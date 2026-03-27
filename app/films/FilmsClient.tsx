@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import Poster from '@/components/Poster'
 import Forum from '@/components/Forum'
@@ -28,10 +28,54 @@ function avgRating(scores: number[] | undefined) {
   return (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1)
 }
 
+// ─── GODFATHER 8-BIT THEME (Web Audio) ──────────────────────────────────────
+function playGodfatherTheme() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    const notes: [number, number, number][] = [
+      [329.6, 0, .5], [246.9, .6, .35], [329.6, 1.0, .4],
+      [220, 1.5, .65], [207.6, 2.25, .35], [329.6, 2.7, .5],
+      [220, 3.3, .4], [246.9, 3.8, .8],
+    ]
+    notes.forEach(([f, t, d]) => {
+      const osc = ctx.createOscillator(); const gain = ctx.createGain()
+      osc.connect(gain); gain.connect(ctx.destination)
+      osc.type = 'triangle'; osc.frequency.value = f
+      gain.gain.setValueAtTime(0.12, ctx.currentTime + t)
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + d)
+      osc.start(ctx.currentTime + t); osc.stop(ctx.currentTime + t + d + .1)
+    })
+  } catch {}
+}
+
+// ─── JAWS THEME (Web Audio) ──────────────────────────────────────────────────
+function playJawsTheme() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    const seq: [number, number, number][] = [
+      [110, 0, .5], [116.5, .62, .5],
+      [110, 1.3, .4], [116.5, 1.78, .4],
+      [110, 2.25, .28], [116.5, 2.62, .28],
+      [110, 2.98, .18], [116.5, 3.24, .18],
+      [110, 3.48, .13], [116.5, 3.67, .13],
+      [110, 3.86, .1], [116.5, 4.02, .1],
+    ]
+    seq.forEach(([f, t, d]) => {
+      const osc = ctx.createOscillator(); const gain = ctx.createGain()
+      osc.connect(gain); gain.connect(ctx.destination)
+      osc.type = 'sawtooth'; osc.frequency.value = f
+      gain.gain.setValueAtTime(0.18, ctx.currentTime + t)
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + d)
+      osc.start(ctx.currentTime + t); osc.stop(ctx.currentTime + t + d + .08)
+    })
+  } catch {}
+}
+
+// ─── FILM MODAL ──────────────────────────────────────────────────────────────
 function FilmModal({ film, profile, isWatched, myRating, watchPct, ratingScores, isWeekFilm, isMarathonLive, onClose, onRefresh }: {
-  film: Film, profile: Profile, isWatched: boolean, myRating: number | undefined,
-  watchPct: number, ratingScores: number[], isWeekFilm: boolean,
-  isMarathonLive: boolean, onClose: () => void, onRefresh: () => void
+  film: Film; profile: Profile; isWatched: boolean; myRating: number | undefined
+  watchPct: number; ratingScores: number[]; isWeekFilm: boolean
+  isMarathonLive: boolean; onClose: () => void; onRefresh: () => void
 }) {
   const [tab, setTab] = useState<'info' | 'streaming' | 'forum'>('info')
   const [hov, setHov] = useState(0)
@@ -41,6 +85,45 @@ function FilmModal({ film, profile, isWatched, myRating, watchPct, ratingScores,
   const platforms = getStreamingPlatforms(film.id, film.titre)
   const typeLabel: Record<string, string> = { svod: 'Abonnement', tvod: 'Location/Achat', free: 'Gratuit légal' }
   const expGain = isWeekFilm ? CONFIG.EXP_FDLS : CONFIG.EXP_FILM
+
+  // ── Easter eggs ─────────────────────────────────────────────
+  const isInception  = film.titre.toLowerCase().includes('inception')
+  const isGodfather  = film.titre.toLowerCase().includes('parrain') || film.titre.toLowerCase().includes('godfather')
+
+  const [inceptionClicks, setInceptionClicks] = useState(0)
+  const [inceptionTilt, setInceptionTilt]     = useState(false)
+  const [godfatherOverlay, setGodfatherOverlay] = useState(false)
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Inception: 5 clicks on poster → tilt
+  function handlePosterClick() {
+    if (!isInception) return
+    const n = inceptionClicks + 1
+    setInceptionClicks(n)
+    if (n >= 5) {
+      setInceptionTilt(true)
+      setInceptionClicks(0)
+      document.documentElement.style.transition = 'transform 1.6s ease'
+      document.documentElement.style.transform  = 'rotate(45deg)'
+      setTimeout(() => {
+        document.documentElement.style.transform = 'rotate(0deg)'
+        setTimeout(() => {
+          document.documentElement.style.transition = ''
+          setInceptionTilt(false)
+        }, 1600)
+      }, 3200)
+    }
+  }
+
+  // Godfather: idle 30s → hand & theme
+  useEffect(() => {
+    if (!isGodfather) return
+    idleTimerRef.current = setTimeout(() => {
+      setGodfatherOverlay(true)
+      playGodfatherTheme()
+    }, 30_000)
+    return () => { if (idleTimerRef.current) clearTimeout(idleTimerRef.current) }
+  }, [isGodfather])
 
   async function handleToggle() {
     await toggleWatched(film.id, film.titre)
@@ -57,14 +140,23 @@ function FilmModal({ film, profile, isWatched, myRating, watchPct, ratingScores,
   return (
     <div className="modal-wrap" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
-        {/* Hero */}
-        <div style={{ position: 'relative', height: 280, overflow: 'hidden' }}>
+        {/* Hero / Poster */}
+        <div
+          style={{ position: 'relative', height: 280, overflow: 'hidden', cursor: isInception ? 'pointer' : 'default' }}
+          onClick={handlePosterClick}
+          title={isInception ? 'Cliquer 5 fois...' : undefined}
+        >
           {film.poster
             ? <Image src={film.poster} alt={film.titre} fill style={{ objectFit: 'cover' }} sizes="740px" />
             : <div style={{ width: '100%', height: '100%', background: 'var(--bg3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem' }}>🎬</div>
           }
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 25%, var(--bg2) 100%)' }} />
-          <button onClick={onClose} style={{ position: 'absolute', top: '1rem', right: '1rem', width: 34, height: 34, borderRadius: '50%', background: 'rgba(8,8,14,.75)', border: '1px solid var(--border2)', color: 'var(--text2)', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+          <button onClick={e => { e.stopPropagation(); onClose() }} style={{ position: 'absolute', top: '1rem', right: '1rem', width: 34, height: 34, borderRadius: '50%', background: 'rgba(8,8,14,.75)', border: '1px solid var(--border2)', color: 'var(--text2)', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+          {isInception && inceptionClicks > 0 && inceptionClicks < 5 && (
+            <div style={{ position: 'absolute', bottom: '1rem', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,.7)', color: '#aaa', fontSize: '.65rem', padding: '3px 8px', borderRadius: 99, whiteSpace: 'nowrap' }}>
+              {inceptionClicks}/5...
+            </div>
+          )}
         </div>
 
         <div style={{ padding: '1.5rem' }}>
@@ -143,16 +235,39 @@ function FilmModal({ film, profile, isWatched, myRating, watchPct, ratingScores,
           )}
 
           {tab === 'forum' && (
-            <Forum topic={`film_${film.id}`} profile={profile} />
+            <Forum topic={`film_${film.id}`} profile={profile} filmTitle={film.titre} />
           )}
         </div>
       </div>
+
+      {/* Inception dream message */}
+      {inceptionTilt && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.2rem,4vw,2rem)', color: '#fff', textShadow: '0 2px 20px rgba(0,0,0,.9)', animation: 'ee-dream-msg .8s ease', transform: 'rotate(-45deg)', textAlign: 'center', padding: '0 2rem' }}>
+            Tu es encore en train de rêver.
+          </div>
+        </div>
+      )}
+
+      {/* Godfather rose overlay */}
+      {godfatherOverlay && (
+        <div onClick={() => setGodfatherOverlay(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.75)', zIndex: 9000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', cursor: 'pointer', paddingBottom: '6rem' }}>
+          <div style={{ textAlign: 'center', animation: 'ee-hand-rise 2s ease' }}>
+            <div style={{ fontSize: '5rem', lineHeight: 1 }}>🤌🌹</div>
+            <div style={{ fontFamily: 'var(--font-display)', color: '#d4a256', fontSize: 'clamp(1rem,3vw,1.4rem)', marginTop: '1rem', textShadow: '0 2px 12px rgba(0,0,0,.9)' }}>
+              "Je vais lui faire une offre qu'il ne pourra pas refuser."
+            </div>
+            <div style={{ color: 'var(--text3)', fontSize: '.72rem', marginTop: '1rem' }}>— Cliquer pour fermer —</div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
+// ─── ADD FILM MODAL ──────────────────────────────────────────────────────────
 function AddFilmModal({ profile, isMarathonLive, saisonNumero, onClose, onRefresh }: {
-  profile: Profile, isMarathonLive: boolean, saisonNumero: number, onClose: () => void, onRefresh: () => void
+  profile: Profile; isMarathonLive: boolean; saisonNumero: number; onClose: () => void; onRefresh: () => void
 }) {
   const { addToast } = useToast()
   const [err, setErr] = useState('')
@@ -203,6 +318,29 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, onClose, onRefres
   )
 }
 
+// ─── SHARK OVERLAY ───────────────────────────────────────────────────────────
+function SharkOverlay({ onDone }: { onDone: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onDone, 4200)
+    return () => clearTimeout(t)
+  }, [onDone])
+
+  return (
+    <div style={{ position: 'fixed', bottom: 0, left: '50%', zIndex: 9000, pointerEvents: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      {/* Fin */}
+      <div style={{ width: 0, height: 0, borderLeft: '45px solid transparent', borderRight: '45px solid transparent', borderBottom: '90px solid #3a5f8a', animation: 'ee-shark-rise .9s ease, ee-shark-sink .8s ease 3.2s forwards' }} />
+      {/* Body */}
+      <div style={{ width: 220, height: 55, background: '#3a5f8a', borderRadius: '0 0 110px 110px', display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'ee-shark-rise .9s ease, ee-shark-sink .8s ease 3.2s forwards' }}>
+        <span style={{ fontSize: '1.8rem' }}>🦈</span>
+      </div>
+      <div style={{ fontFamily: 'monospace', fontSize: '.7rem', color: '#3a5f8a', marginTop: '.2rem', letterSpacing: '.15em', animation: 'ee-shark-rise .9s ease, ee-shark-sink .8s ease 3.2s forwards' }}>
+        dun dun... dun dun...
+      </div>
+    </div>
+  )
+}
+
+// ─── MAIN FILMS CLIENT ───────────────────────────────────────────────────────
 export default function FilmsClient({ films, profile, watchedIds, myRatings, watchCountMap, ratingMap, totalUsers, weekFilmId, isMarathonLive, saisonNumero }: Props) {
   const router = useRouter()
   const [search, setSearch] = useState('')
@@ -213,16 +351,38 @@ export default function FilmsClient({ films, profile, watchedIds, myRatings, wat
   const [addModal, setAddModal] = useState(false)
   const watchedSet = useMemo(() => new Set(watchedIds), [watchedIds])
 
-  const genres = useMemo(() => [...new Set(films.map(f => f.genre))].sort(), [films])
+  // ── Shark easter egg ───────────────────────────────────────
+  const [sharkVisible, setSharkVisible] = useState(false)
+  const lastScrollY = useRef(0)
+  const sharkTriggered = useRef(false)
+
+  useEffect(() => {
+    function onScroll() {
+      const y = window.scrollY
+      const velocity = y - lastScrollY.current
+      lastScrollY.current = y
+      const nearBottom = window.innerHeight + y >= document.body.scrollHeight - 80
+      if (nearBottom && velocity > 25 && !sharkTriggered.current) {
+        sharkTriggered.current = true
+        setSharkVisible(true)
+        playJawsTheme()
+        setTimeout(() => { setSharkVisible(false); sharkTriggered.current = false }, 5000)
+      }
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  const genres  = useMemo(() => [...new Set(films.map(f => f.genre))].sort(), [films])
   const decades = useMemo(() => [...new Set(films.map(f => Math.floor(f.annee / 10) * 10))].sort(), [films])
-  const reals = useMemo(() => [...new Set(films.map(f => f.realisateur))].sort(), [films])
+  const reals   = useMemo(() => [...new Set(films.map(f => f.realisateur))].sort(), [films])
 
   const filtered = useMemo(() => films.filter(f => {
     const q = search.toLowerCase()
     return (!q || f.titre.toLowerCase().includes(q) || f.realisateur.toLowerCase().includes(q))
-      && (!filterGenre || f.genre === filterGenre)
+      && (!filterGenre  || f.genre === filterGenre)
       && (!filterDecade || Math.floor(f.annee / 10) * 10 === parseInt(filterDecade))
-      && (!filterReal || f.realisateur === filterReal)
+      && (!filterReal   || f.realisateur === filterReal)
   }), [films, search, filterGenre, filterDecade, filterReal])
 
   function getWatchPct(filmId: number) {
@@ -238,9 +398,9 @@ export default function FilmsClient({ films, profile, watchedIds, myRatings, wat
     setModal(unwatched[Math.floor(Math.random() * unwatched.length)])
   }
 
-  const s1Total = films.filter(f => f.saison === 1).length
+  const s1Total     = films.filter(f => f.saison === 1).length
   const watchedCount = watchedIds.length
-  const pct = s1Total ? Math.round((watchedCount / s1Total) * 100) : 0
+  const pct         = s1Total ? Math.round((watchedCount / s1Total) * 100) : 0
 
   return (
     <div>
@@ -281,16 +441,13 @@ export default function FilmsClient({ films, profile, watchedIds, myRatings, wat
         <input style={{ flex: 1, minWidth: 180, background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.55rem .9rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.83rem' }}
           placeholder="🔍 Rechercher titre, réalisateur…" value={search} onChange={e => setSearch(e.target.value)} />
         <select style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.55rem .8rem', color: 'var(--text2)', fontFamily: 'var(--font-body)', fontSize: '.8rem' }} value={filterGenre} onChange={e => setFilterGenre(e.target.value)}>
-          <option value="">Genres</option>
-          {genres.map(g => <option key={g}>{g}</option>)}
+          <option value="">Genres</option>{genres.map(g => <option key={g}>{g}</option>)}
         </select>
         <select style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.55rem .8rem', color: 'var(--text2)', fontFamily: 'var(--font-body)', fontSize: '.8rem' }} value={filterDecade} onChange={e => setFilterDecade(e.target.value)}>
-          <option value="">Décennies</option>
-          {decades.map(d => <option key={d} value={d}>{d}s</option>)}
+          <option value="">Décennies</option>{decades.map(d => <option key={d} value={d}>{d}s</option>)}
         </select>
         <select style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.55rem .8rem', color: 'var(--text2)', fontFamily: 'var(--font-body)', fontSize: '.8rem' }} value={filterReal} onChange={e => setFilterReal(e.target.value)}>
-          <option value="">Réalisateurs</option>
-          {reals.map(r => <option key={r} value={r}>{r}</option>)}
+          <option value="">Réalisateurs</option>{reals.map(r => <option key={r} value={r}>{r}</option>)}
         </select>
       </div>
 
@@ -298,9 +455,9 @@ export default function FilmsClient({ films, profile, watchedIds, myRatings, wat
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))', gap: '1rem' }}>
         {filtered.map(film => {
           const isWatched = watchedSet.has(film.id)
-          const maj = isMajority(film.id)
-          const s2 = film.saison === 2
-          const rat = avgRating(ratingMap[film.id])
+          const maj   = isMajority(film.id)
+          const s2    = film.saison === 2
+          const rat   = avgRating(ratingMap[film.id])
           const isWeek = weekFilmId === film.id
 
           return (
@@ -310,7 +467,6 @@ export default function FilmsClient({ films, profile, watchedIds, myRatings, wat
             >
               <div style={{ width: '100%', aspectRatio: '2/3', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Poster film={film} fill style={{ objectFit: 'cover' }} />
-                {/* Overlay on hover */}
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(8,8,14,.92) 0%, transparent 55%)', opacity: 0, transition: 'opacity .2s', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '.8rem' }} className="poster-hover-overlay">
                   <div style={{ fontSize: '.82rem', fontWeight: 600, color: 'var(--text)', lineHeight: 1.2, marginBottom: '.15rem' }}>{film.titre}</div>
                   <div style={{ fontSize: '.68rem', color: 'var(--text2)' }}>{film.annee} · {film.realisateur}</div>
@@ -361,6 +517,8 @@ export default function FilmsClient({ films, profile, watchedIds, myRatings, wat
           onRefresh={() => router.refresh()}
         />
       )}
+
+      {sharkVisible && <SharkOverlay onDone={() => setSharkVisible(false)} />}
     </div>
   )
 }

@@ -3,6 +3,7 @@ import './globals.css'
 import { createClient } from '@/lib/supabase/server'
 import Sidebar from '@/components/Sidebar'
 import { ToastProvider } from '@/components/ToastProvider'
+import EasterEggs from '@/components/EasterEggs'
 
 export const metadata: Metadata = {
   title: 'Ciné Marathon',
@@ -27,6 +28,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="fr">
       <body>
         <ToastProvider>
+          <EasterEggs />
           {user && profile ? (
             <div style={{ display: 'flex', minHeight: '100vh' }}>
               <Sidebar profile={profile} />
