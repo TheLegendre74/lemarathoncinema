@@ -34,12 +34,16 @@ create table public.films (
   saison        integer default 1 not null,
   added_by      uuid references public.profiles(id),
   created_at    timestamptz default now() not null,
+  tmdb_id       integer,
+  flagged_18plus boolean default false not null,
   unique(titre, annee)
 );
 alter table public.films enable row level security;
 create policy "Films lisibles par tous"    on public.films for select using (true);
 create policy "Films ajoutables par connecté" on public.films for insert to authenticated with check (true);
 create policy "Films supprimables par admin"  on public.films for delete to authenticated
+  using (exists (select 1 from public.profiles where id = auth.uid() and is_admin));
+create policy "Films modifiables par admin"   on public.films for update to authenticated
   using (exists (select 1 from public.profiles where id = auth.uid() and is_admin));
 
 -- ─── WATCHED ──────────────────────────────────────────────────

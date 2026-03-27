@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp } from '@/lib/actions'
+import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
 import { CONFIG } from '@/lib/config'
 import type { Film, Profile } from '@/lib/supabase/types'
@@ -15,9 +15,10 @@ interface Props {
   weekFilm: any
   totalUsers: number
   watchCountMap: Record<number, number>
+  flaggedFilms: Film[]
 }
 
-export default function AdminClient({ profile, films, users, duels, weekFilm, totalUsers, watchCountMap }: Props) {
+export default function AdminClient({ profile, films, users, duels, weekFilm, totalUsers, watchCountMap, flaggedFilms }: Props) {
   const { addToast } = useToast()
   const router = useRouter()
 
@@ -76,6 +77,26 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
     router.refresh()
   }
 
+  async function cleanDuels() {
+    if (!confirm('Supprimer TOUS les duels, votes et messages associés ? Cette action est irréversible.')) return
+    const result = await adminCleanDuels()
+    if (result.error) addToast(result.error, '⚠️')
+    else { addToast('Tous les duels ont été supprimés', '🗑️'); router.refresh() }
+  }
+
+  async function approveFilm(filmId: number, titre: string) {
+    const result = await adminApproveFlaggedFilm(filmId)
+    if (result.error) addToast(result.error, '⚠️')
+    else { addToast(`"${titre}" approuvé`, '✅'); router.refresh() }
+  }
+
+  async function rejectFilm(filmId: number, titre: string) {
+    if (!confirm(`Retirer "${titre}" de la liste (film -18 ans refusé) ?`)) return
+    await adminDeleteFilm(filmId)
+    addToast(`"${titre}" retiré`, '🗑️')
+    router.refresh()
+  }
+
   const Section = ({ icon, title, children }: { icon: string; title: string; children: React.ReactNode }) => (
     <div style={{ background: 'rgba(232,90,90,.04)', border: '1px solid rgba(232,90,90,.18)', borderRadius: 'var(--rl)', padding: '1.3rem', marginBottom: '1.2rem' }}>
       <div style={{ fontSize: '.68rem', letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--red)', marginBottom: '1rem' }}>
@@ -92,11 +113,31 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
         <div style={{ color: 'var(--text2)', fontSize: '.83rem', marginTop: '.35rem' }}>Accès restreint · {CONFIG.SAISON_LABEL}</div>
       </div>
 
+      {/* 18+ alert banner */}
+      {flaggedFilms.length > 0 && (
+        <div style={{ background: 'rgba(232,90,90,.12)', border: '2px solid var(--red)', borderRadius: 'var(--rl)', padding: '1rem 1.3rem', marginBottom: '1.2rem', display: 'flex', alignItems: 'center', gap: '.8rem' }}>
+          <span style={{ fontSize: '1.4rem' }}>🔞</span>
+          <div>
+            <div style={{ fontWeight: 700, color: 'var(--red)', fontSize: '.9rem' }}>
+              {flaggedFilms.length} film{flaggedFilms.length > 1 ? 's' : ''} interdit{flaggedFilms.length > 1 ? 's' : ''} aux moins de 18 ans en attente de validation
+            </div>
+            <div style={{ fontSize: '.76rem', color: 'var(--text2)', marginTop: '.2rem' }}>
+              Voir la section « Films 18+ » ci-dessous pour approuver ou refuser.
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Duels */}
       <Section icon="⚔️" title="Gestion des duels">
-        <button className="btn btn-gold" onClick={createDuel} style={{ marginBottom: '1rem' }}>
-          Générer un duel aléatoire (films les moins vus)
-        </button>
+        <div style={{ display: 'flex', gap: '.7rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+          <button className="btn btn-gold" onClick={createDuel}>
+            Générer un duel aléatoire (films les moins vus)
+          </button>
+          <button className="btn btn-red" onClick={cleanDuels} style={{ fontSize: '.8rem' }}>
+            🗑️ Nettoyer tous les duels
+          </button>
+        </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
           {duels.map((d: any) => {
             const v1 = d.votes?.filter((v: any) => v.film_choice === d.film1_id).length ?? 0
@@ -162,6 +203,24 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
           ))}
         </div>
       </Section>
+
+      {/* 18+ flagged films */}
+      {flaggedFilms.length > 0 && (
+        <Section icon="🔞" title={`Films +18 ans à valider (${flaggedFilms.length})`}>
+          <div style={{ fontSize: '.78rem', color: 'var(--text2)', marginBottom: '.8rem' }}>
+            Ces films ont une certification 18+ (FR) ou R/NC-17 (US) détectée par TMDB. Approuve-les s'ils conviennent au groupe, ou rejette-les.
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
+            {flaggedFilms.map(f => (
+              <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: '.7rem', background: 'rgba(232,90,90,.07)', border: '1px solid rgba(232,90,90,.3)', borderRadius: 'var(--r)', padding: '.6rem 1rem', flexWrap: 'wrap' }}>
+                <span style={{ flex: 1, fontSize: '.85rem', fontWeight: 500 }}>{f.titre} <span style={{ color: 'var(--text3)', fontSize: '.72rem' }}>({f.annee}) · {f.realisateur}</span></span>
+                <button className="btn btn-green" style={{ fontSize: '.73rem', padding: '.28rem .65rem' }} onClick={() => approveFilm(f.id, f.titre)}>✓ Approuver</button>
+                <button className="btn btn-red" style={{ fontSize: '.73rem', padding: '.28rem .65rem' }} onClick={() => rejectFilm(f.id, f.titre)}>✕ Refuser</button>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
 
       {/* Films */}
       <Section icon="🎥" title={`Films (${films.length})`}>

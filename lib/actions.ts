@@ -5,6 +5,64 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { isMarathonLive, CONFIG } from '@/lib/config'
 
+// ── TMDB VERIFICATION ────────────────────────────────────────
+
+async function verifyWithTMDB(titre: string, annee: number): Promise<{
+  ok: boolean; error?: string; tmdbId?: number; flagged18?: boolean
+}> {
+  const key = process.env.TMDB_API_KEY
+  if (!key) return { ok: true }
+
+  try {
+    let searchRes = await fetch(
+      `https://api.themoviedb.org/3/search/movie?api_key=${key}&query=${encodeURIComponent(titre)}&year=${annee}&language=fr-FR`,
+      { cache: 'no-store' }
+    )
+    let searchData = await searchRes.json()
+
+    // Retry without year if no results (release year vs production year)
+    if (!searchData.results?.length) {
+      searchRes = await fetch(
+        `https://api.themoviedb.org/3/search/movie?api_key=${key}&query=${encodeURIComponent(titre)}&language=fr-FR`,
+        { cache: 'no-store' }
+      )
+      searchData = await searchRes.json()
+      const match = searchData.results?.find(
+        (m: any) => Math.abs(parseInt(m.release_date?.slice(0, 4) ?? '0') - annee) <= 2
+      )
+      if (!match) {
+        return { ok: false, error: `Film introuvable sur TMDB pour "${titre}" (${annee}). Vérifiez le titre et l'année.` }
+      }
+      searchData = { results: [match] }
+    }
+
+    const movie = searchData.results[0]
+
+    if (movie.adult) {
+      return { ok: false, error: 'Ce film contient du contenu adulte explicite et ne peut pas être ajouté.' }
+    }
+
+    // Fetch content certifications
+    const relRes = await fetch(
+      `https://api.themoviedb.org/3/movie/${movie.id}/release_dates?api_key=${key}`,
+      { cache: 'no-store' }
+    )
+    const relData = await relRes.json()
+
+    const frEntry = relData.results?.find((r: any) => r.iso_3166_1 === 'FR')
+    const usEntry = relData.results?.find((r: any) => r.iso_3166_1 === 'US')
+    const cert = (frEntry || usEntry)?.release_dates?.find((d: any) => d.certification)?.certification ?? ''
+
+    // FR "18" = interdit -18 ans / US "NC-17" = adultes / US "R" = déconseillé -17 ans
+    const flagged18 = ['18', 'NC-17', 'R'].includes(cert)
+
+    return { ok: true, tmdbId: movie.id as number, flagged18 }
+  } catch {
+    // Network error → graceful degradation, don't block the user
+    return { ok: true }
+  }
+}
+
 // ── AUTH ────────────────────────────────────────────────────
 
 export async function signUp(formData: FormData) {
@@ -181,15 +239,21 @@ export async function addFilm(formData: FormData) {
 
   if (dup) return { error: `⚠️ "${dup.titre}" (${annee}) est déjà dans la liste !` }
 
+  // TMDB verification: existence + adult content check
+  const tmdb = await verifyWithTMDB(titre, annee)
+  if (!tmdb.ok) return { error: tmdb.error }
+
   const saison = isMarathonLive() ? CONFIG.SAISON_NUMERO + 1 : CONFIG.SAISON_NUMERO
 
   const { error } = await supabase.from('films').insert({
     titre, annee, realisateur, genre, poster, saison, added_by: user.id,
+    tmdb_id: tmdb.tmdbId ?? null,
+    flagged_18plus: tmdb.flagged18 ?? false,
   })
 
   if (error) return { error: error.message }
   revalidatePath('/films')
-  return { success: true, saison }
+  return { success: true, saison, flagged18: tmdb.flagged18 ?? false }
 }
 
 // ── POSTS (forum) ────────────────────────────────────────────
@@ -324,5 +388,39 @@ export async function adminGrantExp(userId: string, amount: number) {
   await supabase.rpc('increment_exp', { user_id: userId, amount })
   revalidatePath('/admin')
   revalidatePath('/classement')
+  return { success: true }
+}
+
+export async function adminCleanDuels() {
+  const supabase = await createClient()
+  const adminClient = createAdminClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Non autorisé.' }
+
+  // Delete duel forum posts first
+  await adminClient.from('posts').delete().like('topic', 'duel_%')
+  // Delete all duels — votes cascade automatically (ON DELETE CASCADE)
+  await adminClient.from('duels').delete().gte('id', 0)
+
+  revalidatePath('/duels')
+  revalidatePath('/admin')
+  return { success: true }
+}
+
+export async function adminApproveFlaggedFilm(filmId: number) {
+  const supabase = await createClient()
+  const adminClient = createAdminClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Non autorisé.' }
+
+  await adminClient.from('films').update({ flagged_18plus: false }).eq('id', filmId)
+  revalidatePath('/admin')
+  revalidatePath('/films')
   return { success: true }
 }
