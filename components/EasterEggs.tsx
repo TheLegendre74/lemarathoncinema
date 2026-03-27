@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { discoverEgg } from '@/lib/actions'
 import FightClubGame from './FightClubGame'
+import { KennyDeath, SouthParkBus, RandyMarsh } from './SouthParkEggs'
 
 // ─── ANIMATIONS (partagées avec Forum et FilmsClient) ───────────────────────
 const EE_STYLES = `
@@ -414,6 +415,9 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
   const [showBond,       setShowBond]       = useState(false)
   const [showNoctambule, setShowNoctambule] = useState(false)
   const [showFightClub,  setShowFightClub]  = useState(false)
+  const [showKenny,      setShowKenny]      = useState(false)
+  const [showSouthPark,  setShowSouthPark]  = useState(false)
+  const [showRandy,      setShowRandy]      = useState(false)
   const keyBuf = useRef<string[]>([])
   const tarsShown = useRef(false)
   const noctambuleShown = useRef(false)
@@ -471,6 +475,24 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
         keyBuf.current = []
         return
       }
+      // "kill kenny" → Kenny death scene (10 chars avec espace)
+      if (buf.slice(-10).join('').toLowerCase() === 'kill kenny') {
+        setShowKenny(true)
+        keyBuf.current = []
+        return
+      }
+      // "south park" → Bus stop scene (10 chars avec espace)
+      if (buf.slice(-10).join('').toLowerCase() === 'south park') {
+        setShowSouthPark(true)
+        keyBuf.current = []
+        return
+      }
+      // "randy" → Randy Marsh
+      if (buf.slice(-5).join('').toLowerCase() === 'randy') {
+        setShowRandy(true)
+        keyBuf.current = []
+        return
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -513,6 +535,9 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
       {showBond       && <BondOverlay   onDone={() => setShowBond(false)} />}
       {showNoctambule && <NoctambuleNotif onDone={() => setShowNoctambule(false)} />}
       {showFightClub  && <FightClubGame   onDone={() => setShowFightClub(false)} />}
+      {showKenny      && <KennyDeath      onDone={() => setShowKenny(false)} />}
+      {showSouthPark  && <SouthParkBus    onDone={() => setShowSouthPark(false)} />}
+      {showRandy      && <RandyMarsh      onDone={() => setShowRandy(false)} />}
     </>
   )
 }

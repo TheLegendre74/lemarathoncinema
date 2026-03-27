@@ -57,6 +57,27 @@ const EGGS = [
     condition: 'Taper "tyler" au clavier — et survivre',
   },
   {
+    id: 'kenny',
+    icon: '🧡',
+    name: 'Oh mon Dieu !',
+    category: 'Clavier',
+    condition: 'Taper "kill kenny" au clavier',
+  },
+  {
+    id: 'southpark',
+    icon: '🚌',
+    name: 'En route pour South Park',
+    category: 'Clavier',
+    condition: 'Taper "south park" au clavier',
+  },
+  {
+    id: 'randy',
+    icon: '🍷',
+    name: 'Le Vinomoussage',
+    category: 'Clavier',
+    condition: 'Taper "randy" au clavier',
+  },
+  {
     id: 'tars',
     icon: '▣',
     name: 'TARS en ligne',
