@@ -78,6 +78,20 @@ const EGGS = [
     condition: 'Taper "randy" au clavier',
   },
   {
+    id: 'killbill',
+    icon: '⚔️',
+    name: 'Tue Bill',
+    category: 'Clavier',
+    condition: 'Taper "kill bill" et lui trancher la tête avec le katana',
+  },
+  {
+    id: 'avp',
+    icon: '👾',
+    name: 'Alien vs Predator',
+    category: 'Clavier',
+    condition: 'Taper "vs" — et regarder le site se faire détruire',
+  },
+  {
     id: 'tars',
     icon: '▣',
     name: 'TARS en ligne',

@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import { discoverEgg } from '@/lib/actions'
 import FightClubGame from './FightClubGame'
 import { KennyDeath, SouthParkBus, RandyMarsh } from './SouthParkEggs'
+import KillBillGame from './KillBillGame'
+import AVPEgg from './AVPEgg'
 
 // ─── ANIMATIONS (partagées avec Forum et FilmsClient) ───────────────────────
 const EE_STYLES = `
@@ -418,6 +420,8 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
   const [showKenny,      setShowKenny]      = useState(false)
   const [showSouthPark,  setShowSouthPark]  = useState(false)
   const [showRandy,      setShowRandy]      = useState(false)
+  const [showKillBill,   setShowKillBill]   = useState(false)
+  const [showAVP,        setShowAVP]        = useState(false)
   const keyBuf = useRef<string[]>([])
   const tarsShown = useRef(false)
   const noctambuleShown = useRef(false)
@@ -493,6 +497,18 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
         keyBuf.current = []
         return
       }
+      // "kill bill" → Kill Bill katana game (9 chars avec espace)
+      if (buf.slice(-9).join('').toLowerCase() === 'kill bill') {
+        setShowKillBill(true)
+        keyBuf.current = []
+        return
+      }
+      // "vs" → Alien vs Predator DOM destruction
+      if (buf.slice(-2).join('').toLowerCase() === 'vs') {
+        setShowAVP(true)
+        keyBuf.current = []
+        return
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -538,6 +554,8 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
       {showKenny      && <KennyDeath      onDone={() => setShowKenny(false)} />}
       {showSouthPark  && <SouthParkBus    onDone={() => setShowSouthPark(false)} />}
       {showRandy      && <RandyMarsh      onDone={() => setShowRandy(false)} />}
+      {showKillBill   && <KillBillGame    onDone={() => setShowKillBill(false)} />}
+      {showAVP        && <AVPEgg          onDone={() => setShowAVP(false)} />}
     </>
   )
 }
