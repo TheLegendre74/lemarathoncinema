@@ -174,6 +174,46 @@ export type Database = {
         }
         Relationships: []
       }
+      reports: {
+        Row: {
+          id: string
+          film_id: number
+          user_id: string
+          reason: string
+          resolved: boolean
+          resolved_by: string | null
+          created_at: string
+        }
+        Insert: {
+          film_id: number
+          user_id: string
+          reason: string
+          resolved?: boolean
+          resolved_by?: string | null
+        }
+        Update: {
+          resolved?: boolean
+          resolved_by?: string | null
+        }
+        Relationships: []
+      }
+      site_config: {
+        Row: {
+          key: string
+          value: string
+          updated_at: string
+        }
+        Insert: {
+          key: string
+          value: string
+          updated_at?: string
+        }
+        Update: {
+          value?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {}
     Functions: {

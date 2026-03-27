@@ -273,6 +273,97 @@ export async function voteDuel(duelId: number, filmChoice: number) {
   return { success: true }
 }
 
+// ── REPORTS ──────────────────────────────────────────────────
+
+export async function reportFilm(filmId: number, reason: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  if (!reason.trim()) return { error: 'Précise le problème.' }
+
+  const { data: existing } = await supabase
+    .from('reports')
+    .select('id')
+    .eq('film_id', filmId)
+    .eq('user_id', user.id)
+    .eq('resolved', false)
+    .maybeSingle()
+
+  if (existing) return { error: 'Tu as déjà signalé ce film (en attente de traitement).' }
+
+  const { error } = await supabase.from('reports').insert({ film_id: filmId, user_id: user.id, reason: reason.trim() })
+  if (error) return { error: error.message }
+  return { success: true }
+}
+
+export async function adminResolveReport(reportId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Non autorisé.' }
+
+  const adminClient = createAdminClient()
+  await adminClient.from('reports').update({ resolved: true, resolved_by: user.id }).eq('id', reportId)
+  revalidatePath('/admin')
+  return { success: true }
+}
+
+// ── SITE CONFIG ───────────────────────────────────────────────
+
+export async function adminSetConfig(configs: Record<string, string>) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Non autorisé.' }
+
+  const adminClient = createAdminClient()
+  const entries = Object.entries(configs).map(([key, value]) => ({
+    key, value, updated_at: new Date().toISOString()
+  }))
+  const { error } = await adminClient.from('site_config').upsert(entries, { onConflict: 'key' })
+  if (error) return { error: error.message }
+
+  revalidatePath('/', 'layout')
+  revalidatePath('/admin')
+  return { success: true }
+}
+
+// ── POSTER VERIFICATION ───────────────────────────────────────
+
+export async function adminVerifyPosters(fromId: number = 0) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Non autorisé.' }
+
+  const { data: films } = await supabase
+    .from('films')
+    .select('id, titre, poster')
+    .not('poster', 'is', null)
+    .gt('id', fromId)
+    .order('id')
+    .limit(40)
+
+  if (!films?.length) return { success: true, broken: [], nextId: null }
+
+  const broken: { id: number; titre: string; poster: string }[] = []
+
+  await Promise.all(films.map(async (f) => {
+    try {
+      const res = await fetch(f.poster!, { method: 'HEAD', signal: AbortSignal.timeout(4000) })
+      if (!res.ok) broken.push({ id: f.id, titre: f.titre, poster: f.poster! })
+    } catch {
+      broken.push({ id: f.id, titre: f.titre, poster: f.poster! })
+    }
+  }))
+
+  const nextId = films.length === 40 ? films[films.length - 1].id : null
+  return { success: true, broken, nextId, checked: films.length }
+}
+
 // ── FILMS ────────────────────────────────────────────────────
 
 export async function updateFilm(filmId: number, updates: {

@@ -5,7 +5,7 @@ import Image from 'next/image'
 import Poster from '@/components/Poster'
 import Forum from '@/components/Forum'
 import { useToast } from '@/components/ToastProvider'
-import { toggleWatched, upsertRating, addFilm, updateFilm } from '@/lib/actions'
+import { toggleWatched, upsertRating, addFilm, updateFilm, reportFilm } from '@/lib/actions'
 import { getStreamingPlatforms, CONFIG } from '@/lib/config'
 import { useRouter } from 'next/navigation'
 import type { Film, Profile } from '@/lib/supabase/types'
@@ -81,6 +81,8 @@ function FilmModal({ film, profile, isWatched, myRating, watchPct, ratingScores,
   const [hov, setHov] = useState(0)
   const [editingGenre, setEditingGenre] = useState(false)
   const [genreVal, setGenreVal] = useState(film.genre)
+  const [reporting, setReporting] = useState(false)
+  const [reportReason, setReportReason] = useState('')
   const { addToast } = useToast()
   const router = useRouter()
 
@@ -139,6 +141,14 @@ function FilmModal({ film, profile, isWatched, myRating, watchPct, ratingScores,
     await upsertRating(film.id, score)
     addToast(`Note ${score}/10 enregistrée`, '⭐')
     onRefresh()
+  }
+
+  async function handleReport() {
+    const result = await reportFilm(film.id, reportReason)
+    if (result.error) { addToast(result.error, '⚠️'); return }
+    addToast('Signalement envoyé à l\'admin', '✅')
+    setReporting(false)
+    setReportReason('')
   }
 
   async function handleSaveGenre() {
@@ -227,6 +237,28 @@ function FilmModal({ film, profile, isWatched, myRating, watchPct, ratingScores,
                   ⚠️ Plus de {CONFIG.SEUIL_MAJORITY}% des joueurs ont vu ce film — il est grisé et exclu des duels.
                 </div>
               )}
+              {/* Signaler une erreur */}
+              <div style={{ marginTop: '.8rem', borderTop: '1px solid var(--border)', paddingTop: '.8rem' }}>
+                {reporting ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
+                    <input
+                      value={reportReason}
+                      onChange={e => setReportReason(e.target.value)}
+                      placeholder="Décris le problème (affiche incorrecte, mauvais titre…)"
+                      style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.5rem .75rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.83rem' }}
+                    />
+                    <div style={{ display: 'flex', gap: '.5rem' }}>
+                      <button className="btn btn-red" style={{ fontSize: '.78rem', flex: 1 }} onClick={handleReport} disabled={!reportReason.trim()}>Envoyer le signalement</button>
+                      <button className="btn btn-outline" style={{ fontSize: '.78rem' }} onClick={() => { setReporting(false); setReportReason('') }}>Annuler</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button className="btn btn-outline" style={{ fontSize: '.75rem', color: 'var(--text3)' }} onClick={() => setReporting(true)}>
+                    ⚠️ Signaler une erreur
+                  </button>
+                )}
+              </div>
+
               {isAuthor && (
                 <div style={{ marginTop: '.8rem', borderTop: '1px solid var(--border)', paddingTop: '.8rem' }}>
                   <div style={{ fontSize: '.68rem', color: 'var(--text3)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '.5rem' }}>

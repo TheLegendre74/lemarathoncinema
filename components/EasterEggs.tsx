@@ -24,7 +24,7 @@ const EE_STYLES = `
 `
 
 // ─── MATRIX RAIN ────────────────────────────────────────────────────────────
-function MatrixRain({ onDone }: { onDone: () => void }) {
+function MatrixRain({ onDone, line1, line2, line3 }: { onDone: () => void; line1: string; line2: string; line3: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -63,16 +63,16 @@ function MatrixRain({ onDone }: { onDone: () => void }) {
         textShadow: '0 0 20px #00ff41',
         animation: 'ee-matrix-text 5s ease forwards',
       }}>
-        <div style={{ fontSize: '1.8rem', fontWeight: 700 }}>Wake up, Neo...</div>
-        <div style={{ fontSize: '1rem', opacity: .8 }}>The Matrix has you.</div>
-        <div style={{ fontSize: '.8rem', opacity: .6 }}>Follow the white rabbit.</div>
+        <div style={{ fontSize: '1.8rem', fontWeight: 700 }}>{line1}</div>
+        <div style={{ fontSize: '1rem', opacity: .8 }}>{line2}</div>
+        <div style={{ fontSize: '.8rem', opacity: .6 }}>{line3}</div>
       </div>
     </div>
   )
 }
 
 // ─── JOKER ──────────────────────────────────────────────────────────────────
-function JokerWalk({ onDone }: { onDone: () => void }) {
+function JokerWalk({ onDone, phrase }: { onDone: () => void; phrase: string }) {
   useEffect(() => {
     const t = setTimeout(onDone, 5500)
     return () => clearTimeout(t)
@@ -87,7 +87,7 @@ function JokerWalk({ onDone }: { onDone: () => void }) {
         fontWeight: 700, textShadow: '0 0 40px rgba(200,0,0,.7)',
         whiteSpace: 'nowrap', animation: 'ee-fadein .6s ease',
       }}>
-        Why so serious? 🃏
+        {phrase}
       </div>
 
       {/* Joker pixel-art character */}
@@ -118,7 +118,7 @@ function JokerWalk({ onDone }: { onDone: () => void }) {
 }
 
 // ─── TARS ────────────────────────────────────────────────────────────────────
-function TarsNotif({ onDone }: { onDone: () => void }) {
+function TarsNotif({ onDone, line1, line2 }: { onDone: () => void; line1: string; line2: string }) {
   const [leaving, setLeaving] = useState(false)
 
   useEffect(() => {
@@ -139,17 +139,17 @@ function TarsNotif({ onDone }: { onDone: () => void }) {
         ▣ TARS · Système actif
       </div>
       <div style={{ color: 'var(--text)', fontSize: '.9rem', fontFamily: 'monospace', lineHeight: 1.5 }}>
-        Niveau d'humour réglé à <span style={{ color: 'var(--gold)', fontWeight: 700 }}>75%</span>.
+        {line1}
       </div>
       <div style={{ fontSize: '.75rem', color: 'var(--text3)', marginTop: '.4rem', fontStyle: 'italic' }}>
-        "C'est honnête."
+        "{line2}"
       </div>
     </div>
   )
 }
 
 // ─── MARVIN ──────────────────────────────────────────────────────────────────
-function MarvinOverlay({ onDone }: { onDone: () => void }) {
+function MarvinOverlay({ onDone, line1, line2 }: { onDone: () => void; line1: string; line2: string }) {
   const [leaving, setLeaving] = useState(false)
 
   useEffect(() => {
@@ -190,10 +190,10 @@ function MarvinOverlay({ onDone }: { onDone: () => void }) {
       }}>
         <div style={{ fontSize: '.65rem', color: '#888', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '.3rem' }}>Marvin</div>
         <div style={{ color: 'var(--text)', fontSize: '.85rem', lineHeight: 1.5 }}>
-          Encore un humain qui cherche la réponse à la question fondamentale sur la vie...
+          {line1}
         </div>
         <div style={{ color: 'var(--text3)', fontSize: '.78rem', marginTop: '.4rem', fontStyle: 'italic' }}>
-          C'est 42. C'est pathétique.
+          {line2}
         </div>
         <div style={{ position: 'absolute', left: -8, top: '50%', transform: 'translateY(-50%)', width: 0, height: 0, borderTop: '7px solid transparent', borderBottom: '7px solid transparent', borderRight: '8px solid rgba(12,12,20,.97)' }} />
       </div>
@@ -204,7 +204,24 @@ function MarvinOverlay({ onDone }: { onDone: () => void }) {
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
 const KONAMI = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a']
 
-export default function EasterEggs() {
+export interface EasterEggsConfig {
+  matrixLine1?: string; matrixLine2?: string; matrixLine3?: string
+  jokerPhrase?: string
+  tarsLine1?: string; tarsLine2?: string
+  marvinLine1?: string; marvinLine2?: string
+}
+
+export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig }) {
+  const ee = {
+    matrixLine1: config.matrixLine1 ?? 'Wake up, Neo...',
+    matrixLine2: config.matrixLine2 ?? 'The Matrix has you.',
+    matrixLine3: config.matrixLine3 ?? 'Follow the white rabbit.',
+    jokerPhrase: config.jokerPhrase ?? 'Why so serious? 🃏',
+    tarsLine1:   config.tarsLine1   ?? "Niveau d'humour réglé à 75%.",
+    tarsLine2:   config.tarsLine2   ?? "C'est honnête.",
+    marvinLine1: config.marvinLine1 ?? 'Encore un humain qui cherche la réponse à la question fondamentale sur la vie...',
+    marvinLine2: config.marvinLine2 ?? "C'est 42. C'est pathétique.",
+  }
   const [showMatrix, setShowMatrix] = useState(false)
   const [showJoker, setShowJoker] = useState(false)
   const [showTars, setShowTars] = useState(false)
@@ -257,10 +274,10 @@ export default function EasterEggs() {
   return (
     <>
       <style>{EE_STYLES}</style>
-      {showMatrix && <MatrixRain onDone={() => setShowMatrix(false)} />}
-      {showJoker  && <JokerWalk  onDone={() => setShowJoker(false)}  />}
-      {showTars   && <TarsNotif  onDone={() => setShowTars(false)}   />}
-      {showMarvin && <MarvinOverlay onDone={() => setShowMarvin(false)} />}
+      {showMatrix && <MatrixRain onDone={() => setShowMatrix(false)} line1={ee.matrixLine1} line2={ee.matrixLine2} line3={ee.matrixLine3} />}
+      {showJoker  && <JokerWalk  onDone={() => setShowJoker(false)}  phrase={ee.jokerPhrase} />}
+      {showTars   && <TarsNotif  onDone={() => setShowTars(false)}   line1={ee.tarsLine1} line2={ee.tarsLine2} />}
+      {showMarvin && <MarvinOverlay onDone={() => setShowMarvin(false)} line1={ee.marvinLine1} line2={ee.marvinLine2} />}
     </>
   )
 }

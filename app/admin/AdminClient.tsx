@@ -2,10 +2,140 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, updateFilm } from '@/lib/actions'
+import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, updateFilm, adminResolveReport, adminSetConfig, adminVerifyPosters } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
 import { CONFIG } from '@/lib/config'
 import type { Film, Profile } from '@/lib/supabase/types'
+import type { ServerConfig } from '@/lib/serverConfig'
+
+// ─── CONFIG SECTION ──────────────────────────────────────────────────────────
+function ConfigSection({ serverConfig, siteConfig, onSave, saving }: {
+  serverConfig: ServerConfig
+  siteConfig: Record<string, string>
+  onSave: (c: Record<string, string>) => Promise<void>
+  saving: boolean
+}) {
+  const cfg = serverConfig
+  const [vals, setVals] = useState<Record<string, string>>({
+    marathon_start:    siteConfig.marathon_start    ?? cfg.MARATHON_START.toISOString().slice(0, 16),
+    saison_numero:     siteConfig.saison_numero     ?? String(cfg.SAISON_NUMERO),
+    saison_label:      siteConfig.saison_label      ?? cfg.SAISON_LABEL,
+    seance_jour:       siteConfig.seance_jour       ?? cfg.SEANCE_JOUR,
+    seance_heure:      siteConfig.seance_heure      ?? cfg.SEANCE_HEURE,
+    fdls_jour:         siteConfig.fdls_jour         ?? cfg.FDLS_JOUR,
+    fdls_heure:        siteConfig.fdls_heure        ?? cfg.FDLS_HEURE,
+    seuil_majority:    siteConfig.seuil_majority    ?? String(cfg.SEUIL_MAJORITY),
+    exp_film:          siteConfig.exp_film          ?? String(cfg.EXP_FILM),
+    exp_fdls:          siteConfig.exp_fdls          ?? String(cfg.EXP_FDLS),
+    exp_duel_win:      siteConfig.exp_duel_win      ?? String(cfg.EXP_DUEL_WIN),
+    exp_vote:          siteConfig.exp_vote          ?? String(cfg.EXP_VOTE),
+    accueil_sous_titre: siteConfig.accueil_sous_titre ?? cfg.ACCUEIL_SOUS_TITRE,
+    matrix_line1:      siteConfig.matrix_line1      ?? cfg.MATRIX_LINE1,
+    matrix_line2:      siteConfig.matrix_line2      ?? cfg.MATRIX_LINE2,
+    matrix_line3:      siteConfig.matrix_line3      ?? cfg.MATRIX_LINE3,
+    joker_phrase:      siteConfig.joker_phrase      ?? cfg.JOKER_PHRASE,
+    tars_line1:        siteConfig.tars_line1        ?? cfg.TARS_LINE1,
+    tars_line2:        siteConfig.tars_line2        ?? cfg.TARS_LINE2,
+    marvin_line1:      siteConfig.marvin_line1      ?? cfg.MARVIN_LINE1,
+    marvin_line2:      siteConfig.marvin_line2      ?? cfg.MARVIN_LINE2,
+  })
+
+  const f = (key: string) => ({
+    value: vals[key] ?? '',
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => setVals(v => ({ ...v, [key]: e.target.value })),
+  })
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%', background: 'var(--bg3)', border: '1px solid var(--border2)',
+    borderRadius: 'var(--r)', padding: '.5rem .75rem', color: 'var(--text)',
+    fontFamily: 'var(--font-body)', fontSize: '.83rem',
+  }
+  const Sub = ({ label }: { label: string }) => (
+    <div style={{ fontSize: '.62rem', color: 'var(--text3)', letterSpacing: '1.5px', textTransform: 'uppercase', margin: '.9rem 0 .4rem' }}>{label}</div>
+  )
+
+  return (
+    <div style={{ background: 'rgba(232,90,90,.04)', border: '1px solid rgba(232,90,90,.18)', borderRadius: 'var(--rl)', padding: '1.3rem', marginBottom: '1.2rem' }}>
+      <div style={{ fontSize: '.68rem', letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--red)', marginBottom: '1rem' }}>
+        ⚙️ Configuration du site
+      </div>
+      <div style={{ fontSize: '.75rem', color: 'var(--text3)', marginBottom: '1rem', lineHeight: 1.5 }}>
+        Ces réglages écrasent les variables d'environnement sans redéploiement.
+      </div>
+
+      <Sub label="Marathon" />
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.6rem' }}>
+        <div><label style={{ fontSize: '.72rem', color: 'var(--text2)', display: 'block', marginBottom: '.2rem' }}>Date de lancement</label>
+          <input type="datetime-local" style={inputStyle} {...f('marathon_start')} /></div>
+        <div><label style={{ fontSize: '.72rem', color: 'var(--text2)', display: 'block', marginBottom: '.2rem' }}>Saison n°</label>
+          <input type="number" style={inputStyle} {...f('saison_numero')} min="1" /></div>
+      </div>
+      <div style={{ marginTop: '.5rem' }}><label style={{ fontSize: '.72rem', color: 'var(--text2)', display: 'block', marginBottom: '.2rem' }}>Label saison</label>
+        <input style={inputStyle} {...f('saison_label')} placeholder="Saison 1 · 2026" /></div>
+
+      <Sub label="Séances" />
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '.6rem' }}>
+        {[['Jour séance', 'seance_jour'], ['Heure séance', 'seance_heure'], ['Jour FDLS', 'fdls_jour'], ['Heure FDLS', 'fdls_heure']].map(([label, key]) => (
+          <div key={key}><label style={{ fontSize: '.72rem', color: 'var(--text2)', display: 'block', marginBottom: '.2rem' }}>{label}</label>
+            <input style={inputStyle} {...f(key)} /></div>
+        ))}
+      </div>
+
+      <Sub label="EXP & seuils" />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '.6rem' }}>
+        {[['EXP film', 'exp_film'], ['EXP FDLS', 'exp_fdls'], ['EXP duel', 'exp_duel_win'], ['EXP vote', 'exp_vote'], ['Seuil %', 'seuil_majority']].map(([label, key]) => (
+          <div key={key}><label style={{ fontSize: '.72rem', color: 'var(--text2)', display: 'block', marginBottom: '.2rem' }}>{label}</label>
+            <input type="number" style={inputStyle} {...f(key)} /></div>
+        ))}
+      </div>
+
+      <Sub label="Phrase d'accueil (sous-titre du site)" />
+      <input style={inputStyle} {...f('accueil_sous_titre')} />
+
+      <Sub label="Easter eggs — Matrix (taper 'red pill')" />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
+        {[['Ligne 1', 'matrix_line1'], ['Ligne 2', 'matrix_line2'], ['Ligne 3', 'matrix_line3']].map(([label, key]) => (
+          <div key={key} style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '.5rem', alignItems: 'center' }}>
+            <span style={{ fontSize: '.72rem', color: 'var(--text3)' }}>{label}</span>
+            <input style={inputStyle} {...f(key)} />
+          </div>
+        ))}
+      </div>
+
+      <Sub label="Easter eggs — Joker (Konami code)" />
+      <input style={inputStyle} {...f('joker_phrase')} />
+
+      <Sub label="Easter eggs — TARS (à 14:07)" />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
+        {[['Ligne 1', 'tars_line1'], ['Citation', 'tars_line2']].map(([label, key]) => (
+          <div key={key} style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '.5rem', alignItems: 'center' }}>
+            <span style={{ fontSize: '.72rem', color: 'var(--text3)' }}>{label}</span>
+            <input style={inputStyle} {...f(key)} />
+          </div>
+        ))}
+      </div>
+
+      <Sub label="Easter eggs — Marvin (taper '42')" />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
+        {[['Ligne 1', 'marvin_line1'], ['Ligne 2', 'marvin_line2']].map(([label, key]) => (
+          <div key={key} style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '.5rem', alignItems: 'center' }}>
+            <span style={{ fontSize: '.72rem', color: 'var(--text3)' }}>{label}</span>
+            <input style={inputStyle} {...f(key)} />
+          </div>
+        ))}
+      </div>
+
+      <button
+        className="btn btn-gold"
+        style={{ width: '100%', marginTop: '1.1rem' }}
+        disabled={saving}
+        onClick={() => onSave(vals)}
+      >
+        {saving ? '…' : '💾 Sauvegarder la configuration'}
+      </button>
+    </div>
+  )
+}
 
 const GENRES = ['Action','Animation','Aventure','Comédie','Crime','Drame','Fantaisie','Guerre','Horreur','Policier','SF','Thriller','Western']
 
@@ -93,15 +223,22 @@ interface Props {
   totalUsers: number
   watchCountMap: Record<number, number>
   flaggedFilms: Film[]
+  reports: any[]
+  siteConfig: Record<string, string>
+  serverConfig: ServerConfig
 }
 
-export default function AdminClient({ profile, films, users, duels, weekFilm, totalUsers, watchCountMap, flaggedFilms }: Props) {
+export default function AdminClient({ profile, films, users, duels, weekFilm, totalUsers, watchCountMap, flaggedFilms, reports, siteConfig, serverConfig }: Props) {
   const { addToast } = useToast()
   const router = useRouter()
   const [posterLoading, setPosterLoading] = useState<Record<number, boolean>>({})
   const [editFilm, setEditFilm] = useState<Film | null>(null)
   const [allPostersNextId, setAllPostersNextId] = useState<number | null>(0)
   const [allPostersRunning, setAllPostersRunning] = useState(false)
+  const [brokenPosters, setBrokenPosters] = useState<{ id: number; titre: string; poster: string }[]>([])
+  const [verifyNextId, setVerifyNextId] = useState<number | null>(0)
+  const [verifyRunning, setVerifyRunning] = useState(false)
+  const [savingConfig, setSavingConfig] = useState(false)
 
   function getWatchPct(filmId: number) {
     if (!totalUsers) return 0
@@ -192,6 +329,40 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
     else { addToast(`${result.count} affiche(s) récupérée(s) !`, '🖼️'); router.refresh() }
   }
 
+  async function resolveReport(reportId: string) {
+    const result = await adminResolveReport(reportId)
+    if (result.error) addToast(result.error, '⚠️')
+    else { addToast('Signalement résolu', '✅'); router.refresh() }
+  }
+
+  async function saveConfig(configs: Record<string, string>) {
+    setSavingConfig(true)
+    const result = await adminSetConfig(configs)
+    setSavingConfig(false)
+    if (result.error) addToast(result.error, '⚠️')
+    else { addToast('Configuration sauvegardée !', '✅'); router.refresh() }
+  }
+
+  async function verifyPostersBatch() {
+    if (verifyNextId === null) { addToast('Toutes les affiches ont été vérifiées', 'ℹ️'); return }
+    setVerifyRunning(true)
+    const result = await adminVerifyPosters(verifyNextId)
+    setVerifyRunning(false)
+    if (result.error) { addToast(result.error, '⚠️'); return }
+    const newBroken = result.broken ?? []
+    if (newBroken.length) {
+      setBrokenPosters(prev => {
+        const ids = new Set(prev.map(b => b.id))
+        return [...prev, ...newBroken.filter(b => !ids.has(b.id))]
+      })
+    }
+    setVerifyNextId(result.nextId ?? null)
+    const msg = result.nextId
+      ? `${newBroken.length} affiche(s) cassée(s) trouvée(s) sur ${result.checked ?? 0} vérifiées — cliquer pour continuer`
+      : `Vérification terminée — ${brokenPosters.length + newBroken.length} affiche(s) cassée(s) au total`
+    addToast(msg, newBroken.length ? '⚠️' : '✅')
+  }
+
   async function forceRefreshAll() {
     if (allPostersNextId === null) { addToast('Tous les films ont été traités !', '✅'); return }
     setAllPostersRunning(true)
@@ -250,6 +421,29 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
             <div style={{ fontSize: '.76rem', color: 'var(--text2)', marginTop: '.2rem' }}>
               Voir la section « Films 18+ » ci-dessous pour approuver ou refuser.
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Signalements */}
+      {reports.length > 0 && (
+        <div style={{ background: 'rgba(232,90,90,.1)', border: '2px solid var(--red)', borderRadius: 'var(--rl)', padding: '1rem 1.3rem', marginBottom: '1.2rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '.7rem', marginBottom: '.8rem' }}>
+            <span style={{ fontSize: '1.3rem' }}>🚨</span>
+            <div style={{ fontWeight: 700, color: 'var(--red)', fontSize: '.9rem' }}>
+              {reports.length} signalement{reports.length > 1 ? 's' : ''} en attente
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
+            {reports.map((r: any) => (
+              <div key={r.id} style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.6rem 1rem', display: 'flex', alignItems: 'center', gap: '.7rem', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '.75rem', color: 'var(--red)', fontWeight: 600 }}>🎬 {r.film?.titre}</span>
+                <span style={{ fontSize: '.75rem', color: 'var(--text3)' }}>par {r.reporter?.pseudo}</span>
+                <span style={{ flex: 1, fontSize: '.82rem' }}>{r.reason}</span>
+                <span style={{ fontSize: '.68rem', color: 'var(--text3)' }}>{new Date(r.created_at).toLocaleDateString('fr-FR')}</span>
+                <button className="btn btn-green" style={{ fontSize: '.72rem', padding: '.25rem .6rem' }} onClick={() => resolveReport(r.id)}>✓ Résolu</button>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -362,7 +556,31 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
           >
             {allPostersRunning ? '…' : allPostersNextId === null ? '✅ Tout traité' : '🔄 Tout rafraîchir depuis TMDB (lot de 50)'}
           </button>
+          <button
+            className="btn btn-outline"
+            style={{ fontSize: '.78rem' }}
+            disabled={verifyRunning || verifyNextId === null}
+            onClick={verifyPostersBatch}
+          >
+            {verifyRunning ? '…' : verifyNextId === null ? `✅ Vérifié (${brokenPosters.length} cassée(s))` : `🔍 Vérifier les URLs (lot de 40)`}
+          </button>
         </div>
+        {brokenPosters.length > 0 && (
+          <div style={{ background: 'rgba(232,90,90,.07)', border: '1px solid rgba(232,90,90,.3)', borderRadius: 'var(--r)', padding: '.75rem', marginBottom: '.6rem' }}>
+            <div style={{ fontSize: '.72rem', color: 'var(--red)', fontWeight: 600, marginBottom: '.4rem' }}>
+              ⚠️ {brokenPosters.length} affiche(s) avec URL cassée — utilise 🔄 TMDB pour les corriger
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '.25rem' }}>
+              {brokenPosters.map(b => (
+                <div key={b.id} style={{ fontSize: '.75rem', color: 'var(--text2)', display: 'flex', gap: '.5rem', alignItems: 'center' }}>
+                  <span style={{ color: 'var(--red)' }}>✕</span>
+                  <span style={{ flex: 1 }}>{b.titre}</span>
+                  <button className="btn btn-outline" style={{ fontSize: '.62rem', padding: '.15rem .4rem' }} onClick={() => fetchPoster(b.id, b.titre)}>🔄 TMDB</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '.35rem', maxHeight: 400, overflowY: 'auto' }}>
           {films.map(f => {
             const loading = posterLoading[f.id]
@@ -413,6 +631,9 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
           })}
         </div>
       </Section>
+
+      {/* Configuration */}
+      <ConfigSection serverConfig={serverConfig} siteConfig={siteConfig} onSave={saveConfig} saving={savingConfig} />
 
       {/* Edit film modal */}
       {editFilm && (
