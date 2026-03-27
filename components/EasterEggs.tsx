@@ -230,9 +230,8 @@ export default function EasterEggs() {
         keyBuf.current = []
         return
       }
-      // "42" (not preceded by another digit) → Marvin
-      const last3 = buf.slice(-3).join('')
-      if (last3.slice(-2) === '42' && !/\d/.test(last3[0] ?? '')) {
+      // "42" → Marvin (standalone: not sandwiched between digits)
+      if (buf.slice(-2).join('') === '42' && !/\d/.test(buf.at(-3) ?? '')) {
         setShowMarvin(true)
       }
     }
