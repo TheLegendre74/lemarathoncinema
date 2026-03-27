@@ -50,6 +50,13 @@ const EGGS = [
     condition: 'Taper "bond" au clavier',
   },
   {
+    id: 'fightclub',
+    icon: '🥊',
+    name: 'La Première Règle',
+    category: 'Clavier',
+    condition: 'Taper "tyler" au clavier — et survivre',
+  },
+  {
     id: 'tars',
     icon: '▣',
     name: 'TARS en ligne',
@@ -146,7 +153,7 @@ export default function EasterEggsPageClient({ discoveredMap, achievements }: Pr
           🥚 Easter Eggs
         </h1>
         <p style={{ color: 'var(--text3)', fontSize: '.9rem', lineHeight: 1.6 }}>
-          Des secrets sont cachés dans le site. Trouve-les tous pour les débloquer.
+          Des secrets sont cachés dans le site. Trouve-les tous pour les débloquer. Certains nécessitent du courage.
         </p>
 
         {/* Progress bar */}

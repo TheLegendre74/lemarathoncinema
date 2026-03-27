@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { discoverEgg } from '@/lib/actions'
+import FightClubGame from './FightClubGame'
 
 // ─── ANIMATIONS (partagées avec Forum et FilmsClient) ───────────────────────
 const EE_STYLES = `
@@ -412,6 +413,7 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
   const [showNolan,      setShowNolan]      = useState(false)
   const [showBond,       setShowBond]       = useState(false)
   const [showNoctambule, setShowNoctambule] = useState(false)
+  const [showFightClub,  setShowFightClub]  = useState(false)
   const keyBuf = useRef<string[]>([])
   const tarsShown = useRef(false)
   const noctambuleShown = useRef(false)
@@ -463,6 +465,12 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
         keyBuf.current = []
         return
       }
+      // "tyler" → Fight Club game
+      if (buf.slice(-5).join('').toLowerCase() === 'tyler') {
+        setShowFightClub(true)
+        keyBuf.current = []
+        return
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -504,6 +512,7 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
       {showNolan      && <NolanOverlay  onDone={() => setShowNolan(false)} />}
       {showBond       && <BondOverlay   onDone={() => setShowBond(false)} />}
       {showNoctambule && <NoctambuleNotif onDone={() => setShowNoctambule(false)} />}
+      {showFightClub  && <FightClubGame   onDone={() => setShowFightClub(false)} />}
     </>
   )
 }
