@@ -7,6 +7,50 @@ import { isMarathonLive, CONFIG } from '@/lib/config'
 
 // ── TMDB VERIFICATION ────────────────────────────────────────
 
+// ── OMDB FALLBACK ────────────────────────────────────────────
+
+async function searchOMDB(titre: string, annee: number): Promise<{
+  imdbId?: string; posterUrl?: string; found: boolean
+}> {
+  const omdbKey = process.env.OMDB_API_KEY
+  if (!omdbKey) return { found: false }
+
+  try {
+    // Try with year first, then without
+    for (const yr of [annee, undefined]) {
+      const url = yr
+        ? `https://www.omdbapi.com/?t=${encodeURIComponent(titre)}&y=${yr}&type=movie&apikey=${omdbKey}`
+        : `https://www.omdbapi.com/?t=${encodeURIComponent(titre)}&type=movie&apikey=${omdbKey}`
+      const res = await fetch(url, { cache: 'no-store' })
+      const data = await res.json()
+      if (data.Response === 'True') {
+        const movieYear = parseInt(data.Year ?? '0')
+        if (!yr || Math.abs(movieYear - annee) <= 3) {
+          return {
+            found: true,
+            imdbId: data.imdbID,
+            posterUrl: data.Poster && data.Poster !== 'N/A' ? data.Poster : undefined,
+          }
+        }
+      }
+    }
+  } catch { /* graceful */ }
+  return { found: false }
+}
+
+async function tmdbFindByImdbId(imdbId: string, tmdbKey: string): Promise<any | null> {
+  try {
+    const res = await fetch(
+      `https://api.themoviedb.org/3/find/${imdbId}?api_key=${tmdbKey}&external_source=imdb_id`,
+      { cache: 'no-store' }
+    )
+    const data = await res.json()
+    return data.movie_results?.[0] ?? null
+  } catch { return null }
+}
+
+// ── TMDB + OMDB VERIFICATION ─────────────────────────────────
+
 async function verifyWithTMDB(titre: string, annee: number): Promise<{
   ok: boolean; error?: string; tmdbId?: number; flagged18?: boolean; posterUrl?: string
 }> {
@@ -29,27 +73,28 @@ async function verifyWithTMDB(titre: string, annee: number): Promise<{
   }
 
   try {
-    // 1. Search with year in French
+    // 1. Search TMDB: FR avec année, FR sans année, EN avec année, EN sans année
     let results = await searchTMDB(titre, 'fr-FR', annee)
+    if (!results.length) results = await searchTMDB(titre, 'fr-FR')
+    if (!results.length) results = await searchTMDB(titre, 'en-US', annee)
+    if (!results.length) results = await searchTMDB(titre, 'en-US')
 
-    // 2. Retry without year in French (±3 ans de tolérance)
-    if (!results.length) {
-      results = await searchTMDB(titre, 'fr-FR')
-    }
-
-    // 3. Retry in English if still nothing (titre en VO)
-    if (!results.length) {
-      results = await searchTMDB(titre, 'en-US', annee)
-    }
-    if (!results.length) {
-      results = await searchTMDB(titre, 'en-US')
-    }
-
-    // Find best match within ±3 years
     let movie = results.length === 1 ? results[0] : findByYear(results, annee, 3)
 
+    // 2. Fallback OMDB (données IMDB) si TMDB ne trouve rien
     if (!movie) {
-      return { ok: false, error: `Film introuvable sur TMDB pour "${titre}" (${annee}). Vérifiez le titre et l'année (±3 ans acceptés).` }
+      const omdb = await searchOMDB(titre, annee)
+      if (!omdb.found) {
+        return { ok: false, error: `Film introuvable sur TMDB/IMDB pour "${titre}" (${annee}). Vérifiez le titre et l'année.` }
+      }
+      // Essayer de retrouver le film sur TMDB via l'IMDB ID pour les certifications
+      if (omdb.imdbId) {
+        movie = await tmdbFindByImdbId(omdb.imdbId, key)
+      }
+      // Si TMDB n'a pas le film, on accepte quand même avec l'affiche OMDB
+      if (!movie) {
+        return { ok: true, posterUrl: omdb.posterUrl }
+      }
     }
 
     if (movie.adult) {
@@ -66,8 +111,6 @@ async function verifyWithTMDB(titre: string, annee: number): Promise<{
     const frEntry = relData.results?.find((r: any) => r.iso_3166_1 === 'FR')
     const usEntry = relData.results?.find((r: any) => r.iso_3166_1 === 'US')
     const cert = (frEntry || usEntry)?.release_dates?.find((d: any) => d.certification)?.certification ?? ''
-
-    // FR "18" = interdit -18 ans / US "NC-17" = adultes / US "R" = déconseillé -17 ans
     const flagged18 = ['18', 'NC-17', 'R'].includes(cert)
 
     const posterUrl = movie.poster_path
@@ -76,7 +119,6 @@ async function verifyWithTMDB(titre: string, annee: number): Promise<{
 
     return { ok: true, tmdbId: movie.id as number, flagged18, posterUrl }
   } catch {
-    // Network error → graceful degradation, don't block the user
     return { ok: true }
   }
 }
@@ -495,9 +537,24 @@ async function tmdbSearchMovie(titre: string, annee: number, key: string) {
   if (!results.length) results = await search('fr-FR')
   if (!results.length) results = await search('en-US', annee)
   if (!results.length) results = await search('en-US')
-  return results.find(
+
+  const tmdbMatch = results.find(
     (m: any) => Math.abs(parseInt(m.release_date?.slice(0, 4) ?? '0') - annee) <= 3
   ) ?? results[0] ?? null
+
+  if (tmdbMatch) return tmdbMatch
+
+  // Fallback OMDB → TMDB /find via IMDB ID
+  const omdb = await searchOMDB(titre, annee)
+  if (omdb.imdbId) {
+    const byImdb = await tmdbFindByImdbId(omdb.imdbId, key)
+    if (byImdb) return byImdb
+  }
+  // Dernier recours : retourner un objet minimal avec le poster OMDB
+  if (omdb.found && omdb.posterUrl) {
+    return { id: null, poster_path: null, _omdbPoster: omdb.posterUrl }
+  }
+  return null
 }
 
 export async function adminFetchFilmPoster(filmId: number) {
@@ -525,13 +582,16 @@ export async function adminFetchFilmPoster(filmId: number) {
       movie = await tmdbSearchMovie(film.titre, film.annee, key)
     }
 
-    if (!movie?.poster_path) return { error: 'Aucune affiche trouvée sur TMDB pour ce film.' }
+    const posterUrl = movie?.poster_path
+      ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+      : movie?._omdbPoster ?? null
 
-    const posterUrl = `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+    if (!posterUrl) return { error: 'Aucune affiche trouvée sur TMDB/IMDB pour ce film.' }
+
     const adminClient = createAdminClient()
     await adminClient.from('films').update({
       poster: posterUrl,
-      ...(movie.id && !film.tmdb_id ? { tmdb_id: movie.id } : {}),
+      ...(movie?.id && !film.tmdb_id ? { tmdb_id: movie.id } : {}),
     }).eq('id', filmId)
 
     revalidatePath('/films')
@@ -610,10 +670,13 @@ export async function adminRefreshMissingPosters() {
       } else {
         movie = await tmdbSearchMovie(film.titre, film.annee, key)
       }
-      if (movie?.poster_path) {
+      const poster = movie?.poster_path
+        ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+        : movie?._omdbPoster ?? null
+      if (poster) {
         await adminClient.from('films').update({
-          poster: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
-          ...(movie.id && !film.tmdb_id ? { tmdb_id: movie.id } : {}),
+          poster,
+          ...(movie?.id && !film.tmdb_id ? { tmdb_id: movie.id } : {}),
         }).eq('id', film.id)
         count++
       }
@@ -660,10 +723,13 @@ export async function adminForceRefreshAllPosters(fromId: number = 0) {
       } else {
         movie = await tmdbSearchMovie(film.titre, film.annee, key)
       }
-      if (movie?.poster_path) {
+      const poster = movie?.poster_path
+        ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+        : movie?._omdbPoster ?? null
+      if (poster) {
         await adminClient.from('films').update({
-          poster: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
-          ...(movie.id && !film.tmdb_id ? { tmdb_id: movie.id } : {}),
+          poster,
+          ...(movie?.id && !film.tmdb_id ? { tmdb_id: movie.id } : {}),
         }).eq('id', film.id)
         count++
       }
