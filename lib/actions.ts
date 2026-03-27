@@ -8,35 +8,49 @@ import { isMarathonLive, CONFIG } from '@/lib/config'
 // ── TMDB VERIFICATION ────────────────────────────────────────
 
 async function verifyWithTMDB(titre: string, annee: number): Promise<{
-  ok: boolean; error?: string; tmdbId?: number; flagged18?: boolean
+  ok: boolean; error?: string; tmdbId?: number; flagged18?: boolean; posterUrl?: string
 }> {
   const key = process.env.TMDB_API_KEY
   if (!key) return { ok: true }
 
-  try {
-    let searchRes = await fetch(
-      `https://api.themoviedb.org/3/search/movie?api_key=${key}&query=${encodeURIComponent(titre)}&year=${annee}&language=fr-FR`,
-      { cache: 'no-store' }
-    )
-    let searchData = await searchRes.json()
+  async function searchTMDB(query: string, lang: string, year?: number) {
+    const url = year
+      ? `https://api.themoviedb.org/3/search/movie?api_key=${key}&query=${encodeURIComponent(query)}&year=${year}&language=${lang}`
+      : `https://api.themoviedb.org/3/search/movie?api_key=${key}&query=${encodeURIComponent(query)}&language=${lang}`
+    const res = await fetch(url, { cache: 'no-store' })
+    const data = await res.json()
+    return data.results ?? []
+  }
 
-    // Retry without year if no results (release year vs production year)
-    if (!searchData.results?.length) {
-      searchRes = await fetch(
-        `https://api.themoviedb.org/3/search/movie?api_key=${key}&query=${encodeURIComponent(titre)}&language=fr-FR`,
-        { cache: 'no-store' }
-      )
-      searchData = await searchRes.json()
-      const match = searchData.results?.find(
-        (m: any) => Math.abs(parseInt(m.release_date?.slice(0, 4) ?? '0') - annee) <= 2
-      )
-      if (!match) {
-        return { ok: false, error: `Film introuvable sur TMDB pour "${titre}" (${annee}). Vérifiez le titre et l'année.` }
-      }
-      searchData = { results: [match] }
+  function findByYear(results: any[], annee: number, tolerance = 3) {
+    return results.find(
+      (m: any) => Math.abs(parseInt(m.release_date?.slice(0, 4) ?? '0') - annee) <= tolerance
+    )
+  }
+
+  try {
+    // 1. Search with year in French
+    let results = await searchTMDB(titre, 'fr-FR', annee)
+
+    // 2. Retry without year in French (±3 ans de tolérance)
+    if (!results.length) {
+      results = await searchTMDB(titre, 'fr-FR')
     }
 
-    const movie = searchData.results[0]
+    // 3. Retry in English if still nothing (titre en VO)
+    if (!results.length) {
+      results = await searchTMDB(titre, 'en-US', annee)
+    }
+    if (!results.length) {
+      results = await searchTMDB(titre, 'en-US')
+    }
+
+    // Find best match within ±3 years
+    let movie = results.length === 1 ? results[0] : findByYear(results, annee, 3)
+
+    if (!movie) {
+      return { ok: false, error: `Film introuvable sur TMDB pour "${titre}" (${annee}). Vérifiez le titre et l'année (±3 ans acceptés).` }
+    }
 
     if (movie.adult) {
       return { ok: false, error: 'Ce film contient du contenu adulte explicite et ne peut pas être ajouté.' }
@@ -56,7 +70,11 @@ async function verifyWithTMDB(titre: string, annee: number): Promise<{
     // FR "18" = interdit -18 ans / US "NC-17" = adultes / US "R" = déconseillé -17 ans
     const flagged18 = ['18', 'NC-17', 'R'].includes(cert)
 
-    return { ok: true, tmdbId: movie.id as number, flagged18 }
+    const posterUrl = movie.poster_path
+      ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+      : undefined
+
+    return { ok: true, tmdbId: movie.id as number, flagged18, posterUrl }
   } catch {
     // Network error → graceful degradation, don't block the user
     return { ok: true }
@@ -215,6 +233,40 @@ export async function voteDuel(duelId: number, filmChoice: number) {
 
 // ── FILMS ────────────────────────────────────────────────────
 
+export async function updateFilm(filmId: number, updates: {
+  genre?: string; titre?: string; annee?: number
+  realisateur?: string; poster?: string | null; saison?: number; sousgenre?: string | null
+}) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+
+  const [{ data: profile }, { data: film }] = await Promise.all([
+    supabase.from('profiles').select('is_admin').eq('id', user.id).single(),
+    supabase.from('films').select('added_by').eq('id', filmId).single(),
+  ])
+
+  if (!film) return { error: 'Film introuvable.' }
+  const isAdmin = !!profile?.is_admin
+  const isAuthor = film.added_by === user.id
+  if (!isAdmin && !isAuthor) return { error: 'Non autorisé.' }
+
+  // Authors can only update genre
+  const allowed = isAdmin
+    ? updates
+    : { genre: updates.genre }
+
+  const clean = Object.fromEntries(Object.entries(allowed).filter(([, v]) => v !== undefined))
+  if (!Object.keys(clean).length) return { error: 'Aucune modification.' }
+
+  const { error } = await supabase.from('films').update(clean).eq('id', filmId)
+  if (error) return { error: error.message }
+
+  revalidatePath('/films')
+  revalidatePath('/admin')
+  return { success: true }
+}
+
 export async function addFilm(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -224,7 +276,7 @@ export async function addFilm(formData: FormData) {
   const annee = parseInt(formData.get('annee') as string)
   const realisateur = (formData.get('realisateur') as string).trim()
   const genre = formData.get('genre') as string
-  const poster = (formData.get('poster') as string)?.trim() || null
+  const manualPoster = (formData.get('poster') as string)?.trim() || null
 
   if (!titre || !annee || !realisateur) return { error: 'Champs requis manquants.' }
   if (annee < 1888 || annee > 2030) return { error: 'Année invalide.' }
@@ -242,6 +294,9 @@ export async function addFilm(formData: FormData) {
   // TMDB verification: existence + adult content check
   const tmdb = await verifyWithTMDB(titre, annee)
   if (!tmdb.ok) return { error: tmdb.error }
+
+  // Use manual poster URL if provided, otherwise use TMDB poster
+  const poster = manualPoster || tmdb.posterUrl || null
 
   const saison = isMarathonLive() ? CONFIG.SAISON_NUMERO + 1 : CONFIG.SAISON_NUMERO
 
@@ -423,4 +478,201 @@ export async function adminApproveFlaggedFilm(filmId: number) {
   revalidatePath('/admin')
   revalidatePath('/films')
   return { success: true }
+}
+
+// ── POSTER MANAGEMENT ────────────────────────────────────────
+
+async function tmdbSearchMovie(titre: string, annee: number, key: string) {
+  async function search(lang: string, year?: number) {
+    const url = year
+      ? `https://api.themoviedb.org/3/search/movie?api_key=${key}&query=${encodeURIComponent(titre)}&year=${year}&language=${lang}`
+      : `https://api.themoviedb.org/3/search/movie?api_key=${key}&query=${encodeURIComponent(titre)}&language=${lang}`
+    const res = await fetch(url, { cache: 'no-store' })
+    const data = await res.json()
+    return (data.results ?? []) as any[]
+  }
+  let results = await search('fr-FR', annee)
+  if (!results.length) results = await search('fr-FR')
+  if (!results.length) results = await search('en-US', annee)
+  if (!results.length) results = await search('en-US')
+  return results.find(
+    (m: any) => Math.abs(parseInt(m.release_date?.slice(0, 4) ?? '0') - annee) <= 3
+  ) ?? results[0] ?? null
+}
+
+export async function adminFetchFilmPoster(filmId: number) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Non autorisé.' }
+
+  const { data: film } = await supabase.from('films').select('titre, annee, tmdb_id').eq('id', filmId).single()
+  if (!film) return { error: 'Film introuvable.' }
+
+  const key = process.env.TMDB_API_KEY
+  if (!key) return { error: 'Clé TMDB_API_KEY manquante dans les variables d\'environnement.' }
+
+  try {
+    let movie: any = null
+    if (film.tmdb_id) {
+      const res = await fetch(
+        `https://api.themoviedb.org/3/movie/${film.tmdb_id}?api_key=${key}&language=fr-FR`,
+        { cache: 'no-store' }
+      )
+      movie = await res.json()
+    } else {
+      movie = await tmdbSearchMovie(film.titre, film.annee, key)
+    }
+
+    if (!movie?.poster_path) return { error: 'Aucune affiche trouvée sur TMDB pour ce film.' }
+
+    const posterUrl = `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+    const adminClient = createAdminClient()
+    await adminClient.from('films').update({
+      poster: posterUrl,
+      ...(movie.id && !film.tmdb_id ? { tmdb_id: movie.id } : {}),
+    }).eq('id', filmId)
+
+    revalidatePath('/films')
+    revalidatePath('/admin')
+    return { success: true, posterUrl }
+  } catch {
+    return { error: 'Erreur réseau lors de la recherche TMDB.' }
+  }
+}
+
+export async function adminUploadFilmPoster(filmId: number, formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Non autorisé.' }
+
+  const file = formData.get('poster') as File
+  if (!file || !file.size) return { error: 'Aucun fichier sélectionné.' }
+  if (file.size > 5 * 1024 * 1024) return { error: 'Image trop lourde (max 5 Mo).' }
+
+  const adminClient = createAdminClient()
+
+  // Create bucket if it doesn't exist yet
+  await adminClient.storage.createBucket('posters', { public: true }).catch(() => {})
+
+  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+  const filename = `film-${filmId}-${Date.now()}.${ext}`
+  const bytes = await file.arrayBuffer()
+
+  const { error: uploadError } = await adminClient.storage
+    .from('posters')
+    .upload(filename, bytes, { contentType: file.type, upsert: true })
+
+  if (uploadError) return { error: uploadError.message }
+
+  const { data: { publicUrl } } = adminClient.storage.from('posters').getPublicUrl(filename)
+
+  await adminClient.from('films').update({ poster: publicUrl }).eq('id', filmId)
+
+  revalidatePath('/films')
+  revalidatePath('/admin')
+  return { success: true, posterUrl: publicUrl }
+}
+
+export async function adminRefreshMissingPosters() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Non autorisé.' }
+
+  const key = process.env.TMDB_API_KEY
+  if (!key) return { error: 'Clé TMDB_API_KEY manquante dans les variables d\'environnement.' }
+
+  const { data: films } = await supabase
+    .from('films')
+    .select('id, titre, annee, tmdb_id')
+    .is('poster', null)
+    .limit(30)
+
+  if (!films?.length) return { success: true, count: 0 }
+
+  const adminClient = createAdminClient()
+  let count = 0
+
+  for (const film of films) {
+    try {
+      let movie: any = null
+      if (film.tmdb_id) {
+        const res = await fetch(
+          `https://api.themoviedb.org/3/movie/${film.tmdb_id}?api_key=${key}`,
+          { cache: 'no-store' }
+        )
+        movie = await res.json()
+      } else {
+        movie = await tmdbSearchMovie(film.titre, film.annee, key)
+      }
+      if (movie?.poster_path) {
+        await adminClient.from('films').update({
+          poster: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
+          ...(movie.id && !film.tmdb_id ? { tmdb_id: movie.id } : {}),
+        }).eq('id', film.id)
+        count++
+      }
+    } catch { /* skip */ }
+  }
+
+  revalidatePath('/films')
+  revalidatePath('/admin')
+  return { success: true, count }
+}
+
+export async function adminForceRefreshAllPosters(fromId: number = 0) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Non autorisé.' }
+
+  const key = process.env.TMDB_API_KEY
+  if (!key) return { error: 'Clé TMDB_API_KEY manquante dans les variables d\'environnement.' }
+
+  // Fetch next 50 films starting from fromId
+  const { data: films } = await supabase
+    .from('films')
+    .select('id, titre, annee, tmdb_id')
+    .gt('id', fromId)
+    .order('id')
+    .limit(50)
+
+  if (!films?.length) return { success: true, count: 0, nextId: null }
+
+  const adminClient = createAdminClient()
+  let count = 0
+
+  for (const film of films) {
+    try {
+      let movie: any = null
+      if (film.tmdb_id) {
+        const res = await fetch(
+          `https://api.themoviedb.org/3/movie/${film.tmdb_id}?api_key=${key}`,
+          { cache: 'no-store' }
+        )
+        movie = await res.json()
+      } else {
+        movie = await tmdbSearchMovie(film.titre, film.annee, key)
+      }
+      if (movie?.poster_path) {
+        await adminClient.from('films').update({
+          poster: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
+          ...(movie.id && !film.tmdb_id ? { tmdb_id: movie.id } : {}),
+        }).eq('id', film.id)
+        count++
+      }
+    } catch { /* skip */ }
+  }
+
+  const nextId = films.length === 50 ? films[films.length - 1].id : null
+
+  revalidatePath('/films')
+  revalidatePath('/admin')
+  return { success: true, count, nextId }
 }

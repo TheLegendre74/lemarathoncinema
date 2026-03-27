@@ -1,11 +1,88 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm } from '@/lib/actions'
+import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, updateFilm } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
 import { CONFIG } from '@/lib/config'
 import type { Film, Profile } from '@/lib/supabase/types'
+
+const GENRES = ['Action','Animation','Aventure','Comédie','Crime','Drame','Fantaisie','Guerre','Horreur','Policier','SF','Thriller','Western']
+
+function EditFilmModal({ film, onClose, onSave }: {
+  film: Film
+  onClose: () => void
+  onSave: (updates: { titre?: string; annee?: number; realisateur?: string; genre?: string; sousgenre?: string | null; poster?: string | null; saison?: number }) => Promise<boolean>
+}) {
+  const [titre, setTitre] = useState(film.titre)
+  const [annee, setAnnee] = useState(String(film.annee))
+  const [realisateur, setRealisateur] = useState(film.realisateur)
+  const [genre, setGenre] = useState(film.genre)
+  const [sousgenre, setSousgenre] = useState(film.sousgenre ?? '')
+  const [poster, setPoster] = useState(film.poster ?? '')
+  const [saison, setSaison] = useState(String(film.saison))
+  const [loading, setLoading] = useState(false)
+  const [err, setErr] = useState('')
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setErr(''); setLoading(true)
+    const ok = await onSave({
+      titre: titre.trim(),
+      annee: parseInt(annee),
+      realisateur: realisateur.trim(),
+      genre,
+      sousgenre: sousgenre.trim() || null,
+      poster: poster.trim() || null,
+      saison: parseInt(saison),
+    })
+    setLoading(false)
+    if (!ok) setErr('Une erreur est survenue.')
+  }
+
+  const fieldStyle: React.CSSProperties = { width: '100%', background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.55rem .8rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.88rem' }
+
+  return (
+    <div className="modal-wrap" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal" style={{ maxWidth: 500 }}>
+        <div style={{ padding: '2rem 1.5rem' }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', marginBottom: '1.2rem' }}>
+            ✏️ Modifier — {film.titre}
+          </div>
+          <form onSubmit={handleSubmit}>
+            <div className="field"><label>Titre</label><input style={fieldStyle} value={titre} onChange={e => setTitre(e.target.value)} required /></div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.7rem' }}>
+              <div className="field"><label>Année</label><input style={fieldStyle} type="number" value={annee} onChange={e => setAnnee(e.target.value)} min="1888" max="2030" required /></div>
+              <div className="field">
+                <label>Saison</label>
+                <select style={fieldStyle} value={saison} onChange={e => setSaison(e.target.value)}>
+                  <option value="1">Saison 1</option>
+                  <option value="2">Saison 2</option>
+                </select>
+              </div>
+            </div>
+            <div className="field"><label>Réalisateur</label><input style={fieldStyle} value={realisateur} onChange={e => setRealisateur(e.target.value)} required /></div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.7rem' }}>
+              <div className="field">
+                <label>Genre</label>
+                <select style={fieldStyle} value={genre} onChange={e => setGenre(e.target.value)}>
+                  {GENRES.map(g => <option key={g}>{g}</option>)}
+                </select>
+              </div>
+              <div className="field"><label>Sous-genre</label><input style={fieldStyle} value={sousgenre} onChange={e => setSousgenre(e.target.value)} placeholder="Optionnel" /></div>
+            </div>
+            <div className="field"><label>URL Affiche</label><input style={fieldStyle} value={poster} onChange={e => setPoster(e.target.value)} placeholder="https://image.tmdb.org/..." /></div>
+            {err && <div style={{ color: 'var(--red)', fontSize: '.78rem', marginBottom: '.6rem' }}>{err}</div>}
+            <div style={{ display: 'flex', gap: '.7rem', marginTop: '.5rem' }}>
+              <button type="button" className="btn btn-outline" onClick={onClose} style={{ flex: 1 }}>Annuler</button>
+              <button type="submit" className="btn btn-gold" disabled={loading} style={{ flex: 1 }}>{loading ? '…' : 'Enregistrer'}</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 interface Props {
   profile: Profile
@@ -21,6 +98,10 @@ interface Props {
 export default function AdminClient({ profile, films, users, duels, weekFilm, totalUsers, watchCountMap, flaggedFilms }: Props) {
   const { addToast } = useToast()
   const router = useRouter()
+  const [posterLoading, setPosterLoading] = useState<Record<number, boolean>>({})
+  const [editFilm, setEditFilm] = useState<Film | null>(null)
+  const [allPostersNextId, setAllPostersNextId] = useState<number | null>(0)
+  const [allPostersRunning, setAllPostersRunning] = useState(false)
 
   function getWatchPct(filmId: number) {
     if (!totalUsers) return 0
@@ -82,6 +163,51 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
     const result = await adminCleanDuels()
     if (result.error) addToast(result.error, '⚠️')
     else { addToast('Tous les duels ont été supprimés', '🗑️'); router.refresh() }
+  }
+
+  async function fetchPoster(filmId: number, titre: string) {
+    setPosterLoading(l => ({ ...l, [filmId]: true }))
+    const result = await adminFetchFilmPoster(filmId)
+    setPosterLoading(l => ({ ...l, [filmId]: false }))
+    if (result.error) addToast(result.error, '⚠️')
+    else { addToast(`Affiche de "${titre}" récupérée depuis TMDB`, '🖼️'); router.refresh() }
+  }
+
+  async function uploadPoster(filmId: number, titre: string, file: File | undefined) {
+    if (!file) return
+    setPosterLoading(l => ({ ...l, [filmId]: true }))
+    const fd = new FormData()
+    fd.append('poster', file)
+    const result = await adminUploadFilmPoster(filmId, fd)
+    setPosterLoading(l => ({ ...l, [filmId]: false }))
+    if (result.error) addToast(result.error, '⚠️')
+    else { addToast(`Affiche de "${titre}" mise à jour`, '🖼️'); router.refresh() }
+  }
+
+  async function refreshAllPosters() {
+    addToast('Recherche en cours…', '🔄')
+    const result = await adminRefreshMissingPosters()
+    if (result.error) addToast(result.error, '⚠️')
+    else if (result.count === 0) addToast('Toutes les affiches sont déjà renseignées', 'ℹ️')
+    else { addToast(`${result.count} affiche(s) récupérée(s) !`, '🖼️'); router.refresh() }
+  }
+
+  async function forceRefreshAll() {
+    if (allPostersNextId === null) { addToast('Tous les films ont été traités !', '✅'); return }
+    setAllPostersRunning(true)
+    addToast('Mise à jour en cours (lot de 50)…', '🔄')
+    const result = await adminForceRefreshAllPosters(allPostersNextId)
+    setAllPostersRunning(false)
+    if (result.error) { addToast(result.error, '⚠️'); return }
+    const next = result.nextId ?? null
+    setAllPostersNextId(next)
+    addToast(
+      next === null
+        ? `✅ Terminé ! ${result.count} affiches mises à jour dans ce lot.`
+        : `${result.count} affiches mises à jour — cliquer à nouveau pour le lot suivant`,
+      '🖼️'
+    )
+    router.refresh()
   }
 
   async function approveFilm(filmId: number, titre: string) {
@@ -224,17 +350,85 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
 
       {/* Films */}
       <Section icon="🎥" title={`Films (${films.length})`}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '.35rem', maxHeight: 350, overflowY: 'auto' }}>
-          {films.map(f => (
-            <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: '.7rem', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.5rem .85rem', flexWrap: 'wrap' }}>
-              <span style={{ flex: 1, fontSize: '.82rem' }}>{f.titre} <span style={{ color: 'var(--text3)', fontSize: '.7rem' }}>({f.annee})</span></span>
-              <span style={{ fontSize: '.68rem', color: f.saison === 2 ? 'var(--red)' : 'var(--text3)', border: '1px solid var(--border)', borderRadius: 99, padding: '1px 6px' }}>S{f.saison}</span>
-              <span style={{ fontSize: '.72rem', color: 'var(--text2)' }}>{getWatchPct(f.id)}% vus</span>
-              <button className="btn btn-red" style={{ fontSize: '.68rem', padding: '.2rem .5rem' }} onClick={() => deleteFilm(f.id, f.titre)}>✕</button>
-            </div>
-          ))}
+        <div style={{ display: 'flex', gap: '.6rem', flexWrap: 'wrap', marginBottom: '.8rem' }}>
+          <button className="btn btn-outline" style={{ fontSize: '.78rem' }} onClick={refreshAllPosters}>
+            🔄 Affiches manquantes (lot de 30)
+          </button>
+          <button
+            className="btn btn-outline"
+            style={{ fontSize: '.78rem' }}
+            disabled={allPostersRunning || allPostersNextId === null}
+            onClick={forceRefreshAll}
+          >
+            {allPostersRunning ? '…' : allPostersNextId === null ? '✅ Tout traité' : '🔄 Tout rafraîchir depuis TMDB (lot de 50)'}
+          </button>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '.35rem', maxHeight: 400, overflowY: 'auto' }}>
+          {films.map(f => {
+            const loading = posterLoading[f.id]
+            return (
+              <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: '.6rem', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.4rem .7rem', flexWrap: 'wrap' }}>
+                {/* Miniature affiche */}
+                <div style={{ width: 28, height: 40, flexShrink: 0, borderRadius: 3, overflow: 'hidden', background: 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.9rem' }}>
+                  {f.poster
+                    ? <img src={f.poster} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : '🎬'}
+                </div>
+                <span style={{ flex: 1, fontSize: '.82rem' }}>{f.titre} <span style={{ color: 'var(--text3)', fontSize: '.7rem' }}>({f.annee})</span></span>
+                <span style={{ fontSize: '.68rem', color: f.saison === 2 ? 'var(--red)' : 'var(--text3)', border: '1px solid var(--border)', borderRadius: 99, padding: '1px 6px' }}>S{f.saison}</span>
+                <span style={{ fontSize: '.72rem', color: 'var(--text2)' }}>{getWatchPct(f.id)}% vus</span>
+                {/* Bouton TMDB */}
+                <button
+                  className="btn btn-outline"
+                  style={{ fontSize: '.65rem', padding: '.18rem .45rem' }}
+                  disabled={loading}
+                  onClick={() => fetchPoster(f.id, f.titre)}
+                  title="Récupérer l'affiche depuis TMDB"
+                >
+                  {loading ? '…' : '🔄 TMDB'}
+                </button>
+                {/* Bouton upload PC */}
+                <label style={{ cursor: 'pointer', display: 'inline-block' }} title="Uploader une affiche depuis votre PC">
+                  <span className="btn btn-outline" style={{ fontSize: '.65rem', padding: '.18rem .45rem', pointerEvents: loading ? 'none' : 'auto', opacity: loading ? .5 : 1 }}>
+                    📁 PC
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={e => uploadPoster(f.id, f.titre, e.target.files?.[0])}
+                  />
+                </label>
+                <button
+                  className="btn btn-outline"
+                  style={{ fontSize: '.65rem', padding: '.18rem .45rem' }}
+                  onClick={() => setEditFilm(f)}
+                  title="Modifier ce film"
+                >
+                  ✏️
+                </button>
+                <button className="btn btn-red" style={{ fontSize: '.65rem', padding: '.18rem .45rem' }} onClick={() => deleteFilm(f.id, f.titre)}>✕</button>
+              </div>
+            )
+          })}
         </div>
       </Section>
+
+      {/* Edit film modal */}
+      {editFilm && (
+        <EditFilmModal
+          film={editFilm}
+          onClose={() => setEditFilm(null)}
+          onSave={async (updates) => {
+            const result = await updateFilm(editFilm.id, updates)
+            if (result.error) { addToast(result.error, '⚠️'); return false }
+            addToast(`"${editFilm.titre}" mis à jour`, '✅')
+            setEditFilm(null)
+            router.refresh()
+            return true
+          }}
+        />
+      )}
     </div>
   )
 }

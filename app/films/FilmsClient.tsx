@@ -5,7 +5,7 @@ import Image from 'next/image'
 import Poster from '@/components/Poster'
 import Forum from '@/components/Forum'
 import { useToast } from '@/components/ToastProvider'
-import { toggleWatched, upsertRating, addFilm } from '@/lib/actions'
+import { toggleWatched, upsertRating, addFilm, updateFilm } from '@/lib/actions'
 import { getStreamingPlatforms, CONFIG } from '@/lib/config'
 import { useRouter } from 'next/navigation'
 import type { Film, Profile } from '@/lib/supabase/types'
@@ -79,8 +79,12 @@ function FilmModal({ film, profile, isWatched, myRating, watchPct, ratingScores,
 }) {
   const [tab, setTab] = useState<'info' | 'streaming' | 'forum'>('info')
   const [hov, setHov] = useState(0)
+  const [editingGenre, setEditingGenre] = useState(false)
+  const [genreVal, setGenreVal] = useState(film.genre)
   const { addToast } = useToast()
   const router = useRouter()
+
+  const isAuthor = film.added_by === profile.id
   const avg = avgRating(ratingScores)
   const platforms = getStreamingPlatforms(film.id, film.titre)
   const typeLabel: Record<string, string> = { svod: 'Abonnement', tvod: 'Location/Achat', free: 'Gratuit légal' }
@@ -134,6 +138,14 @@ function FilmModal({ film, profile, isWatched, myRating, watchPct, ratingScores,
   async function handleRate(score: number) {
     await upsertRating(film.id, score)
     addToast(`Note ${score}/10 enregistrée`, '⭐')
+    onRefresh()
+  }
+
+  async function handleSaveGenre() {
+    const result = await updateFilm(film.id, { genre: genreVal })
+    if (result.error) { addToast(result.error, '⚠️'); return }
+    addToast('Genre mis à jour', '✅')
+    setEditingGenre(false)
     onRefresh()
   }
 
@@ -211,8 +223,34 @@ function FilmModal({ film, profile, isWatched, myRating, watchPct, ratingScores,
                 <div className="expbar-fill" style={{ width: `${watchPct}%`, height: 6, background: watchPct >= CONFIG.SEUIL_MAJORITY ? 'var(--text3)' : undefined }} />
               </div>
               {watchPct >= CONFIG.SEUIL_MAJORITY && (
-                <div style={{ fontSize: '.78rem', color: 'var(--text2)', background: 'rgba(255,255,255,.04)', borderRadius: 'var(--r)', padding: '.6rem .8rem' }}>
+                <div style={{ fontSize: '.78rem', color: 'var(--text2)', background: 'rgba(255,255,255,.04)', borderRadius: 'var(--r)', padding: '.6rem .8rem', marginBottom: '.8rem' }}>
                   ⚠️ Plus de {CONFIG.SEUIL_MAJORITY}% des joueurs ont vu ce film — il est grisé et exclu des duels.
+                </div>
+              )}
+              {isAuthor && (
+                <div style={{ marginTop: '.8rem', borderTop: '1px solid var(--border)', paddingTop: '.8rem' }}>
+                  <div style={{ fontSize: '.68rem', color: 'var(--text3)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '.5rem' }}>
+                    Tu as proposé ce film
+                  </div>
+                  {editingGenre ? (
+                    <div style={{ display: 'flex', gap: '.5rem', alignItems: 'center' }}>
+                      <select
+                        value={genreVal}
+                        onChange={e => setGenreVal(e.target.value)}
+                        style={{ flex: 1, background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.5rem .7rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.85rem' }}
+                      >
+                        {['Action','Animation','Aventure','Comédie','Crime','Drame','Fantaisie','Guerre','Horreur','Policier','SF','Thriller','Western'].map(g => (
+                          <option key={g}>{g}</option>
+                        ))}
+                      </select>
+                      <button className="btn btn-gold" style={{ fontSize: '.78rem', padding: '.4rem .75rem' }} onClick={handleSaveGenre}>Sauvegarder</button>
+                      <button className="btn btn-outline" style={{ fontSize: '.78rem', padding: '.4rem .75rem' }} onClick={() => { setEditingGenre(false); setGenreVal(film.genre) }}>Annuler</button>
+                    </div>
+                  ) : (
+                    <button className="btn btn-outline" style={{ fontSize: '.78rem' }} onClick={() => setEditingGenre(true)}>
+                      ✏️ Modifier le genre
+                    </button>
+                  )}
                 </div>
               )}
             </div>
