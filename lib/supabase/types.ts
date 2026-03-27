@@ -174,6 +174,19 @@ export type Database = {
         }
         Relationships: []
       }
+      discovered_eggs: {
+        Row: {
+          user_id: string
+          egg_id: string
+          found_at: string
+        }
+        Insert: {
+          user_id: string
+          egg_id: string
+        }
+        Update: Record<string, never>
+        Relationships: []
+      }
       reports: {
         Row: {
           id: string

@@ -5,7 +5,7 @@ import Image from 'next/image'
 import Poster from '@/components/Poster'
 import Forum from '@/components/Forum'
 import { useToast } from '@/components/ToastProvider'
-import { toggleWatched, upsertRating, addFilm, updateFilm, reportFilm } from '@/lib/actions'
+import { toggleWatched, upsertRating, addFilm, updateFilm, reportFilm, discoverEgg } from '@/lib/actions'
 import { getStreamingPlatforms, CONFIG } from '@/lib/config'
 import { useRouter } from 'next/navigation'
 import type { Film, Profile } from '@/lib/supabase/types'
@@ -109,6 +109,7 @@ function FilmModal({ film, profile, isWatched, myRating, watchPct, ratingScores,
     if (n >= 5) {
       setInceptionTilt(true)
       setInceptionClicks(0)
+      discoverEgg('inception')
       document.documentElement.style.transition = 'transform 1.6s ease'
       document.documentElement.style.transform  = 'rotate(45deg)'
       setTimeout(() => {
@@ -127,6 +128,7 @@ function FilmModal({ film, profile, isWatched, myRating, watchPct, ratingScores,
     idleTimerRef.current = setTimeout(() => {
       setGodfatherOverlay(true)
       playGodfatherTheme()
+      discoverEgg('godfather')
     }, 30_000)
     return () => { if (idleTimerRef.current) clearTimeout(idleTimerRef.current) }
   }, [isGodfather])
@@ -436,6 +438,7 @@ export default function FilmsClient({ films, profile, watchedIds, myRatings, wat
         sharkTriggered.current = true
         setSharkVisible(true)
         playJawsTheme()
+        discoverEgg('shark')
         setTimeout(() => { setSharkVisible(false); sharkTriggered.current = false }, 5000)
       }
     }

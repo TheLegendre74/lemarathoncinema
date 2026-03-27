@@ -14,17 +14,29 @@ interface ForumProps {
 }
 
 // ─── FIGHT CLUB ─────────────────────────────────────────────────────────────
-function FightClubRule({ rule, onClose }: { rule: 1 | 2; onClose: () => void }) {
+const FC_RULES: Record<number, { title: string; text: string }> = {
+  1: { title: 'Règle n°1', text: 'On ne parle pas du Fight Club.' },
+  2: { title: 'Règle n°2', text: 'On ne parle pas du Fight Club.' },
+  3: { title: 'Règle n°3', text: 'Quelqu\'un crie stop, quelqu\'un s\'écroule ou n\'en peut plus — le combat est terminé.' },
+}
+
+function FightClubRule({ rule, onClose }: { rule: 1 | 2 | 3; onClose: () => void }) {
+  const { title, text } = FC_RULES[rule]
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.88)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-      <div style={{ textAlign: 'center', animation: 'ee-rule-in .35s ease' }}>
+      <div style={{ textAlign: 'center', animation: 'ee-rule-in .35s ease', maxWidth: 560, padding: '0 2rem' }}>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem,6vw,3.5rem)', color: '#fff', textShadow: '0 0 40px rgba(255,255,255,.25)', lineHeight: 1.2 }}>
-          Règle n°{rule}
+          {title}
         </div>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.2rem,3.5vw,2rem)', color: 'var(--red)', marginTop: '1rem', textShadow: '0 0 25px rgba(232,90,90,.6)' }}>
-          On ne parle pas du Fight Club.
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1rem,3vw,1.7rem)', color: 'var(--red)', marginTop: '1rem', textShadow: '0 0 25px rgba(232,90,90,.6)', lineHeight: 1.4 }}>
+          {text}
         </div>
-        <div style={{ color: 'var(--text3)', fontSize: '.75rem', marginTop: '2rem' }}>— Cliquer pour fermer —</div>
+        {rule === 3 && (
+          <div style={{ color: 'var(--text2)', fontSize: '.82rem', marginTop: '1.2rem', fontStyle: 'italic' }}>
+            Tu insistes encore ? Le combat commence…
+          </div>
+        )}
+        <div style={{ color: 'var(--text3)', fontSize: '.75rem', marginTop: '1.5rem' }}>— Cliquer pour fermer —</div>
       </div>
     </div>
   )

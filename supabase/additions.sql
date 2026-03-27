@@ -20,6 +20,17 @@ create policy "Report lisible par son auteur"    on public.reports for select to
 create policy "Report lisible par admin"         on public.reports for select to authenticated using (exists (select 1 from public.profiles where id = auth.uid() and is_admin));
 create policy "Report modifiable par admin"      on public.reports for update to authenticated using (exists (select 1 from public.profiles where id = auth.uid() and is_admin));
 
+-- ─── DISCOVERED_EGGS (easter eggs découverts) ────────────────
+create table if not exists public.discovered_eggs (
+  user_id  uuid references public.profiles(id) on delete cascade not null,
+  egg_id   text not null,
+  found_at timestamptz default now() not null,
+  primary key (user_id, egg_id)
+);
+alter table public.discovered_eggs enable row level security;
+create policy "Egg lisible par son owner"    on public.discovered_eggs for select to authenticated using (user_id = auth.uid());
+create policy "Egg inserable par son owner"  on public.discovered_eggs for insert to authenticated with check (user_id = auth.uid());
+
 -- ─── SITE_CONFIG (configuration dynamique) ───────────────────
 create table if not exists public.site_config (
   key         text primary key,

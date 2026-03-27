@@ -22,6 +22,7 @@ export default function Sidebar({ profile }: SidebarProps) {
     { href: '/notes',       icon: '📊', label: 'Classement films' },
     { href: '/classement',  icon: '🏆', label: 'Classement joueurs' },
     { href: '/profil',      icon: '👤', label: 'Mon profil' },
+    { href: '/easter-eggs', icon: '🥚', label: 'Easter Eggs' },
     ...(profile.is_admin ? [{ href: '/admin', icon: '🔧', label: 'Administration' }] : []),
   ]
 

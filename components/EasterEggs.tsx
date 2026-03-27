@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { discoverEgg } from '@/lib/actions'
 
 // ─── ANIMATIONS (partagées avec Forum et FilmsClient) ───────────────────────
 const EE_STYLES = `
@@ -21,6 +22,15 @@ const EE_STYLES = `
   @keyframes ee-dream-msg { from { opacity:0; transform:rotate(-45deg) scale(.7); } to { opacity:1; transform:rotate(-45deg) scale(1); } }
   @keyframes ee-rule-in { 0% { opacity:0; transform:scale(1.3); } 100% { opacity:1; transform:scale(1); } }
   @keyframes ee-matrix-text { 0% { opacity:0; } 15% { opacity:1; } 80% { opacity:1; } 100% { opacity:0; } }
+  @keyframes ee-hal-eye { 0%,100% { transform:scale(1); } 50% { transform:scale(1.08); } }
+  @keyframes ee-hal-in { from { opacity:0; } to { opacity:1; } }
+  @keyframes ee-hal-out { from { opacity:1; } to { opacity:0; } }
+  @keyframes ee-nolan-spin { from { transform:translateX(-50%) rotate(0deg); } to { transform:translateX(-50%) rotate(360deg); } }
+  @keyframes ee-bond-iris-in { from { clip-path:circle(50% at 50% 50%); } to { clip-path:circle(0% at 30% 50%); } }
+  @keyframes ee-bond-in { from { opacity:0; } to { opacity:1; } }
+  @keyframes ee-bond-out { from { opacity:1; } to { opacity:0; } }
+  @keyframes ee-noctambule-in { from { opacity:0; transform:translateX(100px); } to { opacity:1; transform:translateX(0); } }
+  @keyframes ee-noctambule-out { from { opacity:1; } to { opacity:0; transform:translateX(100px); } }
 `
 
 // ─── MATRIX RAIN ────────────────────────────────────────────────────────────
@@ -201,6 +211,178 @@ function MarvinOverlay({ onDone, line1, line2 }: { onDone: () => void; line1: st
   )
 }
 
+// ─── HAL 9000 ────────────────────────────────────────────────────────────────
+function HalOverlay({ onDone }: { onDone: () => void }) {
+  const [leaving, setLeaving] = useState(false)
+
+  useEffect(() => {
+    const t1 = setTimeout(() => setLeaving(true), 5500)
+    const t2 = setTimeout(onDone, 6200)
+    return () => { clearTimeout(t1); clearTimeout(t2) }
+  }, [onDone])
+
+  return (
+    <div
+      onClick={() => { setLeaving(true); setTimeout(onDone, 700) }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: 'rgba(6,0,0,.92)', backdropFilter: 'blur(6px)',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        animation: leaving ? 'ee-hal-out .7s ease forwards' : 'ee-hal-in .5s ease',
+        cursor: 'pointer',
+      }}
+    >
+      {/* HAL eye */}
+      <div style={{
+        width: 140, height: 140, borderRadius: '50%',
+        background: 'radial-gradient(circle at 35% 35%, #ff9060 0%, #cc2200 40%, #880000 70%, #1a0000 100%)',
+        animation: 'ee-hal-pulse 2s ease-in-out infinite, ee-hal-eye 3s ease-in-out infinite',
+        marginBottom: '2rem',
+      }} />
+      <div style={{
+        fontFamily: 'monospace', color: '#ff4422', fontSize: 'clamp(.9rem,2.5vw,1.3rem)',
+        textAlign: 'center', lineHeight: 2, maxWidth: 480, padding: '0 2rem',
+        textShadow: '0 0 20px rgba(255,60,20,.6)',
+      }}>
+        <div>Je suis désolé, Dave.</div>
+        <div style={{ fontSize: '.85em', opacity: .75 }}>J'ai bien peur de ne pas pouvoir faire ça.</div>
+      </div>
+      <div style={{ marginTop: '2rem', fontSize: '.65rem', color: 'rgba(255,60,20,.4)', letterSpacing: '3px', textTransform: 'uppercase' }}>
+        HAL 9000 · Discovery One
+      </div>
+    </div>
+  )
+}
+
+// ─── NOLAN ───────────────────────────────────────────────────────────────────
+function NolanOverlay({ onDone }: { onDone: () => void }) {
+  const [leaving, setLeaving] = useState(false)
+
+  useEffect(() => {
+    const t1 = setTimeout(() => setLeaving(true), 5500)
+    const t2 = setTimeout(onDone, 6200)
+    return () => { clearTimeout(t1); clearTimeout(t2) }
+  }, [onDone])
+
+  return (
+    <div
+      onClick={() => { setLeaving(true); setTimeout(onDone, 700) }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: 'rgba(4,4,10,.95)', backdropFilter: 'blur(8px)',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        animation: leaving ? 'ee-hal-out .7s ease forwards' : 'ee-hal-in .5s ease',
+        cursor: 'pointer',
+      }}
+    >
+      {/* Spinning top (toupie d'Inception) */}
+      <div style={{
+        width: 60, height: 60, borderRadius: '50%',
+        border: '3px solid rgba(255,255,255,.15)',
+        borderTop: '3px solid rgba(255,255,255,.8)',
+        animation: 'ee-nolan-spin 1.2s linear infinite',
+        position: 'absolute', left: '50%', top: '30%',
+        marginLeft: -30,
+      }} />
+      <div style={{
+        fontFamily: 'var(--font-display)', color: '#fff',
+        fontSize: 'clamp(1.1rem,3vw,1.8rem)',
+        textAlign: 'center', lineHeight: 1.8, maxWidth: 520, padding: '0 2rem',
+        textShadow: '0 2px 40px rgba(255,255,255,.2)',
+      }}>
+        <div style={{ fontSize: '.6em', letterSpacing: '6px', textTransform: 'uppercase', color: 'rgba(255,255,255,.4)', marginBottom: '1.5rem' }}>
+          Christopher Nolan
+        </div>
+        "Le cinéma est la plus puissante<br />façon de partager un rêve."
+      </div>
+      <div style={{ marginTop: '2.5rem', fontSize: '.65rem', color: 'rgba(255,255,255,.2)', letterSpacing: '3px', textTransform: 'uppercase' }}>
+        Cliquer pour fermer
+      </div>
+    </div>
+  )
+}
+
+// ─── BOND ────────────────────────────────────────────────────────────────────
+function BondOverlay({ onDone }: { onDone: () => void }) {
+  const [phase, setPhase] = useState<'barrel'|'quote'|'leaving'>('barrel')
+
+  useEffect(() => {
+    const t1 = setTimeout(() => setPhase('quote'), 1800)
+    const t2 = setTimeout(() => setPhase('leaving'), 5500)
+    const t3 = setTimeout(onDone, 6200)
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
+  }, [onDone])
+
+  return (
+    <div
+      onClick={() => { setPhase('leaving'); setTimeout(onDone, 700) }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: phase === 'barrel' ? '#000' : 'rgba(4,4,12,.97)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        cursor: 'pointer',
+        animation: phase === 'leaving' ? 'ee-bond-out .7s ease forwards' : 'ee-bond-in .3s ease',
+      }}
+    >
+      {phase === 'barrel' && (
+        /* Gun barrel circle */
+        <div style={{
+          width: 180, height: 180, borderRadius: '50%',
+          border: '8px solid rgba(255,255,255,.08)',
+          boxShadow: '0 0 0 200vmax rgba(0,0,0,1)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#111', border: '3px solid rgba(255,255,255,.15)' }} />
+        </div>
+      )}
+      {phase === 'quote' && (
+        <div style={{ textAlign: 'center', padding: '0 2rem' }}>
+          <div style={{ fontSize: 'clamp(1.2rem,3vw,2rem)', fontFamily: 'var(--font-display)', color: '#fff', letterSpacing: '2px', marginBottom: '.5rem' }}>
+            Bond.
+          </div>
+          <div style={{ fontSize: 'clamp(1.5rem,4vw,2.8rem)', fontFamily: 'var(--font-display)', color: '#d4af37', letterSpacing: '1px' }}>
+            James Bond.
+          </div>
+          <div style={{ marginTop: '2rem', fontSize: '.75rem', color: 'rgba(255,255,255,.3)', letterSpacing: '4px', textTransform: 'uppercase' }}>
+            007 · Shaken, not stirred
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── NOCTAMBULE ──────────────────────────────────────────────────────────────
+function NoctambuleNotif({ onDone }: { onDone: () => void }) {
+  const [leaving, setLeaving] = useState(false)
+
+  useEffect(() => {
+    const t1 = setTimeout(() => setLeaving(true), 6000)
+    const t2 = setTimeout(onDone, 6800)
+    return () => { clearTimeout(t1); clearTimeout(t2) }
+  }, [onDone])
+
+  return (
+    <div style={{
+      position: 'fixed', bottom: '2rem', right: '2rem', zIndex: 9997,
+      background: 'rgba(8,8,20,.97)', border: '1px solid rgba(150,100,255,.25)',
+      borderRadius: 'var(--rl)', padding: '1rem 1.4rem', maxWidth: 300,
+      backdropFilter: 'blur(12px)',
+      animation: leaving ? 'ee-noctambule-out .7s ease forwards' : 'ee-noctambule-in .4s ease',
+    }}>
+      <div style={{ fontSize: '.65rem', color: 'rgba(150,100,255,.7)', letterSpacing: '2.5px', textTransform: 'uppercase', marginBottom: '.5rem' }}>
+        🌙 Mode Noctambule
+      </div>
+      <div style={{ color: 'var(--text)', fontSize: '.9rem', lineHeight: 1.5 }}>
+        Tu regardes des films à cette heure-ci ?
+      </div>
+      <div style={{ fontSize: '.75rem', color: 'var(--text3)', marginTop: '.4rem', fontStyle: 'italic' }}>
+        Les vrais cinéphiles ne dorment pas.
+      </div>
+    </div>
+  )
+}
+
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
 const KONAMI = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a']
 
@@ -222,12 +404,17 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
     marvinLine1: config.marvinLine1 ?? 'Encore un humain qui cherche la réponse à la question fondamentale sur la vie...',
     marvinLine2: config.marvinLine2 ?? "C'est 42. C'est pathétique.",
   }
-  const [showMatrix, setShowMatrix] = useState(false)
-  const [showJoker, setShowJoker] = useState(false)
-  const [showTars, setShowTars] = useState(false)
-  const [showMarvin, setShowMarvin] = useState(false)
+  const [showMatrix,     setShowMatrix]     = useState(false)
+  const [showJoker,      setShowJoker]      = useState(false)
+  const [showTars,       setShowTars]       = useState(false)
+  const [showMarvin,     setShowMarvin]     = useState(false)
+  const [showHal,        setShowHal]        = useState(false)
+  const [showNolan,      setShowNolan]      = useState(false)
+  const [showBond,       setShowBond]       = useState(false)
+  const [showNoctambule, setShowNoctambule] = useState(false)
   const keyBuf = useRef<string[]>([])
   const tarsShown = useRef(false)
+  const noctambuleShown = useRef(false)
 
   // Keyboard easter eggs
   useEffect(() => {
@@ -238,33 +425,68 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
       // Konami → Joker
       if (buf.slice(-10).join('|') === KONAMI.join('|')) {
         setShowJoker(true)
+        discoverEgg('joker')
         keyBuf.current = []
         return
       }
       // "red pill" → Matrix
       if (buf.slice(-8).join('').toLowerCase() === 'red pill') {
         setShowMatrix(true)
+        discoverEgg('matrix')
         keyBuf.current = []
         return
       }
       // "42" → Marvin (standalone: not sandwiched between digits)
       if (buf.slice(-2).join('') === '42' && !/\d/.test(buf.at(-3) ?? '')) {
         setShowMarvin(true)
+        discoverEgg('marvin')
+        return
+      }
+      // "hal" → HAL 9000
+      if (buf.slice(-3).join('').toLowerCase() === 'hal') {
+        setShowHal(true)
+        discoverEgg('hal')
+        keyBuf.current = []
+        return
+      }
+      // "nolan" → Nolan quote
+      if (buf.slice(-5).join('').toLowerCase() === 'nolan') {
+        setShowNolan(true)
+        discoverEgg('nolan')
+        keyBuf.current = []
+        return
+      }
+      // "bond" → Bond intro
+      if (buf.slice(-4).join('').toLowerCase() === 'bond') {
+        setShowBond(true)
+        discoverEgg('bond')
+        keyBuf.current = []
+        return
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  // 14:07 → TARS
+  // 14:07 → TARS | midnight → Noctambule
   useEffect(() => {
     const check = () => {
       const now = new Date()
-      if (now.getHours() === 14 && now.getMinutes() === 7 && !tarsShown.current) {
+      const h = now.getHours(), m = now.getMinutes()
+
+      if (h === 14 && m === 7 && !tarsShown.current) {
         tarsShown.current = true
         setShowTars(true)
+        discoverEgg('tars')
       }
-      if (now.getHours() === 0 && now.getMinutes() === 0) tarsShown.current = false
+      if (h === 0 && m === 0) tarsShown.current = false
+
+      if (h === 0 && m < 30 && !noctambuleShown.current) {
+        noctambuleShown.current = true
+        setShowNoctambule(true)
+        discoverEgg('noctambule')
+      }
+      if (h === 1) noctambuleShown.current = false
     }
     check()
     const id = setInterval(check, 30_000)
@@ -274,10 +496,14 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
   return (
     <>
       <style>{EE_STYLES}</style>
-      {showMatrix && <MatrixRain onDone={() => setShowMatrix(false)} line1={ee.matrixLine1} line2={ee.matrixLine2} line3={ee.matrixLine3} />}
-      {showJoker  && <JokerWalk  onDone={() => setShowJoker(false)}  phrase={ee.jokerPhrase} />}
-      {showTars   && <TarsNotif  onDone={() => setShowTars(false)}   line1={ee.tarsLine1} line2={ee.tarsLine2} />}
-      {showMarvin && <MarvinOverlay onDone={() => setShowMarvin(false)} line1={ee.marvinLine1} line2={ee.marvinLine2} />}
+      {showMatrix     && <MatrixRain    onDone={() => setShowMatrix(false)}     line1={ee.matrixLine1} line2={ee.matrixLine2} line3={ee.matrixLine3} />}
+      {showJoker      && <JokerWalk     onDone={() => setShowJoker(false)}      phrase={ee.jokerPhrase} />}
+      {showTars       && <TarsNotif     onDone={() => setShowTars(false)}       line1={ee.tarsLine1} line2={ee.tarsLine2} />}
+      {showMarvin     && <MarvinOverlay onDone={() => setShowMarvin(false)}     line1={ee.marvinLine1} line2={ee.marvinLine2} />}
+      {showHal        && <HalOverlay    onDone={() => setShowHal(false)} />}
+      {showNolan      && <NolanOverlay  onDone={() => setShowNolan(false)} />}
+      {showBond       && <BondOverlay   onDone={() => setShowBond(false)} />}
+      {showNoctambule && <NoctambuleNotif onDone={() => setShowNoctambule(false)} />}
     </>
   )
 }

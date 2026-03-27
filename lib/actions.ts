@@ -833,3 +833,15 @@ export async function adminForceRefreshAllPosters(fromId: number = 0) {
   revalidatePath('/admin')
   return { success: true, count, nextId }
 }
+
+// ── EASTER EGGS ───────────────────────────────────────────────
+
+export async function discoverEgg(eggId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  await supabase.from('discovered_eggs').upsert(
+    { user_id: user.id, egg_id: eggId },
+    { onConflict: 'user_id,egg_id', ignoreDuplicates: true }
+  )
+}
