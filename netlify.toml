@@ -2,5 +2,19 @@
   command = "npm run build"
   publish = ".next"
 
+[build.environment]
+  NEXT_PUBLIC_MARATHON_START = "2026-04-10T00:00:00"
+  NEXT_PUBLIC_SAISON_NUMERO = "1"
+  NEXT_PUBLIC_SAISON_LABEL = "Saison 1 · 2026"
+  NEXT_PUBLIC_SEANCE_JOUR = "Mercredi"
+  NEXT_PUBLIC_SEANCE_HEURE = "20h30"
+  NEXT_PUBLIC_FDLS_JOUR = "Vendredi"
+  NEXT_PUBLIC_FDLS_HEURE = "20h30"
+  NEXT_PUBLIC_SEUIL_MAJORITY = "60"
+  NEXT_PUBLIC_EXP_FILM = "5"
+  NEXT_PUBLIC_EXP_FDLS = "10"
+  NEXT_PUBLIC_EXP_DUEL_WIN = "15"
+  NEXT_PUBLIC_EXP_VOTE = "2"
+
 [[plugins]]
   package = "@netlify/plugin-nextjs"
