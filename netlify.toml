@@ -1,8 +1,10 @@
 [build]
-  command = "npm run build"
+  command = "npm ci && npm run build"
   publish = ".next"
 
 [build.environment]
+  NODE_VERSION = "20"
+  NEXT_TELEMETRY_DISABLED = "1"
   NEXT_PUBLIC_MARATHON_START = "2026-04-10T00:00:00"
   NEXT_PUBLIC_SAISON_NUMERO = "1"
   NEXT_PUBLIC_SAISON_LABEL = "Saison 1 · 2026"
