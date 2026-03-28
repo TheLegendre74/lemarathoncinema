@@ -171,6 +171,27 @@ function FilmModal({ film, profile, isWatched, myRating, watchPct, ratingScores,
         </div>
 
         <div style={{ padding: '1.5rem' }}>
+          {film.flagged_18plus && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '.6rem',
+              background: 'rgba(180,0,0,.12)',
+              border: '2px solid rgba(220,30,30,.6)',
+              borderRadius: 'var(--r)',
+              padding: '.75rem 1rem',
+              marginBottom: '1rem',
+              boxShadow: '0 0 16px rgba(220,30,30,.2)',
+            }}>
+              <span style={{ fontSize: '1.3rem', flexShrink: 0 }}>⚠️</span>
+              <div>
+                <div style={{ fontSize: '.78rem', fontWeight: 700, color: '#ff6b6b', letterSpacing: '.5px', marginBottom: '.15rem' }}>
+                  FILM SOUMIS À UNE RESTRICTION D'ÂGE
+                </div>
+                <div style={{ fontSize: '.7rem', color: 'rgba(255,107,107,.75)', lineHeight: 1.4 }}>
+                  Ce film contient des scènes de violence, de gore, de sexualité explicite ou de contenu choquant pouvant heurter la sensibilité.
+                </div>
+              </div>
+            </div>
+          )}
           <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.8rem', lineHeight: 1.1, marginBottom: '.35rem' }}>{film.titre}</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.6rem', marginBottom: '1.2rem' }}>
             <span style={{ fontSize: '.75rem', color: 'var(--text2)' }}>{film.annee}</span>
@@ -423,6 +444,8 @@ export default function FilmsClient({ films, profile, watchedIds, myRatings, wat
   const [filterReal, setFilterReal] = useState('')
   const [modal, setModal] = useState<Film | null>(null)
   const [addModal, setAddModal] = useState(false)
+  const [showRestricted, setShowRestricted] = useState(false)
+  const [ageWarnModal, setAgeWarnModal] = useState(false)
   const watchedSet = useMemo(() => new Set(watchedIds), [watchedIds])
 
   // ── Shark easter egg ───────────────────────────────────────
@@ -451,12 +474,13 @@ export default function FilmsClient({ films, profile, watchedIds, myRatings, wat
   const reals   = useMemo(() => [...new Set(films.map(f => f.realisateur))].sort(), [films])
 
   const filtered = useMemo(() => films.filter(f => {
+    if (f.flagged_18plus && !showRestricted) return false
     const q = search.toLowerCase()
     return (!q || f.titre.toLowerCase().includes(q) || f.realisateur.toLowerCase().includes(q))
       && (!filterGenre  || f.genre === filterGenre)
       && (!filterDecade || Math.floor(f.annee / 10) * 10 === parseInt(filterDecade))
       && (!filterReal   || f.realisateur === filterReal)
-  }), [films, search, filterGenre, filterDecade, filterReal])
+  }), [films, search, filterGenre, filterDecade, filterReal, showRestricted])
 
   function getWatchPct(filmId: number) {
     if (!totalUsers) return 0
@@ -524,6 +548,37 @@ export default function FilmsClient({ films, profile, watchedIds, myRatings, wat
         </select>
       </div>
 
+      {/* Age restriction toggle */}
+      <div
+        onClick={() => { if (!showRestricted) setAgeWarnModal(true); else setShowRestricted(false) }}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: '.6rem',
+          marginBottom: '1.3rem', padding: '.5rem .9rem',
+          borderRadius: 'var(--r)', cursor: 'pointer',
+          background: showRestricted ? 'rgba(220,30,30,.10)' : 'rgba(255,255,255,.03)',
+          border: `1px solid ${showRestricted ? 'rgba(220,30,30,.4)' : 'var(--border2)'}`,
+          transition: 'all .2s', userSelect: 'none',
+        }}
+      >
+        <div style={{
+          width: 16, height: 16, borderRadius: 3, flexShrink: 0,
+          background: showRestricted ? 'var(--red)' : 'transparent',
+          border: `2px solid ${showRestricted ? 'var(--red)' : 'rgba(255,255,255,.3)'}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'all .15s',
+        }}>
+          {showRestricted && <span style={{ color: '#fff', fontSize: '.6rem', fontWeight: 700, lineHeight: 1 }}>✓</span>}
+        </div>
+        <span style={{ fontSize: '.78rem', color: showRestricted ? '#ff6b6b' : 'var(--text3)' }}>
+          ⚠️ Afficher les films avec restriction d'âge (-16 / -18)
+        </span>
+        {films.filter(f => f.flagged_18plus).length > 0 && (
+          <span style={{ fontSize: '.65rem', background: 'rgba(220,30,30,.2)', color: '#ff6b6b', border: '1px solid rgba(220,30,30,.35)', borderRadius: 99, padding: '1px 7px' }}>
+            {films.filter(f => f.flagged_18plus).length} film{films.filter(f => f.flagged_18plus).length > 1 ? 's' : ''}
+          </span>
+        )}
+      </div>
+
       {/* Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 155px))', gap: '1rem', justifyContent: 'center' }}>
         {filtered.map(film => {
@@ -533,10 +588,15 @@ export default function FilmsClient({ films, profile, watchedIds, myRatings, wat
           const rat   = avgRating(ratingMap[film.id])
           const isWeek = weekFilmId === film.id
 
+          const isRestricted = film.flagged_18plus
           return (
             <div key={film.id}
               className={`film-card ${isWatched ? 'watched' : ''} ${maj ? 'majority' : ''} ${s2 ? 's2' : ''}`}
               onClick={() => setModal(film)}
+              style={isRestricted ? {
+                boxShadow: '0 0 0 2px rgba(220,30,30,.7), 0 0 18px rgba(220,30,30,.35)',
+                borderRadius: 'var(--rl)',
+              } : undefined}
             >
               <div style={{ width: '100%', aspectRatio: '2/3', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Poster film={film} fill style={{ objectFit: 'cover' }} />
@@ -548,6 +608,18 @@ export default function FilmsClient({ films, profile, watchedIds, myRatings, wat
                 {!isWatched && s2 && <div style={{ position: 'absolute', top: 7, left: 7, background: 'var(--red)', color: '#fff', fontSize: '.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: 99 }}>S2</div>}
                 {!isWatched && maj && <div style={{ position: 'absolute', top: 7, right: 7, background: 'rgba(255,255,255,.12)', color: '#aaa', fontSize: '.58rem', padding: '2px 7px', borderRadius: 99 }}>60%+</div>}
                 {isWeek && <div style={{ position: 'absolute', bottom: 7, left: 7, background: 'var(--gold)', color: '#0a0a0f', fontSize: '.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: 99 }}>⭐ SEMAINE</div>}
+                {isRestricted && (
+                  <div style={{
+                    position: 'absolute', bottom: 0, left: 0, right: 0,
+                    background: 'linear-gradient(to top, rgba(180,0,0,.95) 0%, rgba(180,0,0,.6) 60%, transparent 100%)',
+                    padding: '.5rem .4rem .4rem',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
+                  }}>
+                    <div style={{ fontSize: '.55rem', fontWeight: 800, color: '#fff', letterSpacing: '.5px', textAlign: 'center', lineHeight: 1.3 }}>
+                      ⚠️ RESTRICTION D'ÂGE
+                    </div>
+                  </div>
+                )}
               </div>
               <div style={{ padding: '.65rem .75rem .5rem' }}>
                 <div style={{ fontSize: '.82rem', fontWeight: 500, lineHeight: 1.3, marginBottom: '.15rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{film.titre}</div>
@@ -592,6 +664,51 @@ export default function FilmsClient({ films, profile, watchedIds, myRatings, wat
       )}
 
       {sharkVisible && <JawsScrollOverlay onDone={() => { setSharkVisible(false); sharkTriggered.current = false }} />}
+
+      {/* Age warning modal */}
+      {ageWarnModal && (
+        <div className="modal-wrap" onClick={e => e.target === e.currentTarget && setAgeWarnModal(false)}>
+          <div className="modal" style={{ maxWidth: 480 }}>
+            <div style={{ padding: '2rem 1.5rem' }}>
+              <div style={{ textAlign: 'center', marginBottom: '1.2rem' }}>
+                <div style={{ fontSize: '3rem', marginBottom: '.5rem' }}>⚠️</div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: '#ff6b6b', marginBottom: '.4rem' }}>
+                  Contenu sensible
+                </div>
+              </div>
+              <div style={{
+                background: 'rgba(180,0,0,.1)', border: '2px solid rgba(220,30,30,.5)',
+                borderRadius: 'var(--r)', padding: '1rem 1.2rem', marginBottom: '1.2rem',
+                boxShadow: '0 0 20px rgba(220,30,30,.15)',
+              }}>
+                <div style={{ fontSize: '.85rem', fontWeight: 700, color: '#ff6b6b', marginBottom: '.5rem', letterSpacing: '.5px' }}>
+                  /!\ FILMS SOUMIS À UNE RESTRICTION D'ÂGE /!\
+                </div>
+                <div style={{ fontSize: '.8rem', color: 'rgba(255,255,255,.75)', lineHeight: 1.7 }}>
+                  Les films affichés contiennent des scènes pouvant être <strong style={{ color: '#ffb3b3' }}>violentes, graphiques, sexuellement explicites ou psychologiquement choquantes</strong> (violence gore, contenu pour adultes, drogues, thèmes traumatisants).
+                  <br /><br />
+                  Ils sont soumis à une <strong style={{ color: '#ffb3b3' }}>classification -16 ou -18 ans</strong> par les organismes de contrôle du cinéma.
+                </div>
+              </div>
+              <div style={{ fontSize: '.75rem', color: 'var(--text3)', textAlign: 'center', marginBottom: '1.2rem', lineHeight: 1.5 }}>
+                En continuant, tu confirmes avoir l'âge requis<br />et accepter de voir ce contenu.
+              </div>
+              <div style={{ display: 'flex', gap: '.7rem' }}>
+                <button className="btn btn-outline" style={{ flex: 1 }} onClick={() => setAgeWarnModal(false)}>
+                  Annuler
+                </button>
+                <button
+                  className="btn"
+                  style={{ flex: 1, background: 'var(--red)', color: '#fff', border: 'none' }}
+                  onClick={() => { setAgeWarnModal(false); setShowRestricted(true) }}
+                >
+                  J'ai l'âge requis — Afficher
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
