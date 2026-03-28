@@ -732,12 +732,13 @@ function NoctambuleNotif({ onDone, line1, line2 }: { onDone: () => void; line1: 
 }
 
 // ─── FIGHT CLUB RULES OVERLAY ───────────────────────────────────────────────
-function FightClubRule({ rule, onDone }: { rule: 1|2|3; onDone: ()=>void }) {
+function FightClubRule({ rule, onDone }: { rule: 1|2|3|4; onDone: ()=>void }) {
   const RULES = [
     '',
     "La première règle du Fight Club est : il est interdit de parler du Fight Club.",
     "La deuxième règle du Fight Club est : il est interdit de parler du Fight Club.",
     "Troisième règle du Fight Club : quelqu'un crie stop, quelqu'un s'écroule ou n'en peut plus, le combat est terminé.",
+    "Quatrième règle du Fight Club : si c'est votre première nuit au Fight Club, vous devez vous battre !",
   ]
   useEffect(()=>{
     const t=setTimeout(onDone,4500)
@@ -806,7 +807,7 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
   const [showBond,       setShowBond]       = useState(false)
   const [showNoctambule, setShowNoctambule] = useState(false)
   const [showFightClub,  setShowFightClub]  = useState(false)
-  const [fightClubRule,  setFightClubRule]  = useState<1|2|3|null>(null)
+  const [fightClubRule,  setFightClubRule]  = useState<1|2|3|4|null>(null)
   const fightClubCount = useRef(0)
   const [showKenny,      setShowKenny]      = useState(false)
   const [showSouthPark,  setShowSouthPark]  = useState(false)
@@ -876,7 +877,7 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
           if (fightClubCount.current === 1) discoverEgg('fightclub')
         } else {
           fightClubCount.current = 0
-          setShowFightClub(true)
+          setFightClubRule(4)
         }
         return
       }
@@ -970,7 +971,7 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
       {showNolan      && <NolanOverlay  onDone={() => setShowNolan(false)}      quote={ee.nolanQuote} />}
       {showBond       && <BondOverlay   onDone={() => setShowBond(false)}       bondLine={ee.bondLine} />}
       {showNoctambule && <NoctambuleNotif onDone={() => setShowNoctambule(false)} line1={ee.noctamLine1} line2={ee.noctamLine2} />}
-      {fightClubRule  && <FightClubRule   rule={fightClubRule} onDone={() => setFightClubRule(null)} />}
+      {fightClubRule  && <FightClubRule   rule={fightClubRule} onDone={() => { if (fightClubRule === 4) { setFightClubRule(null); setShowFightClub(true) } else { setFightClubRule(null) } }} />}
       {showFightClub  && <FightClubGame   onDone={() => setShowFightClub(false)} gameOverText={ee.fightClubGameOver} />}
       {showKenny      && <KennyDeath      onDone={() => setShowKenny(false)}     text1={ee.kennyText1} text2={ee.kennyText2} />}
       {showSouthPark  && <SouthParkBus    onDone={() => setShowSouthPark(false)} />}
