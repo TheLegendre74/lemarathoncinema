@@ -551,6 +551,22 @@ export async function adminDeleteFilm(filmId: number) {
   return { success: true }
 }
 
+export async function adminSetAdmin(userId: string, makeAdmin: boolean) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Non autorisé.' }
+
+  // Empêche de se retirer soi-même les droits admin
+  if (userId === user.id && !makeAdmin) return { error: 'Impossible de se retirer ses propres droits admin.' }
+
+  await supabase.from('profiles').update({ is_admin: makeAdmin }).eq('id', userId)
+  revalidatePath('/admin')
+  return { success: true }
+}
+
 export async function adminDeleteUser(userId: string) {
   const adminClient = createAdminClient()
   const supabase = await createClient()

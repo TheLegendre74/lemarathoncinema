@@ -318,9 +318,10 @@ function updateEnemyAI(e: Char, player: Char, gs: GS) {
 }
 
 // ── Main component ────────────────────────────────────────────
-export default function FightClubGame({ onDone }: { onDone: () => void }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const rafRef    = useRef<number>(0)
+export default function FightClubGame({ onDone, gameOverText }: { onDone: () => void; gameOverText?: string }) {
+  const canvasRef      = useRef<HTMLCanvasElement>(null)
+  const rafRef         = useRef<number>(0)
+  const gameOverTextRef = useRef(gameOverText ?? 'Tyler est toujours plus fort que toi...')
   const [scale, setScale] = useState(1)
 
   // Scale canvas to fit viewport
@@ -547,7 +548,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           // The quote
           ctx.fillStyle = '#e8e8e8'
           ctx.font = 'italic 20px serif'
-          ctx.fillText('"Tyler est toujours plus fort que toi..."', GW / 2, GH / 2 - 10)
+          ctx.fillText(`"${gameOverTextRef.current}"`, GW / 2, GH / 2 - 10)
 
           // Stats
           ctx.fillStyle = 'rgba(255,255,255,0.45)'

@@ -279,7 +279,7 @@ function drawBus(ctx: CanvasRenderingContext2D, x: number, groundY: number) {
 
 // ── KENNY DEATH ───────────────────────────────────────────────────────────────
 
-export function KennyDeath({ onDone }: { onDone: () => void }) {
+export function KennyDeath({ onDone, text1, text2 }: { onDone: () => void; text1?: string; text2?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const rafRef = useRef(0)
 
@@ -413,8 +413,8 @@ export function KennyDeath({ onDone }: { onDone: () => void }) {
         ctx.fillStyle = '#fff'
         ctx.strokeStyle = '#000'
         ctx.lineWidth = 5
-        ctx.strokeText('Oh mon Dieu ! Ils ont tué Kenny !', GW / 2, GH * 0.32)
-        ctx.fillText('Oh mon Dieu ! Ils ont tué Kenny !', GW / 2, GH * 0.32)
+        ctx.strokeText(text1 ?? 'Oh mon Dieu ! Ils ont tué Kenny !', GW / 2, GH * 0.32)
+        ctx.fillText(text1 ?? 'Oh mon Dieu ! Ils ont tué Kenny !', GW / 2, GH * 0.32)
         ctx.restore()
       }
 
@@ -428,8 +428,8 @@ export function KennyDeath({ onDone }: { onDone: () => void }) {
         ctx.fillStyle = '#ffdd00'
         ctx.strokeStyle = '#000'
         ctx.lineWidth = 4
-        ctx.strokeText("Espèce d'enfoirés !", GW / 2, GH * 0.46)
-        ctx.fillText("Espèce d'enfoirés !", GW / 2, GH * 0.46)
+        ctx.strokeText(text2 ?? "Espèce d'enfoirés !", GW / 2, GH * 0.46)
+        ctx.fillText(text2 ?? "Espèce d'enfoirés !", GW / 2, GH * 0.46)
         ctx.restore()
       }
 
@@ -644,7 +644,7 @@ export function SouthParkBus({ onDone }: { onDone: () => void }) {
 
 // ── RANDY MARSH ───────────────────────────────────────────────────────────────
 
-export function RandyMarsh({ onDone }: { onDone: () => void }) {
+export function RandyMarsh({ onDone, quote }: { onDone: () => void; quote?: string }) {
   const [leaving, setLeaving] = useState(false)
 
   useEffect(() => {
@@ -726,7 +726,7 @@ export function RandyMarsh({ onDone }: { onDone: () => void }) {
           🧔 Randy Marsh
         </div>
         <div style={{ color: '#fff', fontSize: '.88rem', lineHeight: 1.65, fontStyle: 'italic' }}>
-          "C'est pas de l'alcoolisme, c'est du <strong style={{ color: '#ffcc44' }}>vinomoussage</strong>... c'est une activité élégamment culturelle."
+          {quote ?? "C'est pas de l'alcoolisme, c'est du vinomoussage... c'est une activité élégamment culturelle."}
         </div>
         {/* Bubble arrow */}
         <div style={{

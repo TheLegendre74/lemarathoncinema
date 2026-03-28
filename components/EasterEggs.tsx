@@ -216,7 +216,7 @@ function MarvinOverlay({ onDone, line1, line2 }: { onDone: () => void; line1: st
 }
 
 // ─── HAL 9000 ────────────────────────────────────────────────────────────────
-function HalOverlay({ onDone }: { onDone: () => void }) {
+function HalOverlay({ onDone, line1, line2 }: { onDone: () => void; line1: string; line2: string }) {
   const [leaving, setLeaving] = useState(false)
 
   useEffect(() => {
@@ -248,8 +248,8 @@ function HalOverlay({ onDone }: { onDone: () => void }) {
         textAlign: 'center', lineHeight: 2, maxWidth: 480, padding: '0 2rem',
         textShadow: '0 0 20px rgba(255,60,20,.6)',
       }}>
-        <div>Je suis désolé, Dave.</div>
-        <div style={{ fontSize: '.85em', opacity: .75 }}>J'ai bien peur de ne pas pouvoir faire ça.</div>
+        <div>{line1}</div>
+        <div style={{ fontSize: '.85em', opacity: .75 }}>{line2}</div>
       </div>
       <div style={{ marginTop: '2rem', fontSize: '.65rem', color: 'rgba(255,60,20,.4)', letterSpacing: '3px', textTransform: 'uppercase' }}>
         HAL 9000 · Discovery One
@@ -259,7 +259,7 @@ function HalOverlay({ onDone }: { onDone: () => void }) {
 }
 
 // ─── NOLAN ───────────────────────────────────────────────────────────────────
-function NolanOverlay({ onDone }: { onDone: () => void }) {
+function NolanOverlay({ onDone, quote }: { onDone: () => void; quote: string }) {
   const [leaving, setLeaving] = useState(false)
 
   useEffect(() => {
@@ -297,7 +297,7 @@ function NolanOverlay({ onDone }: { onDone: () => void }) {
         <div style={{ fontSize: '.6em', letterSpacing: '6px', textTransform: 'uppercase', color: 'rgba(255,255,255,.4)', marginBottom: '1.5rem' }}>
           Christopher Nolan
         </div>
-        "Le cinéma est la plus puissante<br />façon de partager un rêve."
+        {quote}
       </div>
       <div style={{ marginTop: '2.5rem', fontSize: '.65rem', color: 'rgba(255,255,255,.2)', letterSpacing: '3px', textTransform: 'uppercase' }}>
         Cliquer pour fermer
@@ -307,7 +307,7 @@ function NolanOverlay({ onDone }: { onDone: () => void }) {
 }
 
 // ─── BOND ────────────────────────────────────────────────────────────────────
-function BondOverlay({ onDone }: { onDone: () => void }) {
+function BondOverlay({ onDone, bondLine }: { onDone: () => void; bondLine: string }) {
   const [phase, setPhase] = useState<'barrel'|'quote'|'leaving'>('barrel')
 
   useEffect(() => {
@@ -345,7 +345,7 @@ function BondOverlay({ onDone }: { onDone: () => void }) {
             Bond.
           </div>
           <div style={{ fontSize: 'clamp(1.5rem,4vw,2.8rem)', fontFamily: 'var(--font-display)', color: '#d4af37', letterSpacing: '1px' }}>
-            James Bond.
+            {bondLine}
           </div>
           <div style={{ marginTop: '2rem', fontSize: '.75rem', color: 'rgba(255,255,255,.3)', letterSpacing: '4px', textTransform: 'uppercase' }}>
             007 · Shaken, not stirred
@@ -357,7 +357,7 @@ function BondOverlay({ onDone }: { onDone: () => void }) {
 }
 
 // ─── NOCTAMBULE ──────────────────────────────────────────────────────────────
-function NoctambuleNotif({ onDone }: { onDone: () => void }) {
+function NoctambuleNotif({ onDone, line1, line2 }: { onDone: () => void; line1: string; line2: string }) {
   const [leaving, setLeaving] = useState(false)
 
   useEffect(() => {
@@ -378,10 +378,10 @@ function NoctambuleNotif({ onDone }: { onDone: () => void }) {
         🌙 Mode Noctambule
       </div>
       <div style={{ color: 'var(--text)', fontSize: '.9rem', lineHeight: 1.5 }}>
-        Tu regardes des films à cette heure-ci ?
+        {line1}
       </div>
       <div style={{ fontSize: '.75rem', color: 'var(--text3)', marginTop: '.4rem', fontStyle: 'italic' }}>
-        Les vrais cinéphiles ne dorment pas.
+        {line2}
       </div>
     </div>
   )
@@ -395,18 +395,37 @@ export interface EasterEggsConfig {
   jokerPhrase?: string
   tarsLine1?: string; tarsLine2?: string
   marvinLine1?: string; marvinLine2?: string
+  halLine1?: string; halLine2?: string
+  nolanQuote?: string
+  bondLine?: string
+  noctamLine1?: string; noctamLine2?: string
+  kennyText1?: string; kennyText2?: string
+  randyQuote?: string
+  fightClubGameOver?: string
+  killBillEnd?: string
 }
 
 export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig }) {
   const ee = {
-    matrixLine1: config.matrixLine1 ?? 'Wake up, Neo...',
-    matrixLine2: config.matrixLine2 ?? 'The Matrix has you.',
-    matrixLine3: config.matrixLine3 ?? 'Follow the white rabbit.',
-    jokerPhrase: config.jokerPhrase ?? 'Why so serious? 🃏',
-    tarsLine1:   config.tarsLine1   ?? "Niveau d'humour réglé à 75%.",
-    tarsLine2:   config.tarsLine2   ?? "C'est honnête.",
-    marvinLine1: config.marvinLine1 ?? 'Encore un humain qui cherche la réponse à la question fondamentale sur la vie...',
-    marvinLine2: config.marvinLine2 ?? "C'est 42. C'est pathétique.",
+    matrixLine1:     config.matrixLine1     ?? 'Wake up, Neo...',
+    matrixLine2:     config.matrixLine2     ?? 'The Matrix has you.',
+    matrixLine3:     config.matrixLine3     ?? 'Follow the white rabbit.',
+    jokerPhrase:     config.jokerPhrase     ?? 'Why so serious? 🃏',
+    tarsLine1:       config.tarsLine1       ?? "Niveau d'humour réglé à 75%.",
+    tarsLine2:       config.tarsLine2       ?? "C'est honnête.",
+    marvinLine1:     config.marvinLine1     ?? 'Encore un humain qui cherche la réponse à la question fondamentale sur la vie...',
+    marvinLine2:     config.marvinLine2     ?? "C'est 42. C'est pathétique.",
+    halLine1:        config.halLine1        ?? 'Je suis désolé, Dave.',
+    halLine2:        config.halLine2        ?? "J'ai bien peur de ne pas pouvoir faire ça.",
+    nolanQuote:      config.nolanQuote      ?? 'Le cinéma est la plus puissante façon de partager un rêve.',
+    bondLine:        config.bondLine        ?? 'James Bond.',
+    noctamLine1:     config.noctamLine1     ?? 'Tu regardes des films à cette heure-ci ?',
+    noctamLine2:     config.noctamLine2     ?? 'Les vrais cinéphiles ne dorment pas.',
+    kennyText1:      config.kennyText1      ?? 'Oh mon Dieu ! Ils ont tué Kenny !',
+    kennyText2:      config.kennyText2      ?? "Espèce d'enfoirés !",
+    randyQuote:      config.randyQuote      ?? "C'est pas de l'alcoolisme, c'est du vinomoussage... c'est une activité élégamment culturelle.",
+    fightClubGameOver: config.fightClubGameOver ?? 'Tyler est toujours plus fort que toi...',
+    killBillEnd:     config.killBillEnd     ?? "Pai mei t'a bien entraîné.",
   }
   const [showMatrix,     setShowMatrix]     = useState(false)
   const [showJoker,      setShowJoker]      = useState(false)
@@ -546,15 +565,15 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
       {showJoker      && <JokerWalk     onDone={() => setShowJoker(false)}      phrase={ee.jokerPhrase} />}
       {showTars       && <TarsNotif     onDone={() => setShowTars(false)}       line1={ee.tarsLine1} line2={ee.tarsLine2} />}
       {showMarvin     && <MarvinOverlay onDone={() => setShowMarvin(false)}     line1={ee.marvinLine1} line2={ee.marvinLine2} />}
-      {showHal        && <HalOverlay    onDone={() => setShowHal(false)} />}
-      {showNolan      && <NolanOverlay  onDone={() => setShowNolan(false)} />}
-      {showBond       && <BondOverlay   onDone={() => setShowBond(false)} />}
-      {showNoctambule && <NoctambuleNotif onDone={() => setShowNoctambule(false)} />}
-      {showFightClub  && <FightClubGame   onDone={() => setShowFightClub(false)} />}
-      {showKenny      && <KennyDeath      onDone={() => setShowKenny(false)} />}
+      {showHal        && <HalOverlay    onDone={() => setShowHal(false)}        line1={ee.halLine1}    line2={ee.halLine2} />}
+      {showNolan      && <NolanOverlay  onDone={() => setShowNolan(false)}      quote={ee.nolanQuote} />}
+      {showBond       && <BondOverlay   onDone={() => setShowBond(false)}       bondLine={ee.bondLine} />}
+      {showNoctambule && <NoctambuleNotif onDone={() => setShowNoctambule(false)} line1={ee.noctamLine1} line2={ee.noctamLine2} />}
+      {showFightClub  && <FightClubGame   onDone={() => setShowFightClub(false)} gameOverText={ee.fightClubGameOver} />}
+      {showKenny      && <KennyDeath      onDone={() => setShowKenny(false)}     text1={ee.kennyText1} text2={ee.kennyText2} />}
       {showSouthPark  && <SouthParkBus    onDone={() => setShowSouthPark(false)} />}
-      {showRandy      && <RandyMarsh      onDone={() => setShowRandy(false)} />}
-      {showKillBill   && <KillBillGame    onDone={() => setShowKillBill(false)} />}
+      {showRandy      && <RandyMarsh      onDone={() => setShowRandy(false)}     quote={ee.randyQuote} />}
+      {showKillBill   && <KillBillGame    onDone={() => setShowKillBill(false)}  endText={ee.killBillEnd} />}
       {showAVP        && <AVPEgg          onDone={() => setShowAVP(false)} />}
     </>
   )

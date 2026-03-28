@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, updateFilm, adminResolveReport, adminSetConfig, adminVerifyPosters } from '@/lib/actions'
+import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, updateFilm, adminResolveReport, adminSetConfig, adminVerifyPosters, adminSetAdmin } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
 import { CONFIG } from '@/lib/config'
 import type { Film, Profile } from '@/lib/supabase/types'
@@ -38,6 +38,17 @@ function ConfigSection({ serverConfig, siteConfig, onSave, saving }: {
     tars_line2:        siteConfig.tars_line2        ?? cfg.TARS_LINE2,
     marvin_line1:      siteConfig.marvin_line1      ?? cfg.MARVIN_LINE1,
     marvin_line2:      siteConfig.marvin_line2      ?? cfg.MARVIN_LINE2,
+    hal_line1:         siteConfig.hal_line1         ?? cfg.HAL_LINE1,
+    hal_line2:         siteConfig.hal_line2         ?? cfg.HAL_LINE2,
+    nolan_quote:       siteConfig.nolan_quote       ?? cfg.NOLAN_QUOTE,
+    bond_line:         siteConfig.bond_line         ?? cfg.BOND_LINE,
+    noctam_line1:      siteConfig.noctam_line1      ?? cfg.NOCTAM_LINE1,
+    noctam_line2:      siteConfig.noctam_line2      ?? cfg.NOCTAM_LINE2,
+    kenny_text1:       siteConfig.kenny_text1       ?? cfg.KENNY_TEXT1,
+    kenny_text2:       siteConfig.kenny_text2       ?? cfg.KENNY_TEXT2,
+    randy_quote:       siteConfig.randy_quote       ?? cfg.RANDY_QUOTE,
+    fightclub_gameover: siteConfig.fightclub_gameover ?? cfg.FIGHTCLUB_GAMEOVER,
+    killbill_end:      siteConfig.killbill_end      ?? cfg.KILLBILL_END,
   })
 
   const f = (key: string) => ({
@@ -124,6 +135,51 @@ function ConfigSection({ serverConfig, siteConfig, onSave, saving }: {
           </div>
         ))}
       </div>
+
+      <Sub label="Easter eggs — HAL 9000 (taper 'hal')" />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
+        {[['Ligne 1', 'hal_line1'], ['Ligne 2', 'hal_line2']].map(([label, key]) => (
+          <div key={key} style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '.5rem', alignItems: 'center' }}>
+            <span style={{ fontSize: '.72rem', color: 'var(--text3)' }}>{label}</span>
+            <input style={inputStyle} {...f(key)} />
+          </div>
+        ))}
+      </div>
+
+      <Sub label="Easter eggs — Nolan (taper 'nolan')" />
+      <input style={inputStyle} {...f('nolan_quote')} />
+
+      <Sub label="Easter eggs — Bond (taper 'bond')" />
+      <input style={inputStyle} {...f('bond_line')} />
+
+      <Sub label="Easter eggs — Noctambule (minuit–00h30)" />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
+        {[['Ligne 1', 'noctam_line1'], ['Ligne 2', 'noctam_line2']].map(([label, key]) => (
+          <div key={key} style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '.5rem', alignItems: 'center' }}>
+            <span style={{ fontSize: '.72rem', color: 'var(--text3)' }}>{label}</span>
+            <input style={inputStyle} {...f(key)} />
+          </div>
+        ))}
+      </div>
+
+      <Sub label="Easter eggs — Kenny (taper 'kill kenny')" />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
+        {[['Texte 1', 'kenny_text1'], ['Texte 2', 'kenny_text2']].map(([label, key]) => (
+          <div key={key} style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '.5rem', alignItems: 'center' }}>
+            <span style={{ fontSize: '.72rem', color: 'var(--text3)' }}>{label}</span>
+            <input style={inputStyle} {...f(key)} />
+          </div>
+        ))}
+      </div>
+
+      <Sub label="Easter eggs — Randy (taper 'randy')" />
+      <input style={inputStyle} {...f('randy_quote')} />
+
+      <Sub label="Easter eggs — Fight Club (taper 'tyler') — texte game over" />
+      <input style={inputStyle} {...f('fightclub_gameover')} />
+
+      <Sub label="Easter eggs — Kill Bill (taper 'kill bill') — texte victoire" />
+      <input style={inputStyle} {...f('killbill_end')} />
 
       <button
         className="btn btn-gold"
@@ -287,6 +343,19 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
     await adminDeleteUser(userId)
     addToast(`${pseudo} supprimé`, '🗑️')
     router.refresh()
+  }
+
+  async function toggleAdmin(userId: string, pseudo: string, makeAdmin: boolean) {
+    const msg = makeAdmin
+      ? `Accorder les droits admin à "${pseudo}" ?\n\nCette personne pourra accéder au panneau admin et modifier le site.`
+      : `Retirer les droits admin à "${pseudo}" ?`
+    if (!confirm(msg)) return
+    const result = await adminSetAdmin(userId, makeAdmin)
+    if (result?.error) addToast(result.error, '⚠️')
+    else {
+      addToast(makeAdmin ? `${pseudo} est maintenant admin` : `Droits admin retirés à ${pseudo}`, makeAdmin ? '👑' : '🔓')
+      router.refresh()
+    }
   }
 
   async function grantExp(userId: string, pseudo: string, amount: number) {
@@ -511,13 +580,27 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
         <div style={{ display: 'flex', flexDirection: 'column', gap: '.4rem', maxHeight: 400, overflowY: 'auto' }}>
           {users.map((u: any) => (
             <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: '.8rem', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.6rem 1rem', flexWrap: 'wrap' }}>
-              <span style={{ flex: 1, fontSize: '.85rem', fontWeight: 500 }}>{u.pseudo}</span>
+              <span style={{ flex: 1, fontSize: '.85rem', fontWeight: 500 }}>
+                {u.pseudo}
+                {u.is_admin && <span style={{ marginLeft: '.4rem', fontSize: '.6rem', color: 'var(--gold)', letterSpacing: '1px', textTransform: 'uppercase' }}>👑 admin</span>}
+              </span>
               <span style={{ fontSize: '.72rem', color: 'var(--text3)' }}>S{u.saison}</span>
               <span style={{ fontSize: '.8rem', color: 'var(--gold)', fontFamily: 'var(--font-display)' }}>{u.exp} EXP</span>
               <span style={{ fontSize: '.72rem', color: 'var(--text2)' }}>🎬 {u.watched?.length ?? 0}</span>
               <button className="btn btn-green" style={{ fontSize: '.7rem', padding: '.22rem .55rem' }} onClick={() => grantExp(u.id, u.pseudo, 10)}>+10 EXP</button>
-              {!u.is_admin && (
-                <button className="btn btn-red" style={{ fontSize: '.7rem', padding: '.22rem .55rem' }} onClick={() => deleteUser(u.id, u.pseudo)}>✕</button>
+              {u.is_admin ? (
+                u.id !== profile.id && (
+                  <button className="btn btn-outline" style={{ fontSize: '.7rem', padding: '.22rem .55rem', borderColor: 'var(--gold)', color: 'var(--gold)' }} onClick={() => toggleAdmin(u.id, u.pseudo, false)}>
+                    ✕ Admin
+                  </button>
+                )
+              ) : (
+                <>
+                  <button className="btn btn-outline" style={{ fontSize: '.7rem', padding: '.22rem .55rem', borderColor: 'var(--gold)', color: 'var(--gold)' }} onClick={() => toggleAdmin(u.id, u.pseudo, true)}>
+                    👑 Admin
+                  </button>
+                  <button className="btn btn-red" style={{ fontSize: '.7rem', padding: '.22rem .55rem' }} onClick={() => deleteUser(u.id, u.pseudo)}>✕</button>
+                </>
               )}
             </div>
           ))}

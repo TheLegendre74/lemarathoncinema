@@ -5,23 +5,35 @@ import Image from 'next/image'
 import Forum from '@/components/Forum'
 import { toggleWatched } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
-import { getStreamingPlatforms, CONFIG } from '@/lib/config'
+import { CONFIG } from '@/lib/config'
 import { useRouter } from 'next/navigation'
 import type { Profile } from '@/lib/supabase/types'
+
+interface WatchProvider {
+  provider_id: number
+  provider_name: string
+  logo_path: string
+}
+
+interface WatchProvidersFR {
+  link: string
+  flatrate?: WatchProvider[]
+  rent?: WatchProvider[]
+  buy?: WatchProvider[]
+}
 
 interface Props {
   profile: Profile
   weekFilm: any
   film: any
   isWatched: boolean
+  watchProviders: WatchProvidersFR | null
 }
 
-export default function SemaineClient({ profile, weekFilm, film, isWatched }: Props) {
+export default function SemaineClient({ profile, weekFilm, film, isWatched, watchProviders }: Props) {
   const [forumOpen, setForumOpen] = useState(false)
   const { addToast } = useToast()
   const router = useRouter()
-  const platforms = film ? getStreamingPlatforms(film.id, film.titre) : []
-  const typeLabel: Record<string, string> = { svod: 'Abonnement', tvod: 'Location/Achat', free: 'Gratuit légal' }
 
   async function markSeen() {
     if (!film || isWatched) return
@@ -81,14 +93,45 @@ export default function SemaineClient({ profile, weekFilm, film, isWatched }: Pr
                 {/* Streaming */}
                 <div style={{ marginTop: '1.5rem' }}>
                   <div className="section-title">Où regarder</div>
-                  {platforms.map((p, i) => (
-                    <a key={i} href={p.url} target="_blank" rel="noopener noreferrer" className="streaming-platform">
-                      <div className="sp-icon" style={{ background: p.color, color: '#fff' }}>{p.icon}</div>
-                      <span style={{ flex: 1, fontSize: '.88rem', fontWeight: 500, color: 'var(--text)' }}>{p.name}</span>
-                      <span className={`sp-type ${p.type}`}>{typeLabel[p.type]}</span>
-                      <span style={{ fontSize: '.8rem', color: 'var(--text3)' }}>↗</span>
-                    </a>
-                  ))}
+                  {watchProviders ? (
+                    <>
+                      {watchProviders.flatrate?.map((p) => (
+                        <a key={p.provider_id} href={watchProviders.link} target="_blank" rel="noopener noreferrer" className="streaming-platform">
+                          <Image src={`https://image.tmdb.org/t/p/original${p.logo_path}`} alt={p.provider_name} width={32} height={32} style={{ borderRadius: 6, objectFit: 'cover' }} />
+                          <span style={{ flex: 1, fontSize: '.88rem', fontWeight: 500, color: 'var(--text)' }}>{p.provider_name}</span>
+                          <span className="sp-type svod">Abonnement</span>
+                          <span style={{ fontSize: '.8rem', color: 'var(--text3)' }}>↗</span>
+                        </a>
+                      ))}
+                      {(() => {
+                        const rentBuy = [...(watchProviders.rent ?? []), ...(watchProviders.buy ?? [])]
+                        const seen = new Set<number>()
+                        return rentBuy.filter(p => { if (seen.has(p.provider_id)) return false; seen.add(p.provider_id); return true }).map((p) => (
+                          <a key={p.provider_id} href={watchProviders.link} target="_blank" rel="noopener noreferrer" className="streaming-platform">
+                            <Image src={`https://image.tmdb.org/t/p/original${p.logo_path}`} alt={p.provider_name} width={32} height={32} style={{ borderRadius: 6, objectFit: 'cover' }} />
+                            <span style={{ flex: 1, fontSize: '.88rem', fontWeight: 500, color: 'var(--text)' }}>{p.provider_name}</span>
+                            <span className="sp-type tvod">Location/Achat</span>
+                            <span style={{ fontSize: '.8rem', color: 'var(--text3)' }}>↗</span>
+                          </a>
+                        ))
+                      })()}
+                      {!watchProviders.flatrate?.length && !watchProviders.rent?.length && !watchProviders.buy?.length && (
+                        <div style={{ fontSize: '.82rem', color: 'var(--text3)', padding: '.5rem 0' }}>Aucune plateforme disponible en France pour le moment.</div>
+                      )}
+                    </>
+                  ) : (
+                    <div style={{ fontSize: '.82rem', color: 'var(--text3)', padding: '.5rem 0' }}>Disponibilité non renseignée.</div>
+                  )}
+                  <a
+                    href={`https://www.justwatch.com/fr/rechercher?q=${encodeURIComponent(film.titre)}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="streaming-platform"
+                    style={{ marginTop: '.4rem', opacity: .7 }}
+                  >
+                    <div className="sp-icon" style={{ background: '#1e2030', color: '#fff' }}>🔍</div>
+                    <span style={{ flex: 1, fontSize: '.85rem', color: 'var(--text2)' }}>Voir toutes les options sur JustWatch</span>
+                    <span style={{ fontSize: '.8rem', color: 'var(--text3)' }}>↗</span>
+                  </a>
                 </div>
               </div>
             </div>

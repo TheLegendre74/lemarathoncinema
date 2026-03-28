@@ -5,7 +5,7 @@ import { discoverEgg } from '@/lib/actions'
 
 const GW = 900, GH = 500
 
-export default function KillBillGame({ onDone }: { onDone: () => void }) {
+export default function KillBillGame({ onDone, endText }: { onDone: () => void; endText?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const rafRef    = useRef(0)
   const [scale, setScale]   = useState(1)
@@ -401,7 +401,7 @@ export default function KillBillGame({ onDone }: { onDone: () => void }) {
             BILL EST MORT
           </div>
           <div style={{ color: '#e8e8e8', fontSize: '1.1rem', fontStyle: 'italic', fontFamily: 'serif', marginBottom: '2rem' }}>
-            "Pai mei t'a bien entraîné."
+            {endText ?? "Pai mei t'a bien entraîné."}
           </div>
           <button
             onClick={onDone}
