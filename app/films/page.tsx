@@ -37,6 +37,8 @@ export default async function FilmsPage() {
   })
 
   const watchedIds = new Set((watched?.map((w: { film_id: number }) => w.film_id) ?? []) as number[])
+  const watchedPreMap: Record<number, boolean> = {}
+  watched?.forEach((w: { film_id: number; pre: boolean }) => { watchedPreMap[w.film_id] = w.pre })
   const myRatings = Object.fromEntries(ratings?.map((r: { film_id: number; score: number }) => [r.film_id, r.score]) ?? [])
   const weekFilmId = (weekFilm as { film_id: number } | null)?.film_id ?? null
 
@@ -45,6 +47,7 @@ export default async function FilmsPage() {
       films={films ?? []}
       profile={profile!}
       watchedIds={[...watchedIds]}
+      watchedPreMap={watchedPreMap}
       myRatings={myRatings}
       watchCountMap={watchCountMap}
       ratingMap={ratingMap}

@@ -5,7 +5,7 @@ import Image from 'next/image'
 import Poster from '@/components/Poster'
 import Forum from '@/components/Forum'
 import { useToast } from '@/components/ToastProvider'
-import { toggleWatched, upsertRating, addFilm, updateFilm, reportFilm, discoverEgg, getFilmWatchProviders } from '@/lib/actions'
+import { toggleWatched, markWatched, upsertRating, addFilm, updateFilm, reportFilm, discoverEgg, getFilmWatchProviders } from '@/lib/actions'
 import { CONFIG } from '@/lib/config'
 import { useRouter } from 'next/navigation'
 import JawsScrollOverlay from '@/components/JawsScrollOverlay'
@@ -15,6 +15,7 @@ interface Props {
   films: Film[]
   profile: Profile
   watchedIds: number[]
+  watchedPreMap: Record<number, boolean>
   myRatings: Record<number, number>
   watchCountMap: Record<number, number>
   ratingMap: Record<number, number[]>
@@ -51,8 +52,8 @@ function playGodfatherTheme() {
 
 
 // ─── FILM MODAL ──────────────────────────────────────────────────────────────
-function FilmModal({ film, profile, isWatched, myRating, watchPct, ratingScores, isWeekFilm, isMarathonLive, onClose, onRefresh }: {
-  film: Film; profile: Profile; isWatched: boolean; myRating: number | undefined
+function FilmModal({ film, profile, isWatched, watchedPre, myRating, watchPct, ratingScores, isWeekFilm, isMarathonLive, onClose, onRefresh }: {
+  film: Film; profile: Profile; isWatched: boolean; watchedPre: boolean | null; myRating: number | undefined
   watchPct: number; ratingScores: number[]; isWeekFilm: boolean
   isMarathonLive: boolean; onClose: () => void; onRefresh: () => void
 }) {
@@ -123,6 +124,20 @@ function FilmModal({ film, profile, isWatched, myRating, watchPct, ratingScores,
   async function handleToggle() {
     await toggleWatched(film.id, film.titre)
     addToast(isWatched ? `"${film.titre}" retiré` : `+${expGain} EXP — "${film.titre}" vu !`, '🎬')
+    onRefresh()
+  }
+
+  async function handleMarkPre() {
+    const res = await markWatched(film.id, true)
+    if (res?.error) { addToast(res.error, '⚠️'); return }
+    addToast(res?.action === 'removed' ? `"${film.titre}" retiré` : `"${film.titre}" marqué vu (pré-marathon)`, '🎬')
+    onRefresh()
+  }
+
+  async function handleMarkMarathon() {
+    const res = await markWatched(film.id, false)
+    if (res?.error) { addToast(res.error, '⚠️'); return }
+    addToast(res?.action === 'removed' ? `"${film.titre}" retiré` : `+${CONFIG.EXP_FILM} EXP — "${film.titre}" vu pendant le marathon !`, '🎬')
     onRefresh()
   }
 
@@ -218,13 +233,28 @@ function FilmModal({ film, profile, isWatched, myRating, watchPct, ratingScores,
             </div>
           </div>
 
-          <button
-            className={`btn ${isWatched ? 'btn-green' : 'btn-outline'} btn-full`}
-            onClick={handleToggle}
-            style={{ marginBottom: '1rem' }}
-          >
-            {isWatched ? '✓ Vu — Cliquer pour retirer' : `+ Marquer comme vu${isMarathonLive ? ` (+${expGain} EXP)` : ' (pré-marathon)'}`}
-          </button>
+          {/* Watched buttons */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem', marginBottom: '1rem' }}>
+            {/* Pré-marathon button — always active */}
+            <button
+              className={`btn ${isWatched && watchedPre === true ? 'btn-green' : 'btn-outline'} btn-full`}
+              onClick={handleMarkPre}
+            >
+              {isWatched && watchedPre === true ? '✓ Vu avant le marathon — Retirer' : '🎬 J\'ai vu ce film (pré-marathon)'}
+            </button>
+            {/* Marathon button — disabled until marathon is live */}
+            <button
+              className={`btn ${isWatched && watchedPre === false ? 'btn-green' : 'btn-outline'} btn-full`}
+              onClick={isMarathonLive ? handleMarkMarathon : undefined}
+              disabled={!isMarathonLive}
+              title={!isMarathonLive ? 'Le marathon n\'a pas encore commencé' : undefined}
+              style={!isMarathonLive ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}
+            >
+              {isWatched && watchedPre === false
+                ? '✓ Vu pendant le marathon — Retirer'
+                : `🏆 J'ai vu ce film pendant le marathon (+${CONFIG.EXP_FILM} EXP)`}
+            </button>
+          </div>
 
           {/* Tabs */}
           <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: '1.2rem', overflowX: 'auto' }}>
@@ -436,7 +466,7 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, onClose, onRefres
 
 
 // ─── MAIN FILMS CLIENT ───────────────────────────────────────────────────────
-export default function FilmsClient({ films, profile, watchedIds, myRatings, watchCountMap, ratingMap, totalUsers, weekFilmId, isMarathonLive, saisonNumero }: Props) {
+export default function FilmsClient({ films, profile, watchedIds, watchedPreMap, myRatings, watchCountMap, ratingMap, totalUsers, weekFilmId, isMarathonLive, saisonNumero }: Props) {
   const router = useRouter()
   const [search, setSearch] = useState('')
   const [filterGenre, setFilterGenre] = useState('')
@@ -643,6 +673,7 @@ export default function FilmsClient({ films, profile, watchedIds, myRatings, wat
           film={modal}
           profile={profile}
           isWatched={watchedSet.has(modal.id)}
+          watchedPre={watchedSet.has(modal.id) ? (watchedPreMap[modal.id] ?? null) : null}
           myRating={myRatings[modal.id]}
           watchPct={getWatchPct(modal.id)}
           ratingScores={ratingMap[modal.id] ?? []}

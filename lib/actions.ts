@@ -185,6 +185,50 @@ export async function signOut() {
 
 // ── WATCHED ─────────────────────────────────────────────────
 
+// Explicit pre/marathon mark (used by the two separate buttons)
+export async function markWatched(filmId: number, pre: boolean) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+
+  // Block marathon mark if marathon not live
+  if (!pre && !isMarathonLive()) return { error: 'Le marathon n\'a pas encore commencé.' }
+
+  const { data: existing } = await supabase
+    .from('watched')
+    .select('film_id, pre')
+    .eq('user_id', user.id)
+    .eq('film_id', filmId)
+    .single()
+
+  // Toggle off: if already watched with SAME pre value, remove
+  if (existing && existing.pre === pre) {
+    await supabase.from('watched').delete().eq('user_id', user.id).eq('film_id', filmId)
+    if (!pre) {
+      await supabase.rpc('decrement_exp', { user_id: user.id, amount: CONFIG.EXP_FILM })
+    }
+    revalidatePath('/films')
+    return { action: 'removed' }
+  }
+
+  // Switch from pre→marathon or marathon→pre: delete existing first
+  if (existing) {
+    await supabase.from('watched').delete().eq('user_id', user.id).eq('film_id', filmId)
+    // If switching from marathon to pre: remove marathon EXP
+    if (existing.pre === false) {
+      await supabase.rpc('decrement_exp', { user_id: user.id, amount: CONFIG.EXP_FILM })
+    }
+  }
+
+  // Insert new record
+  await supabase.from('watched').insert({ user_id: user.id, film_id: filmId, pre })
+  if (!pre) {
+    await supabase.rpc('increment_exp', { user_id: user.id, amount: CONFIG.EXP_FILM })
+  }
+  revalidatePath('/films')
+  return { action: 'added', pre }
+}
+
 export async function toggleWatched(filmId: number, filmTitre: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
