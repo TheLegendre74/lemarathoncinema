@@ -3,30 +3,58 @@
 import { useEffect, useRef, useState } from 'react'
 import { discoverEgg } from '@/lib/actions'
 
-// ── South Park intro melody (approximation 8-bit) ─────────────────────────
-function playSPTheme() {
+// ── South Park theme 8-bit (Primus — looping) ────────────────────────────
+function startSPTheme(): () => void {
   try {
     const ac = new (window.AudioContext || (window as any).webkitAudioContext)()
-    // Notes approximating the SP instrumental intro
-    const n: [number, number][] = [
+    // South Park main theme — main hook + verse loop
+    const MELODY: [number, number][] = [
+      // Main hook
       [392, .17], [392, .08], [494, .17], [392, .17], [523, .17], [494, .33],
       [392, .17], [392, .08], [494, .17], [392, .17], [587, .17], [523, .33],
       [392, .17], [392, .08], [784, .25], [659, .17], [523, .17], [494, .17], [440, .33],
       [523, .17], [523, .08], [659, .17], [523, .17], [698, .17], [659, .33],
+      // Verse (funky bass riff)
+      [196, .18], [0, .06], [196, .12], [220, .12], [247, .18], [0, .06],
+      [247, .12], [220, .12], [196, .36],
+      [220, .18], [0, .06], [220, .12], [247, .12], [277, .18], [0, .06],
+      [277, .12], [247, .12], [220, .36],
+      // Hook reprise
+      [392, .17], [392, .08], [494, .17], [392, .17], [523, .17], [494, .33],
+      [392, .17], [392, .08], [784, .25], [659, .17], [523, .17], [494, .17], [440, .5],
+      [0, .25],
     ]
-    let t = ac.currentTime + 0.05
-    for (const [freq, dur] of n) {
-      const o = ac.createOscillator()
-      const g = ac.createGain()
-      o.connect(g); g.connect(ac.destination)
-      o.type = 'square'
-      o.frequency.value = freq
-      g.gain.setValueAtTime(0.07, t)
-      g.gain.exponentialRampToValueAtTime(0.001, t + dur * 0.85)
-      o.start(t); o.stop(t + dur)
-      t += dur
+    const totalLen = MELODY.reduce((s, [, d]) => s + d, 0)
+    const master = ac.createGain(); master.gain.value = 0.18; master.connect(ac.destination)
+    let running = true, nextStart = ac.currentTime + 0.05
+
+    function scheduleLoop() {
+      const t0 = nextStart; nextStart += totalLen
+      let t = t0
+      for (const [freq, dur] of MELODY) {
+        if (freq > 0) {
+          const o = ac.createOscillator(), g = ac.createGain()
+          o.type = 'square'; o.frequency.value = freq
+          g.gain.setValueAtTime(0, t)
+          g.gain.linearRampToValueAtTime(0.12, t + 0.01)
+          g.gain.exponentialRampToValueAtTime(0.001, t + dur * 0.88)
+          o.connect(g); g.connect(master)
+          o.start(t); o.stop(t + dur + 0.01)
+        }
+        t += dur
+      }
     }
-  } catch { /* ignore */ }
+    scheduleLoop(); scheduleLoop()
+    const id = setInterval(() => {
+      if (!running) { clearInterval(id); return }
+      if (nextStart - ac.currentTime < totalLen * 1.5) scheduleLoop()
+    }, 400)
+    return () => {
+      running = false; clearInterval(id)
+      master.gain.linearRampToValueAtTime(0, ac.currentTime + 0.3)
+      setTimeout(() => { try { master.disconnect() } catch {} }, 400)
+    }
+  } catch { return () => {} }
 }
 
 // ── Drawing helpers ───────────────────────────────────────────────────────────
@@ -461,7 +489,7 @@ export function SouthParkBus({ onDone }: { onDone: () => void }) {
 
   useEffect(() => {
     discoverEgg('southpark')
-    playSPTheme()
+    const stopMusic = startSPTheme()
     const canvas = canvasRef.current
     if (!canvas) return
     canvas.width = window.innerWidth
@@ -627,6 +655,7 @@ export function SouthParkBus({ onDone }: { onDone: () => void }) {
 
     rafRef.current = requestAnimationFrame(loop)
     return () => {
+      stopMusic()
       cancelAnimationFrame(rafRef.current)
       timers.forEach(clearTimeout)
     }
@@ -654,50 +683,69 @@ export function RandyMarsh({ onDone, quote }: { onDone: () => void; quote?: stri
     return () => { clearTimeout(t1); clearTimeout(t2) }
   }, [onDone])
 
+  // Randy Marsh — South Park style : chemise bleue claire, cheveux bruns, moustache
   const RandyPixel = () => (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, flexShrink: 0 }}>
-      {/* Hair */}
-      <div style={{ width: 46, height: 10, background: '#5a2d0c', borderRadius: '4px 4px 0 0', marginBottom: -2 }} />
-      {/* Head */}
-      <div style={{ width: 46, height: 42, borderRadius: '50% 50% 40% 40%', background: '#f2d5a8', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
-        {/* Eyes */}
-        <div style={{ display: 'flex', gap: 10, marginBottom: 4 }}>
-          <div style={{ width: 7, height: 7, background: '#222', borderRadius: '50%' }} />
-          <div style={{ width: 7, height: 7, background: '#222', borderRadius: '50%' }} />
+      {/* Cheveux bruns courts */}
+      <div style={{ width: 50, height: 12, background: '#6b3a1f', borderRadius: '6px 6px 0 0' }} />
+      {/* Tête */}
+      <div style={{ width: 50, height: 44, borderRadius: '46% 46% 42% 42%', background: '#f2c888', position: 'relative', overflow: 'visible' }}>
+        {/* Oreilles */}
+        <div style={{ position: 'absolute', left: -7, top: 10, width: 8, height: 12, background: '#f2c888', borderRadius: '50%' }} />
+        <div style={{ position: 'absolute', right: -7, top: 10, width: 8, height: 12, background: '#f2c888', borderRadius: '50%' }} />
+        {/* Yeux */}
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', paddingTop: 10 }}>
+          <div style={{ width: 8, height: 8, background: '#222', borderRadius: '50%' }} />
+          <div style={{ width: 8, height: 8, background: '#222', borderRadius: '50%' }} />
         </div>
-        {/* Smile (slightly drunk) */}
-        <div style={{ width: 18, height: 4, border: '2px solid #bb8866', borderTop: 'none', borderRadius: '0 0 8px 8px' }} />
+        {/* Nez */}
+        <div style={{ width: 8, height: 5, background: '#e0a870', borderRadius: '50%', margin: '3px auto 0' }} />
+        {/* Moustache brune épaisse — caractéristique de Randy */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 2 }}>
+          <div style={{ width: 26, height: 7, background: '#5a2a0a', borderRadius: '4px 4px 6px 6px' }} />
+        </div>
+        {/* Bouche légèrement ouverte (sourire détendu) */}
+        <div style={{ width: 14, height: 5, background: '#cc7755', borderRadius: '0 0 6px 6px', margin: '2px auto 0', border: '1px solid #8a3a22' }} />
       </div>
-      {/* Body */}
-      <div style={{ position: 'relative', width: 54, height: 58, background: '#2255bb', borderRadius: '2px 2px 4px 4px' }}>
-        {/* Left arm + beer can */}
-        <div style={{ position: 'absolute', left: -20, top: 6, display: 'flex', alignItems: 'flex-end', flexDirection: 'column' }}>
-          <div style={{ width: 14, height: 34, background: '#2255bb', borderRadius: 4 }} />
-          {/* Beer can */}
-          <div style={{ width: 18, height: 26, background: 'linear-gradient(to bottom, #cc2222, #aa0000)', borderRadius: '2px 2px 0 0', border: '1px solid #880000', marginTop: -4 }}>
-            <div style={{ height: 5, background: '#ddd', borderRadius: '2px 2px 0 0' }} />
-            <div style={{ margin: '3px 2px 0', fontSize: '5px', color: '#fff', fontFamily: 'monospace', letterSpacing: 0, lineHeight: 1.2 }}>BEER</div>
+      {/* Corps — chemise bleue claire boutonné */}
+      <div style={{ position: 'relative', width: 58, height: 60, background: '#5b9bd5', borderRadius: '2px 2px 4px 4px' }}>
+        {/* Col de chemise */}
+        <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 20, height: 10, background: '#f0f0f0', clipPath: 'polygon(20% 0%, 80% 0%, 100% 100%, 0% 100%)' }} />
+        {/* Boutons chemise */}
+        <div style={{ position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {[0,1,2].map(i => <div key={i} style={{ width: 4, height: 4, background: '#3a7ab0', borderRadius: '50%' }} />)}
+        </div>
+        {/* Bras gauche + canette de bière */}
+        <div style={{ position: 'absolute', left: -18, top: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={{ width: 15, height: 32, background: '#5b9bd5', borderRadius: 4 }} />
+          <div style={{ width: 14, height: 24, background: 'linear-gradient(180deg,#e8c020,#c8a010)', borderRadius: '2px 2px 3px 3px', border: '1px solid #a07808' }}>
+            <div style={{ height: 4, background: '#eee', borderRadius: '2px 2px 0 0' }} />
+            <div style={{ fontSize: '4px', color: '#fff', textAlign: 'center', fontFamily: 'monospace', marginTop: 2, lineHeight: 1.1 }}>{'BEER\nCO'}</div>
           </div>
         </div>
-        {/* Right arm + wine glass */}
-        <div style={{ position: 'absolute', right: -22, top: 6, display: 'flex', alignItems: 'flex-end', flexDirection: 'column' }}>
-          <div style={{ width: 14, height: 34, background: '#2255bb', borderRadius: 4 }} />
-          {/* Wine glass */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: -4 }}>
-            <div style={{ width: 22, height: 16, background: 'rgba(220,180,80,0.8)', borderRadius: '0 0 12px 12px', border: '1px solid rgba(255,220,100,0.5)' }} />
-            <div style={{ width: 2, height: 10, background: 'rgba(255,255,255,0.4)' }} />
-            <div style={{ width: 16, height: 3, background: 'rgba(255,255,255,0.4)', borderRadius: 2 }} />
+        {/* Bras droit + verre de vin */}
+        <div style={{ position: 'absolute', right: -20, top: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={{ width: 15, height: 32, background: '#5b9bd5', borderRadius: 4 }} />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div style={{ width: 20, height: 14, background: 'rgba(180,50,50,0.75)', borderRadius: '0 0 10px 10px', border: '1px solid rgba(200,80,80,0.5)' }} />
+            <div style={{ width: 2, height: 8, background: 'rgba(255,255,255,0.35)' }} />
+            <div style={{ width: 14, height: 3, background: 'rgba(255,255,255,0.35)', borderRadius: 2 }} />
           </div>
         </div>
-        {/* Shirt */}
-        <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 16, height: '100%', background: '#eee', borderRadius: 2 }} />
-        {/* Belt */}
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 8, background: '#333' }} />
+        {/* Ceinture */}
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 7, background: '#2a2a2a', borderRadius: '0 0 2px 2px' }}>
+          <div style={{ width: 10, height: 7, background: '#888', margin: '0 auto' }} />
+        </div>
       </div>
-      {/* Pants */}
-      <div style={{ display: 'flex', gap: 4 }}>
-        <div style={{ width: 22, height: 36, background: '#3355aa', borderRadius: '0 0 4px 4px' }} />
-        <div style={{ width: 22, height: 36, background: '#3355aa', borderRadius: '0 0 4px 4px' }} />
+      {/* Pantalon gris */}
+      <div style={{ display: 'flex', gap: 3 }}>
+        <div style={{ width: 25, height: 38, background: '#7a7a8a', borderRadius: '0 0 4px 4px' }} />
+        <div style={{ width: 25, height: 38, background: '#7a7a8a', borderRadius: '0 0 4px 4px' }} />
+      </div>
+      {/* Chaussures marron */}
+      <div style={{ display: 'flex', gap: 3, marginTop: 1 }}>
+        <div style={{ width: 28, height: 8, background: '#4a2810', borderRadius: '2px 4px 4px 2px' }} />
+        <div style={{ width: 28, height: 8, background: '#4a2810', borderRadius: '4px 2px 2px 4px' }} />
       </div>
     </div>
   )

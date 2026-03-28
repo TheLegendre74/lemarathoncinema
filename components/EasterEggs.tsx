@@ -387,6 +387,32 @@ function NoctambuleNotif({ onDone, line1, line2 }: { onDone: () => void; line1: 
   )
 }
 
+// ─── FIGHT CLUB RULES OVERLAY ───────────────────────────────────────────────
+function FightClubRule({ rule, onDone }: { rule: 1|2|3; onDone: ()=>void }) {
+  const RULES = [
+    '',
+    "La première règle du Fight Club est : il est interdit de parler du Fight Club.",
+    "La deuxième règle du Fight Club est : il est interdit de parler du Fight Club.",
+    "Troisième règle du Fight Club : quelqu'un crie stop, quelqu'un s'écroule ou n'en peut plus, le combat est terminé.",
+  ]
+  useEffect(()=>{
+    const t=setTimeout(onDone,4500)
+    const onKey=(e:KeyboardEvent)=>{ if(e.key==='Escape') onDone() }
+    window.addEventListener('keydown',onKey)
+    return ()=>{ clearTimeout(t); window.removeEventListener('keydown',onKey) }
+  },[onDone])
+  return (
+    <div style={{position:'fixed',inset:0,zIndex:9999,background:'rgba(0,0,0,0.94)',
+      display:'flex',alignItems:'center',justifyContent:'center',animation:'ee-fadein 0.4s ease'}}>
+      <div style={{maxWidth:640,padding:'3rem',color:'#fff',fontFamily:'serif',textAlign:'center',lineHeight:1.8}}>
+        <div style={{fontSize:'2.5rem',marginBottom:'1.5rem',opacity:.25}}>✊</div>
+        <div style={{fontSize:'1.35rem',fontStyle:'italic',color:'#e8e8e8'}}>"{RULES[rule]}"</div>
+        <div style={{marginTop:'2rem',fontSize:'.7rem',color:'rgba(255,255,255,.2)',letterSpacing:'3px'}}>— FIGHT CLUB</div>
+      </div>
+    </div>
+  )
+}
+
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
 const KONAMI = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a']
 
@@ -436,6 +462,8 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
   const [showBond,       setShowBond]       = useState(false)
   const [showNoctambule, setShowNoctambule] = useState(false)
   const [showFightClub,  setShowFightClub]  = useState(false)
+  const [fightClubRule,  setFightClubRule]  = useState<1|2|3|null>(null)
+  const fightClubCount = useRef(0)
   const [showKenny,      setShowKenny]      = useState(false)
   const [showSouthPark,  setShowSouthPark]  = useState(false)
   const [showRandy,      setShowRandy]      = useState(false)
@@ -492,10 +520,17 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
         keyBuf.current = []
         return
       }
-      // "tyler" → Fight Club game
-      if (buf.slice(-5).join('').toLowerCase() === 'tyler') {
-        setShowFightClub(true)
+      // "fight club" → règles 1-3 puis jeu à la 4e
+      if (buf.slice(-10).join('').toLowerCase() === 'fight club') {
+        fightClubCount.current = (fightClubCount.current % 3) + 1
         keyBuf.current = []
+        if (fightClubCount.current < 4) {
+          setFightClubRule(fightClubCount.current as 1|2|3)
+          if (fightClubCount.current === 1) discoverEgg('fightclub')
+        } else {
+          fightClubCount.current = 0
+          setShowFightClub(true)
+        }
         return
       }
       // "kill kenny" → Kenny death scene (10 chars avec espace)
@@ -569,6 +604,7 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
       {showNolan      && <NolanOverlay  onDone={() => setShowNolan(false)}      quote={ee.nolanQuote} />}
       {showBond       && <BondOverlay   onDone={() => setShowBond(false)}       bondLine={ee.bondLine} />}
       {showNoctambule && <NoctambuleNotif onDone={() => setShowNoctambule(false)} line1={ee.noctamLine1} line2={ee.noctamLine2} />}
+      {fightClubRule  && <FightClubRule   rule={fightClubRule} onDone={() => setFightClubRule(null)} />}
       {showFightClub  && <FightClubGame   onDone={() => setShowFightClub(false)} gameOverText={ee.fightClubGameOver} />}
       {showKenny      && <KennyDeath      onDone={() => setShowKenny(false)}     text1={ee.kennyText1} text2={ee.kennyText2} />}
       {showSouthPark  && <SouthParkBus    onDone={() => setShowSouthPark(false)} />}
