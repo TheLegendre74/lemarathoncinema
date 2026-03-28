@@ -16,7 +16,7 @@ export default function AVPEgg({ onDone }: { onDone: () => void }) {
 
     discoverEgg('predator')
 
-    const roarAudio = new Audio('/sons/predator-roar.mp3')
+    const roarAudio = new Audio('/sons/Predator roar. (128kbit_AAC).m4a')
     roarAudio.volume = 0.9
 
     let done = false
