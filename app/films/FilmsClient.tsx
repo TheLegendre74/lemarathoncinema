@@ -477,7 +477,7 @@ export default function FilmsClient({ films, profile, watchedIds, myRatings, wat
   const pct         = s1Total ? Math.round((watchedCount / s1Total) * 100) : 0
 
   return (
-    <div>
+    <div style={{ maxWidth: 1080, margin: '0 auto' }}>
       <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', lineHeight: 1 }}>Films</div>
@@ -526,7 +526,7 @@ export default function FilmsClient({ films, profile, watchedIds, myRatings, wat
       </div>
 
       {/* Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))', gap: '1rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))', gap: '1rem', justifyItems: 'center' }}>
         {filtered.map(film => {
           const isWatched = watchedSet.has(film.id)
           const maj   = isMajority(film.id)
