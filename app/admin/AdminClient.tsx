@@ -297,6 +297,8 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
   const [frenchPostersRunning, setFrenchPostersRunning] = useState(false)
   const [ageScanNextId, setAgeScanNextId] = useState<number | null>(0)
   const [ageScanRunning, setAgeScanRunning] = useState(false)
+  const [flaggedDecisions, setFlaggedDecisions] = useState<Record<number, 'approve' | 'reject'>>({})
+  const [flaggedSubmitting, setFlaggedSubmitting] = useState(false)
   const [brokenPosters, setBrokenPosters] = useState<{ id: number; titre: string; poster: string }[]>([])
   const [verifyNextId, setVerifyNextId] = useState<number | null>(0)
   const [verifyRunning, setVerifyRunning] = useState(false)
@@ -533,6 +535,29 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
     router.refresh()
   }
 
+  async function submitFlaggedDecisions() {
+    const entries = Object.entries(flaggedDecisions)
+    if (!entries.length) return
+    setFlaggedSubmitting(true)
+    let approved = 0, rejected = 0
+    for (const [idStr, decision] of entries) {
+      const id = parseInt(idStr)
+      const film = flaggedFilms.find(f => f.id === id)
+      if (!film) continue
+      if (decision === 'approve') {
+        await adminApproveFlaggedFilm(id)
+        approved++
+      } else {
+        await adminDeleteFilm(id)
+        rejected++
+      }
+    }
+    setFlaggedDecisions({})
+    setFlaggedSubmitting(false)
+    addToast(`${approved} approuvé(s), ${rejected} refusé(s)`, '✅')
+    router.refresh()
+  }
+
   const Section = ({ icon, title, children }: { icon: string; title: string; children: React.ReactNode }) => (
     <div style={{ background: 'rgba(232,90,90,.04)', border: '1px solid rgba(232,90,90,.18)', borderRadius: 'var(--rl)', padding: '1.3rem', marginBottom: '1.2rem' }}>
       <div style={{ fontSize: '.68rem', letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--red)', marginBottom: '1rem' }}>
@@ -708,18 +733,71 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
       {/* 18+ flagged films */}
       {flaggedFilms.length > 0 && (
         <Section icon="🔞" title={`Films +18 ans à valider (${flaggedFilms.length})`}>
-          <div style={{ fontSize: '.78rem', color: 'var(--text2)', marginBottom: '.8rem' }}>
-            Ces films ont une certification 18+ (FR) ou R/NC-17 (US) détectée par TMDB. Approuve-les s'ils conviennent au groupe, ou rejette-les.
+          <div style={{ fontSize: '.78rem', color: 'var(--text2)', marginBottom: '1rem' }}>
+            Coche chaque film puis valide en une fois.
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
-            {flaggedFilms.map(f => (
-              <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: '.7rem', background: 'rgba(232,90,90,.07)', border: '1px solid rgba(232,90,90,.3)', borderRadius: 'var(--r)', padding: '.6rem 1rem', flexWrap: 'wrap' }}>
-                <span style={{ flex: 1, fontSize: '.85rem', fontWeight: 500 }}>{f.titre} <span style={{ color: 'var(--text3)', fontSize: '.72rem' }}>({f.annee}) · {f.realisateur}</span></span>
-                <button className="btn btn-green" style={{ fontSize: '.73rem', padding: '.28rem .65rem' }} onClick={() => approveFilm(f.id, f.titre)}>✓ Approuver</button>
-                <button className="btn btn-red" style={{ fontSize: '.73rem', padding: '.28rem .65rem' }} onClick={() => rejectFilm(f.id, f.titre)}>✕ Refuser</button>
-              </div>
-            ))}
+
+          {/* Header colonnes */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px 90px', gap: '.5rem', padding: '0 .5rem', marginBottom: '.4rem' }}>
+            <div />
+            <div style={{ fontSize: '.68rem', letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--green)', textAlign: 'center' }}>✓ Oui</div>
+            <div style={{ fontSize: '.68rem', letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--red)', textAlign: 'center' }}>✕ Non</div>
           </div>
+
+          {/* Lignes films */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '.3rem', marginBottom: '1rem' }}>
+            {flaggedFilms.map(f => {
+              const dec = flaggedDecisions[f.id]
+              return (
+                <div key={f.id} style={{
+                  display: 'grid', gridTemplateColumns: '1fr 90px 90px', gap: '.5rem', alignItems: 'center',
+                  background: dec === 'approve' ? 'rgba(79,217,138,.07)' : dec === 'reject' ? 'rgba(232,90,90,.07)' : 'var(--bg3)',
+                  border: `1px solid ${dec === 'approve' ? 'rgba(79,217,138,.3)' : dec === 'reject' ? 'rgba(232,90,90,.3)' : 'var(--border)'}`,
+                  borderRadius: 'var(--r)', padding: '.55rem .8rem', transition: 'background .15s, border-color .15s'
+                }}>
+                  <span style={{ fontSize: '.85rem', fontWeight: 500 }}>
+                    {f.titre}
+                    <span style={{ color: 'var(--text3)', fontSize: '.72rem', marginLeft: '.4rem' }}>({f.annee}) · {f.realisateur}</span>
+                  </span>
+                  <button
+                    onClick={() => setFlaggedDecisions(d => ({ ...d, [f.id]: 'approve' }))}
+                    style={{
+                      width: '100%', padding: '.4rem 0', borderRadius: 'var(--r)', border: '1px solid',
+                      cursor: 'pointer', fontSize: '.8rem', fontWeight: 600, transition: 'all .15s',
+                      background: dec === 'approve' ? 'var(--green2)' : 'transparent',
+                      borderColor: dec === 'approve' ? 'rgba(79,217,138,.5)' : 'var(--border)',
+                      color: dec === 'approve' ? 'var(--green)' : 'var(--text3)',
+                    }}
+                  >✓</button>
+                  <button
+                    onClick={() => setFlaggedDecisions(d => ({ ...d, [f.id]: 'reject' }))}
+                    style={{
+                      width: '100%', padding: '.4rem 0', borderRadius: 'var(--r)', border: '1px solid',
+                      cursor: 'pointer', fontSize: '.8rem', fontWeight: 600, transition: 'all .15s',
+                      background: dec === 'reject' ? 'var(--red2)' : 'transparent',
+                      borderColor: dec === 'reject' ? 'rgba(232,90,90,.5)' : 'var(--border)',
+                      color: dec === 'reject' ? 'var(--red)' : 'var(--text3)',
+                    }}
+                  >✕</button>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Bouton valider */}
+          {(() => {
+            const count = Object.keys(flaggedDecisions).length
+            return (
+              <button
+                className="btn btn-gold"
+                disabled={count === 0 || flaggedSubmitting}
+                onClick={submitFlaggedDecisions}
+                style={{ fontSize: '.82rem' }}
+              >
+                {flaggedSubmitting ? '⏳ En cours…' : count === 0 ? 'Aucune sélection' : `Valider ${count} / ${flaggedFilms.length} film${count > 1 ? 's' : ''}`}
+              </button>
+            )
+          })()}
         </Section>
       )}
 
