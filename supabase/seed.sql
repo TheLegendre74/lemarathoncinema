@@ -223,8 +223,7 @@ insert into public.films (id, titre, annee, realisateur, genre, sousgenre, poste
 (223,'Warrior',                        2011,'Gavin O''Connor',              'Drame',     'Sport',               'https://image.tmdb.org/t/p/w300/6WkqBPRYCiOaqOMHZnvMhNXb8vU.jpg',  1),
 (224,'Joker',                          2019,'Todd Phillips',                'Drame',     'Super-héros',         'https://image.tmdb.org/t/p/w300/udDclJoHjfjb8Ekgsd4FDteOkCU.jpg',  1),
 (225,'Logan',                          2017,'James Mangold',                'Action',    'Super-héros',         'https://image.tmdb.org/t/p/w300/45Y1G5FEgttPNGmHOmEGXJiWFKj.jpg',  1),
-(226,'Blue Velvet',                    1986,'David Lynch',                  'Thriller',  'Mystère',             'https://image.tmdb.org/t/p/w300/vFzfJHEBBsPaJkgz0f5kX9PiHp9.jpg',  1),
-(227,'Solaris',                        1972,'Andreï Tarkovski',             'SF',        'Drame psychologique', 'https://image.tmdb.org/t/p/w300/gPBNWtknHzfO6g7bKCYuJw4SaK5.jpg',  1)
+(226,'Blue Velvet',                    1986,'David Lynch',                  'Thriller',  'Mystère',             'https://image.tmdb.org/t/p/w300/vFzfJHEBBsPaJkgz0f5kX9PiHp9.jpg',  1)
 on conflict (id) do nothing;
 
 -- Réinitialiser la séquence

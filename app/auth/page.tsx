@@ -56,7 +56,7 @@ export default function AuthPage() {
 
     if (tab === 'login') {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) { setErr(error.message); setLoading(false); return }
+      if (error) { setErr('Email ou mot de passe incorrect.'); setLoading(false); return }
       setTimeout(() => { window.location.href = '/' }, 500)
     } else {
       if (pseudo.length < 2) { setErr('Pseudo trop court (min 2 caractères).'); setLoading(false); return }
