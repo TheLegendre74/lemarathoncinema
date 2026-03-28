@@ -850,6 +850,26 @@ export async function adminForceRefreshAllPosters(fromId: number = 0) {
   return { success: true, count, nextId }
 }
 
+// ── WATCH PROVIDERS (public — appelé depuis FilmsClient) ──────
+
+export async function getFilmWatchProviders(tmdbId: number | null): Promise<{
+  flatrate?: { provider_id: number; provider_name: string; logo_path: string }[]
+  rent?: { provider_id: number; provider_name: string; logo_path: string }[]
+  buy?: { provider_id: number; provider_name: string; logo_path: string }[]
+} | null> {
+  if (!tmdbId) return null
+  const key = process.env.TMDB_API_KEY
+  if (!key) return null
+  try {
+    const res = await fetch(
+      `https://api.themoviedb.org/3/movie/${tmdbId}/watch/providers?api_key=${key}`,
+      { next: { revalidate: 3600 } }
+    )
+    const data = await res.json()
+    return data.results?.FR ?? null
+  } catch { return null }
+}
+
 // ── EASTER EGGS ───────────────────────────────────────────────
 
 export async function discoverEgg(eggId: string) {

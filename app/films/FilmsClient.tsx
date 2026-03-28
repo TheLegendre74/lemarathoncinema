@@ -5,8 +5,8 @@ import Image from 'next/image'
 import Poster from '@/components/Poster'
 import Forum from '@/components/Forum'
 import { useToast } from '@/components/ToastProvider'
-import { toggleWatched, upsertRating, addFilm, updateFilm, reportFilm, discoverEgg } from '@/lib/actions'
-import { getStreamingPlatforms, CONFIG } from '@/lib/config'
+import { toggleWatched, upsertRating, addFilm, updateFilm, reportFilm, discoverEgg, getFilmWatchProviders } from '@/lib/actions'
+import { CONFIG } from '@/lib/config'
 import { useRouter } from 'next/navigation'
 import type { Film, Profile } from '@/lib/supabase/types'
 
@@ -88,8 +88,16 @@ function FilmModal({ film, profile, isWatched, myRating, watchPct, ratingScores,
 
   const isAuthor = film.added_by === profile.id
   const avg = avgRating(ratingScores)
-  const platforms = getStreamingPlatforms(film.id, film.titre)
-  const typeLabel: Record<string, string> = { svod: 'Abonnement', tvod: 'Location/Achat', free: 'Gratuit légal' }
+  type WP = { provider_id: number; provider_name: string; logo_path: string }
+  const [providers, setProviders] = useState<{ flatrate?: WP[]; rent?: WP[]; buy?: WP[] } | null | 'loading'>('loading')
+
+  useEffect(() => {
+    if (tab !== 'streaming') return
+    if (providers !== 'loading') return
+    getFilmWatchProviders((film as any).tmdb_id ?? null).then(setProviders)
+  }, [tab, film, providers])
+
+  const justWatchUrl = `https://www.justwatch.com/fr/rechercher?q=${encodeURIComponent(film.titre)}`
   const expGain = isWeekFilm ? CONFIG.EXP_FDLS : CONFIG.EXP_FILM
 
   // ── Easter eggs ─────────────────────────────────────────────
@@ -292,14 +300,51 @@ function FilmModal({ film, profile, isWatched, myRating, watchPct, ratingScores,
 
           {tab === 'streaming' && (
             <div>
-              {platforms.map((p, i) => (
-                <a key={i} href={p.url} target="_blank" rel="noopener noreferrer" className="streaming-platform">
-                  <div className="sp-icon" style={{ background: p.color, color: '#fff' }}>{p.icon}</div>
-                  <span style={{ flex: 1, fontSize: '.88rem', fontWeight: 500, color: 'var(--text)' }}>{p.name}</span>
-                  <span className={`sp-type ${p.type}`}>{typeLabel[p.type]}</span>
+              {providers === 'loading' && (
+                <div style={{ fontSize: '.82rem', color: 'var(--text3)', padding: '.5rem 0' }}>Recherche des plateformes…</div>
+              )}
+              {providers && providers !== 'loading' && (() => {
+                const flatrate = providers.flatrate ?? []
+                const rentBuy = [...(providers.rent ?? []), ...(providers.buy ?? [])]
+                const seen = new Set<number>()
+                const deduped = rentBuy.filter(p => { if (seen.has(p.provider_id)) return false; seen.add(p.provider_id); return true })
+                return (
+                  <>
+                    {flatrate.map(p => (
+                      <a key={p.provider_id} href={justWatchUrl} target="_blank" rel="noopener noreferrer" className="streaming-platform">
+                        <Image src={`https://image.tmdb.org/t/p/original${p.logo_path}`} alt={p.provider_name} width={32} height={32} style={{ borderRadius: 6, objectFit: 'cover' }} />
+                        <span style={{ flex: 1, fontSize: '.88rem', fontWeight: 500, color: 'var(--text)' }}>{p.provider_name}</span>
+                        <span className="sp-type svod">Abonnement</span>
+                        <span style={{ fontSize: '.8rem', color: 'var(--text3)' }}>↗</span>
+                      </a>
+                    ))}
+                    {deduped.map(p => (
+                      <a key={p.provider_id} href={justWatchUrl} target="_blank" rel="noopener noreferrer" className="streaming-platform">
+                        <Image src={`https://image.tmdb.org/t/p/original${p.logo_path}`} alt={p.provider_name} width={32} height={32} style={{ borderRadius: 6, objectFit: 'cover' }} />
+                        <span style={{ flex: 1, fontSize: '.88rem', fontWeight: 500, color: 'var(--text)' }}>{p.provider_name}</span>
+                        <span className="sp-type tvod">Location/Achat</span>
+                        <span style={{ fontSize: '.8rem', color: 'var(--text3)' }}>↗</span>
+                      </a>
+                    ))}
+                  </>
+                )
+              })()}
+              {/* JustWatch fallback — toujours visible */}
+              {providers !== 'loading' && (
+                <a href={justWatchUrl} target="_blank" rel="noopener noreferrer" className="streaming-platform" style={{ opacity: .75 }}>
+                  <div className="sp-icon" style={{ background: '#1e2030', color: '#fff' }}>🔍</div>
+                  <span style={{ flex: 1, fontSize: '.85rem', color: 'var(--text2)' }}>Toutes les plateformes — JustWatch</span>
                   <span style={{ fontSize: '.8rem', color: 'var(--text3)' }}>↗</span>
                 </a>
-              ))}
+              )}
+              {/* IMDB link si tmdb_id dispo */}
+              {(film as any).tmdb_id && providers !== 'loading' && (
+                <a href={`https://www.imdb.com/find/?q=${encodeURIComponent(film.titre)}&s=tt&ttype=ft`} target="_blank" rel="noopener noreferrer" className="streaming-platform" style={{ opacity: .65 }}>
+                  <div className="sp-icon" style={{ background: '#f5c518', color: '#000', fontWeight: 700, fontSize: '.7rem' }}>IMDb</div>
+                  <span style={{ flex: 1, fontSize: '.85rem', color: 'var(--text2)' }}>Voir sur IMDb</span>
+                  <span style={{ fontSize: '.8rem', color: 'var(--text3)' }}>↗</span>
+                </a>
+              )}
               <div style={{ fontSize: '.73rem', color: 'var(--text3)', marginTop: '.6rem', lineHeight: 1.5, fontStyle: 'italic', background: 'rgba(255,255,255,.03)', borderRadius: 'var(--r)', padding: '.6rem .8rem' }}>
                 ℹ️ Les disponibilités peuvent varier. Les liens JustWatch listent toujours les options légales les plus récentes.
               </div>

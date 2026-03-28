@@ -522,9 +522,9 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
       }
       // "fight club" → règles 1-3 puis jeu à la 4e
       if (buf.slice(-10).join('').toLowerCase() === 'fight club') {
-        fightClubCount.current = (fightClubCount.current % 3) + 1
+        fightClubCount.current = fightClubCount.current + 1
         keyBuf.current = []
-        if (fightClubCount.current < 4) {
+        if (fightClubCount.current <= 3) {
           setFightClubRule(fightClubCount.current as 1|2|3)
           if (fightClubCount.current === 1) discoverEgg('fightclub')
         } else {
