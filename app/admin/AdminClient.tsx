@@ -291,6 +291,8 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
   const [editFilm, setEditFilm] = useState<Film | null>(null)
   const [allPostersNextId, setAllPostersNextId] = useState<number | null>(0)
   const [allPostersRunning, setAllPostersRunning] = useState(false)
+  const [autoRunning, setAutoRunning] = useState(false)
+  const [autoProgress, setAutoProgress] = useState('')
   const [brokenPosters, setBrokenPosters] = useState<{ id: number; titre: string; poster: string }[]>([])
   const [verifyNextId, setVerifyNextId] = useState<number | null>(0)
   const [verifyRunning, setVerifyRunning] = useState(false)
@@ -447,6 +449,27 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
         : `${result.count} affiches mises à jour — cliquer à nouveau pour le lot suivant`,
       '🖼️'
     )
+    router.refresh()
+  }
+
+  async function forceRefreshAllAuto() {
+    setAutoRunning(true)
+    let nextId: number | null = 0
+    let totalCount = 0
+    let lot = 1
+    while (nextId !== null) {
+      setAutoProgress(`Lot ${lot} en cours…`)
+      const result = await adminForceRefreshAllPosters(nextId)
+      if (result.error) { addToast(result.error, '⚠️'); break }
+      totalCount += result.count ?? 0
+      nextId = result.nextId ?? null
+      lot++
+      if (nextId !== null) await new Promise(r => setTimeout(r, 800))
+    }
+    setAllPostersNextId(null)
+    setAutoRunning(false)
+    setAutoProgress('')
+    addToast(`✅ Terminé ! ${totalCount} affiches mises à jour au total.`, '🖼️')
     router.refresh()
   }
 
@@ -634,10 +657,18 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
           <button
             className="btn btn-outline"
             style={{ fontSize: '.78rem' }}
-            disabled={allPostersRunning || allPostersNextId === null}
+            disabled={allPostersRunning || allPostersNextId === null || autoRunning}
             onClick={forceRefreshAll}
           >
             {allPostersRunning ? '…' : allPostersNextId === null ? '✅ Tout traité' : '🔄 Tout rafraîchir depuis TMDB (lot de 50)'}
+          </button>
+          <button
+            className="btn btn-gold"
+            style={{ fontSize: '.78rem' }}
+            disabled={autoRunning}
+            onClick={forceRefreshAllAuto}
+          >
+            {autoRunning ? `⏳ ${autoProgress}` : '⚡ Tout rafraîchir automatiquement'}
           </button>
           <button
             className="btn btn-outline"
