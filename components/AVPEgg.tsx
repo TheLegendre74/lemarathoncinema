@@ -90,9 +90,12 @@ export default function AVPEgg({ onDone }: { onDone: () => void }) {
     const ctx = canvas.getContext('2d')!
     discoverEgg('predator')
 
-    // Audio principal
+    // Audio
     const audio = new Audio('/sons/predator-sound.m4a')
     audio.volume = 0.85; audio.play().catch(() => {})
+    const roar = new Audio('/sons/Predator roar. (128kbit_AAC).m4a')
+    roar.volume = 0.90
+    let roarPlayed = false
 
     let ac: AudioContext | null = null
     try { ac = makeAC() } catch {}
@@ -387,6 +390,7 @@ export default function AVPEgg({ onDone }: { onDone: () => void }) {
       }
       if (elapsed >= T.alienEscape && !alien.escaped) {
         alien.escaped = true; alien.escapeVy = -5
+        if (!roarPlayed) { roarPlayed = true; roar.play().catch(() => {}) }
       }
       if (alien.escaped) {
         alien.escapeVy -= 0.35
@@ -440,7 +444,7 @@ export default function AVPEgg({ onDone }: { onDone: () => void }) {
       if (elapsed >= T.fadeStart) {
         fadeAlpha = (elapsed - T.fadeStart) / (T.end - T.fadeStart)
         if (fadeAlpha >= 1 && !done) {
-          done = true; audio.pause(); stopBeeps(); onDone(); return
+          done = true; audio.pause(); roar.pause(); stopBeeps(); onDone(); return
         }
         ctx.fillStyle = `rgba(0,0,0,${Math.min(1, fadeAlpha)})`
         ctx.fillRect(0, 0, W, H)
@@ -453,12 +457,12 @@ export default function AVPEgg({ onDone }: { onDone: () => void }) {
     raf = requestAnimationFrame(render)
 
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') { done = true; audio.pause(); stopBeeps(); onDone() }
+      if (e.key === 'Escape') { done = true; audio.pause(); roar.pause(); stopBeeps(); onDone() }
     }
     window.addEventListener('keydown', onKey)
 
     return () => {
-      cancelAnimationFrame(raf); audio.pause(); stopBeeps()
+      cancelAnimationFrame(raf); audio.pause(); roar.pause(); stopBeeps()
       window.removeEventListener('keydown', onKey)
     }
   }, [onDone])
