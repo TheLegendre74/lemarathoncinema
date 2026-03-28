@@ -6,6 +6,7 @@ import FightClubGame from './FightClubGame'
 import { KennyDeath, SouthParkBus, RandyMarsh } from './SouthParkEggs'
 import KillBillGame from './KillBillGame'
 import AVPEgg from './AVPEgg'
+import AlienEgg from './AlienEgg'
 import JawsEgg from './JawsEgg'
 
 // ─── ANIMATIONS (partagées avec Forum et FilmsClient) ───────────────────────
@@ -470,6 +471,7 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
   const [showRandy,      setShowRandy]      = useState(false)
   const [showKillBill,   setShowKillBill]   = useState(false)
   const [showAVP,        setShowAVP]        = useState(false)
+  const [showAlien,      setShowAlien]      = useState(false)
   const [showJaws,       setShowJaws]       = useState(false)
   const keyBuf = useRef<string[]>([])
   const tarsShown = useRef(false)
@@ -559,9 +561,15 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
         keyBuf.current = []
         return
       }
-      // "vs" → Alien vs Predator DOM destruction
-      if (buf.slice(-2).join('').toLowerCase() === 'vs') {
+      // "predator" → Alien vs Predator (alien 4 pattes, predator tire)
+      if (buf.slice(-8).join('').toLowerCase() === 'predator') {
         setShowAVP(true)
+        keyBuf.current = []
+        return
+      }
+      // "alien" → Nostromo (alien tue l'équipage, facehugger sur Ripley)
+      if (buf.slice(-5).join('').toLowerCase() === 'alien') {
+        setShowAlien(true)
         keyBuf.current = []
         return
       }
@@ -620,6 +628,7 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
       {showRandy      && <RandyMarsh      onDone={() => setShowRandy(false)}     quote={ee.randyQuote} />}
       {showKillBill   && <KillBillGame    onDone={() => setShowKillBill(false)}  endText={ee.killBillEnd} />}
       {showAVP        && <AVPEgg          onDone={() => setShowAVP(false)} />}
+      {showAlien      && <AlienEgg       onDone={() => setShowAlien(false)} />}
       {showJaws       && <JawsEgg        onDone={() => setShowJaws(false)} />}
     </>
   )

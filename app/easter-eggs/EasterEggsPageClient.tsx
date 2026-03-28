@@ -54,7 +54,7 @@ const EGGS = [
     icon: '🥊',
     name: 'La Première Règle',
     category: 'Clavier',
-    condition: 'Taper "tyler" au clavier — et survivre',
+    condition: 'Taper "fight club" 4 fois au clavier — et survivre au combat',
   },
   {
     id: 'kenny',
@@ -85,11 +85,25 @@ const EGGS = [
     condition: 'Taper "kill bill" et lui trancher la tête avec le katana',
   },
   {
-    id: 'avp',
-    icon: '👾',
-    name: 'Alien vs Predator',
+    id: 'predator',
+    icon: '🎯',
+    name: 'Predator vs Alien',
     category: 'Clavier',
-    condition: 'Taper "vs" — et regarder le site se faire détruire',
+    condition: 'Taper "predator" — le Predator traque l\'Alien qui grimpe en l\'esquivant',
+  },
+  {
+    id: 'alien',
+    icon: '👾',
+    name: 'Alien — Nostromo',
+    category: 'Clavier',
+    condition: 'Taper "alien" — à bord du Nostromo, l\'alien élimine l\'équipage un par un',
+  },
+  {
+    id: 'jaws',
+    icon: '🦈',
+    name: 'Les Dents de la Mer',
+    category: 'Clavier',
+    condition: 'Taper "jaws" — l\'aileron approche, le requin surgit des profondeurs',
   },
   {
     id: 'tars',
