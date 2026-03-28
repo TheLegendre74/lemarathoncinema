@@ -387,244 +387,306 @@ function BondOverlay({ onDone, bondLine }: { onDone: () => void; bondLine: strin
     canvas.width = W; canvas.height = H
     const ctx = canvas.getContext('2d')!
 
-    const cx = W / 2, cy = H / 2
-    const BASE_R = Math.min(W, H) * 0.26
+    const cy   = H / 2
+    const BASE_R = Math.min(W, H) * 0.27
+    // Barrel centre x follows Bond during walk, then snaps to W/2
+    let barrelX  = W * 0.18
+    let irisR    = BASE_R
+    let elapsed  = 0, lastT = performance.now(), raf: number, done = false
 
-    let elapsed = 0, lastT = performance.now(), raf: number, done = false
+    // Bond absolute x position on screen
+    let bondAbsX = W * 0.18
+    let walkPh   = 0
+    let fired    = false
+    let flashAlp = 0
+    // blood 0→1
+    let blood    = 0
 
-    // Timeline (ms)
+    // Timeline ms
     const T = {
-      walk:      500,   // bond starts walking
-      turnStart: 2600,  // bond turns to face camera
-      aimReady:  3400,  // arm fully extended
-      fire:      3800,  // gunshot
-      irisClose: 3850,  // iris snaps shut
-      bloodStart:4100,  // blood drips start
-      textStart: 4600,
-      fadeStart: 7200,
-      end:       8600,
+      walkEnd:   2400,
+      aimReady:  3200,
+      fireAt:    3600,
+      bloodStart:3700,
+      irisStart: 3750,
+      irisEnd:   4600,
+      fadeStart: 6200,
+      end:       7800,
     }
 
-    // Bond state
-    let bondX    = -BASE_R * 0.75   // x relative to cx
-    let walkPh   = 0
-    let aimProg  = 0                 // 0→1 arm extension
-    let irisR    = BASE_R            // gun barrel radius
-    let flashAlp = 0
-    let fadeAlp  = 0
-    let textAlp  = 0
-    let fired    = false
+    // ── Gun barrel ────────────────────────────────────────────────────────
+    function drawBarrel(bx: number, r: number) {
+      // Black screen
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H)
+      if (r < 2) return
 
-    // Blood drips
-    const drips: { x: number; y: number; vy: number; w: number; len: number }[] = []
-    let bloodSpawned = 0
-
-    // ── Draw barrel interior ───────────────────────────────────────────────
-    function drawBarrel(r: number) {
       ctx.save()
-      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.clip()
+      // Clip to circle
+      ctx.beginPath(); ctx.arc(bx, cy, r, 0, Math.PI * 2); ctx.clip()
 
-      // Light-grey barrel interior
-      ctx.fillStyle = '#d8d8d0'; ctx.fillRect(cx - r, cy - r, r * 2, r * 2)
+      // Interior: warm off-white
+      ctx.fillStyle = '#e2e0d8'; ctx.fillRect(bx - r, cy - r, r * 2, r * 2)
 
-      // Rifling — 8 spiral grooves
+      // Spiral rifling (8 grooves, slightly rotated)
       for (let i = 0; i < 8; i++) {
-        const a = (i / 8) * Math.PI * 2
-        ctx.strokeStyle = 'rgba(120,118,110,0.45)'; ctx.lineWidth = r * 0.035
-        ctx.beginPath(); ctx.moveTo(cx, cy)
-        ctx.lineTo(cx + Math.cos(a) * r * 1.1, cy + Math.sin(a) * r * 1.1)
+        const a0 = (i / 8) * Math.PI * 2
+        const a1 = a0 + 0.22   // spiral offset
+        ctx.strokeStyle = 'rgba(105,100,90,0.38)'
+        ctx.lineWidth   = r * 0.028
+        ctx.beginPath()
+        ctx.moveTo(bx + Math.cos(a0) * r * 0.04, cy + Math.sin(a0) * r * 0.04)
+        ctx.lineTo(bx + Math.cos(a1) * r,         cy + Math.sin(a1) * r)
         ctx.stroke()
       }
-      // Depth rings
-      for (let i = 1; i <= 5; i++) {
-        ctx.beginPath(); ctx.arc(cx, cy, r * (i / 5), 0, Math.PI * 2)
-        ctx.strokeStyle = `rgba(90,88,82,${0.22 - i * 0.02})`
-        ctx.lineWidth = r * 0.012; ctx.stroke()
-      }
-      // Dark centre
-      ctx.beginPath(); ctx.arc(cx, cy, r * 0.08, 0, Math.PI * 2)
-      ctx.fillStyle = '#111'; ctx.fill()
+
+      // Radial depth shadow (darker toward edge)
+      const vignette = ctx.createRadialGradient(bx, cy, r * 0.3, bx, cy, r)
+      vignette.addColorStop(0,   'rgba(0,0,0,0)')
+      vignette.addColorStop(0.65,'rgba(0,0,0,0.04)')
+      vignette.addColorStop(1,   'rgba(0,0,0,0.60)')
+      ctx.fillStyle = vignette; ctx.fillRect(bx - r, cy - r, r * 2, r * 2)
+
+      // Central hole (black dot)
+      ctx.beginPath(); ctx.arc(bx, cy, r * 0.07, 0, Math.PI * 2)
+      ctx.fillStyle = '#000'; ctx.fill()
+
       ctx.restore()
 
-      // Outer ring (barrel rim)
-      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2)
-      ctx.strokeStyle = '#0a0a0a'; ctx.lineWidth = r * 0.11; ctx.stroke()
+      // Thick dark barrel rim
+      ctx.beginPath(); ctx.arc(bx, cy, r, 0, Math.PI * 2)
+      ctx.strokeStyle = '#040404'; ctx.lineWidth = r * 0.13; ctx.stroke()
+      ctx.beginPath(); ctx.arc(bx, cy, r * 0.94, 0, Math.PI * 2)
+      ctx.strokeStyle = 'rgba(30,28,24,0.7)'; ctx.lineWidth = r * 0.04; ctx.stroke()
     }
 
-    // ── Draw Bond silhouette ───────────────────────────────────────────────
-    function drawBond(xOff: number, facing: 'right'|'front', walkPhase: number, aim: number) {
-      const x = cx + xOff, y = cy
-      const s = irisR / 140   // scale with iris
-      ctx.save(); ctx.translate(x, y); ctx.scale(s, s)
-      ctx.fillStyle = '#0a0a0a'; ctx.strokeStyle = '#0a0a0a'; ctx.lineCap = 'round'
+    // ── Bond silhouette ───────────────────────────────────────────────────
+    // Drawn at (bx, cy) — centred in barrel
+    function drawBondWalking(bx: number, ph: number) {
+      const S = BASE_R / 150
+      ctx.save(); ctx.translate(bx, cy); ctx.scale(S, S)
+      ctx.fillStyle = '#0d0d0d'; ctx.strokeStyle = '#0d0d0d'; ctx.lineCap = 'round'
 
-      if (facing === 'right') {
-        // Walking profile
-        // Torso
-        ctx.fillRect(-10, -55, 22, 38)
-        // Head
-        ctx.beginPath(); ctx.arc(2, -70, 13, 0, Math.PI * 2); ctx.fill()
-        // Legs animated
-        const sw = Math.sin(walkPhase) * 20
-        ctx.lineWidth = 9
-        ctx.beginPath(); ctx.moveTo(-4, -17); ctx.lineTo(-4 + sw, 18); ctx.lineTo(-2 + sw * 0.6, 52); ctx.stroke()
-        ctx.beginPath(); ctx.moveTo(6,  -17); ctx.lineTo(6  - sw, 18); ctx.lineTo(4  - sw * 0.6, 52); ctx.stroke()
-        // Arms
-        ctx.lineWidth = 7
-        ctx.beginPath(); ctx.moveTo(-10,-40); ctx.lineTo(-20 + Math.sin(walkPhase+Math.PI)*12, -15); ctx.stroke()
-        ctx.beginPath(); ctx.moveTo(12, -40); ctx.lineTo(22  - Math.sin(walkPhase+Math.PI)*12, -15); ctx.stroke()
-        // Gun in hand (right arm)
-        ctx.fillRect(22 - Math.sin(walkPhase+Math.PI)*12 - 2, -20, 16, 5)
-      } else {
-        // Facing camera — aim pose (slight angle, left arm extended with gun)
-        ctx.scale(-1, 1)  // mirror so gun arm points right
+      const sw = Math.sin(ph) * 24   // leg swing
 
-        // Body
-        ctx.beginPath(); ctx.ellipse(0, -38, 16, 22, 0, 0, Math.PI * 2); ctx.fill()
-        // Head
-        ctx.beginPath(); ctx.arc(0, -70, 14, 0, Math.PI * 2); ctx.fill()
-        // Legs spread
-        ctx.lineWidth = 10
-        ctx.beginPath(); ctx.moveTo(-8, -16); ctx.lineTo(-18, 20); ctx.lineTo(-18, 52); ctx.stroke()
-        ctx.beginPath(); ctx.moveTo( 8, -16); ctx.lineTo( 18, 20); ctx.lineTo( 18, 52); ctx.stroke()
-        // Gun arm — extends toward camera (grows with aim progress)
-        const armLen = 18 + aim * 55
-        ctx.lineWidth = 8
-        ctx.beginPath(); ctx.moveTo(-16, -54); ctx.lineTo(-16 - armLen, -52); ctx.stroke()
-        // Gun body
-        if (aim > 0.3) {
-          ctx.fillRect(-16 - armLen - 20, -57, 20, 8)
-          // Barrel
-          ctx.fillRect(-16 - armLen - 30, -55, 10, 4)
+      // Head
+      ctx.beginPath(); ctx.arc(4, -72, 13, 0, Math.PI * 2); ctx.fill()
+
+      // Jacket torso (trapezoid — wider shoulders)
+      ctx.beginPath()
+      ctx.moveTo(-15, -58); ctx.lineTo(20, -58)
+      ctx.lineTo(15,  -18); ctx.lineTo(-10, -18)
+      ctx.closePath(); ctx.fill()
+
+      // Legs
+      ctx.lineWidth = 10
+      ctx.beginPath(); ctx.moveTo(-5,-18); ctx.lineTo(-5+sw, 18); ctx.lineTo(-3+sw*.6, 54); ctx.stroke()
+      ctx.beginPath(); ctx.moveTo( 7,-18); ctx.lineTo( 7-sw, 18); ctx.lineTo( 5-sw*.6, 54); ctx.stroke()
+
+      // Arms
+      const aswing = Math.sin(ph + Math.PI) * 15
+      ctx.lineWidth = 7
+      ctx.beginPath(); ctx.moveTo(-15,-48); ctx.lineTo(-22+aswing,-20); ctx.stroke()
+      ctx.beginPath(); ctx.moveTo( 20,-48); ctx.lineTo( 26-aswing,-20); ctx.stroke()
+
+      // Gun in right hand (lowered while walking)
+      ctx.fillRect(26 - aswing - 2, -24, 17, 6)
+      ctx.fillRect(26 - aswing + 14, -23, 8, 4)
+
+      ctx.restore()
+    }
+
+    function drawBondAiming(bx: number, aimP: number) {
+      // aimP 0→1 : turns from profile to full-facing with gun out
+      const S = BASE_R / 150
+      ctx.save(); ctx.translate(bx, cy); ctx.scale(S, S)
+      ctx.fillStyle = '#0d0d0d'; ctx.strokeStyle = '#0d0d0d'; ctx.lineCap = 'round'
+
+      // Body width grows as he turns to face us
+      const bodyW = 8 + aimP * 16    // half-width of shoulders
+      const lean  = (1 - aimP) * 12  // offset (still turning)
+
+      // Head
+      ctx.beginPath(); ctx.arc(lean, -72, 13, 0, Math.PI * 2); ctx.fill()
+
+      // Torso
+      ctx.beginPath()
+      ctx.moveTo(lean - bodyW * 1.4, -58); ctx.lineTo(lean + bodyW * 1.4, -58)
+      ctx.lineTo(lean + bodyW,       -18); ctx.lineTo(lean - bodyW,       -18)
+      ctx.closePath(); ctx.fill()
+
+      // Legs slightly spread
+      ctx.lineWidth = 11
+      ctx.beginPath(); ctx.moveTo(lean - 9,-18); ctx.lineTo(lean - 18, 18); ctx.lineTo(lean - 18, 54); ctx.stroke()
+      ctx.beginPath(); ctx.moveTo(lean + 9,-18); ctx.lineTo(lean + 18, 18); ctx.lineTo(lean + 18, 54); ctx.stroke()
+
+      // Both arms extending toward camera (classic two-hand Walther PPK grip)
+      const reach = aimP * 50   // how far arms push toward viewer (foreshortened)
+      ctx.lineWidth = 8
+      // Left arm
+      ctx.beginPath()
+      ctx.moveTo(lean - bodyW * 1.2, -52)
+      ctx.lineTo(lean - 6, -50 + reach * 0.1)
+      ctx.stroke()
+      // Right arm
+      ctx.beginPath()
+      ctx.moveTo(lean + bodyW * 1.2, -52)
+      ctx.lineTo(lean + 6, -50 + reach * 0.1)
+      ctx.stroke()
+
+      // Gun (Walther PPK shape, foreshortened — we see the barrel face-on)
+      if (aimP > 0.35) {
+        const gAlp = Math.min(1, (aimP - 0.35) / 0.4)
+        ctx.globalAlpha = gAlp
+        // Slide body (side rect)
+        ctx.fillRect(lean - 9, -58 + reach * 0.15, 18, 10)
+        // Barrel end (circle — we look straight down it)
+        ctx.beginPath(); ctx.arc(lean, -53 + reach * 0.15, 5, 0, Math.PI * 2)
+        ctx.fillStyle = '#222'; ctx.fill()
+        ctx.globalAlpha = 1
+      }
+
+      ctx.restore()
+    }
+
+    // ── Blood inside barrel ───────────────────────────────────────────────
+    // Drips from top of barrel rim, pools at bottom
+    function drawBlood(bx: number, r: number, amount: number) {
+      if (amount <= 0 || r < 4) return
+      ctx.save()
+      // Clip strictly inside barrel
+      ctx.beginPath(); ctx.arc(bx, cy, r * 0.87, 0, Math.PI * 2); ctx.clip()
+
+      // 7 drip streams along the top half of the barrel interior
+      const STREAMS = 7
+      for (let i = 0; i < STREAMS; i++) {
+        // Spread across the top arc (-170° to -10°)
+        const a = (-Math.PI + 0.18) + (i / (STREAMS - 1)) * (Math.PI - 0.36)
+        const sx = bx + Math.cos(a) * r * 0.78
+        const sy = cy + Math.sin(a) * r * 0.78
+
+        // How far this stream has dripped downward
+        const speed   = 0.6 + (i % 3) * 0.2
+        const dripLen = r * 1.6 * amount * speed
+        const ex      = sx + Math.cos(a) * 4
+        const ey      = Math.min(sy + dripLen, cy + r * 0.85)
+
+        // Stream thickness varies
+        const w = 2.5 + (i % 3) * 2
+        ctx.strokeStyle = `rgba(${140 + i * 4},0,0,0.92)`
+        ctx.lineWidth = w; ctx.lineCap = 'round'
+        ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke()
+
+        // Droplet at tip
+        if (ey < cy + r * 0.83) {
+          ctx.beginPath(); ctx.arc(ex, ey, w * 0.75, 0, Math.PI * 2)
+          ctx.fillStyle = 'rgba(150,0,0,0.88)'; ctx.fill()
         }
-        // Other arm (slight bend)
-        ctx.lineWidth = 7
-        ctx.beginPath(); ctx.moveTo(16, -54); ctx.lineTo(24, -30); ctx.stroke()
       }
+
+      // Pool accumulating at bottom of barrel
+      if (amount > 0.25) {
+        const poolP  = Math.min(1, (amount - 0.25) / 0.75)
+        const poolRx = r * 0.62 * poolP
+        const poolRy = r * 0.18 * poolP
+        const poolY  = cy + r * 0.74
+        const poolG  = ctx.createRadialGradient(bx, poolY, 0, bx, poolY, poolRx)
+        poolG.addColorStop(0,   'rgba(170,0,0,0.95)')
+        poolG.addColorStop(0.6, 'rgba(120,0,0,0.85)')
+        poolG.addColorStop(1,   'rgba(70,0,0,0.5)')
+        ctx.fillStyle = poolG
+        ctx.beginPath(); ctx.ellipse(bx, poolY, poolRx, poolRy, 0, 0, Math.PI * 2); ctx.fill()
+      }
+
       ctx.restore()
     }
 
-    // ── Blood drips ────────────────────────────────────────────────────────
-    function spawnDrip() {
-      drips.push({
-        x:   10 + Math.random() * (W - 20),
-        y:   -20,
-        vy:  2.5 + Math.random() * 3.5,
-        w:   2 + Math.random() * 4,
-        len: 50 + Math.random() * 160,
-      })
-    }
-    function drawDrips() {
-      for (const d of drips) {
-        d.y += d.vy; d.vy += 0.06
-        // Bulge at tip
-        const tipR = d.w * 0.8
-        ctx.beginPath(); ctx.arc(d.x, d.y + d.len, tipR, 0, Math.PI * 2)
-        ctx.fillStyle = '#8a0000'; ctx.fill()
-        // Stream
-        ctx.strokeStyle = '#8a0000'; ctx.lineWidth = d.w; ctx.lineCap = 'round'
-        ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(d.x, d.y + d.len); ctx.stroke()
-        // Bright red core
-        ctx.strokeStyle = 'rgba(200,0,0,0.6)'; ctx.lineWidth = d.w * 0.4
-        ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(d.x, d.y + d.len * 0.7); ctx.stroke()
-      }
-    }
-
-    // ── SFX: gunshot (Web Audio) ────────────────────────────────────────────
+    // ── SFX gunshot ───────────────────────────────────────────────────────
     function sfxShot() {
       try {
         const ac = new (window.AudioContext || (window as any).webkitAudioContext)()
-        const t = ac.currentTime
-        // Crack
-        const buf = ac.createBuffer(1, Math.ceil(ac.sampleRate * 0.3), ac.sampleRate)
-        const d = buf.getChannelData(0)
-        for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ac.sampleRate * 0.03))
+        const t  = ac.currentTime
+        // Sharp crack
+        const buf = ac.createBuffer(1, Math.ceil(ac.sampleRate * 0.4), ac.sampleRate)
+        const d   = buf.getChannelData(0)
+        for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2-1) * Math.exp(-i/(ac.sampleRate*0.022))
         const src = ac.createBufferSource()
-        const lpf = ac.createBiquadFilter(); lpf.type = 'lowpass'; lpf.frequency.value = 1800
-        const g = ac.createGain(); g.gain.value = 0.6
-        src.buffer = buf; src.connect(lpf); lpf.connect(g); g.connect(ac.destination); src.start(t)
-        // Bass punch
-        const osc = ac.createOscillator(); const og = ac.createGain()
+        const lpf = ac.createBiquadFilter(); lpf.type='lowpass'; lpf.frequency.value=2200
+        const g   = ac.createGain(); g.gain.value = 0.65
+        src.buffer=buf; src.connect(lpf); lpf.connect(g); g.connect(ac.destination); src.start(t)
+        // Low boom
+        const osc=ac.createOscillator(); const og=ac.createGain()
         osc.connect(og); og.connect(ac.destination)
-        osc.type = 'sine'; osc.frequency.setValueAtTime(140, t); osc.frequency.exponentialRampToValueAtTime(35, t + 0.25)
-        og.gain.setValueAtTime(0.5, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.3)
-        osc.start(t); osc.stop(t + 0.35)
+        osc.type='sine'
+        osc.frequency.setValueAtTime(160,t); osc.frequency.exponentialRampToValueAtTime(32,t+0.32)
+        og.gain.setValueAtTime(0.52,t); og.gain.exponentialRampToValueAtTime(0.001,t+0.38)
+        osc.start(t); osc.stop(t+0.42)
       } catch {}
     }
 
-    // ── Render ─────────────────────────────────────────────────────────────
+    // ── Render ────────────────────────────────────────────────────────────
     function render(now: number) {
       if (done) return
       const dt = Math.min(now - lastT, 50); lastT = now; elapsed += dt
 
-      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H)
+      // Phase: walk → aim → fire → blood+iris → fade
+      const walking = elapsed < T.walkEnd
+      const aiming  = elapsed >= T.walkEnd && elapsed < T.fireAt
 
-      // ── Iris (gun barrel) ──────────────────────────────────────────────
-      if (elapsed >= T.irisClose) {
-        const p = Math.min(1, (elapsed - T.irisClose) / 260)
-        irisR = BASE_R * (1 - p * p * p)
-      }
-      if (irisR > 2) drawBarrel(irisR)
-
-      // ── Bond walk ──────────────────────────────────────────────────────
-      if (elapsed >= T.walk && elapsed < T.turnStart) {
-        const p = (elapsed - T.walk) / (T.turnStart - T.walk)
-        bondX = -BASE_R * 0.72 + p * BASE_R * 0.72
-        walkPh += dt * 0.013
-        drawBond(bondX, 'right', walkPh, 0)
-      }
-
-      // ── Bond turns & aims ──────────────────────────────────────────────
-      if (elapsed >= T.turnStart && elapsed < T.fire) {
-        aimProg = Math.min(1, (elapsed - T.turnStart) / (T.aimReady - T.turnStart))
-        drawBond(bondX, 'front', walkPh, aimProg)
+      // Bond position: walks left→right, stops at W*0.5
+      if (walking) {
+        const p    = elapsed / T.walkEnd
+        bondAbsX   = W * 0.18 + p * (W * 0.5 - W * 0.18)
+        barrelX    = bondAbsX
+        walkPh    += dt * 0.014
+      } else {
+        bondAbsX = W * 0.5
+        // Barrel snaps back to centre smoothly
+        barrelX += (W * 0.5 - barrelX) * 0.12
       }
 
-      // ── Gunshot flash ──────────────────────────────────────────────────
-      if (elapsed >= T.fire && !fired) {
-        fired = true; sfxShot()
-      }
-      if (elapsed >= T.fire && elapsed < T.fire + 320) {
-        flashAlp = Math.max(0, 1 - (elapsed - T.fire) / 260)
-        ctx.fillStyle = `rgba(255,245,200,${flashAlp})`; ctx.fillRect(0, 0, W, H)
+      // Iris close
+      if (elapsed >= T.irisStart) {
+        const p = Math.min(1, (elapsed - T.irisStart) / (T.irisEnd - T.irisStart))
+        irisR = BASE_R * (1 - p * p)
       }
 
-      // ── Blood ──────────────────────────────────────────────────────────
-      if (elapsed >= T.bloodStart) {
-        if (bloodSpawned < 28 && Math.random() < 0.15) { spawnDrip(); bloodSpawned++ }
-        drawDrips()
+      // Draw barrel + content
+      drawBarrel(barrelX, irisR)
+
+      if (irisR > 6) {
+        if (walking) {
+          drawBondWalking(bondAbsX, walkPh)
+        } else if (aiming || (elapsed >= T.fireAt && elapsed < T.fireAt + 200)) {
+          const p = Math.min(1, (elapsed - T.walkEnd) / (T.aimReady - T.walkEnd))
+          drawBondAiming(bondAbsX, p)
+        }
+
+        // Blood
+        if (elapsed >= T.bloodStart) {
+          blood = Math.min(1, (elapsed - T.bloodStart) / 2400)
+          drawBlood(barrelX, irisR, blood)
+        }
       }
 
-      // ── Text ───────────────────────────────────────────────────────────
-      if (elapsed >= T.textStart) {
-        textAlp = Math.min(1, (elapsed - T.textStart) / 700)
-        if (elapsed > T.fadeStart - 1000) textAlp = Math.max(0, textAlp - (elapsed - (T.fadeStart - 1000)) / 800)
-        ctx.save(); ctx.globalAlpha = textAlp; ctx.textAlign = 'center'
-        ctx.shadowColor = '#fff'; ctx.shadowBlur = 14
-        ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.round(H * 0.042)}px Georgia, serif`
-        ctx.letterSpacing = '6px'
-        ctx.fillText('Bond.', cx, cy - 18)
-        ctx.shadowColor = '#d4af37'; ctx.shadowBlur = 10
-        ctx.fillStyle = '#d4af37'; ctx.font = `${Math.round(H * 0.026)}px Georgia, serif`
-        ctx.fillText(bondLine, cx, cy + 22)
-        ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.shadowBlur = 0
-        ctx.font = `${Math.round(H * 0.014)}px monospace`
-        ctx.fillText('007  ·  SHAKEN, NOT STIRRED', cx, cy + 60)
-        ctx.restore()
+      // Gunshot + flash
+      if (elapsed >= T.fireAt && !fired) { fired = true; sfxShot() }
+      if (elapsed >= T.fireAt && elapsed < T.fireAt + 350) {
+        flashAlp = Math.max(0, 1 - (elapsed - T.fireAt) / 320)
+        ctx.fillStyle = `rgba(255,248,200,${flashAlp})`; ctx.fillRect(0,0,W,H)
       }
 
-      // ── Fade ───────────────────────────────────────────────────────────
+      // Fade
       if (elapsed >= T.fadeStart) {
-        fadeAlp = Math.min(1, (elapsed - T.fadeStart) / 1200)
-        ctx.fillStyle = `rgba(0,0,0,${fadeAlp})`; ctx.fillRect(0, 0, W, H)
-        if (fadeAlp >= 1 && !done) { done = true; onDone(); return }
+        const fa = Math.min(1, (elapsed - T.fadeStart) / 1400)
+        ctx.fillStyle = `rgba(0,0,0,${fa})`; ctx.fillRect(0,0,W,H)
+        if (fa >= 1 && !done) { done=true; onDone(); return }
       }
 
       raf = requestAnimationFrame(render)
     }
 
     raf = requestAnimationFrame(render)
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { done = true; onDone() } }
+    const onKey = (e: KeyboardEvent) => { if (e.key==='Escape') { done=true; onDone() } }
     window.addEventListener('keydown', onKey)
     return () => { cancelAnimationFrame(raf); window.removeEventListener('keydown', onKey) }
   }, [onDone, bondLine])
@@ -633,7 +695,7 @@ function BondOverlay({ onDone, bondLine }: { onDone: () => void; bondLine: strin
     <canvas
       ref={canvasRef}
       onClick={() => onDone()}
-      style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', zIndex: 9999, display: 'block', cursor: 'pointer' }}
+      style={{ position:'fixed', inset:0, width:'100%', height:'100%', zIndex:9999, display:'block', cursor:'pointer' }}
     />
   )
 }
