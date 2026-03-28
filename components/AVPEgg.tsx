@@ -92,8 +92,8 @@ export default function AVPEgg({ onDone }: { onDone: () => void }) {
 
     // Audio
     const audio = new Audio('/sons/predator-sound.m4a')
-    audio.volume = 0.85; audio.play().catch(() => {})
-    const roar = new Audio('/sons/Predator roar. (128kbit_AAC).m4a')
+    audio.volume = 0.85; audio.loop = true; audio.play().catch(() => {})
+    const roar = new Audio('/sons/' + encodeURIComponent('Predator roar. (128kbit_AAC).m4a'))
     roar.volume = 0.90
     let roarPlayed = false
 
