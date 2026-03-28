@@ -376,53 +376,265 @@ function NolanOverlay({ onDone, quote }: { onDone: () => void; quote: string }) 
   )
 }
 
-// ─── BOND ────────────────────────────────────────────────────────────────────
+// ─── BOND GUN BARREL ────────────────────────────────────────────────────────
 function BondOverlay({ onDone, bondLine }: { onDone: () => void; bondLine: string }) {
-  const [phase, setPhase] = useState<'barrel'|'quote'|'leaving'>('barrel')
+  const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase('quote'), 1800)
-    const t2 = setTimeout(() => setPhase('leaving'), 5500)
-    const t3 = setTimeout(onDone, 6200)
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
-  }, [onDone])
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const W = window.innerWidth, H = window.innerHeight
+    canvas.width = W; canvas.height = H
+    const ctx = canvas.getContext('2d')!
+
+    const cx = W / 2, cy = H / 2
+    const BASE_R = Math.min(W, H) * 0.26
+
+    let elapsed = 0, lastT = performance.now(), raf: number, done = false
+
+    // Timeline (ms)
+    const T = {
+      walk:      500,   // bond starts walking
+      turnStart: 2600,  // bond turns to face camera
+      aimReady:  3400,  // arm fully extended
+      fire:      3800,  // gunshot
+      irisClose: 3850,  // iris snaps shut
+      bloodStart:4100,  // blood drips start
+      textStart: 4600,
+      fadeStart: 7200,
+      end:       8600,
+    }
+
+    // Bond state
+    let bondX    = -BASE_R * 0.75   // x relative to cx
+    let walkPh   = 0
+    let aimProg  = 0                 // 0→1 arm extension
+    let irisR    = BASE_R            // gun barrel radius
+    let flashAlp = 0
+    let fadeAlp  = 0
+    let textAlp  = 0
+    let fired    = false
+
+    // Blood drips
+    const drips: { x: number; y: number; vy: number; w: number; len: number }[] = []
+    let bloodSpawned = 0
+
+    // ── Draw barrel interior ───────────────────────────────────────────────
+    function drawBarrel(r: number) {
+      ctx.save()
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.clip()
+
+      // Light-grey barrel interior
+      ctx.fillStyle = '#d8d8d0'; ctx.fillRect(cx - r, cy - r, r * 2, r * 2)
+
+      // Rifling — 8 spiral grooves
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2
+        ctx.strokeStyle = 'rgba(120,118,110,0.45)'; ctx.lineWidth = r * 0.035
+        ctx.beginPath(); ctx.moveTo(cx, cy)
+        ctx.lineTo(cx + Math.cos(a) * r * 1.1, cy + Math.sin(a) * r * 1.1)
+        ctx.stroke()
+      }
+      // Depth rings
+      for (let i = 1; i <= 5; i++) {
+        ctx.beginPath(); ctx.arc(cx, cy, r * (i / 5), 0, Math.PI * 2)
+        ctx.strokeStyle = `rgba(90,88,82,${0.22 - i * 0.02})`
+        ctx.lineWidth = r * 0.012; ctx.stroke()
+      }
+      // Dark centre
+      ctx.beginPath(); ctx.arc(cx, cy, r * 0.08, 0, Math.PI * 2)
+      ctx.fillStyle = '#111'; ctx.fill()
+      ctx.restore()
+
+      // Outer ring (barrel rim)
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2)
+      ctx.strokeStyle = '#0a0a0a'; ctx.lineWidth = r * 0.11; ctx.stroke()
+    }
+
+    // ── Draw Bond silhouette ───────────────────────────────────────────────
+    function drawBond(xOff: number, facing: 'right'|'front', walkPhase: number, aim: number) {
+      const x = cx + xOff, y = cy
+      const s = irisR / 140   // scale with iris
+      ctx.save(); ctx.translate(x, y); ctx.scale(s, s)
+      ctx.fillStyle = '#0a0a0a'; ctx.strokeStyle = '#0a0a0a'; ctx.lineCap = 'round'
+
+      if (facing === 'right') {
+        // Walking profile
+        // Torso
+        ctx.fillRect(-10, -55, 22, 38)
+        // Head
+        ctx.beginPath(); ctx.arc(2, -70, 13, 0, Math.PI * 2); ctx.fill()
+        // Legs animated
+        const sw = Math.sin(walkPhase) * 20
+        ctx.lineWidth = 9
+        ctx.beginPath(); ctx.moveTo(-4, -17); ctx.lineTo(-4 + sw, 18); ctx.lineTo(-2 + sw * 0.6, 52); ctx.stroke()
+        ctx.beginPath(); ctx.moveTo(6,  -17); ctx.lineTo(6  - sw, 18); ctx.lineTo(4  - sw * 0.6, 52); ctx.stroke()
+        // Arms
+        ctx.lineWidth = 7
+        ctx.beginPath(); ctx.moveTo(-10,-40); ctx.lineTo(-20 + Math.sin(walkPhase+Math.PI)*12, -15); ctx.stroke()
+        ctx.beginPath(); ctx.moveTo(12, -40); ctx.lineTo(22  - Math.sin(walkPhase+Math.PI)*12, -15); ctx.stroke()
+        // Gun in hand (right arm)
+        ctx.fillRect(22 - Math.sin(walkPhase+Math.PI)*12 - 2, -20, 16, 5)
+      } else {
+        // Facing camera — aim pose (slight angle, left arm extended with gun)
+        ctx.scale(-1, 1)  // mirror so gun arm points right
+
+        // Body
+        ctx.beginPath(); ctx.ellipse(0, -38, 16, 22, 0, 0, Math.PI * 2); ctx.fill()
+        // Head
+        ctx.beginPath(); ctx.arc(0, -70, 14, 0, Math.PI * 2); ctx.fill()
+        // Legs spread
+        ctx.lineWidth = 10
+        ctx.beginPath(); ctx.moveTo(-8, -16); ctx.lineTo(-18, 20); ctx.lineTo(-18, 52); ctx.stroke()
+        ctx.beginPath(); ctx.moveTo( 8, -16); ctx.lineTo( 18, 20); ctx.lineTo( 18, 52); ctx.stroke()
+        // Gun arm — extends toward camera (grows with aim progress)
+        const armLen = 18 + aim * 55
+        ctx.lineWidth = 8
+        ctx.beginPath(); ctx.moveTo(-16, -54); ctx.lineTo(-16 - armLen, -52); ctx.stroke()
+        // Gun body
+        if (aim > 0.3) {
+          ctx.fillRect(-16 - armLen - 20, -57, 20, 8)
+          // Barrel
+          ctx.fillRect(-16 - armLen - 30, -55, 10, 4)
+        }
+        // Other arm (slight bend)
+        ctx.lineWidth = 7
+        ctx.beginPath(); ctx.moveTo(16, -54); ctx.lineTo(24, -30); ctx.stroke()
+      }
+      ctx.restore()
+    }
+
+    // ── Blood drips ────────────────────────────────────────────────────────
+    function spawnDrip() {
+      drips.push({
+        x:   10 + Math.random() * (W - 20),
+        y:   -20,
+        vy:  2.5 + Math.random() * 3.5,
+        w:   2 + Math.random() * 4,
+        len: 50 + Math.random() * 160,
+      })
+    }
+    function drawDrips() {
+      for (const d of drips) {
+        d.y += d.vy; d.vy += 0.06
+        // Bulge at tip
+        const tipR = d.w * 0.8
+        ctx.beginPath(); ctx.arc(d.x, d.y + d.len, tipR, 0, Math.PI * 2)
+        ctx.fillStyle = '#8a0000'; ctx.fill()
+        // Stream
+        ctx.strokeStyle = '#8a0000'; ctx.lineWidth = d.w; ctx.lineCap = 'round'
+        ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(d.x, d.y + d.len); ctx.stroke()
+        // Bright red core
+        ctx.strokeStyle = 'rgba(200,0,0,0.6)'; ctx.lineWidth = d.w * 0.4
+        ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(d.x, d.y + d.len * 0.7); ctx.stroke()
+      }
+    }
+
+    // ── SFX: gunshot (Web Audio) ────────────────────────────────────────────
+    function sfxShot() {
+      try {
+        const ac = new (window.AudioContext || (window as any).webkitAudioContext)()
+        const t = ac.currentTime
+        // Crack
+        const buf = ac.createBuffer(1, Math.ceil(ac.sampleRate * 0.3), ac.sampleRate)
+        const d = buf.getChannelData(0)
+        for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ac.sampleRate * 0.03))
+        const src = ac.createBufferSource()
+        const lpf = ac.createBiquadFilter(); lpf.type = 'lowpass'; lpf.frequency.value = 1800
+        const g = ac.createGain(); g.gain.value = 0.6
+        src.buffer = buf; src.connect(lpf); lpf.connect(g); g.connect(ac.destination); src.start(t)
+        // Bass punch
+        const osc = ac.createOscillator(); const og = ac.createGain()
+        osc.connect(og); og.connect(ac.destination)
+        osc.type = 'sine'; osc.frequency.setValueAtTime(140, t); osc.frequency.exponentialRampToValueAtTime(35, t + 0.25)
+        og.gain.setValueAtTime(0.5, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.3)
+        osc.start(t); osc.stop(t + 0.35)
+      } catch {}
+    }
+
+    // ── Render ─────────────────────────────────────────────────────────────
+    function render(now: number) {
+      if (done) return
+      const dt = Math.min(now - lastT, 50); lastT = now; elapsed += dt
+
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H)
+
+      // ── Iris (gun barrel) ──────────────────────────────────────────────
+      if (elapsed >= T.irisClose) {
+        const p = Math.min(1, (elapsed - T.irisClose) / 260)
+        irisR = BASE_R * (1 - p * p * p)
+      }
+      if (irisR > 2) drawBarrel(irisR)
+
+      // ── Bond walk ──────────────────────────────────────────────────────
+      if (elapsed >= T.walk && elapsed < T.turnStart) {
+        const p = (elapsed - T.walk) / (T.turnStart - T.walk)
+        bondX = -BASE_R * 0.72 + p * BASE_R * 0.72
+        walkPh += dt * 0.013
+        drawBond(bondX, 'right', walkPh, 0)
+      }
+
+      // ── Bond turns & aims ──────────────────────────────────────────────
+      if (elapsed >= T.turnStart && elapsed < T.fire) {
+        aimProg = Math.min(1, (elapsed - T.turnStart) / (T.aimReady - T.turnStart))
+        drawBond(bondX, 'front', walkPh, aimProg)
+      }
+
+      // ── Gunshot flash ──────────────────────────────────────────────────
+      if (elapsed >= T.fire && !fired) {
+        fired = true; sfxShot()
+      }
+      if (elapsed >= T.fire && elapsed < T.fire + 320) {
+        flashAlp = Math.max(0, 1 - (elapsed - T.fire) / 260)
+        ctx.fillStyle = `rgba(255,245,200,${flashAlp})`; ctx.fillRect(0, 0, W, H)
+      }
+
+      // ── Blood ──────────────────────────────────────────────────────────
+      if (elapsed >= T.bloodStart) {
+        if (bloodSpawned < 28 && Math.random() < 0.15) { spawnDrip(); bloodSpawned++ }
+        drawDrips()
+      }
+
+      // ── Text ───────────────────────────────────────────────────────────
+      if (elapsed >= T.textStart) {
+        textAlp = Math.min(1, (elapsed - T.textStart) / 700)
+        if (elapsed > T.fadeStart - 1000) textAlp = Math.max(0, textAlp - (elapsed - (T.fadeStart - 1000)) / 800)
+        ctx.save(); ctx.globalAlpha = textAlp; ctx.textAlign = 'center'
+        ctx.shadowColor = '#fff'; ctx.shadowBlur = 14
+        ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.round(H * 0.042)}px Georgia, serif`
+        ctx.letterSpacing = '6px'
+        ctx.fillText('Bond.', cx, cy - 18)
+        ctx.shadowColor = '#d4af37'; ctx.shadowBlur = 10
+        ctx.fillStyle = '#d4af37'; ctx.font = `${Math.round(H * 0.026)}px Georgia, serif`
+        ctx.fillText(bondLine, cx, cy + 22)
+        ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.shadowBlur = 0
+        ctx.font = `${Math.round(H * 0.014)}px monospace`
+        ctx.fillText('007  ·  SHAKEN, NOT STIRRED', cx, cy + 60)
+        ctx.restore()
+      }
+
+      // ── Fade ───────────────────────────────────────────────────────────
+      if (elapsed >= T.fadeStart) {
+        fadeAlp = Math.min(1, (elapsed - T.fadeStart) / 1200)
+        ctx.fillStyle = `rgba(0,0,0,${fadeAlp})`; ctx.fillRect(0, 0, W, H)
+        if (fadeAlp >= 1 && !done) { done = true; onDone(); return }
+      }
+
+      raf = requestAnimationFrame(render)
+    }
+
+    raf = requestAnimationFrame(render)
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { done = true; onDone() } }
+    window.addEventListener('keydown', onKey)
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('keydown', onKey) }
+  }, [onDone, bondLine])
 
   return (
-    <div
-      onClick={() => { setPhase('leaving'); setTimeout(onDone, 700) }}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 9999,
-        background: phase === 'barrel' ? '#000' : 'rgba(4,4,12,.97)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        cursor: 'pointer',
-        animation: phase === 'leaving' ? 'ee-bond-out .7s ease forwards' : 'ee-bond-in .3s ease',
-      }}
-    >
-      {phase === 'barrel' && (
-        /* Gun barrel circle */
-        <div style={{
-          width: 180, height: 180, borderRadius: '50%',
-          border: '8px solid rgba(255,255,255,.08)',
-          boxShadow: '0 0 0 200vmax rgba(0,0,0,1)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#111', border: '3px solid rgba(255,255,255,.15)' }} />
-        </div>
-      )}
-      {phase === 'quote' && (
-        <div style={{ textAlign: 'center', padding: '0 2rem' }}>
-          <div style={{ fontSize: 'clamp(1.2rem,3vw,2rem)', fontFamily: 'var(--font-display)', color: '#fff', letterSpacing: '2px', marginBottom: '.5rem' }}>
-            Bond.
-          </div>
-          <div style={{ fontSize: 'clamp(1.5rem,4vw,2.8rem)', fontFamily: 'var(--font-display)', color: '#d4af37', letterSpacing: '1px' }}>
-            {bondLine}
-          </div>
-          <div style={{ marginTop: '2rem', fontSize: '.75rem', color: 'rgba(255,255,255,.3)', letterSpacing: '4px', textTransform: 'uppercase' }}>
-            007 · Shaken, not stirred
-          </div>
-        </div>
-      )}
-    </div>
+    <canvas
+      ref={canvasRef}
+      onClick={() => onDone()}
+      style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', zIndex: 9999, display: 'block', cursor: 'pointer' }}
+    />
   )
 }
 
