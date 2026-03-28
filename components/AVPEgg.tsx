@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import React, { useEffect, useRef } from 'react'
 import { discoverEgg } from '@/lib/actions'
 
 // ── 8-bit Web Audio SFX ───────────────────────────────────────────────────────
@@ -76,7 +76,7 @@ interface Hole  { x: number; y: number; r: number; age: number; smoke: Smoke[] }
 interface Spark { x: number; y: number; vx: number; vy: number; r: number; alpha: number; rgb: [number, number, number] }
 interface Bolt  { x1: number; y1: number; x2: number; y2: number; age: number; maxAge: number }
 
-export default function AVPEgg({ onDone }: { onDone: () => void }) {
+export default function AVPEgg({ onDone, predSound }: { onDone: () => void; predSound?: React.RefObject<HTMLAudioElement | null> }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -88,17 +88,27 @@ export default function AVPEgg({ onDone }: { onDone: () => void }) {
     canvas.width = W; canvas.height = H
 
     const ctx = canvas.getContext('2d')!
-    discoverEgg('predator')
 
-    // Audio
-    const audio = new Audio('/sons/predator-sound.m4a')
-    audio.volume = 0.85; audio.loop = true; audio.play().catch(() => {})
-    const roar = new Audio('/sons/' + encodeURIComponent('Predator roar. (128kbit_AAC).m4a'))
-    roar.volume = 0.90
-    let roarPlayed = false
-
+    // AudioContext pour SFX + roar (décodé via fetch, contourne autoplay)
     let ac: AudioContext | null = null
     try { ac = makeAC() } catch {}
+
+    // Roar via AudioContext (fetch + decodeAudioData — pas de restriction autoplay)
+    let roarPlayed = false
+    function playRoar() {
+      if (roarPlayed || !ac) return
+      roarPlayed = true
+      fetch('/sons/' + encodeURIComponent('Predator roar. (128kbit_AAC).m4a'))
+        .then(r => r.arrayBuffer())
+        .then(buf => ac!.decodeAudioData(buf))
+        .then(decoded => {
+          const src = ac!.createBufferSource()
+          const g   = ac!.createGain(); g.gain.value = 0.92
+          src.buffer = decoded; src.connect(g); g.connect(ac!.destination)
+          src.start()
+        })
+        .catch(() => {})
+    }
 
     let done = false
     const startTime = performance.now()
@@ -390,7 +400,7 @@ export default function AVPEgg({ onDone }: { onDone: () => void }) {
       }
       if (elapsed >= T.alienEscape && !alien.escaped) {
         alien.escaped = true; alien.escapeVy = -5
-        if (!roarPlayed) { roarPlayed = true; roar.play().catch(() => {}) }
+        playRoar()
       }
       if (alien.escaped) {
         alien.escapeVy -= 0.35
@@ -444,7 +454,7 @@ export default function AVPEgg({ onDone }: { onDone: () => void }) {
       if (elapsed >= T.fadeStart) {
         fadeAlpha = (elapsed - T.fadeStart) / (T.end - T.fadeStart)
         if (fadeAlpha >= 1 && !done) {
-          done = true; audio.pause(); roar.pause(); stopBeeps(); onDone(); return
+          done = true; predSound?.current?.pause(); stopBeeps(); onDone(); return
         }
         ctx.fillStyle = `rgba(0,0,0,${Math.min(1, fadeAlpha)})`
         ctx.fillRect(0, 0, W, H)
@@ -457,12 +467,12 @@ export default function AVPEgg({ onDone }: { onDone: () => void }) {
     raf = requestAnimationFrame(render)
 
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') { done = true; audio.pause(); roar.pause(); stopBeeps(); onDone() }
+      if (e.key === 'Escape') { done = true; predSound?.current?.pause(); stopBeeps(); onDone() }
     }
     window.addEventListener('keydown', onKey)
 
     return () => {
-      cancelAnimationFrame(raf); audio.pause(); roar.pause(); stopBeeps()
+      cancelAnimationFrame(raf); predSound?.current?.pause(); stopBeeps()
       window.removeEventListener('keydown', onKey)
     }
   }, [onDone])

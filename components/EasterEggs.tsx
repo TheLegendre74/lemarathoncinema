@@ -539,6 +539,7 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
   const [showRandy,      setShowRandy]      = useState(false)
   const [showKillBill,   setShowKillBill]   = useState(false)
   const [showAVP,        setShowAVP]        = useState(false)
+  const predSoundRef = useRef<HTMLAudioElement | null>(null)
   const [showAlien,      setShowAlien]      = useState(false)
   const [showJaws,       setShowJaws]       = useState(false)
   const keyBuf = useRef<string[]>([])
@@ -631,6 +632,12 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
       }
       // "predator" → Alien vs Predator (alien 4 pattes, predator tire)
       if (buf.slice(-8).join('').toLowerCase() === 'predator') {
+        // Audio lancé directement dans le handler de touche (contexte user gesture)
+        const snd = new Audio('/sons/predator-sound.m4a')
+        snd.volume = 0.85; snd.loop = true
+        snd.play().catch(() => {})
+        predSoundRef.current = snd
+        discoverEgg('predator')
         setShowAVP(true)
         keyBuf.current = []
         return
@@ -695,7 +702,7 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
       {showSouthPark  && <SouthParkBus    onDone={() => setShowSouthPark(false)} />}
       {showRandy      && <RandyMarsh      onDone={() => setShowRandy(false)}     quote={ee.randyQuote} />}
       {showKillBill   && <KillBillGame    onDone={() => setShowKillBill(false)}  endText={ee.killBillEnd} />}
-      {showAVP        && <AVPEgg          onDone={() => setShowAVP(false)} />}
+      {showAVP        && <AVPEgg          onDone={() => { predSoundRef.current?.pause(); predSoundRef.current = null; setShowAVP(false) }} predSound={predSoundRef} />}
       {showAlien      && <AlienEgg       onDone={() => setShowAlien(false)} />}
       {showJaws       && <JawsEgg        onDone={() => setShowJaws(false)} />}
     </>
