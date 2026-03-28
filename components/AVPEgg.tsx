@@ -3,294 +3,369 @@
 import { useEffect, useRef } from 'react'
 import { discoverEgg } from '@/lib/actions'
 
+// ── 8-bit Web Audio SFX ───────────────────────────────────────────────────────
+function makeAC() { return new (window.AudioContext || (window as any).webkitAudioContext)() }
+
+function sfxTargetBeep(ac: AudioContext, intensity: number) {
+  const freq = 700 + intensity * 1400
+  const osc = ac.createOscillator(); const g = ac.createGain()
+  osc.connect(g); g.connect(ac.destination)
+  osc.type = 'square'; osc.frequency.value = freq
+  const t = ac.currentTime
+  g.gain.setValueAtTime(0.07, t)
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.055)
+  osc.start(t); osc.stop(t + 0.07)
+}
+
+function sfxPlasmaShot(ac: AudioContext) {
+  const t = ac.currentTime
+  // Zap descend
+  const osc = ac.createOscillator(); const g = ac.createGain()
+  osc.connect(g); g.connect(ac.destination)
+  osc.type = 'sawtooth'
+  osc.frequency.setValueAtTime(2400, t)
+  osc.frequency.exponentialRampToValueAtTime(160, t + 0.20)
+  g.gain.setValueAtTime(0.20, t)
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.22)
+  osc.start(t); osc.stop(t + 0.25)
+  // Crackle
+  const buf = ac.createBuffer(1, Math.ceil(ac.sampleRate * 0.12), ac.sampleRate)
+  const d = buf.getChannelData(0)
+  for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ac.sampleRate * 0.02))
+  const src = ac.createBufferSource()
+  const bpf = ac.createBiquadFilter(); bpf.type = 'bandpass'; bpf.frequency.value = 3000; bpf.Q.value = 0.8
+  const cg = ac.createGain(); cg.gain.value = 0.15
+  src.buffer = buf; src.connect(bpf); bpf.connect(cg); cg.connect(ac.destination)
+  src.start(t)
+}
+
+function sfxImpact(ac: AudioContext) {
+  const t = ac.currentTime
+  // Noise burst
+  const buf = ac.createBuffer(1, Math.ceil(ac.sampleRate * 0.45), ac.sampleRate)
+  const d = buf.getChannelData(0)
+  for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ac.sampleRate * 0.06))
+  const src = ac.createBufferSource()
+  const lpf = ac.createBiquadFilter(); lpf.type = 'lowpass'; lpf.frequency.value = 900
+  const ng = ac.createGain(); ng.gain.value = 0.4
+  src.buffer = buf; src.connect(lpf); lpf.connect(ng); ng.connect(ac.destination)
+  src.start(t)
+  // Sub thud
+  const osc = ac.createOscillator(); const og = ac.createGain()
+  osc.connect(og); og.connect(ac.destination)
+  osc.type = 'sine'
+  osc.frequency.setValueAtTime(110, t)
+  osc.frequency.exponentialRampToValueAtTime(28, t + 0.32)
+  og.gain.setValueAtTime(0.45, t)
+  og.gain.exponentialRampToValueAtTime(0.001, t + 0.38)
+  osc.start(t); osc.stop(t + 0.42)
+  // 8-bit crunch (square)
+  const osc2 = ac.createOscillator(); const og2 = ac.createGain()
+  osc2.connect(og2); og2.connect(ac.destination)
+  osc2.type = 'square'
+  osc2.frequency.setValueAtTime(80, t)
+  osc2.frequency.exponentialRampToValueAtTime(20, t + 0.18)
+  og2.gain.setValueAtTime(0.10, t)
+  og2.gain.exponentialRampToValueAtTime(0.001, t + 0.20)
+  osc2.start(t); osc2.stop(t + 0.22)
+}
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+interface Smoke { x: number; y: number; vx: number; vy: number; r: number; alpha: number }
+interface Hole  { x: number; y: number; r: number; age: number; smoke: Smoke[] }
+interface Spark { x: number; y: number; vx: number; vy: number; r: number; alpha: number; rgb: [number, number, number] }
+interface Bolt  { x1: number; y1: number; x2: number; y2: number; age: number; maxAge: number }
+
 export default function AVPEgg({ onDone }: { onDone: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    const ctx = canvas.getContext('2d')!
-    canvas.width = window.innerWidth
-    canvas.height = window.innerHeight
-    const W = canvas.width, H = canvas.height
 
+    const W = window.innerWidth
+    const H = window.innerHeight
+    canvas.width = W; canvas.height = H
+
+    const ctx = canvas.getContext('2d')!
     discoverEgg('predator')
 
-    const roarAudio = new Audio('/sons/Predator roar. (128kbit_AAC).m4a')
-    roarAudio.volume = 0.9
+    // Audio principal
+    const audio = new Audio('/sons/predator-sound.m4a')
+    audio.volume = 0.85; audio.play().catch(() => {})
+
+    let ac: AudioContext | null = null
+    try { ac = makeAC() } catch {}
 
     let done = false
     const startTime = performance.now()
 
-    // ── TIMING (ms) ──────────────────────────────────────────────────────────
+    // ── Timeline ──────────────────────────────────────────────────────────────
+    // Shots fired at these timestamps (ms)
+    const SHOT_TIMES = [2800, 5000, 7200, 9400, 11400]
     const T = {
-      huntStart:  800,
-      leapStart:  8000,
-      stabStart:  9200,
-      roarStart:  9600,
-      fadeStart: 12200,
-      end:       14000,
+      alienAppear: 500,
+      laserStart: 1200,
+      alienEscape: 12400,
+      fadeStart: 14800,
+      end: 16500,
     }
 
-    // ── STATE ─────────────────────────────────────────────────────────────────
-    const predX     = W * 0.28
-    const predBaseY = H * 0.82
-    let predAimAngle   = -Math.PI * 0.65
-    let predFiring     = false
-    let predWristBlade = false
-    let predVictory    = false
-    let roarPlayed     = false
-    let fadeAlpha      = 0
+    // ── Alien ─────────────────────────────────────────────────────────────────
+    const alien = {
+      x: W * 0.58, y: H * 0.48,
+      tx: W * 0.58, ty: H * 0.48,   // lerp target
+      alpha: 0, legAnim: 0,
+      escaped: false, escapeVy: 0,
+    }
+    // Where alien jumps after each shot (dodge)
+    const DODGE_SPOTS = [
+      { x: W * 0.20, y: H * 0.38 },
+      { x: W * 0.72, y: H * 0.55 },
+      { x: W * 0.14, y: H * 0.62 },
+      { x: W * 0.60, y: H * 0.28 },
+      { x: W * 0.38, y: H * 0.50 },
+    ]
+    let dodgeIdx = 0
 
-    const al = {
-      x: W * 0.55, y: H * 0.74,
-      vx: 1.2, vy: -0.5,
-      walkPhase: 0, facingLeft: false,
-      changeTimer: 0, leaping: false,
-      leapT: 0, leapSX: 0, leapSY: 0,
-      dead: false, deadAlpha: 1.0,
+    // ── Laser ─────────────────────────────────────────────────────────────────
+    const laser = {
+      visible: false,
+      tx: W * 0.5, ty: H * 0.5,  // smoothed target
+      dots: Array.from({ length: 3 }, () => ({ x: W * 0.5, y: H * 0.5 })),
+      convergence: 0,             // 0=spread, 1=tight on target
     }
 
-    const bolts: { x: number; y: number; vx: number; vy: number; age: number }[] = []
-    let lastFire = -999
-    const FIRE_INTERVAL = 1500
+    // ── State ─────────────────────────────────────────────────────────────────
+    const holes:  Hole[]  = []
+    const sparks: Spark[] = []
+    let bolt: Bolt | null = null
+    let shotIdx = 0
+    let fadeAlpha = 0
 
-    const acidSplats: { x: number; y: number; r: number; a: number }[] = []
-
-    // ── BACKGROUND ────────────────────────────────────────────────────────────
-    function drawBG() {
-      ctx.fillStyle = '#02060a'
-      ctx.fillRect(0, 0, W, H)
-      const fog = ctx.createRadialGradient(W * 0.5, H * 0.5, 80, W * 0.5, H * 0.5, W * 0.8)
-      fog.addColorStop(0, 'rgba(0,12,6,0)')
-      fog.addColorStop(1, 'rgba(0,0,0,0.65)')
-      ctx.fillStyle = fog; ctx.fillRect(0, 0, W, H)
-      // Tree silhouettes
-      ctx.fillStyle = '#010502'
-      for (let i = 0; i < 18; i++) {
-        const tx = (i / 18) * W * 1.1 - W * 0.05 + (i % 3) * 22
-        const th = H * 0.28 + Math.sin(i * 2.3) * H * 0.11
-        const tw = 24 + Math.sin(i * 1.7) * 9
-        ctx.beginPath()
-        ctx.moveTo(tx, H * 0.89)
-        ctx.lineTo(tx - tw, H * 0.89 - th * 0.45)
-        ctx.lineTo(tx - tw * 0.45, H * 0.89 - th)
-        ctx.lineTo(tx, H * 0.89 - th * 1.12)
-        ctx.lineTo(tx + tw * 0.45, H * 0.89 - th)
-        ctx.lineTo(tx + tw, H * 0.89 - th * 0.45)
-        ctx.closePath(); ctx.fill()
-      }
-      ctx.fillStyle = '#030804'
-      ctx.fillRect(0, H * 0.86, W, H * 0.14)
-      for (let m = 0; m < 5; m++) {
-        const mg = ctx.createLinearGradient(0, H * 0.84 + m * 7, 0, H * 0.84 + m * 7 + 18)
-        mg.addColorStop(0, 'rgba(8,20,10,0.14)')
-        mg.addColorStop(1, 'rgba(0,0,0,0)')
-        ctx.fillStyle = mg; ctx.fillRect(0, H * 0.84 + m * 7, W, 18)
-      }
+    // Beep interval — speed up as convergence rises
+    let beepInterval: ReturnType<typeof setInterval> | null = null
+    let beepCount = 0
+    function startBeeps() {
+      beepInterval = setInterval(() => {
+        if (!ac || done) return
+        sfxTargetBeep(ac, Math.min(1, beepCount * 0.06))
+        beepCount++
+      }, 300)
+    }
+    function stopBeeps() {
+      if (beepInterval) { clearInterval(beepInterval); beepInterval = null }
     }
 
-    // ── ALIEN (quadruped) ─────────────────────────────────────────────────────
-    function drawAlien(x: number, y: number, walkPhase: number, facingLeft: boolean, alpha = 1) {
+    // ── Draw alien (quadruped) ────────────────────────────────────────────────
+    function drawAlien(x: number, y: number, alpha: number) {
       if (alpha <= 0) return
-      ctx.save()
-      ctx.globalAlpha = alpha
-      ctx.translate(x, y)
-      if (!facingLeft) ctx.scale(-1, 1)
-      const bob = Math.sin(walkPhase * 2) * 2.8
+      ctx.save(); ctx.globalAlpha = alpha; ctx.translate(x, y)
 
-      // Ground shadow
-      ctx.beginPath(); ctx.ellipse(0, 33 + bob, 50, 9, 0, 0, Math.PI * 2)
-      ctx.fillStyle = 'rgba(0,0,0,0.38)'; ctx.fill()
+      // Body
+      ctx.beginPath(); ctx.ellipse(0, 0, 30, 13, 0, 0, Math.PI * 2)
+      ctx.fillStyle = '#1b2d1b'; ctx.fill()
+      ctx.strokeStyle = '#2d4d2d'; ctx.lineWidth = 1; ctx.stroke()
 
-      // Body (elongated, horizontal, low)
-      ctx.beginPath(); ctx.ellipse(-2, 2 + bob, 34, 12, -0.06, 0, Math.PI * 2)
-      ctx.fillStyle = '#12121a'; ctx.fill()
-      // Biomechanical ribbing
-      ctx.strokeStyle = '#080810'; ctx.lineWidth = 1.5
-      for (let r = 0; r < 5; r++) {
-        ctx.beginPath(); ctx.moveTo(-24 + r * 11, bob - 5); ctx.lineTo(-26 + r * 11, bob + 10); ctx.stroke()
-      }
+      // Head elongated
+      ctx.beginPath(); ctx.ellipse(36, -3, 22, 10, -0.15, 0, Math.PI * 2)
+      ctx.fillStyle = '#1b2d1b'; ctx.fill()
+
+      // Inner jaw
+      ctx.beginPath(); ctx.moveTo(50, -1); ctx.lineTo(60, 1); ctx.lineTo(50, 4)
+      ctx.fillStyle = '#8a2020'; ctx.fill()
 
       // Dorsal tubes
-      for (let d = 0; d < 5; d++) {
-        const dx = -20 + d * 10, th = 14 + Math.sin(d * 1.4) * 4
-        ctx.beginPath(); ctx.moveTo(dx, bob - 11); ctx.lineTo(dx + 1, bob - 11 - th)
-        ctx.strokeStyle = '#1c1c28'; ctx.lineWidth = 3.5; ctx.lineCap = 'round'; ctx.stroke()
-        ctx.beginPath(); ctx.arc(dx + 1, bob - 11 - th, 2.5, 0, Math.PI * 2)
-        ctx.fillStyle = '#1c1c28'; ctx.fill()
+      for (let i = 0; i < 4; i++) {
+        ctx.beginPath(); ctx.ellipse(-14 + i * 11, -12, 2.5, 6, 0, 0, Math.PI * 2)
+        ctx.fillStyle = '#253525'; ctx.fill()
       }
 
-      // Elongated head (iconic dome)
-      ctx.beginPath(); ctx.ellipse(-36, bob - 3, 22, 9, -0.12, 0, Math.PI * 2)
-      ctx.fillStyle = '#0e0e18'; ctx.fill()
-      // Dome ridge
-      ctx.beginPath(); ctx.moveTo(-54, bob - 4); ctx.quadraticCurveTo(-48, bob - 21, -26, bob - 9)
-      ctx.strokeStyle = '#08080e'; ctx.lineWidth = 2.5; ctx.stroke()
-      // Sheen
-      ctx.beginPath(); ctx.moveTo(-52, bob - 10); ctx.quadraticCurveTo(-44, bob - 19, -28, bob - 12)
-      ctx.strokeStyle = 'rgba(50,70,100,0.3)'; ctx.lineWidth = 1.5; ctx.stroke()
-      // Inner jaw (2nd mouth)
-      ctx.beginPath(); ctx.ellipse(-51, bob - 1, 5.5, 2.5, -0.18, 0, Math.PI)
-      ctx.fillStyle = '#c82820'; ctx.fill()
-      ctx.fillStyle = '#dddac8'
-      for (let t = 0; t < 4; t++) {
-        ctx.beginPath(); ctx.moveTo(-56 + t * 3.5, bob - 0.5)
-        ctx.lineTo(-54.5 + t * 3.5, bob + 4.5); ctx.lineTo(-53 + t * 3.5, bob - 0.5); ctx.fill()
+      // 4 legs (diagonal pair animation)
+      const lp = alien.legAnim
+      const legs = [
+        { bx: -14, by: 8, ph: 0 }, { bx: 8, by: 8, ph: Math.PI },
+        { bx: -24, by: 8, ph: Math.PI }, { bx: 18, by: 8, ph: 0 },
+      ]
+      ctx.lineCap = 'round'
+      for (const leg of legs) {
+        const sw = Math.sin(lp + leg.ph) * 13
+        ctx.strokeStyle = '#1b2d1b'; ctx.lineWidth = 3
+        ctx.beginPath()
+        ctx.moveTo(leg.bx, leg.by)
+        ctx.lineTo(leg.bx + sw, leg.by + 17)
+        ctx.lineTo(leg.bx + sw * 1.6, leg.by + 10)
+        ctx.stroke()
+        // Claw
+        ctx.strokeStyle = '#3a5a3a'; ctx.lineWidth = 1.5
+        ctx.beginPath()
+        ctx.moveTo(leg.bx + sw * 1.6, leg.by + 10)
+        ctx.lineTo(leg.bx + sw * 1.6 + 4, leg.by + 8)
+        ctx.stroke()
       }
-      // Acid drool
-      ctx.beginPath(); ctx.moveTo(-52, bob + 1.5); ctx.lineTo(-52, bob + 8)
-      ctx.strokeStyle = 'rgba(160,255,40,0.55)'; ctx.lineWidth = 1.5; ctx.stroke()
 
-      // 4 legs — diagonal pair walking
-      const swing = Math.sin(walkPhase) * 22
-      const fl = (swing * Math.PI) / 180, fr = (-swing * Math.PI) / 180
-      ctx.strokeStyle = '#12121a'; ctx.lineWidth = 5.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round'
-      // Front-left
-      ctx.beginPath(); ctx.moveTo(-22, bob + 8)
-      ctx.lineTo(-22 + Math.sin(fl) * 17, bob + 23); ctx.lineTo(-22 + Math.sin(fl) * 22, bob + 35); ctx.stroke()
-      // Front-right
-      ctx.beginPath(); ctx.moveTo(-12, bob + 9)
-      ctx.lineTo(-12 + Math.sin(fr) * 17, bob + 23); ctx.lineTo(-12 + Math.sin(fr) * 22, bob + 35); ctx.stroke()
-      // Rear-left (diagonal with front-right)
-      ctx.beginPath(); ctx.moveTo(14, bob + 8)
-      ctx.lineTo(14 + Math.sin(fr) * 15, bob + 22); ctx.lineTo(14 + Math.sin(fr) * 19, bob + 33); ctx.stroke()
-      // Rear-right (diagonal with front-left)
-      ctx.beginPath(); ctx.moveTo(24, bob + 9)
-      ctx.lineTo(24 + Math.sin(fl) * 15, bob + 22); ctx.lineTo(24 + Math.sin(fl) * 19, bob + 33); ctx.stroke()
-
-      // Tail (long S-curve)
-      const tailWag = Math.sin(walkPhase * 1.5) * 10
-      ctx.beginPath(); ctx.moveTo(28, bob + 3)
-      ctx.bezierCurveTo(46, bob + 13 + tailWag, 63, bob - 9 + tailWag * 0.7, 78, bob - 3)
-      ctx.bezierCurveTo(92, bob + 5, 102, bob - 14 + tailWag * 0.4, 110, bob - 7)
-      ctx.strokeStyle = '#12121a'; ctx.lineWidth = 4; ctx.stroke()
-      // Blade tip
-      ctx.beginPath(); ctx.moveTo(108, bob - 7); ctx.lineTo(117, bob - 17); ctx.lineTo(110, bob - 6)
-      ctx.fillStyle = '#1e1e28'; ctx.fill()
+      // Tail S-curve
+      ctx.beginPath()
+      ctx.moveTo(-30, 0)
+      ctx.bezierCurveTo(-50, -12, -65, 12, -80, -6)
+      ctx.strokeStyle = '#1b2d1b'; ctx.lineWidth = 4.5; ctx.stroke()
+      // Blade
+      ctx.beginPath(); ctx.moveTo(-80, -6); ctx.lineTo(-92, -16); ctx.lineTo(-85, -2)
+      ctx.fillStyle = '#3a5a3a'; ctx.fill()
 
       ctx.restore()
     }
 
-    // ── PLASMA BOLT ───────────────────────────────────────────────────────────
-    function drawBolt(bx: number, by: number) {
+    // ── Draw laser 3-dot sight ────────────────────────────────────────────────
+    function drawLaser() {
+      if (!laser.visible) return
       ctx.save()
-      ctx.shadowColor = '#20ff70'; ctx.shadowBlur = 22
-      ctx.fillStyle = '#90ffb0'
-      ctx.beginPath(); ctx.ellipse(bx, by, 5.5, 11, 0, 0, Math.PI * 2); ctx.fill()
-      ctx.fillStyle = '#ffffff'
-      ctx.beginPath(); ctx.ellipse(bx, by, 2, 4.5, 0, 0, Math.PI * 2); ctx.fill()
-      ctx.shadowBlur = 0; ctx.restore()
+      for (let i = 0; i < 3; i++) {
+        const d = laser.dots[i]
+        // Outer glow
+        const grd = ctx.createRadialGradient(d.x, d.y, 0, d.x, d.y, 12)
+        grd.addColorStop(0, 'rgba(255,20,20,0.85)')
+        grd.addColorStop(1, 'rgba(255,0,0,0)')
+        ctx.fillStyle = grd
+        ctx.beginPath(); ctx.arc(d.x, d.y, 12, 0, Math.PI * 2); ctx.fill()
+        // Core
+        ctx.beginPath(); ctx.arc(d.x, d.y, 3.5, 0, Math.PI * 2)
+        ctx.fillStyle = '#ff5555'; ctx.fill()
+      }
+      // Faint triangle between dots
+      ctx.beginPath()
+      ctx.moveTo(laser.dots[0].x, laser.dots[0].y)
+      ctx.lineTo(laser.dots[1].x, laser.dots[1].y)
+      ctx.lineTo(laser.dots[2].x, laser.dots[2].y)
+      ctx.closePath()
+      ctx.strokeStyle = `rgba(255,40,40,${0.08 + laser.convergence * 0.12})`
+      ctx.lineWidth = 0.8; ctx.stroke()
+      ctx.restore()
     }
 
-    // ── PREDATOR ──────────────────────────────────────────────────────────────
-    function drawPredator(aimAngle: number, firing: boolean, wristBlade: boolean, victory: boolean) {
-      ctx.save(); ctx.translate(predX, predBaseY)
+    // ── Draw plasma bolt ──────────────────────────────────────────────────────
+    function drawBolt() {
+      if (!bolt) return
+      const p = Math.min(1, bolt.age / bolt.maxAge)
+      const ex = bolt.x1 + (bolt.x2 - bolt.x1) * p
+      const ey = bolt.y1 + (bolt.y2 - bolt.y1) * p
 
-      // Legs
-      ctx.fillStyle = '#263018'
-      ctx.beginPath(); ctx.moveTo(-15, -5); ctx.lineTo(-24, 28); ctx.lineTo(-16, 30); ctx.lineTo(-8, -3); ctx.closePath(); ctx.fill()
-      ctx.beginPath(); ctx.moveTo(15, -5); ctx.lineTo(24, 28); ctx.lineTo(16, 30); ctx.lineTo(8, -3); ctx.closePath(); ctx.fill()
-      ctx.fillStyle = '#1a2210'
-      ctx.beginPath(); ctx.ellipse(-20, 30, 13, 5, -0.3, 0, Math.PI * 2); ctx.fill()
-      ctx.beginPath(); ctx.ellipse(20, 30, 13, 5, 0.3, 0, Math.PI * 2); ctx.fill()
-
-      // Torso
-      ctx.fillStyle = '#2a3618'
-      ctx.beginPath(); ctx.ellipse(0, -14, 21, 27, 0, 0, Math.PI * 2); ctx.fill()
-      ctx.fillStyle = '#364420'
-      ctx.beginPath(); ctx.ellipse(0, -18, 17, 19, 0, 0, Math.PI * 2); ctx.fill()
-      // Net pattern
-      ctx.strokeStyle = 'rgba(0,0,0,0.38)'; ctx.lineWidth = 0.7
-      for (let n = -20; n < 22; n += 6) {
-        ctx.beginPath(); ctx.moveTo(n, -38); ctx.lineTo(n + 8, 2); ctx.stroke()
-        ctx.beginPath(); ctx.moveTo(-22 + n, 2); ctx.lineTo(-22 + n + 8, -38); ctx.stroke()
-      }
-
-      // Arms
-      ctx.fillStyle = '#263018'
-      ctx.beginPath(); ctx.moveTo(-21, -26); ctx.lineTo(-30, 8); ctx.lineTo(-22, 10); ctx.lineTo(-14, -24); ctx.closePath(); ctx.fill()
-      ctx.beginPath(); ctx.moveTo(21, -26); ctx.lineTo(26, 5); ctx.lineTo(32, 3); ctx.lineTo(26, -24); ctx.closePath(); ctx.fill()
-
-      // Head + bio-mask
-      ctx.fillStyle = '#222c14'
-      ctx.beginPath(); ctx.ellipse(0, -46, 16, 21, 0, 0, Math.PI * 2); ctx.fill()
-      ctx.fillStyle = '#384620'
-      ctx.beginPath(); ctx.ellipse(0, -48, 14, 17, 0, 0, Math.PI * 2); ctx.fill()
-      ctx.strokeStyle = '#202e10'; ctx.lineWidth = 1
-      ctx.beginPath(); ctx.ellipse(0, -48, 10, 12, 0, 0, Math.PI * 2); ctx.stroke()
-      // Tri-laser
-      ctx.shadowColor = '#ff0000'; ctx.shadowBlur = 10; ctx.fillStyle = '#ff1818'
-      for (const [dx, dy] of [[-5, -53], [0, -57], [5, -53]]) {
-        ctx.beginPath(); ctx.arc(dx, dy, 2.5, 0, Math.PI * 2); ctx.fill()
-      }
+      ctx.save()
+      ctx.shadowColor = '#66ffaa'; ctx.shadowBlur = 16
+      ctx.strokeStyle = '#88ffcc'; ctx.lineWidth = 3
+      ctx.beginPath(); ctx.moveTo(bolt.x1, bolt.y1); ctx.lineTo(ex, ey); ctx.stroke()
       ctx.shadowBlur = 0
-      // Mandibles
-      ctx.strokeStyle = '#1a2208'; ctx.lineWidth = 2.5; ctx.lineCap = 'round'
-      for (let m = -1; m <= 1; m += 2) {
-        ctx.beginPath(); ctx.moveTo(m * 13, -38); ctx.lineTo(m * 19, -27); ctx.stroke()
-        ctx.beginPath(); ctx.moveTo(m * 11, -33); ctx.lineTo(m * 17, -21); ctx.stroke()
-      }
-      // Dreadlocks
-      for (let d = 0; d < 7; d++) {
-        const bx2 = (d - 3) * 5, by2 = -63, len = 24 + (d % 3) * 8
-        ctx.strokeStyle = '#121808'; ctx.lineWidth = 3.5
-        ctx.beginPath(); ctx.moveTo(bx2, by2)
-        ctx.quadraticCurveTo(bx2 + Math.sin(d * 1.3) * 5, by2 + len * 0.5, bx2 + Math.sin(d * 1.7) * 4, by2 + len); ctx.stroke()
-        ctx.strokeStyle = '#242e10'; ctx.lineWidth = 1.2
-        ctx.beginPath(); ctx.arc(bx2 + Math.sin(d) * 3, by2 + len * 0.38, 2, 0, Math.PI * 2); ctx.stroke()
-        ctx.beginPath(); ctx.arc(bx2 + Math.sin(d) * 2, by2 + len * 0.7, 2, 0, Math.PI * 2); ctx.stroke()
-      }
 
-      // Shoulder plasma cannon
-      ctx.save(); ctx.translate(23, -31); ctx.rotate(aimAngle)
-      ctx.fillStyle = '#383824'; ctx.beginPath(); ctx.ellipse(0, 0, 10, 13, 0, 0, Math.PI * 2); ctx.fill()
-      ctx.fillStyle = '#282818'; ctx.beginPath(); ctx.rect(-4, -28, 8, 16); ctx.fill()
-      ctx.strokeStyle = 'rgba(255,25,25,0.75)'; ctx.lineWidth = 1
-      ctx.beginPath(); ctx.moveTo(0, -31); ctx.lineTo(-6, -24); ctx.lineTo(6, -24); ctx.closePath(); ctx.stroke()
-      if (firing) {
-        ctx.shadowColor = '#00ff60'; ctx.shadowBlur = 28
-        ctx.fillStyle = '#50ffa0'; ctx.beginPath(); ctx.arc(0, -30, 5.5, 0, Math.PI * 2); ctx.fill()
-        ctx.shadowBlur = 0
-      } else {
-        ctx.fillStyle = 'rgba(0,200,60,0.1)'; ctx.beginPath(); ctx.arc(0, -30, 3, 0, Math.PI * 2); ctx.fill()
+      if (p < 0.98) {
+        ctx.beginPath(); ctx.arc(ex, ey, 7, 0, Math.PI * 2)
+        ctx.fillStyle = 'rgba(120,255,180,0.85)'; ctx.fill()
       }
       ctx.restore()
 
-      // Wrist blades
-      if (wristBlade) {
-        ctx.save(); ctx.translate(-22, 6)
-        ctx.beginPath(); ctx.moveTo(-2, 0); ctx.lineTo(-9, -58); ctx.lineTo(-4, -64); ctx.lineTo(1, -2)
-        ctx.closePath(); ctx.fillStyle = '#b0c0a8'; ctx.fill()
-        ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 0.5; ctx.stroke()
-        ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(-1, -52); ctx.lineTo(4, -57); ctx.lineTo(8, -2)
-        ctx.closePath(); ctx.fillStyle = '#a0b098'; ctx.fill()
-        ctx.restore()
-      }
-
-      // Victory arms raised
-      if (victory) {
-        ctx.strokeStyle = '#263018'; ctx.lineWidth = 12; ctx.lineCap = 'round'
-        ctx.beginPath(); ctx.moveTo(-21, -24); ctx.lineTo(-44, -60); ctx.stroke()
-        ctx.beginPath(); ctx.moveTo(21, -24); ctx.lineTo(44, -60); ctx.stroke()
-      }
-
-      ctx.restore()
+      bolt.age++
+      if (bolt.age > bolt.maxAge + 4) bolt = null
     }
 
-    // ── ACID SPLAT ────────────────────────────────────────────────────────────
-    function drawAcid(x: number, y: number, r: number, a: number) {
-      if (a <= 0) return
-      ctx.save(); ctx.globalAlpha = a
-      const g = ctx.createRadialGradient(x, y, 0, x, y, r)
-      g.addColorStop(0, 'rgba(150,255,30,0.95)')
-      g.addColorStop(0.4, 'rgba(70,190,8,0.7)')
-      g.addColorStop(1, 'rgba(30,140,0,0)')
-      ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.55, 0, 0, Math.PI * 2); ctx.fill()
-      ctx.restore()
+    // ── Draw holes + smoke ────────────────────────────────────────────────────
+    function drawHoles() {
+      for (const hole of holes) {
+        hole.age++
+
+        // Charcoal hole
+        ctx.beginPath(); ctx.arc(hole.x, hole.y, hole.r, 0, Math.PI * 2)
+        ctx.fillStyle = 'rgba(6,4,2,0.97)'; ctx.fill()
+
+        // Burning rim — pulsing orange
+        const pulse = 0.65 + Math.sin(hole.age * 0.16) * 0.35
+        const rim = ctx.createRadialGradient(hole.x, hole.y, hole.r * 0.65, hole.x, hole.y, hole.r * 1.7)
+        rim.addColorStop(0, 'rgba(0,0,0,0)')
+        rim.addColorStop(0.55, `rgba(240,85,8,${0.60 * pulse})`)
+        rim.addColorStop(0.75, `rgba(255,150,0,${0.42 * pulse})`)
+        rim.addColorStop(1, 'rgba(0,0,0,0)')
+        ctx.beginPath(); ctx.arc(hole.x, hole.y, hole.r * 1.7, 0, Math.PI * 2)
+        ctx.fillStyle = rim; ctx.fill()
+
+        // Ember inner
+        const ember = ctx.createRadialGradient(hole.x, hole.y, 0, hole.x, hole.y, hole.r * 0.9)
+        ember.addColorStop(0, `rgba(255,50,0,${0.15 * pulse})`)
+        ember.addColorStop(1, 'rgba(0,0,0,0)')
+        ctx.beginPath(); ctx.arc(hole.x, hole.y, hole.r * 0.9, 0, Math.PI * 2)
+        ctx.fillStyle = ember; ctx.fill()
+
+        // Spawn smoke
+        if (hole.age % 3 === 0 && Math.random() < 0.85) {
+          hole.smoke.push({
+            x: hole.x + (Math.random() - 0.5) * hole.r,
+            y: hole.y - hole.r * 0.4,
+            vx: (Math.random() - 0.5) * 0.7,
+            vy: -(0.5 + Math.random() * 0.9),
+            r: 5 + Math.random() * 9,
+            alpha: 0.30 + Math.random() * 0.22,
+          })
+        }
+
+        // Draw + update smoke
+        for (let i = hole.smoke.length - 1; i >= 0; i--) {
+          const s = hole.smoke[i]
+          s.x += s.vx; s.y += s.vy
+          s.r += 0.22; s.alpha -= 0.005
+          if (s.alpha <= 0) { hole.smoke.splice(i, 1); continue }
+          ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2)
+          ctx.fillStyle = `rgba(38,32,28,${s.alpha})`; ctx.fill()
+        }
+      }
     }
 
-    // ── RENDER LOOP ───────────────────────────────────────────────────────────
+    // ── Draw sparks ───────────────────────────────────────────────────────────
+    function drawSparks() {
+      for (let i = sparks.length - 1; i >= 0; i--) {
+        const s = sparks[i]
+        s.x += s.vx; s.y += s.vy; s.vy += 0.28
+        s.vx *= 0.98; s.r -= 0.10; s.alpha -= 0.022
+        if (s.r <= 0 || s.alpha <= 0) { sparks.splice(i, 1); continue }
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(${s.rgb[0]},${s.rgb[1]},${s.rgb[2]},${s.alpha})`
+        ctx.fill()
+      }
+    }
+
+    // ── Spawn impact ──────────────────────────────────────────────────────────
+    function spawnImpact(x: number, y: number) {
+      holes.push({ x, y, r: 26 + Math.random() * 20, age: 0, smoke: [] })
+      for (let i = 0; i < 22; i++) {
+        const angle = Math.random() * Math.PI * 2
+        const speed = 2 + Math.random() * 7
+        sparks.push({
+          x, y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 2.5,
+          r: 2 + Math.random() * 4.5,
+          alpha: 1,
+          rgb: Math.random() > 0.5 ? [255, 120, 0] : [255, 200, 50],
+        })
+      }
+      if (ac) sfxImpact(ac)
+    }
+
+    // ── Fire a shot ───────────────────────────────────────────────────────────
+    function fireShot() {
+      const tx = laser.tx; const ty = laser.ty
+      if (ac) sfxPlasmaShot(ac)
+      // Bolt from predator (off-screen bottom-right corner)
+      const BOLT_FRAMES = 9
+      bolt = { x1: W * 0.92, y1: H * 0.90, x2: tx, y2: ty, age: 0, maxAge: BOLT_FRAMES }
+
+      // Alien dodges after bolt lands (~150ms)
+      const nextSpot = DODGE_SPOTS[dodgeIdx % DODGE_SPOTS.length]
+      dodgeIdx++
+      setTimeout(() => {
+        if (done) return
+        spawnImpact(tx, ty)  // impact where alien was
+        alien.tx = nextSpot.x; alien.ty = nextSpot.y  // alien jumps
+      }, 150)
+    }
+
+    // ── Render ────────────────────────────────────────────────────────────────
     let raf: number
 
     function render(now: number) {
@@ -298,89 +373,75 @@ export default function AVPEgg({ onDone }: { onDone: () => void }) {
       const elapsed = now - startTime
 
       ctx.clearRect(0, 0, W, H)
-      drawBG()
 
-      // Hunt phase
-      if (elapsed >= T.huntStart && elapsed < T.leapStart && !al.dead) {
-        al.changeTimer -= 16
-        if (al.changeTimer <= 0) {
-          al.changeTimer = 380 + Math.random() * 620
-          const wildness = 1 + (elapsed - T.huntStart) / T.leapStart * 2
-          al.vx = (Math.random() - 0.5) * 5 * wildness
-          al.vy = -0.35 - Math.random() * 0.9
+      // Subtle dark tint so effects pop against page content
+      ctx.fillStyle = 'rgba(0,0,0,0.22)'
+      ctx.fillRect(0, 0, W, H)
+
+      drawHoles()
+      drawSparks()
+
+      // ── Alien appear & move ─────────────────────────────────────────────────
+      if (elapsed >= T.alienAppear) {
+        alien.alpha = Math.min(1, (elapsed - T.alienAppear) / 350)
+      }
+      if (elapsed >= T.alienEscape && !alien.escaped) {
+        alien.escaped = true; alien.escapeVy = -5
+      }
+      if (alien.escaped) {
+        alien.escapeVy -= 0.35
+        alien.ty += alien.escapeVy
+        alien.tx += (W * 0.45 - alien.tx) * 0.03
+        alien.alpha = Math.max(0, alien.alpha - (alien.ty < -50 ? 0.04 : 0))
+      } else {
+        // Idle bob
+        alien.ty += Math.sin(elapsed * 0.0018) * 0.4
+      }
+      // Smooth lerp alien position
+      alien.x += (alien.tx - alien.x) * 0.10
+      alien.y += (alien.ty - alien.y) * 0.10
+      alien.legAnim = elapsed * 0.011
+
+      drawAlien(alien.x, alien.y, alien.alpha)
+
+      // ── Laser tracking ──────────────────────────────────────────────────────
+      if (elapsed >= T.laserStart && !alien.escaped) {
+        laser.visible = true
+        // Smooth laser target tracking alien
+        laser.tx += (alien.x - laser.tx) * 0.04
+        laser.ty += (alien.y - laser.ty) * 0.04
+
+        // Convergence: how close we are to firing next shot
+        const nextShotT = SHOT_TIMES[shotIdx] ?? Infinity
+        const prevShotT = SHOT_TIMES[shotIdx - 1] ?? T.laserStart
+        laser.convergence = Math.min(1, Math.max(0, (elapsed - prevShotT) / (nextShotT - prevShotT)))
+
+        // Dots rotate tightly around target, spreading when hunting
+        const spread = (1 - laser.convergence) * 38 + 6
+        const rotSpeed = elapsed * 0.0022
+        for (let i = 0; i < 3; i++) {
+          const a = rotSpeed + (i / 3) * Math.PI * 2
+          const tdx = laser.tx + Math.cos(a) * spread
+          const tdy = laser.ty + Math.sin(a) * spread
+          laser.dots[i].x += (tdx - laser.dots[i].x) * 0.14
+          laser.dots[i].y += (tdy - laser.dots[i].y) * 0.14
         }
-        // Dodge bolts
-        for (const b of bolts) {
-          const dx = b.x - al.x, dy = b.y - al.y
-          if (Math.abs(dx) < 110 && dy > -220 && dy < 0) {
-            al.vx = al.x < b.x + W * 0.1 ? -6 : 6; al.vy = -2.2; al.changeTimer = 350; break
-          }
-        }
-        al.x += al.vx; al.y += al.vy
-        al.x = Math.max(50, Math.min(W - 50, al.x)); al.y = Math.max(H * 0.05, al.y)
-        al.walkPhase += 0.18; al.facingLeft = al.vx < 0
-        // Fire bolt
-        if (elapsed - lastFire > FIRE_INTERVAL) {
-          lastFire = elapsed
-          const dx = al.x - predX, dy = al.y - (predBaseY - 52)
-          const dist = Math.sqrt(dx * dx + dy * dy)
-          bolts.push({ x: predX, y: predBaseY - 52, vx: dx / dist * 9, vy: dy / dist * 9, age: 0 })
-          predAimAngle = Math.atan2(dy, dx) - Math.PI * 0.5
-          predFiring = true; setTimeout(() => { predFiring = false }, 160)
-        }
+        drawLaser()
       }
 
-      for (const b of bolts) { b.x += b.vx; b.y += b.vy; b.age++ }
-
-      // Leap phase
-      if (elapsed >= T.leapStart && elapsed < T.stabStart && !al.dead) {
-        if (!al.leaping) { al.leaping = true; al.leapSX = al.x; al.leapSY = al.y }
-        al.leapT = (elapsed - T.leapStart) / (T.stabStart - T.leapStart)
-        al.x = al.leapSX + (predX - al.leapSX) * al.leapT
-        al.y = al.leapSY + (predBaseY - 40 - al.leapSY) * al.leapT - Math.sin(al.leapT * Math.PI) * 65
-        al.walkPhase += 0.22; al.facingLeft = al.x > predX
+      // ── Fire shots ──────────────────────────────────────────────────────────
+      if (shotIdx < SHOT_TIMES.length && elapsed >= SHOT_TIMES[shotIdx] && !alien.escaped) {
+        fireShot(); shotIdx++
       }
 
-      // Kill phase
-      if (elapsed >= T.stabStart && !al.dead) {
-        al.dead = true; predWristBlade = true
-        for (let s = 0; s < 8; s++) acidSplats.push({
-          x: predX + (Math.random() - 0.5) * 150,
-          y: predBaseY - 28 + (Math.random() - 0.5) * 110,
-          r: 12 + Math.random() * 30, a: 0.85,
-        })
-      }
-      if (al.dead) al.deadAlpha = Math.max(0, al.deadAlpha - 0.006)
+      drawBolt()
 
-      // Roar
-      if (elapsed >= T.roarStart && !roarPlayed) {
-        roarPlayed = true; predVictory = true; roarAudio.play().catch(() => {})
-      }
-
-      // Fade
+      // ── Fade out ────────────────────────────────────────────────────────────
       if (elapsed >= T.fadeStart) {
         fadeAlpha = (elapsed - T.fadeStart) / (T.end - T.fadeStart)
-        if (fadeAlpha >= 1 && !done) { done = true; roarAudio.pause(); onDone(); return }
-      }
-
-      // Draw
-      for (const s of acidSplats) { drawAcid(s.x, s.y, s.r, s.a); if (fadeAlpha > 0) s.a -= 0.014 }
-      for (const b of bolts) { if (b.age < 160) drawBolt(b.x, b.y) }
-
-      // Tri-laser tracking
-      if (elapsed >= T.huntStart && elapsed < T.leapStart && !al.dead) {
-        for (let i = -1; i <= 1; i++) {
-          ctx.beginPath(); ctx.moveTo(predX + i * 3, predBaseY - 52); ctx.lineTo(al.x + i * 3, al.y)
-          ctx.strokeStyle = `rgba(255,8,8,${0.18 - Math.abs(i) * 0.07})`; ctx.lineWidth = 0.8; ctx.stroke()
+        if (fadeAlpha >= 1 && !done) {
+          done = true; audio.pause(); stopBeeps(); onDone(); return
         }
-      }
-
-      if (!al.dead) drawAlien(al.x, al.y, al.walkPhase, al.facingLeft)
-      else if (al.deadAlpha > 0) drawAlien(al.x, al.y, al.walkPhase, al.facingLeft, al.deadAlpha)
-
-      drawPredator(predAimAngle, predFiring, predWristBlade, predVictory)
-
-      if (fadeAlpha > 0) {
         ctx.fillStyle = `rgba(0,0,0,${Math.min(1, fadeAlpha)})`
         ctx.fillRect(0, 0, W, H)
       }
@@ -388,9 +449,30 @@ export default function AVPEgg({ onDone }: { onDone: () => void }) {
       raf = requestAnimationFrame(render)
     }
 
+    startBeeps()
     raf = requestAnimationFrame(render)
-    return () => { cancelAnimationFrame(raf); roarAudio.pause() }
+
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') { done = true; audio.pause(); stopBeeps(); onDone() }
+    }
+    window.addEventListener('keydown', onKey)
+
+    return () => {
+      cancelAnimationFrame(raf); audio.pause(); stopBeeps()
+      window.removeEventListener('keydown', onKey)
+    }
   }, [onDone])
 
-  return <canvas ref={canvasRef} style={{ position: 'fixed', inset: 0, zIndex: 9999, width: '100%', height: '100%' }} />
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: 'fixed', inset: 0,
+        width: '100%', height: '100%',
+        zIndex: 9000,
+        pointerEvents: 'none',
+        display: 'block',
+      }}
+    />
+  )
 }
