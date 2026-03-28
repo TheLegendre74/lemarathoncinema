@@ -379,11 +379,10 @@ export default function FightClubGame({ onDone, gameOverText }: { onDone:()=>voi
     const ctx=canvas.getContext('2d')!
 
     // Audio
-    let stopMusic:()=>void = ()=>{}
-    try {
-      const audioCtx=new AudioContext()
-      stopMusic=start8BitMusic(audioCtx)
-    } catch {}
+    const audio = new Audio('/sons/where-is-my-mind.opus')
+    audio.loop = true; audio.volume = 0.7
+    audio.play().catch(() => {})
+    let stopMusic:()=>void = () => { audio.pause() }
 
     const gs: GS = {
       player:makePlayer(), enemies:[], wave:0, waveTimer:90, cleared:true,
