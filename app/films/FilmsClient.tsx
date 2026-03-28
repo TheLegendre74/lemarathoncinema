@@ -97,7 +97,7 @@ function FilmModal({ film, profile, isWatched, myRating, watchPct, ratingScores,
     getFilmWatchProviders((film as any).tmdb_id ?? null).then(setProviders)
   }, [tab, film, providers])
 
-  const justWatchUrl = `https://www.justwatch.com/fr/rechercher?q=${encodeURIComponent(film.titre)}`
+  const justWatchUrl = `https://www.justwatch.com/fr/films?q=${encodeURIComponent(film.titre)}`
   const expGain = isWeekFilm ? CONFIG.EXP_FDLS : CONFIG.EXP_FILM
 
   // ── Easter eggs ─────────────────────────────────────────────

@@ -37,7 +37,7 @@ interface GS {
 // ── Factory ───────────────────────────────────────────────────
 function makePlayer(): Char {
   return { x:80,y:GROUND-PH,vx:0,vy:0,hp:120,maxHp:120,onGround:true,
-    face:1,state:'idle',stateTimer:0,atkCD:0,hurtInv:0,speed:4.5,dmg:0,isPlayer:true }
+    face:1,state:'idle',stateTimer:0,atkCD:0,hurtInv:0,speed:3.5,dmg:0,isPlayer:true }
 }
 function makeEnemy(x:number, wave:number): Char {
   const hp = Math.min(320, 40 + wave * 32)
