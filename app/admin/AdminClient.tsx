@@ -49,8 +49,6 @@ function ConfigSection({ serverConfig, siteConfig, onSave, saving }: {
     randy_quote:       siteConfig.randy_quote       ?? cfg.RANDY_QUOTE,
     fightclub_gameover: siteConfig.fightclub_gameover ?? cfg.FIGHTCLUB_GAMEOVER,
     killbill_end:      siteConfig.killbill_end      ?? cfg.KILLBILL_END,
-    films_offset_x:    siteConfig.films_offset_x    ?? String(cfg.FILMS_OFFSET_X),
-    films_offset_y:    siteConfig.films_offset_y    ?? String(cfg.FILMS_OFFSET_Y),
   })
 
   const f = (key: string) => ({
@@ -182,14 +180,6 @@ function ConfigSection({ serverConfig, siteConfig, onSave, saving }: {
 
       <Sub label="Easter eggs — Kill Bill (taper 'kill bill') — texte victoire" />
       <input style={inputStyle} {...f('killbill_end')} />
-
-      <Sub label="Mise en page — Page Films (décalage X/Y en pixels)" />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.6rem' }}>
-        <div><label style={{ fontSize: '.72rem', color: 'var(--text2)', display: 'block', marginBottom: '.2rem' }}>Décalage X (horizontal)</label>
-          <input type="number" style={inputStyle} {...f('films_offset_x')} placeholder="0" /></div>
-        <div><label style={{ fontSize: '.72rem', color: 'var(--text2)', display: 'block', marginBottom: '.2rem' }}>Décalage Y (vertical)</label>
-          <input type="number" style={inputStyle} {...f('films_offset_y')} placeholder="0" /></div>
-      </div>
 
       <button
         className="btn btn-gold"

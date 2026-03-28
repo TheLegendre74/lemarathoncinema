@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { CONFIG, isMarathonLive } from '@/lib/config'
-import { getServerConfig } from '@/lib/serverConfig'
 import FilmsClient from './FilmsClient'
 
 export const revalidate = 30
@@ -11,8 +10,7 @@ export default async function FilmsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth')
 
-  const [serverConfig, { data: profile }, { data: films }, { data: watched }, { data: ratings }, { data: userCount }, { data: weekFilm }] = await Promise.all([
-    getServerConfig(),
+  const [{ data: profile }, { data: films }, { data: watched }, { data: ratings }, { data: userCount }, { data: weekFilm }] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
     supabase.from('films').select('*').order('titre'),
     supabase.from('watched').select('film_id, pre').eq('user_id', user.id),
@@ -54,8 +52,6 @@ export default async function FilmsPage() {
       weekFilmId={weekFilmId}
       isMarathonLive={isMarathonLive()}
       saisonNumero={CONFIG.SAISON_NUMERO}
-      filmsOffsetX={serverConfig.FILMS_OFFSET_X}
-      filmsOffsetY={serverConfig.FILMS_OFFSET_Y}
     />
   )
 }

@@ -95,7 +95,7 @@ html, body {
 }
 
 /* ── MAIN ── */
-.main { margin-left: 230px; flex: 1; padding: 2rem 2.5rem; max-width: 1200px; }
+.main { margin-left: 230px; flex: 1; min-width: 0; padding: 2rem 2.5rem; }
 
 /* ── BUTTONS ── */
 .btn {
