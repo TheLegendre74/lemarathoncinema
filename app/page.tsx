@@ -3,7 +3,8 @@ import { redirect } from 'next/navigation'
 import Countdown from '@/components/Countdown'
 import ExpBar from '@/components/ExpBar'
 import Poster from '@/components/Poster'
-import { getBadge, levelFromExp, CONFIG, isMarathonLive } from '@/lib/config'
+import { getBadge, levelFromExp, CONFIG } from '@/lib/config'
+import { getServerConfig } from '@/lib/serverConfig'
 import Link from 'next/link'
 
 export const revalidate = 60
@@ -12,6 +13,8 @@ export default async function HomePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth')
+
+  const cfg = await getServerConfig()
 
   const [{ data: profile }, { data: watched }, { data: votes }, { data: weekFilm }, { data: activeDuel }] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
@@ -29,7 +32,7 @@ export default async function HomePage() {
   const pct = totalS1 ? Math.round((watchedCount / totalS1) * 100) : 0
   const level = levelFromExp(profile.exp)
   const badge = getBadge(profile.exp)
-  const live = isMarathonLive()
+  const live = new Date() >= cfg.MARATHON_START
 
   // Rank
   const { data: rankData } = await supabase
@@ -79,7 +82,7 @@ export default async function HomePage() {
         </div>
       </div>
 
-      <Countdown />
+      <Countdown marathonStart={cfg.MARATHON_START.toISOString()} />
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '.8rem', marginBottom: '1.5rem' }}>

@@ -6,6 +6,7 @@ import FightClubGame from './FightClubGame'
 import { KennyDeath, SouthParkBus, RandyMarsh } from './SouthParkEggs'
 import KillBillGame from './KillBillGame'
 import AVPEgg from './AVPEgg'
+import JawsEgg from './JawsEgg'
 
 // ─── ANIMATIONS (partagées avec Forum et FilmsClient) ───────────────────────
 const EE_STYLES = `
@@ -469,6 +470,7 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
   const [showRandy,      setShowRandy]      = useState(false)
   const [showKillBill,   setShowKillBill]   = useState(false)
   const [showAVP,        setShowAVP]        = useState(false)
+  const [showJaws,       setShowJaws]       = useState(false)
   const keyBuf = useRef<string[]>([])
   const tarsShown = useRef(false)
   const noctambuleShown = useRef(false)
@@ -563,6 +565,13 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
         keyBuf.current = []
         return
       }
+      // "jaws" → Les Dents de la Mer
+      if (buf.slice(-4).join('').toLowerCase() === 'jaws') {
+        setShowJaws(true)
+        discoverEgg('jaws')
+        keyBuf.current = []
+        return
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -611,6 +620,7 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
       {showRandy      && <RandyMarsh      onDone={() => setShowRandy(false)}     quote={ee.randyQuote} />}
       {showKillBill   && <KillBillGame    onDone={() => setShowKillBill(false)}  endText={ee.killBillEnd} />}
       {showAVP        && <AVPEgg          onDone={() => setShowAVP(false)} />}
+      {showJaws       && <JawsEgg        onDone={() => setShowJaws(false)} />}
     </>
   )
 }

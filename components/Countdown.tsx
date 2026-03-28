@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CONFIG, isMarathonLive } from '@/lib/config'
+import { CONFIG } from '@/lib/config'
 
-export default function Countdown() {
+export default function Countdown({ marathonStart }: { marathonStart?: string }) {
   const [now, setNow] = useState(new Date())
 
   useEffect(() => {
@@ -11,7 +11,8 @@ export default function Countdown() {
     return () => clearInterval(i)
   }, [])
 
-  const live = now >= CONFIG.MARATHON_START
+  const start = marathonStart ? new Date(marathonStart) : CONFIG.MARATHON_START
+  const live = now >= start
 
   if (live) return (
     <div className="hero-countdown" style={{ marginBottom: '1.5rem' }}>
@@ -22,7 +23,7 @@ export default function Countdown() {
             🎬 Marathon en cours — {CONFIG.SAISON_LABEL}
           </div>
           <div style={{ fontSize: '.78rem', color: 'var(--text2)', marginTop: '.2rem' }}>
-            Démarré le {CONFIG.MARATHON_START.toLocaleDateString('fr-FR', {
+            Démarré le {start.toLocaleDateString('fr-FR', {
               weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
             })}
           </div>
@@ -31,7 +32,7 @@ export default function Countdown() {
     </div>
   )
 
-  const diff = CONFIG.MARATHON_START.getTime() - now.getTime()
+  const diff = start.getTime() - now.getTime()
   const d = Math.floor(diff / 86400000)
   const h = Math.floor((diff % 86400000) / 3600000)
   const m = Math.floor((diff % 3600000) / 60000)
@@ -85,7 +86,7 @@ export default function Countdown() {
         </div>
 
         <div style={{ marginTop: '1.5rem', display: 'inline-flex', alignItems: 'center', gap: '.6rem', background: 'var(--gold3)', border: '1px solid rgba(232,196,106,.25)', color: 'var(--gold)', fontSize: '.82rem', padding: '.45rem 1.1rem', borderRadius: 99, fontWeight: 500 }}>
-          📅 {CONFIG.MARATHON_START.toLocaleDateString('fr-FR', {
+          📅 {start.toLocaleDateString('fr-FR', {
             weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
           })} à 00h00
         </div>
