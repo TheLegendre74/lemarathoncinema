@@ -408,10 +408,8 @@ function BondOverlay({ onDone, bondLine }: { onDone: () => void; bondLine: strin
       aimReady:  3200,
       fireAt:    3600,
       bloodStart:3700,
-      irisStart: 3750,
-      irisEnd:   4600,
-      fadeStart: 6200,
-      end:       7800,
+      fadeStart: 7000,
+      end:       8400,
     }
 
     // ── Gun barrel ────────────────────────────────────────────────────────
@@ -466,7 +464,9 @@ function BondOverlay({ onDone, bondLine }: { onDone: () => void; bondLine: strin
       ctx.save(); ctx.translate(bx, cy); ctx.scale(S, S)
       ctx.fillStyle = '#0d0d0d'; ctx.strokeStyle = '#0d0d0d'; ctx.lineCap = 'round'
 
-      const sw = Math.sin(ph) * 24   // leg swing
+      // Legs in strict opposite phase — left and right NEVER at same position
+      const lSwing = Math.sin(ph)        * 18   // front/back swing left
+      const rSwing = Math.sin(ph + Math.PI) * 18  // always opposite
 
       // Head
       ctx.beginPath(); ctx.arc(4, -72, 13, 0, Math.PI * 2); ctx.fill()
@@ -477,20 +477,27 @@ function BondOverlay({ onDone, bondLine }: { onDone: () => void; bondLine: strin
       ctx.lineTo(15,  -18); ctx.lineTo(-10, -18)
       ctx.closePath(); ctx.fill()
 
-      // Legs
+      // Legs — hip pivot at (1,-18), each leg swings independently
       ctx.lineWidth = 10
-      ctx.beginPath(); ctx.moveTo(-5,-18); ctx.lineTo(-5+sw, 18); ctx.lineTo(-3+sw*.6, 54); ctx.stroke()
-      ctx.beginPath(); ctx.moveTo( 7,-18); ctx.lineTo( 7-sw, 18); ctx.lineTo( 5-sw*.6, 54); ctx.stroke()
+      // Left leg (thigh + calf)
+      const lKneeX = 1 + lSwing * 0.55, lKneeY = 16
+      const lFootX = 1 + lSwing,         lFootY = 52
+      ctx.beginPath(); ctx.moveTo(1,-18); ctx.lineTo(lKneeX, lKneeY); ctx.lineTo(lFootX, lFootY); ctx.stroke()
+      // Right leg
+      const rKneeX = 1 + rSwing * 0.55, rKneeY = 16
+      const rFootX = 1 + rSwing,         rFootY = 52
+      ctx.beginPath(); ctx.moveTo(1,-18); ctx.lineTo(rKneeX, rKneeY); ctx.lineTo(rFootX, rFootY); ctx.stroke()
 
-      // Arms
-      const aswing = Math.sin(ph + Math.PI) * 15
+      // Arms — opposite phase to legs (natural gait)
+      const lArmX = -15 + Math.sin(ph + Math.PI) * 12
+      const rArmX =  20 + Math.sin(ph) * 12
       ctx.lineWidth = 7
-      ctx.beginPath(); ctx.moveTo(-15,-48); ctx.lineTo(-22+aswing,-20); ctx.stroke()
-      ctx.beginPath(); ctx.moveTo( 20,-48); ctx.lineTo( 26-aswing,-20); ctx.stroke()
+      ctx.beginPath(); ctx.moveTo(-15,-48); ctx.lineTo(lArmX,-20); ctx.stroke()
+      ctx.beginPath(); ctx.moveTo( 20,-48); ctx.lineTo(rArmX,-20); ctx.stroke()
 
       // Gun in right hand (lowered while walking)
-      ctx.fillRect(26 - aswing - 2, -24, 17, 6)
-      ctx.fillRect(26 - aswing + 14, -23, 8, 4)
+      ctx.fillRect(rArmX - 2, -24, 17, 6)
+      ctx.fillRect(rArmX + 14, -23, 8, 4)
 
       ctx.restore()
     }
@@ -549,52 +556,53 @@ function BondOverlay({ onDone, bondLine }: { onDone: () => void; bondLine: strin
     }
 
     // ── Blood inside barrel ───────────────────────────────────────────────
-    // Drips from top of barrel rim, pools at bottom
+    // Filets depuis le bord supérieur, flaque en bas, puis rouge opaque total
     function drawBlood(bx: number, r: number, amount: number) {
       if (amount <= 0 || r < 4) return
       ctx.save()
-      // Clip strictly inside barrel
       ctx.beginPath(); ctx.arc(bx, cy, r * 0.87, 0, Math.PI * 2); ctx.clip()
 
-      // 7 drip streams along the top half of the barrel interior
-      const STREAMS = 7
+      // Phase 1 (0→0.55) : filets qui tombent depuis la bordure du haut
+      const STREAMS = 9
       for (let i = 0; i < STREAMS; i++) {
-        // Spread across the top arc (-170° to -10°)
-        const a = (-Math.PI + 0.18) + (i / (STREAMS - 1)) * (Math.PI - 0.36)
-        const sx = bx + Math.cos(a) * r * 0.78
-        const sy = cy + Math.sin(a) * r * 0.78
+        const a      = (-Math.PI + 0.12) + (i / (STREAMS - 1)) * (Math.PI - 0.24)
+        const sx     = bx + Math.cos(a) * r * 0.80
+        const sy     = cy + Math.sin(a) * r * 0.80
+        const speed  = 0.55 + (i % 4) * 0.18
+        const dripLen = r * 1.75 * Math.min(1, amount / 0.55) * speed
+        const ex     = sx + Math.cos(a) * 3
+        const ey     = Math.min(sy + dripLen, cy + r * 0.82)
+        const w      = 2 + (i % 4) * 1.8
 
-        // How far this stream has dripped downward
-        const speed   = 0.6 + (i % 3) * 0.2
-        const dripLen = r * 1.6 * amount * speed
-        const ex      = sx + Math.cos(a) * 4
-        const ey      = Math.min(sy + dripLen, cy + r * 0.85)
-
-        // Stream thickness varies
-        const w = 2.5 + (i % 3) * 2
-        ctx.strokeStyle = `rgba(${140 + i * 4},0,0,0.92)`
+        ctx.strokeStyle = `rgba(${138 + i * 3},0,0,0.90)`
         ctx.lineWidth = w; ctx.lineCap = 'round'
         ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke()
 
-        // Droplet at tip
-        if (ey < cy + r * 0.83) {
-          ctx.beginPath(); ctx.arc(ex, ey, w * 0.75, 0, Math.PI * 2)
-          ctx.fillStyle = 'rgba(150,0,0,0.88)'; ctx.fill()
+        if (ey < cy + r * 0.80) {
+          ctx.beginPath(); ctx.arc(ex, ey, w * 0.8, 0, Math.PI * 2)
+          ctx.fillStyle = 'rgba(148,0,0,0.88)'; ctx.fill()
         }
       }
 
-      // Pool accumulating at bottom of barrel
-      if (amount > 0.25) {
-        const poolP  = Math.min(1, (amount - 0.25) / 0.75)
-        const poolRx = r * 0.62 * poolP
-        const poolRy = r * 0.18 * poolP
-        const poolY  = cy + r * 0.74
-        const poolG  = ctx.createRadialGradient(bx, poolY, 0, bx, poolY, poolRx)
-        poolG.addColorStop(0,   'rgba(170,0,0,0.95)')
-        poolG.addColorStop(0.6, 'rgba(120,0,0,0.85)')
-        poolG.addColorStop(1,   'rgba(70,0,0,0.5)')
-        ctx.fillStyle = poolG
+      // Phase 2 (0.2→0.75) : flaque rouge qui monte depuis le bas
+      if (amount > 0.2) {
+        const poolP = Math.min(1, (amount - 0.2) / 0.55)
+        const poolRx = r * 0.70 * poolP
+        const poolRy = r * 0.22 * poolP
+        const poolY  = cy + r * 0.72
+        const pg = ctx.createRadialGradient(bx, poolY, 0, bx, poolY, poolRx)
+        pg.addColorStop(0,   'rgba(160,0,0,0.96)')
+        pg.addColorStop(0.5, 'rgba(110,0,0,0.88)')
+        pg.addColorStop(1,   'rgba(60,0,0,0.5)')
+        ctx.fillStyle = pg
         ctx.beginPath(); ctx.ellipse(bx, poolY, poolRx, poolRy, 0, 0, Math.PI * 2); ctx.fill()
+      }
+
+      // Phase 3 (0.55→1.0) : rouge opaque envahit tout le barrel
+      if (amount > 0.55) {
+        const fill = (amount - 0.55) / 0.45
+        ctx.fillStyle = `rgba(90,0,0,${fill * 0.92})`
+        ctx.fillRect(bx - r, cy - r, r * 2, r * 2)
       }
 
       ctx.restore()
@@ -644,28 +652,20 @@ function BondOverlay({ onDone, bondLine }: { onDone: () => void; bondLine: strin
         barrelX += (W * 0.5 - barrelX) * 0.12
       }
 
-      // Iris close
-      if (elapsed >= T.irisStart) {
-        const p = Math.min(1, (elapsed - T.irisStart) / (T.irisEnd - T.irisStart))
-        irisR = BASE_R * (1 - p * p)
-      }
-
-      // Draw barrel + content
+      // Draw barrel + content (iris stays open throughout)
       drawBarrel(barrelX, irisR)
 
-      if (irisR > 6) {
-        if (walking) {
-          drawBondWalking(bondAbsX, walkPh)
-        } else if (aiming || (elapsed >= T.fireAt && elapsed < T.fireAt + 200)) {
-          const p = Math.min(1, (elapsed - T.walkEnd) / (T.aimReady - T.walkEnd))
-          drawBondAiming(bondAbsX, p)
-        }
+      if (walking) {
+        drawBondWalking(bondAbsX, walkPh)
+      } else if (aiming || (elapsed >= T.fireAt && elapsed < T.bloodStart)) {
+        const p = Math.min(1, (elapsed - T.walkEnd) / (T.aimReady - T.walkEnd))
+        drawBondAiming(bondAbsX, p)
+      }
 
-        // Blood
-        if (elapsed >= T.bloodStart) {
-          blood = Math.min(1, (elapsed - T.bloodStart) / 2400)
-          drawBlood(barrelX, irisR, blood)
-        }
+      // Blood — couvre progressivement tout le barrel, mais l'iris reste ouvert
+      if (elapsed >= T.bloodStart) {
+        blood = Math.min(1, (elapsed - T.bloodStart) / 3000)
+        drawBlood(barrelX, irisR, blood)
       }
 
       // Gunshot + flash
