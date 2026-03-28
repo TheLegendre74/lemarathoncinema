@@ -22,6 +22,8 @@ interface Props {
   weekFilmId: number | null
   isMarathonLive: boolean
   saisonNumero: number
+  filmsOffsetX?: number
+  filmsOffsetY?: number
 }
 
 function avgRating(scores: number[] | undefined) {
@@ -416,7 +418,7 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, onClose, onRefres
 
 
 // ─── MAIN FILMS CLIENT ───────────────────────────────────────────────────────
-export default function FilmsClient({ films, profile, watchedIds, myRatings, watchCountMap, ratingMap, totalUsers, weekFilmId, isMarathonLive, saisonNumero }: Props) {
+export default function FilmsClient({ films, profile, watchedIds, myRatings, watchCountMap, ratingMap, totalUsers, weekFilmId, isMarathonLive, saisonNumero, filmsOffsetX = 0, filmsOffsetY = 0 }: Props) {
   const router = useRouter()
   const [search, setSearch] = useState('')
   const [filterGenre, setFilterGenre] = useState('')
@@ -477,7 +479,7 @@ export default function FilmsClient({ films, profile, watchedIds, myRatings, wat
   const pct         = s1Total ? Math.round((watchedCount / s1Total) * 100) : 0
 
   return (
-    <div>
+    <div style={(filmsOffsetX || filmsOffsetY) ? { transform: `translate(${filmsOffsetX}px, ${filmsOffsetY}px)` } : undefined}>
       <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', lineHeight: 1 }}>Films</div>

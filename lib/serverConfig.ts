@@ -16,6 +16,8 @@ export type ServerConfig = typeof CONFIG & {
   RANDY_QUOTE: string
   FIGHTCLUB_GAMEOVER: string
   KILLBILL_END: string
+  FILMS_OFFSET_X: number
+  FILMS_OFFSET_Y: number
 }
 
 export const getServerConfig = cache(async (): Promise<ServerConfig> => {
@@ -41,6 +43,8 @@ export const getServerConfig = cache(async (): Promise<ServerConfig> => {
     RANDY_QUOTE:         "C'est pas de l'alcoolisme, c'est du vinomoussage... c'est une activité élégamment culturelle.",
     FIGHTCLUB_GAMEOVER:  'Tyler est toujours plus fort que toi...',
     KILLBILL_END:        "Pai mei t'a bien entraîné.",
+    FILMS_OFFSET_X:      0,
+    FILMS_OFFSET_Y:      0,
   }
 
   try {
@@ -85,6 +89,8 @@ export const getServerConfig = cache(async (): Promise<ServerConfig> => {
       RANDY_QUOTE:       db.randy_quote       ?? defaults.RANDY_QUOTE,
       FIGHTCLUB_GAMEOVER: db.fightclub_gameover ?? defaults.FIGHTCLUB_GAMEOVER,
       KILLBILL_END:      db.killbill_end      ?? defaults.KILLBILL_END,
+      FILMS_OFFSET_X:    db.films_offset_x    ? parseInt(db.films_offset_x) : defaults.FILMS_OFFSET_X,
+      FILMS_OFFSET_Y:    db.films_offset_y    ? parseInt(db.films_offset_y) : defaults.FILMS_OFFSET_Y,
     }
   } catch {
     return defaults
