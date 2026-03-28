@@ -98,7 +98,7 @@ export default function AVPEgg({ onDone, predSound }: { onDone: () => void; pred
     function playRoar() {
       if (roarPlayed || !ac) return
       roarPlayed = true
-      fetch('/sons/' + encodeURIComponent('Predator roar. (128kbit_AAC).m4a'))
+      fetch('/sons/predator-roar.m4a')
         .then(r => r.arrayBuffer())
         .then(buf => ac!.decodeAudioData(buf))
         .then(decoded => {

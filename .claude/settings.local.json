@@ -12,7 +12,11 @@
       "Bash(grep -r \"revalidate\\\\|experimental\\\\|unstable\\\\|headers\\\\|redirects\" /c/Users/Steam/Desktop/marathon/cinema-marathon-nextjs-complete/cm-next --include=*.ts --include=*.tsx --include=*.js --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=.vercel)",
       "Bash(grep -r \"VERCEL\\\\|NETLIFY\\\\|CI\\\\|BUILD\\\\|DEPLOY\" /c/Users/Steam/Desktop/marathon/cinema-marathon-nextjs-complete/cm-next --include=*.ts --include=*.tsx --include=*.js --include=*.json --include=*.toml --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=.vercel)",
       "Bash(grep -r \"cache\\\\|revalidate\\\\|experimental\" /c/Users/Steam/Desktop/marathon/cinema-marathon-nextjs-complete/cm-next/app --include=*.ts --include=*.tsx)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "WebFetch(domain:www.justwatch.com)",
+      "Bash(mv \"Where Is My Mind\"* \"where-is-my-mind.opus\")",
+      "Bash(mv \"South Park\"* \"south-park-theme.opus\")",
+      "Bash(mv \"Jaws\"* \"jaws-theme.m4a\")"
     ]
   }
 }
