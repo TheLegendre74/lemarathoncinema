@@ -46,13 +46,27 @@ export default function AuthPage() {
   const [email, setEmail] = useState('')
   const [pseudo, setPseudo] = useState('')
   const [password, setPassword] = useState('')
+  const [showPwd, setShowPwd] = useState(false)
   const [err, setErr] = useState('')
+  const [info, setInfo] = useState('')
   const [loading, setLoading] = useState(false)
+  const [forgotMode, setForgotMode] = useState(false)
   const supabase = createClient()
 
   async function handle() {
-    setErr('')
+    setErr(''); setInfo('')
     setLoading(true)
+
+    if (forgotMode) {
+      if (!email) { setErr('Saisis ton email.'); setLoading(false); return }
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset`,
+      })
+      if (error) { setErr(error.message); setLoading(false); return }
+      setInfo('Email de réinitialisation envoyé ! Vérifie ta boîte mail.')
+      setLoading(false)
+      return
+    }
 
     if (tab === 'login') {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
@@ -127,7 +141,7 @@ export default function AuthPage() {
             onChange={e => setEmail(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handle()} />
         </div>
-        {tab === 'register' && (
+        {!forgotMode && tab === 'register' && (
           <div className="field">
             <label>Pseudo</label>
             <input placeholder="CinéPhile42" value={pseudo}
@@ -135,21 +149,44 @@ export default function AuthPage() {
               onKeyDown={e => e.key === 'Enter' && handle()} />
           </div>
         )}
-        <div className="field">
-          <label>Mot de passe</label>
-          <input type="password" placeholder="••••••" value={password}
-            onChange={e => setPassword(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handle()} />
-        </div>
+        {!forgotMode && (
+          <div className="field">
+            <label>Mot de passe</label>
+            <div style={{ position: 'relative' }}>
+              <input type={showPwd ? 'text' : 'password'} placeholder="••••••" value={password}
+                onChange={e => setPassword(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handle()}
+                style={{ width: '100%', paddingRight: '2.5rem' }} />
+              <button type="button" onClick={() => setShowPwd(v => !v)}
+                style={{ position: 'absolute', right: '.6rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: '.9rem', padding: 0 }}>
+                {showPwd ? '🙈' : '👁'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {tab === 'login' && !forgotMode && (
+          <button type="button" onClick={() => { setForgotMode(true); setErr(''); setInfo('') }}
+            style={{ background: 'none', border: 'none', color: 'var(--text3)', fontSize: '.75rem', cursor: 'pointer', padding: 0, marginBottom: '.6rem', textDecoration: 'underline' }}>
+            Mot de passe oublié ?
+          </button>
+        )}
+        {forgotMode && (
+          <button type="button" onClick={() => { setForgotMode(false); setErr(''); setInfo('') }}
+            style={{ background: 'none', border: 'none', color: 'var(--text3)', fontSize: '.75rem', cursor: 'pointer', padding: 0, marginBottom: '.6rem', textDecoration: 'underline' }}>
+            ← Retour à la connexion
+          </button>
+        )}
 
         {err && <div style={{ color: 'var(--red)', fontSize: '.78rem', marginBottom: '.8rem', textAlign: 'center' }}>{err}</div>}
+        {info && <div style={{ color: 'var(--green)', fontSize: '.78rem', marginBottom: '.8rem', textAlign: 'center' }}>{info}</div>}
 
         <button
           style={{ width: '100%', background: 'var(--gold)', color: '#0a0a0f', fontWeight: 600, fontFamily: 'var(--font-body)', fontSize: '.95rem', padding: '.75rem', border: 'none', borderRadius: 'var(--r)', cursor: loading ? 'not-allowed' : 'pointer', marginTop: '.5rem', opacity: loading ? .7 : 1 }}
           onClick={handle}
           disabled={loading}
         >
-          {loading ? 'Chargement…' : tab === 'login' ? 'Se connecter' : 'Rejoindre le marathon'}
+          {loading ? 'Chargement…' : forgotMode ? 'Envoyer le lien' : tab === 'login' ? 'Se connecter' : 'Rejoindre le marathon'}
         </button>
       </div>
     </div>
