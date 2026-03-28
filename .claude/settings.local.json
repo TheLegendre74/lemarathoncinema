@@ -6,7 +6,13 @@
       "Bash(npm install:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(npx vercel:*)",
+      "Bash(find /c/Users/Steam/Desktop/marathon/cinema-marathon-nextjs-complete/cm-next/components -type f \\\\\\(-name *.ts -o -name *.tsx \\\\\\))",
+      "Bash(grep -r \"revalidate\\\\|experimental\\\\|unstable\\\\|headers\\\\|redirects\" /c/Users/Steam/Desktop/marathon/cinema-marathon-nextjs-complete/cm-next --include=*.ts --include=*.tsx --include=*.js --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=.vercel)",
+      "Bash(grep -r \"VERCEL\\\\|NETLIFY\\\\|CI\\\\|BUILD\\\\|DEPLOY\" /c/Users/Steam/Desktop/marathon/cinema-marathon-nextjs-complete/cm-next --include=*.ts --include=*.tsx --include=*.js --include=*.json --include=*.toml --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=.vercel)",
+      "Bash(grep -r \"cache\\\\|revalidate\\\\|experimental\" /c/Users/Steam/Desktop/marathon/cinema-marathon-nextjs-complete/cm-next/app --include=*.ts --include=*.tsx)",
+      "Bash(cd:*)"
     ]
   }
 }
