@@ -49,20 +49,17 @@ export default function JawsScrollOverlay({ onDone }: { onDone: () => void }) {
       end:     27500,
     }
 
-    // Fin state (phase 1 & 2)
+    // Fin state — patrol left-to-right across full width
     const fin = {
-      x: cx,
-      y: H + 30,           // commence sous le canvas
-      visible: false,
+      x: W * 0.08,         // commence sur la gauche
+      vx: 1.8,             // vitesse horizontale (px/frame @ ~60fps)
       riseProgress: 0,     // 0 = sous l'eau, 1 = en surface
       cycleTimer: 0,
-      cyclePhase: 'sink' as 'rise' | 'peak' | 'sink',
+      cyclePhase: 'rise' as 'rise' | 'peak' | 'sink',
     }
 
-    // Fin orbit (phase 3)
-    let orbitAngle  = Math.PI          // commence à gauche
-    let orbitRadius = 120
-    let orbitSpeed  = 0.025
+    // Phase 3 : fin accélère et converge vers la femme
+    let phase3Timer = 0
 
     // Shark (phase 4)
     const shark = {
@@ -252,10 +249,9 @@ export default function JawsScrollOverlay({ onDone }: { onDone: () => void }) {
     }
 
     // ── FIN CYCLE LOGIC ───────────────────────────────────────────────────────
-    // Fin rises/sinks in rhythm:
-    // Phase 1: cycle = 3000ms (rise 1000, peak 800, sink 1200)
-    // Phase 2: cycle = 1800ms (rise 600, peak 500, sink 700)
-    function updateFinCycle(elapsed: number) {
+    // Fin patrols left-to-right across full screen width; rises/sinks in rhythm
+    // Phase 1: slow (cycle ~3s), Phase 2: faster (~1.8s), Phase 3: charge toward woman
+    function updateFinCycle(elapsed: number, dt: number) {
       const inPhase1 = elapsed < T.phase2
       const inPhase2 = elapsed >= T.phase2 && elapsed < T.phase3
       if (!inPhase1 && !inPhase2) return
@@ -263,8 +259,19 @@ export default function JawsScrollOverlay({ onDone }: { onDone: () => void }) {
       const riseMs = inPhase1 ? 900  : 550
       const peakMs = inPhase1 ? 700  : 450
       const sinkMs = inPhase1 ? 1000 : 650
+      // Speed: phase1 slow patrol, phase2 faster
+      const speed  = inPhase1 ? 1.6  : 2.8
 
-      fin.cycleTimer -= 16
+      // Horizontal patrol — bounce between margins
+      fin.x += fin.vx * (dt / 16)
+      if (fin.x < W * 0.05)  { fin.x = W * 0.05;  fin.vx =  Math.abs(fin.vx) * speed / 1.6 }
+      if (fin.x > W * 0.92)  { fin.x = W * 0.92;  fin.vx = -Math.abs(fin.vx) * speed / 1.6 }
+      // Normalise speed
+      const dir = fin.vx > 0 ? 1 : -1
+      fin.vx = dir * speed
+
+      // Rise / sink cycle
+      fin.cycleTimer -= dt
       if (fin.cycleTimer <= 0) {
         if (fin.cyclePhase === 'sink') {
           fin.cyclePhase = 'rise'
@@ -274,24 +281,26 @@ export default function JawsScrollOverlay({ onDone }: { onDone: () => void }) {
           fin.cycleTimer = peakMs
         } else {
           fin.cyclePhase = 'sink'
-          fin.cycleTimer = sinkMs
-          fin.cycleTimer += inPhase1 ? 600 : 200  // pause sous l'eau
+          fin.cycleTimer = sinkMs + (inPhase1 ? 600 : 200)
         }
       }
 
       if (fin.cyclePhase === 'rise') {
-        fin.riseProgress = Math.min(1, fin.riseProgress + 16 / riseMs)
+        fin.riseProgress = Math.min(1, fin.riseProgress + dt / riseMs)
       } else if (fin.cyclePhase === 'sink') {
-        fin.riseProgress = Math.max(0, fin.riseProgress - 16 / sinkMs)
+        fin.riseProgress = Math.max(0, fin.riseProgress - dt / sinkMs)
       }
     }
 
     // ── RENDER ────────────────────────────────────────────────────────────────
     let raf: number
+    let lastNow = performance.now()
 
     function render(now: number) {
       if (done) return
       const elapsed = now - startTime
+      const dt = Math.min(now - lastNow, 50)
+      lastNow = now
 
       ctx.clearRect(0, 0, W, H)
       drawOcean()
@@ -300,19 +309,19 @@ export default function JawsScrollOverlay({ onDone }: { onDone: () => void }) {
       const bobY = Math.sin(elapsed * 0.002 * Math.PI * 2) * 3
 
       if (elapsed < T.phase3) {
-        // Phase 1 & 2 : fin monte/descend en rythme
-        updateFinCycle(elapsed)
-        // La fin se déplace légèrement vers la femme au fil du temps
-        const approachT = Math.min(1, elapsed / T.phase3)
-        fin.x = cx * (1 - approachT) + (cx - 50) * approachT + Math.sin(elapsed * 0.0008) * 30
+        // Phase 1 & 2 : patrol + rise/sink cycle
+        updateFinCycle(elapsed, dt)
         drawFin(fin.x, fin.riseProgress)
       } else if (elapsed < T.attack) {
-        // Phase 3 : aileron tourne autour de la femme rapidement
-        orbitSpeed = 0.025 + (elapsed - T.phase3) / (T.attack - T.phase3) * 0.035
-        orbitRadius = Math.max(55, orbitRadius - 0.15)
-        orbitAngle += orbitSpeed
-        const ox = cx + Math.cos(orbitAngle) * orbitRadius
-        drawFin(ox, 0.85 + Math.sin(orbitAngle * 2) * 0.15)
+        // Phase 3 : fin fonce vers la femme en zigzag
+        phase3Timer += dt
+        const p3 = Math.min(1, (elapsed - T.phase3) / (T.attack - T.phase3))
+        // Converge toward woman with narrowing oscillation
+        const targetX = cx - 10
+        fin.x += (targetX - fin.x) * 0.04 + Math.sin(elapsed * 0.018) * (30 * (1 - p3))
+        // Keep visible above surface
+        const rp = 0.82 + p3 * 0.18
+        drawFin(fin.x, rp)
       } else if (elapsed < T.bite) {
         // Phase 4a : requin monte
         if (!shark.risen) { shark.risen = true }
