@@ -42,6 +42,7 @@ export type Database = {
           created_at: string
           tmdb_id: number | null
           flagged_18plus: boolean
+          flagged_16plus: boolean
         }
         Insert: {
           titre: string
@@ -54,6 +55,7 @@ export type Database = {
           added_by?: string | null
           tmdb_id?: number | null
           flagged_18plus?: boolean
+          flagged_16plus?: boolean
         }
         Update: {
           titre?: string
@@ -65,6 +67,7 @@ export type Database = {
           saison?: number
           tmdb_id?: number | null
           flagged_18plus?: boolean
+          flagged_16plus?: boolean
         }
         Relationships: []
       }

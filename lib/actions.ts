@@ -123,6 +123,80 @@ async function verifyWithTMDB(titre: string, annee: number): Promise<{
   }
 }
 
+// ── TMDB SEARCH SUGGESTIONS ──────────────────────────────────
+
+export type TMDBSuggestion = {
+  tmdb_id: number
+  titre: string
+  titreOriginal: string
+  annee: number | null
+  realisateur: string
+  genre: string
+  sousgenre: string | null
+  poster: string | null
+  overview: string
+}
+
+const TMDB_GENRES: Record<number, string> = {
+  28:'Action', 12:'Aventure', 16:'Animation', 35:'Comédie', 80:'Crime',
+  18:'Drame', 10751:'Famille', 14:'Fantaisie', 36:'Histoire', 27:'Horreur',
+  9648:'Policier', 878:'SF', 53:'Thriller', 10752:'Guerre', 37:'Western',
+}
+
+export async function searchFilmTMDB(query: string): Promise<TMDBSuggestion[]> {
+  if (!query || query.trim().length < 2) return []
+  const key = process.env.TMDB_API_KEY
+  if (!key) return []
+
+  try {
+    const [resFR, resEN] = await Promise.all([
+      fetch(`https://api.themoviedb.org/3/search/movie?api_key=${key}&query=${encodeURIComponent(query)}&language=fr-FR&page=1`, { cache: 'no-store' }),
+      fetch(`https://api.themoviedb.org/3/search/movie?api_key=${key}&query=${encodeURIComponent(query)}&language=en-US&page=1`, { cache: 'no-store' }),
+    ])
+    const [dataFR, dataEN] = await Promise.all([resFR.json(), resEN.json()])
+
+    // Merge: FR results first, add EN results that aren't already in FR (by tmdb_id)
+    const frResults: any[] = dataFR.results ?? []
+    const enResults: any[] = dataEN.results ?? []
+    const frIds = new Set(frResults.map((m: any) => m.id))
+    const merged = [...frResults, ...enResults.filter((m: any) => !frIds.has(m.id))].slice(0, 6)
+
+    if (!merged.length) return []
+
+    // Fetch details + credits for each (parallel)
+    const details = await Promise.all(
+      merged.map((m: any) =>
+        fetch(`https://api.themoviedb.org/3/movie/${m.id}?api_key=${key}&language=fr-FR&append_to_response=credits`, { cache: 'no-store' })
+          .then(r => r.json())
+          .catch(() => null)
+      )
+    )
+
+    return details
+      .filter(Boolean)
+      .map((d: any) => {
+        const director = d.credits?.crew?.find((c: any) => c.job === 'Director')
+        const genres: string[] = (d.genres ?? []).map((g: any) =>
+          TMDB_GENRES[g.id] ?? g.name
+        )
+        return {
+          tmdb_id: d.id,
+          titre: d.title ?? d.original_title ?? '',
+          titreOriginal: d.original_title ?? '',
+          annee: d.release_date ? parseInt(d.release_date.slice(0, 4)) : null,
+          realisateur: director?.name ?? '',
+          genre: genres[0] ?? 'Drame',
+          sousgenre: genres[1] ?? null,
+          poster: d.poster_path ? `https://image.tmdb.org/t/p/w92${d.poster_path}` : null,
+          overview: (d.overview ?? '').slice(0, 100),
+        } as TMDBSuggestion
+      })
+      .filter(s => s.titre)
+  } catch {
+    return []
+  }
+}
+
 // ── AUTH ────────────────────────────────────────────────────
 
 export async function signUp(formData: FormData) {
