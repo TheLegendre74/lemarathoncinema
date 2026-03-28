@@ -8,6 +8,7 @@ import { useToast } from '@/components/ToastProvider'
 import { toggleWatched, upsertRating, addFilm, updateFilm, reportFilm, discoverEgg, getFilmWatchProviders } from '@/lib/actions'
 import { CONFIG } from '@/lib/config'
 import { useRouter } from 'next/navigation'
+import JawsScrollOverlay from '@/components/JawsScrollOverlay'
 import type { Film, Profile } from '@/lib/supabase/types'
 
 interface Props {
@@ -48,28 +49,6 @@ function playGodfatherTheme() {
   } catch {}
 }
 
-// ─── JAWS THEME (Web Audio) ──────────────────────────────────────────────────
-function playJawsTheme() {
-  try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
-    const seq: [number, number, number][] = [
-      [110, 0, .5], [116.5, .62, .5],
-      [110, 1.3, .4], [116.5, 1.78, .4],
-      [110, 2.25, .28], [116.5, 2.62, .28],
-      [110, 2.98, .18], [116.5, 3.24, .18],
-      [110, 3.48, .13], [116.5, 3.67, .13],
-      [110, 3.86, .1], [116.5, 4.02, .1],
-    ]
-    seq.forEach(([f, t, d]) => {
-      const osc = ctx.createOscillator(); const gain = ctx.createGain()
-      osc.connect(gain); gain.connect(ctx.destination)
-      osc.type = 'sawtooth'; osc.frequency.value = f
-      gain.gain.setValueAtTime(0.18, ctx.currentTime + t)
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + d)
-      osc.start(ctx.currentTime + t); osc.stop(ctx.currentTime + t + d + .08)
-    })
-  } catch {}
-}
 
 // ─── FILM MODAL ──────────────────────────────────────────────────────────────
 function FilmModal({ film, profile, isWatched, myRating, watchPct, ratingScores, isWeekFilm, isMarathonLive, onClose, onRefresh }: {
@@ -435,27 +414,6 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, onClose, onRefres
   )
 }
 
-// ─── SHARK OVERLAY ───────────────────────────────────────────────────────────
-function SharkOverlay({ onDone }: { onDone: () => void }) {
-  useEffect(() => {
-    const t = setTimeout(onDone, 4200)
-    return () => clearTimeout(t)
-  }, [onDone])
-
-  return (
-    <div style={{ position: 'fixed', bottom: 0, left: '50%', zIndex: 9000, pointerEvents: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-      {/* Fin */}
-      <div style={{ width: 0, height: 0, borderLeft: '45px solid transparent', borderRight: '45px solid transparent', borderBottom: '90px solid #3a5f8a', animation: 'ee-shark-rise .9s ease, ee-shark-sink .8s ease 3.2s forwards' }} />
-      {/* Body */}
-      <div style={{ width: 220, height: 55, background: '#3a5f8a', borderRadius: '0 0 110px 110px', display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'ee-shark-rise .9s ease, ee-shark-sink .8s ease 3.2s forwards' }}>
-        <span style={{ fontSize: '1.8rem' }}>🦈</span>
-      </div>
-      <div style={{ fontFamily: 'monospace', fontSize: '.7rem', color: '#3a5f8a', marginTop: '.2rem', letterSpacing: '.15em', animation: 'ee-shark-rise .9s ease, ee-shark-sink .8s ease 3.2s forwards' }}>
-        dun dun... dun dun...
-      </div>
-    </div>
-  )
-}
 
 // ─── MAIN FILMS CLIENT ───────────────────────────────────────────────────────
 export default function FilmsClient({ films, profile, watchedIds, myRatings, watchCountMap, ratingMap, totalUsers, weekFilmId, isMarathonLive, saisonNumero }: Props) {
@@ -482,9 +440,7 @@ export default function FilmsClient({ films, profile, watchedIds, myRatings, wat
       if (nearBottom && velocity > 25 && !sharkTriggered.current) {
         sharkTriggered.current = true
         setSharkVisible(true)
-        playJawsTheme()
         discoverEgg('shark')
-        setTimeout(() => { setSharkVisible(false); sharkTriggered.current = false }, 5000)
       }
     }
     window.addEventListener('scroll', onScroll, { passive: true })
@@ -636,7 +592,7 @@ export default function FilmsClient({ films, profile, watchedIds, myRatings, wat
         />
       )}
 
-      {sharkVisible && <SharkOverlay onDone={() => setSharkVisible(false)} />}
+      {sharkVisible && <JawsScrollOverlay onDone={() => { setSharkVisible(false); sharkTriggered.current = false }} />}
     </div>
   )
 }
