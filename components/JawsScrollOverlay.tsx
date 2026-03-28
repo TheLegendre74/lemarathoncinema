@@ -29,6 +29,23 @@ export default function JawsScrollOverlay({ onDone }: { onDone: () => void }) {
     let done = false
     const startTime = performance.now()
 
+    // Echap ou scroll vers le haut → ferme l'animation
+    function abort() {
+      if (done) return
+      done = true; audio.pause(); onDone()
+    }
+
+    const initScrollY = window.scrollY
+    function onScrollAbort() {
+      if (window.scrollY < initScrollY - 30) abort()
+    }
+    function onKeyAbort(e: KeyboardEvent) {
+      if (e.key === 'Escape') abort()
+    }
+
+    window.addEventListener('scroll', onScrollAbort, { passive: true })
+    window.addEventListener('keydown', onKeyAbort)
+
     // Positions relatives dans le canvas
     const SURFACE_Y = Math.round(H * 0.28)   // ligne de surface de l'eau
     const cx        = W * 0.5                 // centre horizontal (femme)
@@ -363,7 +380,11 @@ export default function JawsScrollOverlay({ onDone }: { onDone: () => void }) {
     }
 
     raf = requestAnimationFrame(render)
-    return () => { cancelAnimationFrame(raf); audio.pause() }
+    return () => {
+      cancelAnimationFrame(raf); audio.pause()
+      window.removeEventListener('scroll', onScrollAbort)
+      window.removeEventListener('keydown', onKeyAbort)
+    }
   }, [onDone])
 
   return (
