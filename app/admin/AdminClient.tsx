@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, updateFilm, adminResolveReport, adminSetConfig, adminVerifyPosters, adminSetAdmin } from '@/lib/actions'
+import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, adminFetchFrenchPosters, adminScanAgeRestrictions, updateFilm, adminResolveReport, adminSetConfig, adminVerifyPosters, adminSetAdmin } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
 import { CONFIG } from '@/lib/config'
 import type { Film, Profile } from '@/lib/supabase/types'
@@ -293,6 +293,10 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
   const [allPostersRunning, setAllPostersRunning] = useState(false)
   const [autoRunning, setAutoRunning] = useState(false)
   const [autoProgress, setAutoProgress] = useState('')
+  const [frenchPostersNextId, setFrenchPostersNextId] = useState<number | null>(0)
+  const [frenchPostersRunning, setFrenchPostersRunning] = useState(false)
+  const [ageScanNextId, setAgeScanNextId] = useState<number | null>(0)
+  const [ageScanRunning, setAgeScanRunning] = useState(false)
   const [brokenPosters, setBrokenPosters] = useState<{ id: number; titre: string; poster: string }[]>([])
   const [verifyNextId, setVerifyNextId] = useState<number | null>(0)
   const [verifyRunning, setVerifyRunning] = useState(false)
@@ -458,6 +462,40 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
         : `${result.count} affiches mises à jour — cliquer à nouveau pour le lot suivant`,
       '🖼️'
     )
+    router.refresh()
+  }
+
+  async function fetchFrenchPostersAuto() {
+    setFrenchPostersRunning(true)
+    let nextId: number | null = 0
+    let total = 0
+    while (nextId !== null) {
+      const result = await adminFetchFrenchPosters(nextId)
+      if (result.error) { addToast(result.error, '⚠️'); break }
+      total += result.count ?? 0
+      nextId = result.nextId ?? null
+      if (nextId !== null) await new Promise(r => setTimeout(r, 600))
+    }
+    setFrenchPostersNextId(null)
+    setFrenchPostersRunning(false)
+    addToast(`✅ ${total} affiche(s) françaises mises à jour !`, '🇫🇷')
+    router.refresh()
+  }
+
+  async function scanAgeRestrictionsAuto() {
+    setAgeScanRunning(true)
+    let nextId: number | null = 0
+    let total = 0
+    while (nextId !== null) {
+      const result = await adminScanAgeRestrictions(nextId)
+      if (result.error) { addToast(result.error, '⚠️'); break }
+      total += result.count ?? 0
+      nextId = result.nextId ?? null
+      if (nextId !== null) await new Promise(r => setTimeout(r, 600))
+    }
+    setAgeScanNextId(null)
+    setAgeScanRunning(false)
+    addToast(`✅ ${total} film(s) scannés pour les restrictions d'âge !`, '🔞')
     router.refresh()
   }
 
@@ -714,6 +752,22 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
             onClick={verifyPostersBatch}
           >
             {verifyRunning ? '…' : verifyNextId === null ? `✅ Vérifié (${brokenPosters.length} cassée(s))` : `🔍 Vérifier les URLs (lot de 40)`}
+          </button>
+          <button
+            className="btn btn-outline"
+            style={{ fontSize: '.78rem' }}
+            disabled={frenchPostersRunning}
+            onClick={fetchFrenchPostersAuto}
+          >
+            {frenchPostersRunning ? '⏳ Affiches FR en cours…' : '🇫🇷 Récupérer affiches françaises'}
+          </button>
+          <button
+            className="btn btn-outline"
+            style={{ fontSize: '.78rem' }}
+            disabled={ageScanRunning}
+            onClick={scanAgeRestrictionsAuto}
+          >
+            {ageScanRunning ? '⏳ Scan âge en cours…' : '🔞 Scanner restrictions d\'âge'}
           </button>
         </div>
         {brokenPosters.length > 0 && (

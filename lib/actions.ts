@@ -52,7 +52,7 @@ async function tmdbFindByImdbId(imdbId: string, tmdbKey: string): Promise<any | 
 // ── TMDB + OMDB VERIFICATION ─────────────────────────────────
 
 async function verifyWithTMDB(titre: string, annee: number): Promise<{
-  ok: boolean; error?: string; tmdbId?: number; flagged18?: boolean; posterUrl?: string
+  ok: boolean; error?: string; tmdbId?: number; flagged18?: boolean; flagged16?: boolean; posterUrl?: string
 }> {
   const key = process.env.TMDB_API_KEY
   if (!key) return { ok: true }
@@ -108,19 +108,38 @@ async function verifyWithTMDB(titre: string, annee: number): Promise<{
     )
     const relData = await relRes.json()
 
-    const frEntry = relData.results?.find((r: any) => r.iso_3166_1 === 'FR')
-    const usEntry = relData.results?.find((r: any) => r.iso_3166_1 === 'US')
-    const cert = (frEntry || usEntry)?.release_dates?.find((d: any) => d.certification)?.certification ?? ''
-    const flagged18 = ['18', 'NC-17', 'R'].includes(cert)
+    const { flagged18, flagged16 } = parseTMDBCertifications(relData.results ?? [])
 
     const posterUrl = movie.poster_path
       ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
       : undefined
 
-    return { ok: true, tmdbId: movie.id as number, flagged18, posterUrl }
+    return { ok: true, tmdbId: movie.id as number, flagged18, flagged16, posterUrl }
   } catch {
     return { ok: true }
   }
+}
+
+// Détermine les restrictions d'âge à partir des certifications TMDB (toutes régions)
+function parseTMDBCertifications(releaseDates: any[]): { flagged18: boolean; flagged16: boolean } {
+  const getCert = (iso: string) =>
+    releaseDates.find((r: any) => r.iso_3166_1 === iso)
+      ?.release_dates?.find((d: any) => d.certification)?.certification ?? ''
+
+  const fr = getCert('FR')
+  const us = getCert('US')
+  const gb = getCert('GB')
+  const de = getCert('DE')
+
+  // -18 : FR=18, US=NC-17, GB=18, DE=18
+  if (['18'].includes(fr) || ['NC-17'].includes(us) || ['18'].includes(gb) || ['18'].includes(de)) {
+    return { flagged18: true, flagged16: false }
+  }
+  // -16 : FR=16/12, US=R, GB=15, DE=16/12
+  if (['16', '12'].includes(fr) || ['R'].includes(us) || ['15'].includes(gb) || ['16', '12'].includes(de)) {
+    return { flagged18: false, flagged16: true }
+  }
+  return { flagged18: false, flagged16: false }
 }
 
 // ── TMDB SEARCH SUGGESTIONS ──────────────────────────────────
@@ -555,11 +574,12 @@ export async function addFilm(formData: FormData) {
     titre, annee, realisateur, genre, poster, saison, added_by: user.id,
     tmdb_id: tmdb.tmdbId ?? null,
     flagged_18plus: tmdb.flagged18 ?? false,
+    flagged_16plus: tmdb.flagged16 ?? false,
   })
 
   if (error) return { error: error.message }
   revalidatePath('/films')
-  return { success: true, saison, flagged18: tmdb.flagged18 ?? false }
+  return { success: true, saison, flagged18: tmdb.flagged18 ?? false, flagged16: tmdb.flagged16 ?? false }
 }
 
 // ── POSTS (forum) ────────────────────────────────────────────
@@ -911,6 +931,137 @@ export async function adminRefreshMissingPosters() {
   revalidatePath('/films')
   revalidatePath('/admin')
   return { success: true, count }
+}
+
+export async function adminFetchFrenchPosters(fromId: number = 0) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Non autorisé.' }
+
+  const key = process.env.TMDB_API_KEY
+  if (!key) return { error: 'Clé TMDB_API_KEY manquante.' }
+
+  const { data: films } = await supabase
+    .from('films')
+    .select('id, titre, annee, tmdb_id')
+    .gt('id', fromId)
+    .order('id')
+    .limit(40)
+
+  if (!films?.length) return { success: true, count: 0, nextId: null }
+
+  const adminClient = createAdminClient()
+  let count = 0
+
+  for (const film of films) {
+    try {
+      let tmdbId = film.tmdb_id
+
+      // Si pas de tmdb_id, chercher d'abord
+      if (!tmdbId) {
+        const found = await tmdbSearchMovie(film.titre, film.annee, key)
+        if (found?.id) {
+          tmdbId = found.id
+          await adminClient.from('films').update({ tmdb_id: tmdbId }).eq('id', film.id)
+        }
+      }
+      if (!tmdbId) continue
+
+      // 1. Essayer d'obtenir une affiche française via /images
+      const imgRes = await fetch(
+        `https://api.themoviedb.org/3/movie/${tmdbId}/images?api_key=${key}&include_image_language=fr,null`,
+        { cache: 'no-store' }
+      )
+      const imgData = await imgRes.json()
+      const posters: any[] = imgData.posters ?? []
+
+      // Priorité : fr > null (international) > fallback movie details
+      const frPoster   = posters.find((p: any) => p.iso_639_1 === 'fr')
+      const intlPoster = posters.find((p: any) => p.iso_639_1 === null)
+      const bestPath   = (frPoster ?? intlPoster)?.file_path
+
+      let posterUrl: string | null = null
+      if (bestPath) {
+        posterUrl = `https://image.tmdb.org/t/p/w500${bestPath}`
+      } else {
+        // 2. Fallback : movie details en fr-FR
+        const detRes = await fetch(
+          `https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${key}&language=fr-FR`,
+          { cache: 'no-store' }
+        )
+        const det = await detRes.json()
+        if (det.poster_path) posterUrl = `https://image.tmdb.org/t/p/w500${det.poster_path}`
+      }
+
+      if (posterUrl) {
+        await adminClient.from('films').update({ poster: posterUrl }).eq('id', film.id)
+        count++
+      }
+    } catch { /* skip */ }
+  }
+
+  const nextId = films.length === 40 ? films[films.length - 1].id : null
+  revalidatePath('/films')
+  revalidatePath('/admin')
+  return { success: true, count, nextId }
+}
+
+// Scan par lot les restrictions d'âge de tous les films via TMDB
+export async function adminScanAgeRestrictions(fromId: number = 0) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Non autorisé.' }
+
+  const key = process.env.TMDB_API_KEY
+  if (!key) return { error: 'Clé TMDB_API_KEY manquante.' }
+
+  const { data: films } = await supabase
+    .from('films')
+    .select('id, titre, annee, tmdb_id')
+    .gt('id', fromId)
+    .order('id')
+    .limit(40)
+
+  if (!films?.length) return { success: true, count: 0, nextId: null }
+
+  const adminClient = createAdminClient()
+  let count = 0
+
+  for (const film of films) {
+    try {
+      let tmdbId = film.tmdb_id
+
+      if (!tmdbId) {
+        const found = await tmdbSearchMovie(film.titre, film.annee, key)
+        if (found?.id) {
+          tmdbId = found.id
+          await adminClient.from('films').update({ tmdb_id: tmdbId }).eq('id', film.id)
+        }
+      }
+      if (!tmdbId) continue
+
+      const relRes = await fetch(
+        `https://api.themoviedb.org/3/movie/${tmdbId}/release_dates?api_key=${key}`,
+        { cache: 'no-store' }
+      )
+      const relData = await relRes.json()
+      const { flagged18, flagged16 } = parseTMDBCertifications(relData.results ?? [])
+
+      await adminClient.from('films')
+        .update({ flagged_18plus: flagged18, flagged_16plus: flagged16 })
+        .eq('id', film.id)
+      count++
+    } catch { /* skip */ }
+  }
+
+  const nextId = films.length === 40 ? films[films.length - 1].id : null
+  revalidatePath('/films')
+  revalidatePath('/admin')
+  return { success: true, count, nextId }
 }
 
 export async function adminForceRefreshAllPosters(fromId: number = 0) {
