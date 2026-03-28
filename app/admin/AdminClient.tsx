@@ -297,6 +297,8 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
   const [verifyNextId, setVerifyNextId] = useState<number | null>(0)
   const [verifyRunning, setVerifyRunning] = useState(false)
   const [savingConfig, setSavingConfig] = useState(false)
+  const [manualFilm1, setManualFilm1] = useState('')
+  const [manualFilm2, setManualFilm2] = useState('')
 
   function getWatchPct(filmId: number) {
     if (!totalUsers) return 0
@@ -306,18 +308,25 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
   async function createDuel() {
     const eligible = films.filter(f => f.saison === 1 && getWatchPct(f.id) < CONFIG.SEUIL_MAJORITY)
     if (eligible.length < 2) { addToast('Pas assez de films éligibles', '⚠️'); return }
-    const sorted = [...eligible].sort((a, b) => getWatchPct(a.id) - getWatchPct(b.id)).slice(0, Math.min(10, eligible.length))
-    let f1 = sorted[0], f2 = sorted[1]
-    let tries = 0
-    while (f1.id === f2.id && tries < 20) {
-      f1 = sorted[Math.floor(Math.random() * sorted.length)]
-      f2 = sorted[Math.floor(Math.random() * sorted.length)]
-      tries++
-    }
+    // Vraie randomisation parmi tous les films éligibles
+    const shuffled = [...eligible].sort(() => Math.random() - 0.5)
+    const f1 = shuffled[0], f2 = shuffled[1]
     const weekNum = duels.length + 1
     const result = await adminCreateDuel(f1.id, f2.id, weekNum)
     if (result.error) addToast(result.error, '⚠️')
     else { addToast(`Duel S${weekNum} créé : ${f1.titre} VS ${f2.titre}`, '⚔️'); router.refresh() }
+  }
+
+  async function createManualDuel() {
+    if (!manualFilm1 || !manualFilm2) { addToast('Sélectionne 2 films', '⚠️'); return }
+    if (manualFilm1 === manualFilm2) { addToast('Choisis 2 films différents', '⚠️'); return }
+    const f1 = films.find(f => f.id === parseInt(manualFilm1))
+    const f2 = films.find(f => f.id === parseInt(manualFilm2))
+    if (!f1 || !f2) return
+    const weekNum = duels.length + 1
+    const result = await adminCreateDuel(f1.id, f2.id, weekNum)
+    if (result.error) addToast(result.error, '⚠️')
+    else { addToast(`Duel S${weekNum} créé : ${f1.titre} VS ${f2.titre}`, '⚔️'); setManualFilm1(''); setManualFilm2(''); router.refresh() }
   }
 
   async function closeDuel(duelId: number) {
@@ -544,10 +553,38 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
       <Section icon="⚔️" title="Gestion des duels">
         <div style={{ display: 'flex', gap: '.7rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
           <button className="btn btn-gold" onClick={createDuel}>
-            Générer un duel aléatoire (films les moins vus)
+            🎲 Duel aléatoire (tous les films éligibles)
           </button>
           <button className="btn btn-red" onClick={cleanDuels} style={{ fontSize: '.8rem' }}>
             🗑️ Nettoyer tous les duels
+          </button>
+        </div>
+        {/* Duel manuel */}
+        <div style={{ display: 'flex', gap: '.6rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '1rem', padding: '.75rem', background: 'var(--bg3)', borderRadius: 'var(--r)', border: '1px solid var(--border)' }}>
+          <span style={{ fontSize: '.8rem', color: 'var(--text3)', whiteSpace: 'nowrap' }}>Duel manuel :</span>
+          <select
+            value={manualFilm1}
+            onChange={e => setManualFilm1(e.target.value)}
+            style={{ flex: 1, minWidth: 140, background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.45rem .7rem', color: 'var(--text2)', fontSize: '.82rem' }}
+          >
+            <option value="">Film 1…</option>
+            {films.filter(f => f.saison === 1).map(f => (
+              <option key={f.id} value={f.id}>{f.titre}</option>
+            ))}
+          </select>
+          <span style={{ color: 'var(--text3)', fontSize: '.85rem' }}>VS</span>
+          <select
+            value={manualFilm2}
+            onChange={e => setManualFilm2(e.target.value)}
+            style={{ flex: 1, minWidth: 140, background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.45rem .7rem', color: 'var(--text2)', fontSize: '.82rem' }}
+          >
+            <option value="">Film 2…</option>
+            {films.filter(f => f.saison === 1).map(f => (
+              <option key={f.id} value={f.id}>{f.titre}</option>
+            ))}
+          </select>
+          <button className="btn btn-gold" style={{ fontSize: '.8rem', whiteSpace: 'nowrap' }} onClick={createManualDuel}>
+            ⚔️ Créer ce duel
           </button>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
