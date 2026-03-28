@@ -46,44 +46,112 @@ function MatrixRain({ onDone, line1, line2, line3 }: { onDone: () => void; line1
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
+    const W = window.innerWidth, H = window.innerHeight
+    canvas.width = W; canvas.height = H
     const ctx = canvas.getContext('2d')!
-    canvas.width = window.innerWidth
-    canvas.height = window.innerHeight
-    const cols = Math.floor(canvas.width / 16)
-    const drops: number[] = Array(cols).fill(1)
-    const chars = 'アイウエオカキクケコサシスセソタチツテトナニヌネノ01アムネ10010セソ0ABCDEF☰☷☵'
 
-    const draw = () => {
-      ctx.fillStyle = 'rgba(0,0,0,0.05)'
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
-      drops.forEach((y, i) => {
-        ctx.fillStyle = i % 8 === 0 ? '#aaffaa' : '#00ff41'
-        ctx.font = `${Math.random() > .9 ? 'bold ' : ''}14px monospace`
-        ctx.fillText(chars[Math.floor(Math.random() * chars.length)], i * 16, y * 16)
-        if (y * 16 > canvas.height && Math.random() > 0.975) drops[i] = 0
-        drops[i]++
-      })
+    const FS   = 13   // font size px
+    const COLS = Math.floor(W / FS)
+    const CHARS = 'ｦｧｨｩｪｫｬｭｮｯｰｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ0123456789:･=*+-<>'
+
+    // Each column tracks its head position, speed, trail length and char pool
+    const cols = Array.from({ length: COLS }, () => ({
+      y:        -Math.floor(Math.random() * (H / FS)),   // start staggered above
+      speed:    0.25 + Math.random() * 0.55,
+      trail:    10  + Math.floor(Math.random() * 22),
+      glyphs:   Array.from({ length: 50 }, () => CHARS[Math.floor(Math.random() * CHARS.length)]),
+      muteT:    0,
+    }))
+
+    let lastT  = performance.now()
+    let elapsed = 0
+    let msgAlpha = 0
+    let raf: number
+
+    function render(now: number) {
+      const dt = Math.min(now - lastT, 50); lastT = now; elapsed += dt
+
+      // Full clear each frame — trails managed per-column
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H)
+      ctx.font = `${FS}px monospace`
+
+      for (let i = 0; i < COLS; i++) {
+        const col = cols[i]
+        const headY = Math.floor(col.y)
+
+        for (let j = 0; j < col.trail; j++) {
+          const cy = headY - j
+          if (cy < 0 || cy >= H / FS) continue
+          const ch = col.glyphs[(headY - j + 500) % col.glyphs.length]
+          const x  = i * FS
+          const y  = cy * FS + FS
+
+          if (j === 0) {
+            // Head: bright white with green halo
+            ctx.shadowColor = '#aaffaa'; ctx.shadowBlur = 6
+            ctx.fillStyle = '#e8ffe8'
+          } else {
+            // Trail: fades from bright → dark green
+            const fade = 1 - j / col.trail
+            const g = Math.floor(40 + fade * 195)
+            ctx.shadowBlur = 0
+            ctx.fillStyle = `rgb(0,${g},0)`
+          }
+          ctx.fillText(ch, x, y)
+        }
+        ctx.shadowBlur = 0
+
+        // Occasionally mutate a glyph
+        col.muteT += dt
+        if (col.muteT > 70 + Math.random() * 80) {
+          col.muteT = 0
+          col.glyphs[Math.floor(Math.random() * col.glyphs.length)] =
+            CHARS[Math.floor(Math.random() * CHARS.length)]
+        }
+
+        // Advance head
+        col.y += col.speed * (dt / 16)
+
+        // Reset when fully off-screen
+        if ((col.y - col.trail) * FS > H) {
+          col.y     = -Math.floor(Math.random() * 12)
+          col.speed = 0.25 + Math.random() * 0.55
+          col.trail = 10  + Math.floor(Math.random() * 22)
+        }
+      }
+
+      // Message fades in after 1.2s, out after 5.5s
+      if (elapsed > 1200) msgAlpha = Math.min(1, (elapsed - 1200) / 700)
+      if (elapsed > 5500) msgAlpha = Math.max(0, 1 - (elapsed - 5500) / 800)
+
+      if (msgAlpha > 0) {
+        ctx.save(); ctx.globalAlpha = msgAlpha; ctx.textAlign = 'center'
+        ctx.shadowColor = '#00ff41'; ctx.shadowBlur = 22
+        ctx.fillStyle = '#00ff41'; ctx.font = `bold 20px monospace`
+        ctx.fillText(line1, W / 2, H / 2 - 26)
+        ctx.shadowBlur = 10; ctx.font = `13px monospace`; ctx.fillStyle = '#00cc33'
+        ctx.fillText(line2, W / 2, H / 2 + 6)
+        ctx.font = `11px monospace`; ctx.fillStyle = '#009922'; ctx.shadowBlur = 6
+        ctx.fillText(line3, W / 2, H / 2 + 28)
+        ctx.restore()
+      }
+
+      if (elapsed < 7000) {
+        raf = requestAnimationFrame(render)
+      } else {
+        onDone()
+      }
     }
 
-    const interval = setInterval(draw, 50)
-    const timeout = setTimeout(() => { clearInterval(interval); onDone() }, 5000)
-    return () => { clearInterval(interval); clearTimeout(timeout) }
-  }, [onDone])
+    raf = requestAnimationFrame(render)
+    return () => cancelAnimationFrame(raf)
+  }, [onDone, line1, line2, line3])
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, pointerEvents: 'none' }}>
-      <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
-      <div style={{
-        position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
-        color: '#00ff41', fontFamily: 'monospace', textAlign: 'center', lineHeight: 2,
-        textShadow: '0 0 20px #00ff41',
-        animation: 'ee-matrix-text 5s ease forwards',
-      }}>
-        <div style={{ fontSize: '1.8rem', fontWeight: 700 }}>{line1}</div>
-        <div style={{ fontSize: '1rem', opacity: .8 }}>{line2}</div>
-        <div style={{ fontSize: '.8rem', opacity: .6 }}>{line3}</div>
-      </div>
-    </div>
+    <canvas
+      ref={canvasRef}
+      style={{ position: 'fixed', inset: 0, zIndex: 9999, pointerEvents: 'none', display: 'block' }}
+    />
   )
 }
 
