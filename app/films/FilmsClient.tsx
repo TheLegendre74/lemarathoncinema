@@ -401,7 +401,6 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, onClose, onRefres
               </div>
             </div>
             <div className="field"><label>Réalisateur *</label><input name="realisateur" placeholder="Ex: Francis Ford Coppola" required /></div>
-            <div className="field"><label>URL Affiche TMDB (optionnel)</label><input name="poster" placeholder="https://image.tmdb.org/t/p/w300/..." /></div>
             {err && <div style={{ color: 'var(--red)', fontSize: '.78rem', marginBottom: '.8rem' }}>{err}</div>}
             <div style={{ display: 'flex', gap: '.7rem' }}>
               <button type="button" className="btn btn-outline" onClick={onClose} style={{ flex: 1 }}>Annuler</button>
