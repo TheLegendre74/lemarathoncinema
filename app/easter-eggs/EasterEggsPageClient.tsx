@@ -5,21 +5,21 @@ interface Props {
   achievements: Record<string, boolean>
 }
 
-// ── Définition des 15 easter eggs ─────────────────────────────────────────────
+// ── Définition des easter eggs ────────────────────────────────────────────────
 const EGGS = [
   {
     id: 'matrix',
     icon: '💊',
     name: 'La Pilule Rouge',
     category: 'Clavier',
-    condition: 'Taper "red pill" au clavier sur n\'importe quelle page',
+    condition: 'Taper "red pill" au clavier — la pluie de code Matrix envahit l\'écran',
   },
   {
     id: 'joker',
     icon: '🃏',
     name: 'Why So Serious?',
     category: 'Clavier',
-    condition: 'Entrer le code Konami (↑↑↓↓←→←→BA)',
+    condition: 'Entrer le code Konami : ↑↑↓↓←→←→BA',
   },
   {
     id: 'marvin',
@@ -47,14 +47,14 @@ const EGGS = [
     icon: '🔫',
     name: 'Shaken, Not Stirred',
     category: 'Clavier',
-    condition: 'Taper "bond" au clavier',
+    condition: 'Taper "bond" — gun barrel : James Bond traverse l\'écran, se retourne, tire. Le sang envahit le canon.',
   },
   {
     id: 'fightclub',
     icon: '🥊',
     name: 'La Première Règle',
     category: 'Clavier',
-    condition: 'Taper "fight club" 4 fois au clavier — et survivre au combat',
+    condition: 'Taper "fight club" — survivre au mini-combat (4 rounds)',
   },
   {
     id: 'kenny',
@@ -82,28 +82,28 @@ const EGGS = [
     icon: '⚔️',
     name: 'Tue Bill',
     category: 'Clavier',
-    condition: 'Taper "kill bill" et lui trancher la tête avec le katana',
+    condition: 'Taper "kill bill" — trancher la tête de Bill avec le katana',
   },
   {
     id: 'predator',
     icon: '🎯',
-    name: 'Predator vs Alien',
+    name: 'Le Chasseur',
     category: 'Clavier',
-    condition: 'Taper "predator" — le Predator traque l\'Alien qui grimpe en l\'esquivant',
+    condition: 'Taper "predator" — le viseur laser 3-points traque l\'alien, 5 tirs brûlent des trous dans la page, l\'alien s\'échappe',
   },
   {
     id: 'alien',
     icon: '👾',
     name: 'Alien — Nostromo',
     category: 'Clavier',
-    condition: 'Taper "alien" — à bord du Nostromo, l\'alien élimine l\'équipage un par un',
+    condition: 'Taper "alien" — à bord du Nostromo, l\'alien élimine l\'équipage. Ripley tombe, un chestburster lui sort du ventre.',
   },
   {
     id: 'jaws',
     icon: '🦈',
     name: 'Les Dents de la Mer',
     category: 'Clavier',
-    condition: 'Taper "jaws" — l\'aileron approche, le requin surgit des profondeurs',
+    condition: 'Taper "jaws" — l\'aileron patrouille, la femme dans sa bouée, le requin surgit et l\'eau se teint de sang',
   },
   {
     id: 'tars',
