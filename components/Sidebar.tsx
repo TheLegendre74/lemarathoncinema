@@ -6,24 +6,26 @@ import { signOut } from '@/lib/actions'
 import { levelFromExp, getBadge, CONFIG } from '@/lib/config'
 import type { Profile } from '@/lib/supabase/types'
 
-interface SidebarProps { profile: Profile }
+interface SidebarProps { profile: Profile | null }
 
 export default function Sidebar({ profile }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const level = levelFromExp(profile.exp)
-  const badge = getBadge(profile.exp)
+  const level = profile ? levelFromExp(profile.exp) : null
+  const badge = profile ? getBadge(profile.exp) : null
 
   const nav = [
-    { href: '/',            icon: '🏠', label: 'Accueil' },
-    { href: '/films',       icon: '🎬', label: 'Films' },
-    { href: '/semaine',     icon: '⭐', label: 'Film de la semaine' },
-    { href: '/duels',       icon: '⚔️', label: 'Duels' },
-    { href: '/notes',       icon: '📊', label: 'Classement films' },
-    { href: '/classement',  icon: '🏆', label: 'Classement joueurs' },
-    { href: '/profil',      icon: '👤', label: 'Mon profil' },
-    { href: '/easter-eggs', icon: '🥚', label: 'Easter Eggs' },
-    ...(profile.is_admin ? [{ href: '/admin', icon: '🔧', label: 'Administration' }] : []),
+    { href: '/',              icon: '🏠', label: 'Accueil' },
+    { href: '/films',         icon: '🎬', label: 'Films' },
+    { href: '/semaine',       icon: '⭐', label: 'Film de la semaine' },
+    { href: '/duels',         icon: '⚔️', label: 'Duels' },
+    { href: '/notes',         icon: '📊', label: 'Classement films' },
+    { href: '/classement',    icon: '🏆', label: 'Classement joueurs' },
+    { href: '/forum',         icon: '💬', label: 'Forum' },
+    { href: '/rattrapage',    icon: '🎓', label: 'Rattrapage cinéma' },
+    { href: '/easter-eggs',   icon: '🥚', label: 'Easter Eggs' },
+    ...(profile ? [{ href: '/profil', icon: '👤', label: 'Mon profil' }] : []),
+    ...(profile?.is_admin ? [{ href: '/admin', icon: '🔧', label: 'Administration' }] : []),
   ]
 
   async function handleSignOut() {
@@ -49,23 +51,42 @@ export default function Sidebar({ profile }: SidebarProps) {
       </div>
 
       <div className="sidebar-bottom">
-        <div className="user-chip">
-          <div className="user-ava">{profile.pseudo.slice(0, 2).toUpperCase()}</div>
-          <div>
-            <div style={{ fontSize: '.85rem', fontWeight: 500 }}>{profile.pseudo}</div>
-            <div style={{ fontSize: '.7rem', color: 'var(--gold)' }}>
-              {profile.exp} EXP · Niv.{level}
-              {badge && <span style={{ marginLeft: '.4rem' }}>{badge.icon}</span>}
+        {profile ? (
+          <>
+            <div className="user-chip">
+              <div className="user-ava" style={profile.avatar_url ? { backgroundImage: `url(${profile.avatar_url})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}>
+                {!profile.avatar_url && profile.pseudo.slice(0, 2).toUpperCase()}
+              </div>
+              <div>
+                <div style={{ fontSize: '.85rem', fontWeight: 500 }}>{profile.pseudo}</div>
+                <div style={{ fontSize: '.7rem', color: 'var(--gold)' }}>
+                  {profile.exp} EXP · Niv.{level}
+                  {badge && <span style={{ marginLeft: '.4rem' }}>{badge.icon}</span>}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-        <button
-          onClick={handleSignOut}
-          className="btn btn-outline btn-full"
-          style={{ fontSize: '.78rem' }}
-        >
-          Déconnexion
-        </button>
+            <button
+              onClick={handleSignOut}
+              className="btn btn-outline btn-full"
+              style={{ fontSize: '.78rem' }}
+            >
+              Déconnexion
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="user-chip">
+              <div className="user-ava" style={{ background: 'var(--bg3)', color: 'var(--text3)' }}>👤</div>
+              <div>
+                <div style={{ fontSize: '.85rem', fontWeight: 500, color: 'var(--text2)' }}>Mode Invité</div>
+                <div style={{ fontSize: '.7rem', color: 'var(--text3)' }}>Lecture seule</div>
+              </div>
+            </div>
+            <Link href="/auth" className="btn btn-gold btn-full" style={{ fontSize: '.78rem', textDecoration: 'none', display: 'block', textAlign: 'center' }}>
+              Se connecter
+            </Link>
+          </>
+        )}
       </div>
     </nav>
   )

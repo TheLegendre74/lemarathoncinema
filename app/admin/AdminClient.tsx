@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, adminFetchFrenchPosters, adminScanAgeRestrictions, updateFilm, adminResolveReport, adminSetConfig, adminVerifyPosters, adminSetAdmin } from '@/lib/actions'
+import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminBatchFlaggedDecisions, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, adminFetchFrenchPosters, adminScanAgeRestrictions, updateFilm, adminResolveReport, adminSetConfig, adminVerifyPosters, adminSetAdmin, adminAddNews, adminDeleteNews, adminAddRecommendation, adminDeleteRecommendation, deleteForumTopic } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
 import { CONFIG } from '@/lib/config'
 import type { Film, Profile } from '@/lib/supabase/types'
@@ -102,6 +102,15 @@ function ConfigSection({ serverConfig, siteConfig, onSave, saving }: {
 
       <Sub label="Phrase d'accueil (sous-titre du site)" />
       <input style={inputStyle} {...f('accueil_sous_titre')} />
+
+      <Sub label="Règles du marathon (texte affiché sur l'accueil)" />
+      <textarea
+        value={vals['MARATHON_RULES'] ?? ''}
+        onChange={e => setVals(v => ({ ...v, MARATHON_RULES: e.target.value }))}
+        rows={8}
+        placeholder="Décris ici les règles du marathon. Ce texte s'affiche sur la page d'accueil."
+        style={{ ...inputStyle, resize: 'vertical' }}
+      />
 
       <Sub label="Easter eggs — Matrix (taper 'red pill')" />
       <div style={{ display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
@@ -270,6 +279,17 @@ function EditFilmModal({ film, onClose, onSave }: {
   )
 }
 
+function Section({ icon, title, children }: { icon: string; title: string; children: React.ReactNode }) {
+  return (
+    <div style={{ background: 'rgba(232,90,90,.04)', border: '1px solid rgba(232,90,90,.18)', borderRadius: 'var(--rl)', padding: '1.3rem', marginBottom: '1.2rem' }}>
+      <div style={{ fontSize: '.68rem', letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--red)', marginBottom: '1rem' }}>
+        {icon} {title}
+      </div>
+      {children}
+    </div>
+  )
+}
+
 interface Props {
   profile: Profile
   films: Film[]
@@ -282,9 +302,12 @@ interface Props {
   reports: any[]
   siteConfig: Record<string, string>
   serverConfig: ServerConfig
+  news: any[]
+  recommendations: any[]
+  forumTopics: any[]
 }
 
-export default function AdminClient({ profile, films, users, duels, weekFilm, totalUsers, watchCountMap, flaggedFilms, reports, siteConfig, serverConfig }: Props) {
+export default function AdminClient({ profile, films, users, duels, weekFilm, totalUsers, watchCountMap, flaggedFilms, reports, siteConfig, serverConfig, news, recommendations, forumTopics }: Props) {
   const { addToast } = useToast()
   const router = useRouter()
   const [posterLoading, setPosterLoading] = useState<Record<number, boolean>>({})
@@ -297,6 +320,7 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
   const [frenchPostersRunning, setFrenchPostersRunning] = useState(false)
   const [ageScanNextId, setAgeScanNextId] = useState<number | null>(0)
   const [ageScanRunning, setAgeScanRunning] = useState(false)
+  const [localFlaggedFilms, setLocalFlaggedFilms] = useState<Film[]>(flaggedFilms)
   const [flaggedDecisions, setFlaggedDecisions] = useState<Record<number, 'approve' | 'reject'>>({})
   const [flaggedSubmitting, setFlaggedSubmitting] = useState(false)
   const [brokenPosters, setBrokenPosters] = useState<{ id: number; titre: string; poster: string }[]>([])
@@ -305,6 +329,38 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
   const [savingConfig, setSavingConfig] = useState(false)
   const [manualFilm1, setManualFilm1] = useState('')
   const [manualFilm2, setManualFilm2] = useState('')
+  const [newsTitle, setNewsTitle] = useState('')
+  const [newsContent, setNewsContent] = useState('')
+  const [newsPinned, setNewsPinned] = useState(false)
+  const [recoNiveau, setRecoNiveau] = useState<'debutant'|'intermediaire'|'confirme'>('debutant')
+  const [recoTitre, setRecoTitre] = useState('')
+  const [recoAnnee, setRecoAnnee] = useState('')
+  const [recoReal, setRecoReal] = useState('')
+  const [recoDesc, setRecoDesc] = useState('')
+  const [tipiakLabel, setTipiakLabel] = useState('')
+  const [tipiakUrl, setTipiakUrl] = useState('')
+  const [tipiakLinks, setTipiakLinks] = useState<{label:string;url:string}[]>(
+    (() => { try { return JSON.parse(siteConfig['TIPIAK_LINKS'] ?? '[]') } catch { return [] } })()
+  )
+
+  // ── Scroll fix pour les boutons 18+ ─────────────────────────────────────────
+  // Au lieu de tenter de restaurer après coup, on intercepte directement
+  // l'événement scroll qui se produit dans les 150ms suivant un clic.
+  function lockScrollFor150ms() {
+    const y = window.scrollY
+    const restore = () => window.scrollTo({ top: y, behavior: 'instant' as ScrollBehavior })
+    window.addEventListener('scroll', restore)
+    setTimeout(() => window.removeEventListener('scroll', restore), 150)
+  }
+
+  // Preserve scroll for buttons that trigger router.refresh() (Next.js resets scroll on navigation).
+  function keepScroll() {
+    const y = window.scrollY
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: y, behavior: 'instant' as ScrollBehavior })
+      requestAnimationFrame(() => window.scrollTo({ top: y, behavior: 'instant' as ScrollBehavior }))
+    })
+  }
 
   function getWatchPct(filmId: number) {
     if (!totalUsers) return 0
@@ -536,51 +592,31 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
   }
 
   async function submitFlaggedDecisions() {
-    const entries = Object.entries(flaggedDecisions)
-    if (!entries.length) return
+    if (!Object.keys(flaggedDecisions).length) return
     setFlaggedSubmitting(true)
-    let approved = 0, rejected = 0
-    for (const [idStr, decision] of entries) {
-      const id = parseInt(idStr)
-      const film = flaggedFilms.find(f => f.id === id)
-      if (!film) continue
-      if (decision === 'approve') {
-        await adminApproveFlaggedFilm(id)
-        approved++
-      } else {
-        await adminDeleteFilm(id)
-        rejected++
-      }
-    }
+    const processedIds = new Set(Object.keys(flaggedDecisions).map(Number))
+    const result = await adminBatchFlaggedDecisions(flaggedDecisions as Record<string, 'approve' | 'reject'>)
+    setLocalFlaggedFilms(prev => prev.filter(f => !processedIds.has(f.id)))
     setFlaggedDecisions({})
     setFlaggedSubmitting(false)
-    addToast(`${approved} approuvé(s), ${rejected} refusé(s)`, '✅')
-    router.refresh()
+    if ('error' in result) addToast(result.error!, '⚠️')
+    else addToast(`${result.approved} approuvé(s), ${result.rejected} refusé(s)`, '✅')
   }
 
-  const Section = ({ icon, title, children }: { icon: string; title: string; children: React.ReactNode }) => (
-    <div style={{ background: 'rgba(232,90,90,.04)', border: '1px solid rgba(232,90,90,.18)', borderRadius: 'var(--rl)', padding: '1.3rem', marginBottom: '1.2rem' }}>
-      <div style={{ fontSize: '.68rem', letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--red)', marginBottom: '1rem' }}>
-        {icon} {title}
-      </div>
-      {children}
-    </div>
-  )
-
   return (
-    <div>
+    <div style={{ overflowAnchor: 'none' }}>
       <div style={{ marginBottom: '2rem' }}>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', lineHeight: 1 }}>Administration</div>
         <div style={{ color: 'var(--text2)', fontSize: '.83rem', marginTop: '.35rem' }}>Accès restreint · {CONFIG.SAISON_LABEL}</div>
       </div>
 
       {/* 18+ alert banner */}
-      {flaggedFilms.length > 0 && (
+      {localFlaggedFilms.length > 0 && (
         <div style={{ background: 'rgba(232,90,90,.12)', border: '2px solid var(--red)', borderRadius: 'var(--rl)', padding: '1rem 1.3rem', marginBottom: '1.2rem', display: 'flex', alignItems: 'center', gap: '.8rem' }}>
           <span style={{ fontSize: '1.4rem' }}>🔞</span>
           <div>
             <div style={{ fontWeight: 700, color: 'var(--red)', fontSize: '.9rem' }}>
-              {flaggedFilms.length} film{flaggedFilms.length > 1 ? 's' : ''} interdit{flaggedFilms.length > 1 ? 's' : ''} aux moins de 18 ans en attente de validation
+              {localFlaggedFilms.length} film{localFlaggedFilms.length > 1 ? 's' : ''} interdit{localFlaggedFilms.length > 1 ? 's' : ''} aux moins de 18 ans en attente de validation
             </div>
             <div style={{ fontSize: '.76rem', color: 'var(--text2)', marginTop: '.2rem' }}>
               Voir la section « Films 18+ » ci-dessous pour approuver ou refuser.
@@ -731,8 +767,8 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
       </Section>
 
       {/* 18+ flagged films */}
-      {flaggedFilms.length > 0 && (
-        <Section icon="🔞" title={`Films +18 ans à valider (${flaggedFilms.length})`}>
+      {localFlaggedFilms.length > 0 && (
+        <Section icon="🔞" title={`Films +18 ans à valider (${localFlaggedFilms.length})`}>
           <div style={{ fontSize: '.78rem', color: 'var(--text2)', marginBottom: '1rem' }}>
             Coche chaque film puis valide en une fois.
           </div>
@@ -746,7 +782,7 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
 
           {/* Lignes films */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '.3rem', marginBottom: '1rem' }}>
-            {flaggedFilms.map(f => {
+            {localFlaggedFilms.map(f => {
               const dec = flaggedDecisions[f.id]
               return (
                 <div key={f.id} style={{
@@ -760,7 +796,8 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
                     <span style={{ color: 'var(--text3)', fontSize: '.72rem', marginLeft: '.4rem' }}>({f.annee}) · {f.realisateur}</span>
                   </span>
                   <button
-                    onClick={() => setFlaggedDecisions(d => ({ ...d, [f.id]: 'approve' }))}
+                    type="button"
+                    onClick={() => { lockScrollFor150ms(); setFlaggedDecisions(d => ({ ...d, [f.id]: 'approve' })) }}
                     style={{
                       width: '100%', padding: '.4rem 0', borderRadius: 'var(--r)', border: '1px solid',
                       cursor: 'pointer', fontSize: '.8rem', fontWeight: 600, transition: 'all .15s',
@@ -770,7 +807,8 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
                     }}
                   >✓</button>
                   <button
-                    onClick={() => setFlaggedDecisions(d => ({ ...d, [f.id]: 'reject' }))}
+                    type="button"
+                    onClick={() => { lockScrollFor150ms(); setFlaggedDecisions(d => ({ ...d, [f.id]: 'reject' })) }}
                     style={{
                       width: '100%', padding: '.4rem 0', borderRadius: 'var(--r)', border: '1px solid',
                       cursor: 'pointer', fontSize: '.8rem', fontWeight: 600, transition: 'all .15s',
@@ -789,12 +827,13 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
             const count = Object.keys(flaggedDecisions).length
             return (
               <button
+                type="button"
                 className="btn btn-gold"
                 disabled={count === 0 || flaggedSubmitting}
                 onClick={submitFlaggedDecisions}
                 style={{ fontSize: '.82rem' }}
               >
-                {flaggedSubmitting ? '⏳ En cours…' : count === 0 ? 'Aucune sélection' : `Valider ${count} / ${flaggedFilms.length} film${count > 1 ? 's' : ''}`}
+                {flaggedSubmitting ? '⏳ En cours…' : count === 0 ? 'Aucune sélection' : `Valider ${count} / ${localFlaggedFilms.length} film${count > 1 ? 's' : ''}`}
               </button>
             )
           })()}
@@ -912,6 +951,149 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
               </div>
             )
           })}
+        </div>
+      </Section>
+
+      {/* NEWS */}
+      <Section icon="📢" title="News & Annonces">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '.6rem', marginBottom: '1rem' }}>
+          <input
+            placeholder="Titre de la news…" value={newsTitle} onChange={e => setNewsTitle(e.target.value)} maxLength={200}
+            style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.5rem .75rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.83rem' }}
+          />
+          <textarea
+            placeholder="Contenu de la news…" value={newsContent} onChange={e => setNewsContent(e.target.value)} maxLength={5000} rows={4}
+            style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.5rem .75rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.83rem', resize: 'vertical' }}
+          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '.4rem', fontSize: '.8rem', color: 'var(--text2)', cursor: 'pointer' }}>
+              <input type="checkbox" checked={newsPinned} onChange={e => setNewsPinned(e.target.checked)} /> Épingler
+            </label>
+            <button
+              className="btn btn-gold" style={{ marginLeft: 'auto' }}
+              disabled={!newsTitle.trim() || !newsContent.trim()}
+              onClick={async () => {
+                const res = await adminAddNews(newsTitle.trim(), newsContent.trim(), newsPinned)
+                if (res.error) addToast(res.error, '⚠️')
+                else { addToast('News publiée !', '📢'); setNewsTitle(''); setNewsContent(''); setNewsPinned(false); router.refresh() }
+              }}
+            >Publier</button>
+          </div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
+          {news.map((n: any) => (
+            <div key={n.id} style={{ display: 'flex', alignItems: 'center', gap: '.8rem', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.6rem 1rem' }}>
+              {n.pinned && <span style={{ fontSize: '.7rem' }}>📌</span>}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '.85rem', fontWeight: 500 }}>{n.title}</div>
+                <div style={{ fontSize: '.7rem', color: 'var(--text3)' }}>{new Date(n.created_at).toLocaleDateString('fr-FR')}</div>
+              </div>
+              <button className="btn btn-red" style={{ fontSize: '.65rem', padding: '.18rem .45rem' }}
+                onClick={async () => { await adminDeleteNews(n.id); router.refresh() }}>✕</button>
+            </div>
+          ))}
+          {!news.length && <div style={{ color: 'var(--text3)', fontSize: '.83rem' }}>Aucune news publiée.</div>}
+        </div>
+      </Section>
+
+      {/* RECOMMENDATIONS */}
+      <Section icon="🎓" title="Rattrapage Cinéma">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '.5rem', marginBottom: '.6rem' }}>
+          <select value={recoNiveau} onChange={e => setRecoNiveau(e.target.value as any)}
+            style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.5rem .75rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.83rem' }}>
+            <option value="debutant">Débutant</option>
+            <option value="intermediaire">Intermédiaire</option>
+            <option value="confirme">Confirmé</option>
+          </select>
+          <input placeholder="Titre du film *" value={recoTitre} onChange={e => setRecoTitre(e.target.value)} maxLength={150}
+            style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.5rem .75rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.83rem' }} />
+          <input placeholder="Année (ex: 1972)" value={recoAnnee} onChange={e => setRecoAnnee(e.target.value)} type="number"
+            style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.5rem .75rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.83rem' }} />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.5rem', marginBottom: '.6rem' }}>
+          <input placeholder="Réalisateur" value={recoReal} onChange={e => setRecoReal(e.target.value)} maxLength={100}
+            style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.5rem .75rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.83rem' }} />
+          <input placeholder="Description courte (optionnel)" value={recoDesc} onChange={e => setRecoDesc(e.target.value)} maxLength={300}
+            style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.5rem .75rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.83rem' }} />
+        </div>
+        <button className="btn btn-gold" disabled={!recoTitre.trim()}
+          onClick={async () => {
+            const res = await adminAddRecommendation(recoNiveau, recoTitre, recoAnnee ? parseInt(recoAnnee) : null, recoReal, recoDesc, recommendations.filter((r: any) => r.niveau === recoNiveau).length)
+            if (res.error) addToast(res.error, '⚠️')
+            else { addToast('Film ajouté !', '🎓'); setRecoTitre(''); setRecoAnnee(''); setRecoReal(''); setRecoDesc(''); router.refresh() }
+          }}
+        >Ajouter à la liste</button>
+        <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '.3rem' }}>
+          {(['debutant','intermediaire','confirme'] as const).map(n => (
+            <div key={n}>
+              <div style={{ fontSize: '.68rem', letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--text3)', margin: '.5rem 0 .3rem' }}>
+                {n === 'debutant' ? '🎬 Débutant' : n === 'intermediaire' ? '🎭 Intermédiaire' : '🏆 Confirmé'} ({recommendations.filter((r:any) => r.niveau === n).length})
+              </div>
+              {recommendations.filter((r:any) => r.niveau === n).map((r: any) => (
+                <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: '.7rem', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.5rem .8rem', marginBottom: '.25rem' }}>
+                  <span style={{ flex: 1, fontSize: '.83rem' }}>{r.titre}{r.annee ? ` (${r.annee})` : ''}</span>
+                  <button className="btn btn-red" style={{ fontSize: '.65rem', padding: '.18rem .45rem' }}
+                    onClick={async () => { await adminDeleteRecommendation(r.id); router.refresh() }}>✕</button>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* FORUM TOPICS (admin view) */}
+      <Section icon="💬" title={`Forum — Topics (${forumTopics.length})`}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '.3rem' }}>
+          {forumTopics.map((t: any) => (
+            <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: '.8rem', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.55rem 1rem' }}>
+              <span style={{ fontSize: '.83rem', flex: 1 }}>{t.is_social ? '💬 ' : '📌 '}{t.title}</span>
+              {!t.is_social && (
+                <button className="btn btn-red" style={{ fontSize: '.65rem', padding: '.18rem .45rem' }}
+                  onClick={async () => {
+                    if (!confirm(`Supprimer le topic "${t.title}" et tous ses messages ?`)) return
+                    await deleteForumTopic(t.id); router.refresh()
+                  }}>✕ Supprimer</button>
+              )}
+              {t.is_social && <span style={{ fontSize: '.68rem', color: 'var(--text3)' }}>Topic social (non supprimable)</span>}
+            </div>
+          ))}
+          {!forumTopics.length && <div style={{ color: 'var(--text3)', fontSize: '.83rem' }}>Aucun topic.</div>}
+        </div>
+      </Section>
+
+      {/* TIPIAK (secret) */}
+      <Section icon="🏴‍☠️" title="Tipiak — Liens streaming alternatifs (secret)">
+        <div style={{ fontSize: '.78rem', color: 'var(--text2)', marginBottom: '1rem', lineHeight: 1.5 }}>
+          Ces liens apparaissent dans l'easter egg secret "tipiak". Non visible dans le tableau des easter eggs officiels.
+        </div>
+        <div style={{ display: 'flex', gap: '.5rem', marginBottom: '.8rem' }}>
+          <input placeholder="Nom de la plateforme" value={tipiakLabel} onChange={e => setTipiakLabel(e.target.value)} maxLength={60}
+            style={{ flex: 1, background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.5rem .75rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.83rem' }} />
+          <input placeholder="https://..." value={tipiakUrl} onChange={e => setTipiakUrl(e.target.value)} maxLength={500} type="url"
+            style={{ flex: 2, background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.5rem .75rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.83rem' }} />
+          <button className="btn btn-outline" disabled={!tipiakLabel.trim() || !tipiakUrl.trim()}
+            onClick={async () => {
+              const newLinks = [...tipiakLinks, { label: tipiakLabel.trim(), url: tipiakUrl.trim() }]
+              const res = await adminSetConfig({ TIPIAK_LINKS: JSON.stringify(newLinks) })
+              if (res.error) addToast(res.error, '⚠️')
+              else { setTipiakLinks(newLinks); setTipiakLabel(''); setTipiakUrl(''); addToast('Lien ajouté !', '🏴‍☠️') }
+            }}
+          >Ajouter</button>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '.3rem' }}>
+          {tipiakLinks.map((l, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '.8rem', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.5rem .8rem' }}>
+              <span style={{ flex: 1, fontSize: '.83rem' }}>{l.label}</span>
+              <span style={{ fontSize: '.7rem', color: 'var(--text3)', flex: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.url}</span>
+              <button className="btn btn-red" style={{ fontSize: '.65rem', padding: '.18rem .45rem' }}
+                onClick={async () => {
+                  const newLinks = tipiakLinks.filter((_, j) => j !== i)
+                  const res = await adminSetConfig({ TIPIAK_LINKS: JSON.stringify(newLinks) })
+                  if (!res.error) setTipiakLinks(newLinks)
+                }}>✕</button>
+            </div>
+          ))}
+          {!tipiakLinks.length && <div style={{ color: 'var(--text3)', fontSize: '.83rem' }}>Aucun lien configuré.</div>}
         </div>
       </Section>
 

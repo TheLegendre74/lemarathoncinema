@@ -99,13 +99,6 @@ const EGGS = [
     condition: 'Taper "alien" — à bord du Nostromo, l\'alien élimine l\'équipage. Ripley tombe, un chestburster lui sort du ventre.',
   },
   {
-    id: 'jaws',
-    icon: '🦈',
-    name: 'Les Dents de la Mer',
-    category: 'Clavier',
-    condition: 'Taper "jaws" — l\'aileron patrouille, la femme dans sa bouée, le requin surgit et l\'eau se teint de sang',
-  },
-  {
     id: 'tars',
     icon: '▣',
     name: 'TARS en ligne',

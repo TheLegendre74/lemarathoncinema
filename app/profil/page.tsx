@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { getBadge, getAllBadges, levelFromExp, CONFIG } from '@/lib/config'
 import ExpBar from '@/components/ExpBar'
 import Image from 'next/image'
+import AvatarUpload from './AvatarUpload'
 
 export const revalidate = 30
 
@@ -34,9 +35,10 @@ export default async function ProfilPage() {
       {/* Hero card */}
       <div style={{ background: 'linear-gradient(135deg, var(--bg2), var(--bg3))', border: '1px solid var(--border2)', borderRadius: 'var(--rxl)', padding: '2rem', marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-          <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'linear-gradient(135deg, var(--gold2), var(--purple))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontSize: '2rem', color: '#0a0a0f', flexShrink: 0, fontWeight: 700 }}>
-            {profile.pseudo.slice(0, 2).toUpperCase()}
-          </div>
+          <AvatarUpload
+            currentAvatar={profile.avatar_url ?? null}
+            pseudo={profile.pseudo}
+          />
           <div>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.7rem', lineHeight: 1 }}>{profile.pseudo}</div>
             <div style={{ fontSize: '.75rem', color: 'var(--text3)', marginTop: '.3rem' }}>{user.email}</div>

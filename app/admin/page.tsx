@@ -17,7 +17,19 @@ export default async function AdminPage() {
 
   const cfg = await getServerConfig()
 
-  const [{ data: films }, { data: users }, { data: duels }, { data: weekFilm }, { data: allWatched }, { data: flaggedFilms }, { data: reports }, { data: siteConfigs }] = await Promise.all([
+  const [
+    { data: films },
+    { data: users },
+    { data: duels },
+    { data: weekFilm },
+    { data: allWatched },
+    { data: flaggedFilms },
+    { data: reports },
+    { data: siteConfigs },
+    { data: news },
+    { data: recommendations },
+    { data: forumTopics },
+  ] = await Promise.all([
     supabase.from('films').select('*').order('titre'),
     supabase.from('profiles').select('*, watched:watched(film_id), votes:votes(duel_id)').order('exp', { ascending: false }),
     supabase.from('duels').select('*, film1:films!duels_film1_id_fkey(titre), film2:films!duels_film2_id_fkey(titre), votes(film_choice)').order('created_at', { ascending: false }).limit(10),
@@ -26,6 +38,9 @@ export default async function AdminPage() {
     supabase.from('films').select('*').eq('flagged_18plus', true).order('created_at', { ascending: false }),
     supabase.from('reports').select('*, film:films(titre), reporter:profiles!reports_user_id_fkey(pseudo)').eq('resolved', false).order('created_at', { ascending: false }),
     supabase.from('site_config').select('key, value'),
+    (supabase as any).from('news').select('*, profiles(pseudo)').order('pinned', { ascending: false }).order('created_at', { ascending: false }),
+    (supabase as any).from('recommendation_films').select('*').order('niveau').order('position'),
+    (supabase as any).from('forum_topics').select('*').order('pinned', { ascending: false }).order('created_at', { ascending: false }),
   ])
 
   const totalUsers = users?.length ?? 1
@@ -48,6 +63,9 @@ export default async function AdminPage() {
       reports={reports ?? []}
       siteConfig={configMap}
       serverConfig={cfg}
+      news={news ?? []}
+      recommendations={recommendations ?? []}
+      forumTopics={forumTopics ?? []}
     />
   )
 }

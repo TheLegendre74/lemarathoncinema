@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
 import Image from 'next/image'
 import type { Film } from '@/lib/supabase/types'
 
@@ -7,8 +6,6 @@ export const revalidate = 60
 
 export default async function NotesPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth')
 
   const { data: films } = await supabase.from('films').select('*').eq('saison', 1).order('titre')
   const { data: allRatings } = await supabase.from('ratings').select('film_id, score')

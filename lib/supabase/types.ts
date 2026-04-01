@@ -12,6 +12,7 @@ export type Database = {
           saison: number
           created_at: string
           updated_at: string
+          avatar_url: string | null
         }
         Insert: {
           id: string
@@ -19,12 +20,14 @@ export type Database = {
           exp?: number
           is_admin?: boolean
           saison?: number
+          avatar_url?: string | null
         }
         Update: {
           pseudo?: string
           exp?: number
           is_admin?: boolean
           saison?: number
+          avatar_url?: string | null
         }
         Relationships: []
       }

@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
 import SemaineClient from './SemaineClient'
 
 export const revalidate = 60
@@ -20,21 +19,22 @@ async function fetchWatchProviders(tmdbId: number) {
 export default async function SemainePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth')
 
   const [{ data: profile }, { data: weekFilm }] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', user.id).single(),
+    user ? supabase.from('profiles').select('*').eq('id', user.id).single() : Promise.resolve({ data: null }),
     supabase.from('week_films').select('*, films(*)').eq('active', true).order('created_at', { ascending: false }).limit(1).single(),
   ])
 
   const film = (weekFilm as any)?.films ?? null
-  const { data: isWatched } = film ? await supabase.from('watched').select('film_id').eq('user_id', user.id).eq('film_id', film.id).single() : { data: null }
+  const { data: isWatched } = (film && user)
+    ? await supabase.from('watched').select('film_id').eq('user_id', user.id).eq('film_id', film.id).single()
+    : { data: null }
 
   const watchProviders = film?.tmdb_id ? await fetchWatchProviders(film.tmdb_id) : null
 
   return (
     <SemaineClient
-      profile={profile!}
+      profile={profile}
       weekFilm={weekFilm}
       film={film}
       isWatched={!!isWatched}

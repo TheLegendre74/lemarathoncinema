@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
 import Countdown from '@/components/Countdown'
 import ExpBar from '@/components/ExpBar'
 import Poster from '@/components/Poster'
@@ -12,9 +11,52 @@ export const revalidate = 60
 export default async function HomePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth')
-
   const cfg = await getServerConfig()
+  const live = new Date() >= cfg.MARATHON_START
+
+  // News (public)
+  const { data: newsList } = await (supabase as any)
+    .from('news')
+    .select('*, profiles(pseudo)')
+    .order('pinned', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(5)
+
+  // Guest homepage
+  if (!user) {
+    const { data: totalFilms } = await supabase.from('films').select('id', { count: 'exact' }).eq('saison', 1)
+    const { data: playerCount } = await supabase.from('profiles').select('id', { count: 'exact' })
+    return (
+      <div>
+        <div style={{ marginBottom: '2rem' }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', lineHeight: 1 }}>Ciné Marathon</div>
+          <div style={{ color: 'var(--text2)', fontSize: '.83rem', marginTop: '.35rem' }}>{cfg.ACCUEIL_SOUS_TITRE}</div>
+        </div>
+
+        <Countdown marathonStart={cfg.MARATHON_START.toISOString()} />
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.8rem', marginBottom: '1.5rem' }}>
+          <div className="stat"><div className="stat-l">Films S1</div><div className="stat-v gold">{totalFilms?.length ?? 0}</div></div>
+          <div className="stat"><div className="stat-l">Joueurs</div><div className="stat-v blue">{playerCount?.length ?? 0}</div></div>
+        </div>
+
+        <div className="card" style={{ marginBottom: '1.5rem', textAlign: 'center', padding: '2rem' }}>
+          <div style={{ fontSize: '2rem', marginBottom: '.8rem' }}>👋</div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', marginBottom: '.5rem' }}>Mode Invité</div>
+          <div style={{ fontSize: '.83rem', color: 'var(--text2)', marginBottom: '1.2rem', lineHeight: 1.6 }}>
+            Tu peux naviguer librement et découvrir les films du marathon.<br />
+            Connecte-toi pour participer, voter et accumuler de l'EXP !
+          </div>
+          <Link href="/auth" className="btn btn-gold" style={{ textDecoration: 'none', display: 'inline-block' }}>
+            Se connecter / S'inscrire
+          </Link>
+        </div>
+
+        <NewsSection newsList={newsList ?? []} />
+        <RulesSection cfg={cfg} />
+      </div>
+    )
+  }
 
   const [{ data: profile }, { data: watched }, { data: votes }, { data: weekFilm }, { data: activeDuel }] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
@@ -24,7 +66,15 @@ export default async function HomePage() {
     supabase.from('duels').select('*, film1:films!duels_film1_id_fkey(*), film2:films!duels_film2_id_fkey(*)').eq('closed', false).order('created_at', { ascending: false }).limit(1).single(),
   ])
 
-  if (!profile) redirect('/auth')
+  if (!profile) {
+    return (
+      <div>
+        <Countdown marathonStart={cfg.MARATHON_START.toISOString()} />
+        <NewsSection newsList={newsList ?? []} />
+        <RulesSection cfg={cfg} />
+      </div>
+    )
+  }
 
   const { data: totalFilms } = await supabase.from('films').select('id', { count: 'exact' }).eq('saison', 1)
   const totalS1 = totalFilms?.length ?? 0
@@ -32,16 +82,10 @@ export default async function HomePage() {
   const pct = totalS1 ? Math.round((watchedCount / totalS1) * 100) : 0
   const level = levelFromExp(profile.exp)
   const badge = getBadge(profile.exp)
-  const live = new Date() >= cfg.MARATHON_START
 
-  // Rank
-  const { data: rankData } = await supabase
-    .from('profiles')
-    .select('id')
-    .gte('exp', profile.exp)
+  const { data: rankData } = await supabase.from('profiles').select('id').gte('exp', profile.exp)
   const rank = rankData?.length ?? 1
 
-  // Recent activity
   const { data: recentWatched } = await supabase
     .from('watched')
     .select('film_id, watched_at, pre, films(titre)')
@@ -161,6 +205,9 @@ export default async function HomePage() {
         <ExpBar exp={profile.exp} />
       </div>
 
+      {/* News */}
+      <NewsSection newsList={newsList ?? []} />
+
       {/* Recent activity */}
       <div className="section-title">Activité récente</div>
       {!recentWatched?.length ? (
@@ -182,6 +229,78 @@ export default async function HomePage() {
           })}
         </div>
       )}
+
+      {/* Rules */}
+      <RulesSection cfg={cfg} />
+    </div>
+  )
+}
+
+// ─── NEWS SECTION ─────────────────────────────────────────────────────────────
+function NewsSection({ newsList }: { newsList: any[] }) {
+  if (!newsList.length) return null
+  return (
+    <div style={{ marginBottom: '2rem' }}>
+      <div className="section-title">📢 News</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '.8rem' }}>
+        {newsList.map((n: any) => (
+          <div key={n.id} style={{
+            background: n.pinned ? 'rgba(232,196,106,.05)' : 'var(--bg2)',
+            border: `1px solid ${n.pinned ? 'rgba(232,196,106,.3)' : 'var(--border)'}`,
+            borderRadius: 'var(--r)', padding: '1rem 1.2rem',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginBottom: '.4rem' }}>
+              {n.pinned && <span style={{ fontSize: '.65rem', background: 'rgba(232,196,106,.15)', color: 'var(--gold)', border: '1px solid rgba(232,196,106,.3)', borderRadius: 99, padding: '1px 7px' }}>📌 ÉPINGLÉ</span>}
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: '1rem' }}>{n.title}</span>
+            </div>
+            <div style={{ fontSize: '.83rem', color: 'var(--text2)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{n.content}</div>
+            <div style={{ fontSize: '.68rem', color: 'var(--text3)', marginTop: '.5rem' }}>
+              {n.profiles?.pseudo ?? 'Admin'} · {new Date(n.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── RULES SECTION ────────────────────────────────────────────────────────────
+function RulesSection({ cfg }: { cfg: any }) {
+  const rules = cfg.MARATHON_RULES
+  if (!rules) return <DefaultRules />
+  return (
+    <div style={{ marginBottom: '2rem' }}>
+      <div className="section-title">📋 Règles du marathon</div>
+      <div className="card">
+        <div style={{ fontSize: '.85rem', color: 'var(--text2)', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{rules}</div>
+      </div>
+    </div>
+  )
+}
+
+function DefaultRules() {
+  const rules = [
+    { emoji: '🎬', title: 'Film de la semaine', desc: `Chaque semaine un film est mis en avant. Le voir le vendredi soir lors de la séance rapporte +${CONFIG.EXP_FDLS} EXP.` },
+    { emoji: '✅', title: 'Valider un film', desc: `Marquer un film comme vu rapporte +${CONFIG.EXP_FILM} EXP. Valable pour tous les films de la liste.` },
+    { emoji: '⚔️', title: 'Duels', desc: `Chaque semaine, deux films s'affrontent. Voter pour le gagnant rapporte +${CONFIG.EXP_DUEL_WIN} EXP si tu choisis le bon.` },
+    { emoji: '⭐', title: 'Notes', desc: `Noter un film contribue au classement communautaire et rapporte +${CONFIG.EXP_VOTE} EXP.` },
+    { emoji: '🏆', title: 'Classement', desc: `Le classement des joueurs est basé sur l'EXP totale accumulée pendant le marathon.` },
+    { emoji: '🥚', title: 'Easter Eggs', desc: 'Des surprises sont cachées partout sur le site. Trouve-les pour débloquer des succès secrets !' },
+  ]
+  return (
+    <div style={{ marginBottom: '2rem' }}>
+      <div className="section-title">📋 Règles du marathon</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '.6rem' }}>
+        {rules.map(r => (
+          <div key={r.title} style={{ display: 'flex', gap: '1rem', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.9rem 1.1rem' }}>
+            <span style={{ fontSize: '1.3rem', flexShrink: 0 }}>{r.emoji}</span>
+            <div>
+              <div style={{ fontSize: '.87rem', fontWeight: 600, marginBottom: '.2rem' }}>{r.title}</div>
+              <div style={{ fontSize: '.78rem', color: 'var(--text2)', lineHeight: 1.5 }}>{r.desc}</div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

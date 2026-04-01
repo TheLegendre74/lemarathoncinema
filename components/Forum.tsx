@@ -8,7 +8,7 @@ import type { Post, Profile } from '@/lib/supabase/types'
 
 interface ForumProps {
   topic: string
-  profile: Profile
+  profile: Profile | null
   initialPosts?: (Post & { profiles: Pick<Profile, 'pseudo'> })[]
   filmTitle?: string
 }
@@ -475,20 +475,26 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
         <div ref={bottomRef} />
       </div>
 
-      <div style={{ display: 'flex', gap: '.6rem', alignItems: 'flex-end', marginTop: '1rem' }}>
-        <textarea
-          value={text}
-          onChange={e => setText(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) submit() }}
-          placeholder="Ton commentaire… (Ctrl+Entrée pour envoyer)"
-          style={{ flex: 1, background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.6rem .8rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.83rem', resize: 'vertical', minHeight: 65, outline: 'none' }}
-          onFocus={e => { e.target.style.borderColor = 'var(--gold)' }}
-          onBlur={e => { e.target.style.borderColor = 'var(--border2)' }}
-        />
-        <button className="btn btn-gold" onClick={submit} disabled={loading} style={{ alignSelf: 'flex-end' }}>
-          {loading ? '…' : 'Poster'}
-        </button>
-      </div>
+      {profile ? (
+        <div style={{ display: 'flex', gap: '.6rem', alignItems: 'flex-end', marginTop: '1rem' }}>
+          <textarea
+            value={text}
+            onChange={e => setText(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) submit() }}
+            placeholder="Ton commentaire… (Ctrl+Entrée pour envoyer)"
+            style={{ flex: 1, background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.6rem .8rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.83rem', resize: 'vertical', minHeight: 65, outline: 'none' }}
+            onFocus={e => { e.target.style.borderColor = 'var(--gold)' }}
+            onBlur={e => { e.target.style.borderColor = 'var(--border2)' }}
+          />
+          <button className="btn btn-gold" onClick={submit} disabled={loading} style={{ alignSelf: 'flex-end' }}>
+            {loading ? '…' : 'Poster'}
+          </button>
+        </div>
+      ) : (
+        <div style={{ marginTop: '1rem', textAlign: 'center', fontSize: '.82rem', color: 'var(--text3)' }}>
+          <a href="/auth" style={{ color: 'var(--gold)', textDecoration: 'none' }}>Connecte-toi</a> pour participer à la discussion.
+        </div>
+      )}
 
       {/* Easter egg overlays */}
       {fightRule !== null && <FightClubRule rule={fightRule} onClose={() => setFightRule(null)} />}

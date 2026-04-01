@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { createClient } from '@/lib/supabase/server'
-import Sidebar from '@/components/Sidebar'
+import ClientShell from '@/components/ClientShell'
 import { ToastProvider } from '@/components/ToastProvider'
 import EasterEggs from '@/components/EasterEggs'
 import { getServerConfig } from '@/lib/serverConfig'
@@ -56,16 +56,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <ToastProvider>
           <EasterEggs config={eeConfig} />
-          {user && profile ? (
-            <div style={{ display: 'flex', minHeight: '100vh' }}>
-              <Sidebar profile={profile} />
-              <main className="main">
-                {children}
-              </main>
-            </div>
-          ) : (
-            <>{children}</>
-          )}
+          <ClientShell profile={profile}>
+            {children}
+          </ClientShell>
         </ToastProvider>
       </body>
     </html>

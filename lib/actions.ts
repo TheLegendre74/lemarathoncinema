@@ -767,6 +767,25 @@ export async function adminApproveFlaggedFilm(filmId: number) {
   return { success: true }
 }
 
+export async function adminBatchFlaggedDecisions(decisions: Record<string, 'approve' | 'reject'>) {
+  const supabase = await createClient()
+  const adminClient = createAdminClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Non autorisé.' }
+
+  const toApprove = Object.entries(decisions).filter(([, d]) => d === 'approve').map(([id]) => parseInt(id))
+  const toReject  = Object.entries(decisions).filter(([, d]) => d === 'reject').map(([id]) => parseInt(id))
+
+  if (toApprove.length) await adminClient.from('films').update({ flagged_18plus: false }).in('id', toApprove)
+  if (toReject.length)  await adminClient.from('films').delete().in('id', toReject)
+
+  revalidatePath('/films')
+  return { approved: toApprove.length, rejected: toReject.length }
+}
+
 // ── POSTER MANAGEMENT ────────────────────────────────────────
 
 async function tmdbSearchMovie(titre: string, annee: number, key: string) {
@@ -1149,4 +1168,164 @@ export async function discoverEgg(eggId: string) {
     { user_id: user.id, egg_id: eggId },
     { onConflict: 'user_id,egg_id', ignoreDuplicates: true }
   )
+}
+
+// ── FORUM ─────────────────────────────────────────────────────
+
+export async function createForumTopic(title: string, description: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+
+  const sanitized = title.slice(0, 100).trim()
+  if (!sanitized) return { error: 'Titre requis' }
+
+  const { data, error } = await (supabase as any)
+    .from('forum_topics')
+    .insert({ title: sanitized, description: description.slice(0, 300), created_by: user.id })
+    .select()
+    .single()
+
+  if (error) return { error: 'Erreur lors de la création' }
+  revalidatePath('/forum')
+  return { data }
+}
+
+export async function addForumPost(topicId: string, content: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+
+  const sanitized = content.slice(0, 2000).trim()
+  if (!sanitized) return { error: 'Message vide' }
+
+  const { data, error } = await (supabase as any)
+    .from('forum_posts')
+    .insert({ topic_id: topicId, user_id: user.id, content: sanitized })
+    .select()
+    .single()
+
+  if (error) return { error: 'Erreur lors de l\'envoi' }
+  revalidatePath(`/forum/${topicId}`)
+  return { data }
+}
+
+export async function deleteForumPost(postId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+
+  const { data: post } = await (supabase as any).from('forum_posts').select('user_id, topic_id').eq('id', postId).single()
+  if (!post) return { error: 'Message introuvable' }
+
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (post.user_id !== user.id && !profile?.is_admin) return { error: 'Permission refusée' }
+
+  await (supabase as any).from('forum_posts').delete().eq('id', postId)
+  revalidatePath(`/forum/${post.topic_id}`)
+  return { error: null }
+}
+
+export async function deleteForumTopic(topicId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Réservé aux admins' }
+  await (supabase as any).from('forum_topics').delete().eq('id', topicId)
+  revalidatePath('/forum')
+  return { error: null }
+}
+
+// ── NEWS ──────────────────────────────────────────────────────
+
+export async function adminAddNews(title: string, content: string, pinned = false) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Réservé aux admins' }
+
+  const { data, error } = await (supabase as any)
+    .from('news')
+    .insert({ title: title.slice(0, 200), content: content.slice(0, 5000), created_by: user.id, pinned })
+    .select().single()
+
+  if (error) return { error: 'Erreur lors de la création' }
+  revalidatePath('/')
+  return { data }
+}
+
+export async function adminDeleteNews(newsId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Réservé aux admins' }
+  await (supabase as any).from('news').delete().eq('id', newsId)
+  revalidatePath('/')
+  return { error: null }
+}
+
+// ── AVATAR ────────────────────────────────────────────────────
+
+export async function uploadAvatar(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+
+  const file = formData.get('avatar') as File | null
+  if (!file || !file.size) return { error: 'Fichier manquant' }
+  if (file.size > 2 * 1024 * 1024) return { error: 'Image trop volumineuse (max 2 Mo)' }
+  if (!file.type.startsWith('image/')) return { error: 'Format invalide' }
+
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
+  const path = `avatars/${user.id}.${ext}`
+
+  const buffer = Buffer.from(await file.arrayBuffer())
+  const { error: uploadError } = await supabase.storage
+    .from('posters')
+    .upload(path, buffer, { contentType: file.type, upsert: true })
+
+  if (uploadError) return { error: 'Erreur upload' }
+
+  const { data: { publicUrl } } = supabase.storage.from('posters').getPublicUrl(path)
+
+  await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id)
+  revalidatePath('/profil')
+  return { url: publicUrl }
+}
+
+// ── RECOMMENDATIONS ───────────────────────────────────────────
+
+export async function adminAddRecommendation(
+  niveau: 'debutant' | 'intermediaire' | 'confirme',
+  titre: string, annee: number | null, realisateur: string,
+  description: string, position: number
+) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Réservé aux admins' }
+
+  const { data, error } = await (supabase as any)
+    .from('recommendation_films')
+    .insert({ niveau, titre: titre.trim(), annee, realisateur: realisateur.trim(), description: description.trim(), position })
+    .select().single()
+
+  if (error) return { error: 'Erreur lors de l\'ajout' }
+  revalidatePath('/rattrapage')
+  return { data }
+}
+
+export async function adminDeleteRecommendation(id: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Réservé aux admins' }
+  await (supabase as any).from('recommendation_films').delete().eq('id', id)
+  revalidatePath('/rattrapage')
+  return { error: null }
 }

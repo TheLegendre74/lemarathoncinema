@@ -23,7 +23,7 @@ interface WatchProvidersFR {
 }
 
 interface Props {
-  profile: Profile
+  profile: Profile | null
   weekFilm: any
   film: any
   isWatched: boolean
@@ -82,12 +82,16 @@ export default function SemaineClient({ profile, weekFilm, film, isWatched, watc
                   </div>
                 )}
 
-                {!isWatched ? (
-                  <button className="btn btn-gold" onClick={markSeen}>✓ Marquer comme vu (+{CONFIG.EXP_FDLS} EXP)</button>
+                {profile ? (
+                  !isWatched ? (
+                    <button className="btn btn-gold" onClick={markSeen}>✓ Marquer comme vu (+{CONFIG.EXP_FDLS} EXP)</button>
+                  ) : (
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '.5rem', background: 'var(--green2)', border: '1px solid rgba(79,217,138,.3)', color: 'var(--green)', borderRadius: 99, padding: '.4rem 1rem', fontSize: '.82rem' }}>
+                      ✓ Vu — +{CONFIG.EXP_FDLS} EXP gagné
+                    </div>
+                  )
                 ) : (
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '.5rem', background: 'var(--green2)', border: '1px solid rgba(79,217,138,.3)', color: 'var(--green)', borderRadius: 99, padding: '.4rem 1rem', fontSize: '.82rem' }}>
-                    ✓ Vu — +{CONFIG.EXP_FDLS} EXP gagné
-                  </div>
+                  <a href="/auth" className="btn btn-outline" style={{ fontSize: '.82rem' }}>Se connecter pour marquer comme vu</a>
                 )}
 
                 {/* Streaming */}

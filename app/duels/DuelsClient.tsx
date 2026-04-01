@@ -10,14 +10,14 @@ import { useRouter } from 'next/navigation'
 import type { Profile } from '@/lib/supabase/types'
 
 interface Props {
-  profile: Profile
+  profile: Profile | null
   duels: any[]
   myVotes: { duel_id: number; film_choice: number }[]
   allVotes: { duel_id: number; film_choice: number }[]
 }
 
 function DuelCard({ duel, profile, myVote, v1, v2, allVotes }: {
-  duel: any, profile: Profile, myVote: number | null, v1: number, v2: number, allVotes: { duel_id: number; film_choice: number }[]
+  duel: any, profile: Profile | null, myVote: number | null, v1: number, v2: number, allVotes: { duel_id: number; film_choice: number }[]
 }) {
   const [forumOpen, setForumOpen] = useState(false)
   const { addToast } = useToast()
@@ -27,7 +27,7 @@ function DuelCard({ duel, profile, myVote, v1, v2, allVotes }: {
   const p1 = Math.round((v1 / tot) * 100)
 
   async function handleVote(filmId: number) {
-    if (myVote || duel.closed) return
+    if (!profile || myVote || duel.closed) return
     const result = await voteDuel(duel.id, filmId)
     if (result.error) addToast(result.error, '⚠️')
     else { addToast(`+${CONFIG.EXP_VOTE} EXP — Vote enregistré !`, '⚔️'); router.refresh() }
@@ -95,9 +95,14 @@ function DuelCard({ duel, profile, myVote, v1, v2, allVotes }: {
           </div>
         </div>
       )}
-      {!myVote && !duel.closed && (
+      {profile && !myVote && !duel.closed && (
         <div style={{ padding: '.6rem 1.5rem 1rem', fontSize: '.78rem', color: 'var(--text3)', textAlign: 'center' }}>
           Clique sur un film pour voter (+{CONFIG.EXP_VOTE} EXP) · Le vainqueur est diffusé {CONFIG.SEANCE_JOUR} {CONFIG.SEANCE_HEURE} (+{CONFIG.EXP_DUEL_WIN} EXP)
+        </div>
+      )}
+      {!profile && !duel.closed && (
+        <div style={{ padding: '.6rem 1.5rem 1rem', fontSize: '.78rem', color: 'var(--text3)', textAlign: 'center' }}>
+          <a href="/auth" style={{ color: 'var(--gold)', textDecoration: 'none' }}>Connecte-toi</a> pour voter (+{CONFIG.EXP_VOTE} EXP)
         </div>
       )}
 

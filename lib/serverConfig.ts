@@ -4,6 +4,7 @@ import { CONFIG } from './config'
 
 export type ServerConfig = typeof CONFIG & {
   ACCUEIL_SOUS_TITRE: string
+  MARATHON_RULES: string | null
   MATRIX_LINE1: string; MATRIX_LINE2: string; MATRIX_LINE3: string
   JOKER_PHRASE: string
   TARS_LINE1: string;   TARS_LINE2: string
@@ -22,6 +23,7 @@ export const getServerConfig = cache(async (): Promise<ServerConfig> => {
   const defaults: ServerConfig = {
     ...CONFIG,
     ACCUEIL_SOUS_TITRE:  'Le marathon cinématographique collaboratif',
+    MARATHON_RULES:      null,
     MATRIX_LINE1:        'Wake up, Neo...',
     MATRIX_LINE2:        'The Matrix has you.',
     MATRIX_LINE3:        'Follow the white rabbit.',
@@ -85,6 +87,7 @@ export const getServerConfig = cache(async (): Promise<ServerConfig> => {
       RANDY_QUOTE:       db.randy_quote       ?? defaults.RANDY_QUOTE,
       FIGHTCLUB_GAMEOVER: db.fightclub_gameover ?? defaults.FIGHTCLUB_GAMEOVER,
       KILLBILL_END:      db.killbill_end      ?? defaults.KILLBILL_END,
+      MARATHON_RULES:    db.MARATHON_RULES     ?? defaults.MARATHON_RULES,
     }
   } catch {
     return defaults

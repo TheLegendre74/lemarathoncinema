@@ -7,7 +7,6 @@ import { KennyDeath, SouthParkBus, RandyMarsh } from './SouthParkEggs'
 import KillBillGame from './KillBillGame'
 import AVPEgg from './AVPEgg'
 import AlienEgg from './AlienEgg'
-import JawsEgg from './JawsEgg'
 
 // ─── ANIMATIONS (partagées avec Forum et FilmsClient) ───────────────────────
 const EE_STYLES = `
@@ -758,6 +757,63 @@ function FightClubRule({ rule, onDone }: { rule: 1|2|3|4; onDone: ()=>void }) {
   )
 }
 
+// ─── TIPIAK (secret) ────────────────────────────────────────────────────────
+function TipiakOverlay({ onDone }: { onDone: () => void }) {
+  const [links, setLinks] = useState<{ label: string; url: string }[]>([])
+
+  useEffect(() => {
+    // Load links from server config (admin-managed)
+    fetch('/api/tipiak-links')
+      .then(r => r.ok ? r.json() : { links: [] })
+      .then(d => setLinks(d.links ?? []))
+      .catch(() => {})
+  }, [])
+
+  return (
+    <div
+      onClick={e => e.target === e.currentTarget && onDone()}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.92)', zIndex: 9990, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}
+    >
+      <div style={{ maxWidth: 480, width: '100%', background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--rxl)', padding: '2rem', position: 'relative' }}>
+        <button onClick={onDone} style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: '1.1rem' }}>✕</button>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.8rem', marginBottom: '.3rem' }}>🏴‍☠️ Psst...</div>
+        <div style={{ fontSize: '.82rem', color: 'var(--text2)', marginBottom: '1.5rem', lineHeight: 1.6 }}>
+          T'es un vrai cinéphile. On sait que certains films sont difficiles à trouver légalement.<br />
+          Voilà quelques alternatives... mais chut, c'est entre nous. 🤫
+        </div>
+        {links.length === 0 ? (
+          <div style={{ color: 'var(--text3)', fontSize: '.83rem', textAlign: 'center', padding: '1rem' }}>
+            Aucune plateforme configurée pour l'instant.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '.6rem' }}>
+            {links.map((l, i) => (
+              <a
+                key={i}
+                href={l.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '.8rem',
+                  background: 'var(--bg3)', border: '1px solid var(--border)',
+                  borderRadius: 'var(--r)', padding: '.8rem 1rem', textDecoration: 'none',
+                  color: 'var(--text)', transition: 'border-color .2s',
+                }}
+              >
+                <span style={{ fontSize: '1.2rem' }}>🎬</span>
+                <span style={{ fontSize: '.88rem', fontWeight: 500 }}>{l.label}</span>
+                <span style={{ marginLeft: 'auto', fontSize: '.7rem', color: 'var(--text3)' }}>↗</span>
+              </a>
+            ))}
+          </div>
+        )}
+        <div style={{ marginTop: '1.2rem', fontSize: '.68rem', color: 'var(--text3)', textAlign: 'center' }}>
+          Cet easter egg n'existe pas. Tu n'as rien vu. 👀
+        </div>
+      </div>
+    </div>
+  )
+}
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
 const KONAMI = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a']
 
@@ -816,7 +872,7 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
   const [showAVP,        setShowAVP]        = useState(false)
   const predSoundRef = useRef<HTMLAudioElement | null>(null)
   const [showAlien,      setShowAlien]      = useState(false)
-  const [showJaws,       setShowJaws]       = useState(false)
+  const [showTipiak,     setShowTipiak]     = useState(false)
   const keyBuf = useRef<string[]>([])
   const tarsShown = useRef(false)
   const noctambuleShown = useRef(false)
@@ -923,10 +979,9 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
         keyBuf.current = []
         return
       }
-      // "jaws" → Les Dents de la Mer
-      if (buf.slice(-4).join('').toLowerCase() === 'jaws') {
-        setShowJaws(true)
-        discoverEgg('jaws')
+      // "tipiak" → secret — streaming alternatif (liens gérés par admin)
+      if (buf.slice(-6).join('').toLowerCase() === 'tipiak') {
+        setShowTipiak(true)
         keyBuf.current = []
         return
       }
@@ -979,7 +1034,7 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
       {showKillBill   && <KillBillGame    onDone={() => setShowKillBill(false)}  endText={ee.killBillEnd} />}
       {showAVP        && <AVPEgg          onDone={() => { predSoundRef.current?.pause(); predSoundRef.current = null; setShowAVP(false) }} predSound={predSoundRef} />}
       {showAlien      && <AlienEgg       onDone={() => setShowAlien(false)} />}
-      {showJaws       && <JawsEgg        onDone={() => setShowJaws(false)} />}
+      {showTipiak     && <TipiakOverlay  onDone={() => setShowTipiak(false)} />}
     </>
   )
 }
