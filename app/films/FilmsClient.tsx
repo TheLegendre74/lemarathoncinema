@@ -54,7 +54,7 @@ function playGodfatherTheme() {
 
 // ─── FILM MODAL ──────────────────────────────────────────────────────────────
 function FilmModal({ film, profile, isWatched, watchedPre, myRating, watchPct, ratingScores, isWeekFilm, isMarathonLive, onClose, onRefresh }: {
-  film: Film; profile: Profile; isWatched: boolean; watchedPre: boolean | null; myRating: number | undefined
+  film: Film; profile: Profile | null; isWatched: boolean; watchedPre: boolean | null; myRating: number | undefined
   watchPct: number; ratingScores: number[]; isWeekFilm: boolean
   isMarathonLive: boolean; onClose: () => void; onRefresh: () => void
 }) {
@@ -70,7 +70,7 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, watchPct, r
   const { addToast } = useToast()
   const router = useRouter()
 
-  const isAuthor = film.added_by === profile.id
+  const isAuthor = profile != null && film.added_by === profile.id
   const avg = avgRating(ratingScores)
   type WP = { provider_id: number; provider_name: string; logo_path: string }
   const [providers, setProviders] = useState<{ flatrate?: WP[]; rent?: WP[]; buy?: WP[] } | null | 'loading'>('loading')
@@ -901,7 +901,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
         />
       )}
 
-      {addModal && (
+      {addModal && profile && (
         <AddFilmModal
           profile={profile}
           isMarathonLive={isMarathonLive}

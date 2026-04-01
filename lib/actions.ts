@@ -1364,7 +1364,7 @@ export async function adminEndSeason(saisonNum: number) {
   if (!profile?.is_admin) return { error: 'Non autorisé' }
 
   const adminClient = createAdminClient()
-  const { error } = await adminClient.rpc('end_season', { saison_num: saisonNum })
+  const { error } = await (adminClient as any).rpc('end_season', { saison_num: saisonNum })
   if (error) return { error: error.message }
 
   revalidatePath('/classement')
