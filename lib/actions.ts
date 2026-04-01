@@ -1353,3 +1353,21 @@ export async function adminDeleteRecommendation(id: string) {
   revalidatePath('/rattrapage')
   return { error: null }
 }
+
+// ── SEASON MANAGEMENT ─────────────────────────────────────────
+
+export async function adminEndSeason(saisonNum: number) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Non autorisé' }
+
+  const adminClient = createAdminClient()
+  const { error } = await adminClient.rpc('end_season', { saison_num: saisonNum })
+  if (error) return { error: error.message }
+
+  revalidatePath('/classement')
+  revalidatePath('/admin')
+  return { success: true }
+}

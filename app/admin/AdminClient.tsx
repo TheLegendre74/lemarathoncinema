@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminBatchFlaggedDecisions, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, adminFetchFrenchPosters, adminScanAgeRestrictions, updateFilm, adminResolveReport, adminSetConfig, adminVerifyPosters, adminSetAdmin, adminAddNews, adminDeleteNews, adminAddRecommendation, adminDeleteRecommendation, deleteForumTopic } from '@/lib/actions'
+import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminBatchFlaggedDecisions, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, adminFetchFrenchPosters, adminScanAgeRestrictions, updateFilm, adminResolveReport, adminSetConfig, adminVerifyPosters, adminSetAdmin, adminAddNews, adminDeleteNews, adminAddRecommendation, adminDeleteRecommendation, deleteForumTopic, adminEndSeason } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
 import { CONFIG } from '@/lib/config'
 import type { Film, Profile } from '@/lib/supabase/types'
@@ -342,6 +342,7 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
   const [tipiakLinks, setTipiakLinks] = useState<{label:string;url:string}[]>(
     (() => { try { return JSON.parse(siteConfig['TIPIAK_LINKS'] ?? '[]') } catch { return [] } })()
   )
+  const [endingseason, setEndingSeason] = useState(false)
 
   // ── Scroll fix pour les boutons 18+ ─────────────────────────────────────────
   // Au lieu de tenter de restaurer après coup, on intercepte directement
@@ -1099,6 +1100,32 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
 
       {/* Configuration */}
       <ConfigSection serverConfig={serverConfig} siteConfig={siteConfig} onSave={saveConfig} saving={savingConfig} />
+
+      {/* Clôture de saison */}
+      <Section icon="📚" title={`Clôture — Saison ${serverConfig.SAISON_NUMERO}`}>
+        <div style={{ fontSize: '.82rem', color: 'var(--text2)', marginBottom: '1rem', lineHeight: 1.6 }}>
+          Cette action <strong style={{ color: 'var(--text)' }}>archive le classement actuel</strong> de la Saison {serverConfig.SAISON_NUMERO} dans les archives permanentes,
+          puis <strong style={{ color: 'var(--text)' }}>remet à zéro l'EXP de saison</strong> de tous les joueurs (l'EXP total cumulé est conservé).
+        </div>
+        <div style={{ background: 'rgba(232,90,90,.08)', border: '1px solid rgba(232,90,90,.25)', borderRadius: 'var(--r)', padding: '.75rem 1rem', marginBottom: '1rem', fontSize: '.78rem', color: '#ff9999' }}>
+          ⚠️ Action irréversible. Lance uniquement à la fin de la saison. Une nouvelle saison peut ensuite démarrer avec un nouveau <code>marathon_start</code>.
+        </div>
+        <button
+          className="btn"
+          style={{ background: 'var(--red)', color: '#fff', border: 'none', opacity: endingseason ? .5 : 1 }}
+          disabled={endingseason}
+          onClick={async () => {
+            if (!confirm(`Clôturer définitivement la Saison ${serverConfig.SAISON_NUMERO} et archiver le classement ?`)) return
+            setEndingSeason(true)
+            const res = await adminEndSeason(serverConfig.SAISON_NUMERO)
+            setEndingSeason(false)
+            if (res.error) addToast(res.error, '⚠️')
+            else { addToast(`Saison ${serverConfig.SAISON_NUMERO} archivée ! EXP saison remis à zéro.`, '📚'); router.refresh() }
+          }}
+        >
+          {endingseason ? '…archivage en cours' : `📚 Clôturer la Saison ${serverConfig.SAISON_NUMERO}`}
+        </button>
+      </Section>
 
       {/* Edit film modal */}
       {editFilm && (

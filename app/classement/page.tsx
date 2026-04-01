@@ -32,16 +32,25 @@ export default async function ClassementPage() {
     )
   }
 
-  const [{ data: ranked }, { data: marathonRanked }] = await Promise.all([
+  const [{ data: ranked }, { data: marathonRanked }, { data: archives }] = await Promise.all([
     (supabase as any).rpc('leaderboard', { limit_n: 100 }),
     (supabase as any).rpc('marathon_leaderboard', { limit_n: 100 }),
+    (supabase as any).from('season_archives').select('*').order('saison', { ascending: false }).order('rank_global'),
   ])
+
+  // Regrouper les archives par saison
+  const archivesBySaison: Record<number, any[]> = {}
+  ;(archives ?? []).forEach((row: any) => {
+    if (!archivesBySaison[row.saison]) archivesBySaison[row.saison] = []
+    archivesBySaison[row.saison].push(row)
+  })
 
   return (
     <ClassementClient
       userId={user?.id ?? null}
       ranked={ranked ?? []}
       marathonRanked={marathonRanked ?? []}
+      archivesBySaison={archivesBySaison}
     />
   )
 }
