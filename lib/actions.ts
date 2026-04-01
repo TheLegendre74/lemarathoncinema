@@ -375,6 +375,7 @@ export async function upsertRating(filmId: number, score: number) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non connecté' }
+  if (!Number.isInteger(score) || score < 1 || score > 10) return { error: 'Score invalide (1-10)' }
 
   await supabase.from('ratings').upsert(
     { user_id: user.id, film_id: filmId, score },
@@ -392,8 +393,9 @@ export async function voteDuel(duelId: number, filmChoice: number) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non connecté' }
 
-  const { data: duel } = await supabase.from('duels').select('closed').eq('id', duelId).single()
+  const { data: duel } = await supabase.from('duels').select('film1_id, film2_id, closed').eq('id', duelId).single()
   if (!duel || duel.closed) return { error: 'Ce duel est clôturé.' }
+  if (filmChoice !== duel.film1_id && filmChoice !== duel.film2_id) return { error: 'Choix invalide.' }
 
   const { data: existing } = await supabase
     .from('votes')
@@ -455,10 +457,20 @@ export async function adminSetConfig(configs: Record<string, string>) {
   const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
   if (!profile?.is_admin) return { error: 'Non autorisé.' }
 
+  const ALLOWED_CONFIG_KEYS = new Set([
+    'marathon_start','saison_numero','saison_label','seance_jour','seance_heure',
+    'fdls_jour','fdls_heure','seuil_majority','exp_film','exp_fdls','exp_duel_win','exp_vote',
+    'accueil_sous_titre','matrix_line1','matrix_line2','matrix_line3','joker_phrase',
+    'tars_line1','tars_line2','marvin_line1','marvin_line2','hal_line1','hal_line2',
+    'nolan_quote','bond_line','noctam_line1','noctam_line2','kenny_text1','kenny_text2',
+    'randy_quote','fightclub_gameover','killbill_end','MARATHON_RULES','TIPIAK_LINKS',
+  ])
+
   const adminClient = createAdminClient()
-  const entries = Object.entries(configs).map(([key, value]) => ({
-    key, value, updated_at: new Date().toISOString()
-  }))
+  const entries = Object.entries(configs)
+    .filter(([key]) => ALLOWED_CONFIG_KEYS.has(key))
+    .map(([key, value]) => ({ key, value, updated_at: new Date().toISOString() }))
+  if (!entries.length) return { error: 'Aucune clé valide' }
   const { error } = await adminClient.from('site_config').upsert(entries, { onConflict: 'key' })
   if (error) return { error: error.message }
 
@@ -545,10 +557,10 @@ export async function addFilm(formData: FormData) {
   const titre = (formData.get('titre') as string).trim()
   const annee = parseInt(formData.get('annee') as string)
   const realisateur = (formData.get('realisateur') as string).trim()
-  const genre = formData.get('genre') as string
+  const genre = ((formData.get('genre') as string) ?? '').trim().slice(0, 50)
   const manualPoster = (formData.get('poster') as string)?.trim() || null
 
-  if (!titre || !annee || !realisateur) return { error: 'Champs requis manquants.' }
+  if (!titre || !annee || !realisateur || !genre) return { error: 'Champs requis manquants.' }
   if (annee < 1888 || annee > 2030) return { error: 'Année invalide.' }
 
   // Check duplicate
@@ -588,9 +600,11 @@ export async function addPost(topic: string, content: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non connecté' }
+  const safeTopic = topic?.trim().slice(0, 100) ?? ''
+  if (!safeTopic) return { error: 'Topic invalide.' }
   if (!content.trim()) return { error: 'Message vide.' }
 
-  await supabase.from('posts').insert({ topic, user_id: user.id, content: content.trim() })
+  await supabase.from('posts').insert({ topic: safeTopic, user_id: user.id, content: content.trim().slice(0, 2000) })
   revalidatePath('/films')
   revalidatePath('/duels')
   revalidatePath('/semaine')
@@ -776,8 +790,14 @@ export async function adminBatchFlaggedDecisions(decisions: Record<string, 'appr
   const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
   if (!profile?.is_admin) return { error: 'Non autorisé.' }
 
-  const toApprove = Object.entries(decisions).filter(([, d]) => d === 'approve').map(([id]) => parseInt(id))
-  const toReject  = Object.entries(decisions).filter(([, d]) => d === 'reject').map(([id]) => parseInt(id))
+  const toApprove = Object.entries(decisions)
+    .filter(([, d]) => d === 'approve')
+    .map(([id]) => parseInt(id, 10))
+    .filter(n => !Number.isNaN(n))
+  const toReject = Object.entries(decisions)
+    .filter(([, d]) => d === 'reject')
+    .map(([id]) => parseInt(id, 10))
+    .filter(n => !Number.isNaN(n))
 
   if (toApprove.length) await adminClient.from('films').update({ flagged_18plus: false }).in('id', toApprove)
   if (toReject.length)  await adminClient.from('films').delete().in('id', toReject)
@@ -882,7 +902,9 @@ export async function adminUploadFilmPoster(filmId: number, formData: FormData) 
   // Create bucket if it doesn't exist yet
   await adminClient.storage.createBucket('posters', { public: true }).catch(() => {})
 
-  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+  const ALLOWED_IMG_EXTS = new Set(['jpg', 'jpeg', 'png', 'webp'])
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
+  if (!ALLOWED_IMG_EXTS.has(ext)) return { error: 'Format invalide (jpg, png, webp)' }
   const filename = `film-${filmId}-${Date.now()}.${ext}`
   const bytes = await file.arrayBuffer()
 
@@ -1232,6 +1254,8 @@ export async function deleteForumTopic(topicId: string) {
   if (!user) return { error: 'Non connecté' }
   const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
   if (!profile?.is_admin) return { error: 'Réservé aux admins' }
+  const { data: topic } = await (supabase as any).from('forum_topics').select('is_social').eq('id', topicId).single()
+  if (topic?.is_social) return { error: 'Le Salon ne peut pas être supprimé' }
   await (supabase as any).from('forum_topics').delete().eq('id', topicId)
   revalidatePath('/forum')
   return { error: null }
@@ -1277,9 +1301,9 @@ export async function uploadAvatar(formData: FormData) {
   const file = formData.get('avatar') as File | null
   if (!file || !file.size) return { error: 'Fichier manquant' }
   if (file.size > 2 * 1024 * 1024) return { error: 'Image trop volumineuse (max 2 Mo)' }
-  if (!file.type.startsWith('image/')) return { error: 'Format invalide' }
-
-  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
+  const ALLOWED_AVATAR_EXTS = new Set(['jpg', 'jpeg', 'png', 'webp'])
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
+  if (!ALLOWED_AVATAR_EXTS.has(ext) || !file.type.startsWith('image/')) return { error: 'Format invalide (jpg, png, webp)' }
   const path = `avatars/${user.id}.${ext}`
 
   const buffer = Buffer.from(await file.arrayBuffer())

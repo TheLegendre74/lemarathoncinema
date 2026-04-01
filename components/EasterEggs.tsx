@@ -758,6 +758,13 @@ function FightClubRule({ rule, onDone }: { rule: 1|2|3|4; onDone: ()=>void }) {
 }
 
 // ─── TIPIAK (secret) ────────────────────────────────────────────────────────
+function isSafeUrl(url: string): boolean {
+  try {
+    const p = new URL(url)
+    return p.protocol === 'http:' || p.protocol === 'https:'
+  } catch { return false }
+}
+
 function TipiakOverlay({ onDone }: { onDone: () => void }) {
   const [links, setLinks] = useState<{ label: string; url: string }[]>([])
 
@@ -765,7 +772,7 @@ function TipiakOverlay({ onDone }: { onDone: () => void }) {
     // Load links from server config (admin-managed)
     fetch('/api/tipiak-links')
       .then(r => r.ok ? r.json() : { links: [] })
-      .then(d => setLinks(d.links ?? []))
+      .then(d => setLinks((d.links ?? []).filter((l: { label: string; url: string }) => isSafeUrl(l.url))))
       .catch(() => {})
   }, [])
 
