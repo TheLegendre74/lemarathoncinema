@@ -53,7 +53,7 @@ export default async function HomePage() {
         </div>
 
         <NewsSection newsList={newsList ?? []} />
-        <RulesSection cfg={cfg} />
+        <RulesSection />
       </div>
     )
   }
@@ -71,7 +71,7 @@ export default async function HomePage() {
       <div>
         <Countdown marathonStart={cfg.MARATHON_START.toISOString()} />
         <NewsSection newsList={newsList ?? []} />
-        <RulesSection cfg={cfg} />
+        <RulesSection />
       </div>
     )
   }
@@ -231,7 +231,7 @@ export default async function HomePage() {
       )}
 
       {/* Rules */}
-      <RulesSection cfg={cfg} />
+      <RulesSection />
     </div>
   )
 }
@@ -265,42 +265,111 @@ function NewsSection({ newsList }: { newsList: any[] }) {
 }
 
 // ─── RULES SECTION ────────────────────────────────────────────────────────────
-function RulesSection({ cfg }: { cfg: any }) {
-  const rules = cfg.MARATHON_RULES
-  if (!rules) return <DefaultRules />
-  return (
-    <div style={{ marginBottom: '2rem' }}>
-      <div className="section-title">📋 Règles du marathon</div>
-      <div className="card">
-        <div style={{ fontSize: '.85rem', color: 'var(--text2)', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{rules}</div>
-      </div>
+function RulesSection() {
+  const card = (children: React.ReactNode) => (
+    <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '1.1rem 1.3rem', marginBottom: '.7rem' }}>
+      {children}
     </div>
   )
-}
+  const h = (emoji: string, title: string) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem', marginBottom: '.6rem' }}>
+      <span style={{ fontSize: '1.3rem' }}>{emoji}</span>
+      <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.05rem' }}>{title}</span>
+    </div>
+  )
+  const p = (text: string) => <p style={{ fontSize: '.83rem', color: 'var(--text2)', lineHeight: 1.7, margin: '0 0 .4rem' }}>{text}</p>
+  const table = (rows: [string, string][]) => (
+    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.82rem', marginTop: '.4rem' }}>
+      <tbody>
+        {rows.map(([action, exp]) => (
+          <tr key={action} style={{ borderBottom: '1px solid var(--border)' }}>
+            <td style={{ padding: '.35rem .5rem', color: 'var(--text2)' }}>{action}</td>
+            <td style={{ padding: '.35rem .5rem', color: 'var(--gold)', fontWeight: 600, textAlign: 'right', whiteSpace: 'nowrap' }}>{exp}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
 
-function DefaultRules() {
-  const rules = [
-    { emoji: '🎬', title: 'Film de la semaine', desc: `Chaque semaine un film est mis en avant. Le voir le vendredi soir lors de la séance rapporte +${CONFIG.EXP_FDLS} EXP.` },
-    { emoji: '✅', title: 'Valider un film', desc: `Marquer un film comme vu rapporte +${CONFIG.EXP_FILM} EXP. Valable pour tous les films de la liste.` },
-    { emoji: '⚔️', title: 'Duels', desc: `Chaque semaine, deux films s'affrontent. Voter pour le gagnant rapporte +${CONFIG.EXP_DUEL_WIN} EXP si tu choisis le bon.` },
-    { emoji: '⭐', title: 'Notes', desc: `Noter un film contribue au classement communautaire et rapporte +${CONFIG.EXP_VOTE} EXP.` },
-    { emoji: '🏆', title: 'Classement', desc: `Le classement des joueurs est basé sur l'EXP totale accumulée pendant le marathon.` },
-    { emoji: '🥚', title: 'Easter Eggs', desc: 'Des surprises sont cachées partout sur le site. Trouve-les pour débloquer des succès secrets !' },
-  ]
   return (
     <div style={{ marginBottom: '2rem' }}>
-      <div className="section-title">📋 Règles du marathon</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '.6rem' }}>
-        {rules.map(r => (
-          <div key={r.title} style={{ display: 'flex', gap: '1rem', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.9rem 1.1rem' }}>
-            <span style={{ fontSize: '1.3rem', flexShrink: 0 }}>{r.emoji}</span>
-            <div>
-              <div style={{ fontSize: '.87rem', fontWeight: 600, marginBottom: '.2rem' }}>{r.title}</div>
-              <div style={{ fontSize: '.78rem', color: 'var(--text2)', lineHeight: 1.5 }}>{r.desc}</div>
-            </div>
-          </div>
-        ))}
-      </div>
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', marginBottom: '1.2rem' }}>Les règles du jeu</div>
+
+      {card(<>
+        {h('🎬', 'Bienvenue sur le Ciné Marathon !')}
+        {p("Un marathon de films collectif où tu regardes des films, votes pour les séances, discutes avec les autres joueurs et grimpes dans le classement en gagnant de l'expérience (EXP).")}
+      </>)}
+
+      {card(<>
+        {h('🚀', 'Pour commencer')}
+        {p("Crée ton compte avant le 10 Avril 2026. Après cette date, le marathon est lancé et tu devras attendre la Saison 2.")}
+      </>)}
+
+      {card(<>
+        {h('🎥', 'Les films')}
+        {p("Une liste de films t'attend. Pour chaque film tu peux :")}
+        <ul style={{ fontSize: '.83rem', color: 'var(--text2)', lineHeight: 1.8, paddingLeft: '1.2rem', margin: 0 }}>
+          <li>Le cocher comme vu → tu gagnes de l'EXP</li>
+          <li>Le noter de 1 à 10</li>
+          <li>Discuter dans le forum du film</li>
+          <li>Voir où le regarder légalement (Netflix, Canal+, Prime…)</li>
+          <li>Tirer un film au hasard si tu ne sais pas quoi regarder</li>
+        </ul>
+        {p("Tu peux aussi proposer un nouveau film à ajouter à la liste.")}
+      </>)}
+
+      {card(<>
+        {h('⭐', 'Gagner de l\'EXP')}
+        {table([
+          ['Regarder un film', `+${CONFIG.EXP_FILM} EXP`],
+          ['Regarder le film de la semaine', `+${CONFIG.EXP_FDLS} EXP`],
+          ['Regarder le film vainqueur du duel', `+${CONFIG.EXP_DUEL_WIN} EXP`],
+          ['Voter dans un duel', `+${CONFIG.EXP_VOTE} EXP`],
+        ])}
+      </>)}
+
+      {card(<>
+        {h('⚔️', 'Les duels')}
+        {p(`Chaque semaine, deux films s'affrontent. Tu votes pour celui que tu veux voir en séance collective. Le vainqueur est regardé ensemble le ${CONFIG.SEANCE_JOUR} à ${CONFIG.SEANCE_HEURE} et rapporte +${CONFIG.EXP_DUEL_WIN} EXP.`)}
+      </>)}
+
+      {card(<>
+        {h('📽️', 'Le film de la semaine')}
+        {p(`Chaque ${CONFIG.FDLS_JOUR} à ${CONFIG.FDLS_HEURE}, un film est annoncé pour une séance collective. Le regarder rapporte +${CONFIG.EXP_FDLS} EXP.`)}
+      </>)}
+
+      {card(<>
+        {h('💬', 'Forum & Le Salon')}
+        {p("Chaque film a son propre espace de discussion. Le Salon est un espace libre pour parler cinéma avec tous les membres. Tu peux aussi créer tes propres sujets.")}
+      </>)}
+
+      {card(<>
+        {h('🎓', 'Rattrapage cinéma')}
+        {p("Tu débutes ou tu veux aller plus loin ? La section Rattrapage propose des listes de films classés par niveau : Débutant, Intermédiaire et Confirmé.")}
+      </>)}
+
+      {card(<>
+        {h('🥚', 'Easter Eggs')}
+        {p("Des surprises sont cachées partout sur le site. Explore, tape des mots-clés au clavier, clique sur des éléments inattendus… Trouve-les tous pour débloquer des succès secrets !")}
+      </>)}
+
+      {card(<>
+        {h('🏅', 'Les badges')}
+        {p("Plus tu accumules d'EXP, plus tu débloques des badges :")}
+        {table([
+          ['🎞️ Padawan',        '5 EXP'],
+          ['🎬 L\'Apprenti',    '50 EXP'],
+          ['📝 Le Critique',    '100 EXP'],
+          ['🎭 Cinéphile',      '150 EXP'],
+          ['🏆 L\'Auteur',      '200 EXP'],
+          ['👑 Légende Vivante','300 EXP'],
+        ])}
+      </>)}
+
+      {card(<>
+        {h('🏆', 'Le classement')}
+        {p("Tous les joueurs sont classés par EXP. Le classement Marathon met en avant les films vus et notés pendant le marathon. Les archives conservent les résultats de chaque saison. Qui sera la Légende Vivante de la Saison 1 ?")}
+      </>)}
     </div>
   )
 }

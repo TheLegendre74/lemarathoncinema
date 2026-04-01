@@ -1306,16 +1306,21 @@ export async function uploadAvatar(formData: FormData) {
   if (!ALLOWED_AVATAR_EXTS.has(ext) || !file.type.startsWith('image/')) return { error: 'Format invalide (jpg, png, webp)' }
   const path = `avatars/${user.id}.${ext}`
 
+  const adminClient = createAdminClient()
+
+  // Ensure bucket exists and is public
+  await adminClient.storage.createBucket('posters', { public: true }).catch(() => {})
+
   const buffer = Buffer.from(await file.arrayBuffer())
-  const { error: uploadError } = await supabase.storage
+  const { error: uploadError } = await adminClient.storage
     .from('posters')
     .upload(path, buffer, { contentType: file.type, upsert: true })
 
-  if (uploadError) return { error: 'Erreur upload' }
+  if (uploadError) return { error: uploadError.message }
 
-  const { data: { publicUrl } } = supabase.storage.from('posters').getPublicUrl(path)
+  const { data: { publicUrl } } = adminClient.storage.from('posters').getPublicUrl(path)
 
-  await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id)
+  await adminClient.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id)
   revalidatePath('/profil')
   return { url: publicUrl }
 }
