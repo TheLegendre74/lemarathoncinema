@@ -604,11 +604,12 @@ export async function addPost(topic: string, content: string) {
   if (!safeTopic) return { error: 'Topic invalide.' }
   if (!content.trim()) return { error: 'Message vide.' }
 
-  await supabase.from('posts').insert({ topic: safeTopic, user_id: user.id, content: content.trim().slice(0, 2000) })
+  const { data, error } = await supabase.from('posts').insert({ topic: safeTopic, user_id: user.id, content: content.trim().slice(0, 2000) }).select().single()
+  if (error) return { error: error.message }
   revalidatePath('/films')
   revalidatePath('/duels')
   revalidatePath('/semaine')
-  return { success: true }
+  return { success: true, data }
 }
 
 export async function deletePost(postId: string) {

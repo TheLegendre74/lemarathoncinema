@@ -16,7 +16,9 @@
       "WebFetch(domain:www.justwatch.com)",
       "Bash(mv \"Where Is My Mind\"* \"where-is-my-mind.opus\")",
       "Bash(mv \"South Park\"* \"south-park-theme.opus\")",
-      "Bash(mv \"Jaws\"* \"jaws-theme.m4a\")"
+      "Bash(mv \"Jaws\"* \"jaws-theme.m4a\")",
+      "Bash(find C:UsersSteamDesktopmarathoncinema-marathon-nextjs-completecm-next -name *.sql -o -name seed* -o -name migration*)",
+      "Bash(npx next:*)"
     ]
   }
 }

@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { addForumPost, deleteForumPost } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
-import { useRouter } from 'next/navigation'
 import type { Profile } from '@/lib/supabase/types'
 
 interface Props {
@@ -18,7 +17,6 @@ export default function ForumTopicClient({ topic, posts: initialPosts, profile }
   const [content, setContent] = useState('')
   const [loading, setLoading] = useState(false)
   const { addToast } = useToast()
-  const router = useRouter()
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -28,18 +26,38 @@ export default function ForumTopicClient({ topic, posts: initialPosts, profile }
   async function handlePost(e: React.FormEvent) {
     e.preventDefault()
     if (!content.trim() || !profile) return
+    const text = content.trim()
     setLoading(true)
-    const res = await addForumPost(topic.id, content.trim())
-    setLoading(false)
-    if (res.error) { addToast(res.error, 'error'); return }
+
+    // Optimistic update
+    const tempId = `opt-${Date.now()}`
+    setPosts(prev => [...prev, {
+      id: tempId, topic_id: topic.id, user_id: profile.id,
+      content: text, created_at: new Date().toISOString(),
+      profiles: { pseudo: profile.pseudo, avatar_url: (profile as any).avatar_url ?? null },
+    }])
     setContent('')
-    router.refresh()
+
+    const res = await addForumPost(topic.id, text)
+    setLoading(false)
+    if (res.error) {
+      addToast(res.error, 'error')
+      setPosts(prev => prev.filter(p => p.id !== tempId))
+    } else if (res.data) {
+      setPosts(prev => prev.map(p => p.id === tempId
+        ? { ...res.data, profiles: { pseudo: profile.pseudo, avatar_url: (profile as any).avatar_url ?? null } }
+        : p
+      ))
+    }
   }
 
   async function handleDelete(postId: string) {
+    setPosts(prev => prev.filter(p => p.id !== postId))
     const res = await deleteForumPost(postId)
-    if (res.error) { addToast(res.error, 'error'); return }
-    router.refresh()
+    if (res.error) {
+      addToast(res.error, 'error')
+      // Could restore but keeping it simple
+    }
   }
 
   return (

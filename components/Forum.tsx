@@ -422,16 +422,31 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
     if (low.includes('redrum')) { setShowShining(true); return }
   }
 
-  // Realtime subscription
+  // Realtime subscription (for other users' messages)
   useEffect(() => {
     const supabase = createClient()
     const channel = supabase
       .channel(`forum:${topic}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts', filter: `topic=eq.${topic}` },
         async (payload) => {
+          // Fetch profile then deduplicate smartly
           const { data: prof } = await supabase.from('profiles').select('pseudo').eq('id', payload.new.user_id).single()
-          const newPost = { ...payload.new, profiles: prof } as unknown as Post & { profiles: Pick<Profile, 'pseudo'> }
-          setPosts(prev => [...prev, newPost])
+          setPosts(prev => {
+            // Already present (real id match)
+            if (prev.some(p => p.id === payload.new.id)) return prev
+            // Replace matching optimistic post (same user + content)
+            const optIdx = prev.findIndex(p =>
+              String(p.id).startsWith('opt-') &&
+              p.user_id === payload.new.user_id &&
+              p.content === payload.new.content
+            )
+            if (optIdx >= 0) {
+              const updated = [...prev]
+              updated[optIdx] = { ...payload.new, profiles: prof } as any
+              return updated
+            }
+            return [...prev, { ...payload.new, profiles: prof } as any]
+          })
           setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
         })
       .subscribe()
@@ -439,16 +454,35 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
   }, [topic])
 
   async function submit() {
-    if (!text.trim() || loading) return
+    if (!text.trim() || loading || !profile) return
     setLoading(true)
     const content = text.trim()
+
+    // Optimistic update
+    const tempId = `opt-${Date.now()}`
+    const optimistic = {
+      id: tempId,
+      topic,
+      user_id: profile.id,
+      content,
+      created_at: new Date().toISOString(),
+      profiles: { pseudo: profile.pseudo },
+    }
+    setPosts(prev => [...prev, optimistic as any])
+    setText('')
+    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
+
     const result = await addPost(topic, content)
-    if (result.error) addToast(result.error, '⚠️')
-    else {
-      setText('')
+    setLoading(false)
+    if (result.error) {
+      addToast(result.error, '⚠️')
+      setPosts(prev => prev.filter(p => p.id !== tempId))
+    } else {
+      if (result.data) {
+        setPosts(prev => prev.map(p => p.id === tempId ? { ...result.data, profiles: { pseudo: profile.pseudo } } as any : p))
+      }
       checkEasterEggs(content)
     }
-    setLoading(false)
   }
 
   return (
