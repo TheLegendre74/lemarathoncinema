@@ -71,6 +71,7 @@ RETURNS void LANGUAGE sql SECURITY DEFINER AS $$
 $$;
 
 -- 5. Mise à jour du leaderboard pour inclure saison_exp
+DROP FUNCTION IF EXISTS leaderboard(integer);
 CREATE OR REPLACE FUNCTION leaderboard(limit_n integer DEFAULT 100)
 RETURNS TABLE (
   id          uuid,
