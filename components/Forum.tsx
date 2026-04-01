@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { addPost } from '@/lib/actions'
+import { addPost, deletePost, editPost } from '@/lib/actions'
 import { useToast } from './ToastProvider'
 import type { Post, Profile } from '@/lib/supabase/types'
 
@@ -385,6 +385,9 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
   const [posts, setPosts] = useState(initialPosts)
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editText, setEditText] = useState('')
+  const [editLoading, setEditLoading] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const { addToast } = useToast()
 
@@ -485,6 +488,27 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
     }
   }
 
+  async function handleDelete(postId: string) {
+    setPosts(prev => prev.filter(p => p.id !== postId))
+    const res = await deletePost(postId)
+    if (res.error) addToast(res.error, '⚠️')
+  }
+
+  function startEdit(p: any) {
+    setEditingId(p.id)
+    setEditText(p.content)
+  }
+
+  async function saveEdit(postId: string) {
+    if (!editText.trim()) return
+    setEditLoading(true)
+    setPosts(prev => prev.map(p => p.id === postId ? { ...p, content: editText.trim() } : p))
+    setEditingId(null)
+    const res = await editPost(postId, editText.trim())
+    setEditLoading(false)
+    if (res.error) addToast(res.error, '⚠️')
+  }
+
   return (
     <div>
       {posts.length === 0 && (
@@ -494,18 +518,57 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
       )}
 
       <div style={{ maxHeight: 400, overflowY: 'auto', paddingRight: 4 }}>
-        {posts.map(p => (
-          <div key={p.id} className="forum-post">
-            <div className="forum-post-head">
-              <div className="forum-ava">{p.profiles?.pseudo?.slice(0, 2).toUpperCase()}</div>
-              <span style={{ fontSize: '.8rem', fontWeight: 500 }}>{p.profiles?.pseudo}</span>
-              <span style={{ fontSize: '.67rem', color: 'var(--text3)', marginLeft: 'auto' }}>
-                {new Date(p.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-              </span>
+        {posts.map(p => {
+          const isMe = profile?.id === p.user_id
+          const isAdmin = profile?.is_admin
+          const isEditing = editingId === p.id
+          return (
+            <div key={p.id} className="forum-post">
+              <div className="forum-post-head">
+                <div className="forum-ava">{p.profiles?.pseudo?.slice(0, 2).toUpperCase()}</div>
+                <span style={{ fontSize: '.8rem', fontWeight: 500 }}>{p.profiles?.pseudo}</span>
+                <span style={{ fontSize: '.67rem', color: 'var(--text3)', marginLeft: 'auto' }}>
+                  {new Date(p.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                </span>
+                {/* Actions */}
+                {isMe && !isEditing && (
+                  <button
+                    onClick={() => startEdit(p)}
+                    title="Modifier"
+                    style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: '.72rem', padding: '2px 5px', lineHeight: 1 }}
+                  >✏️</button>
+                )}
+                {(isMe || isAdmin) && !isEditing && (
+                  <button
+                    onClick={() => handleDelete(p.id)}
+                    title="Supprimer"
+                    style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: '.72rem', padding: '2px 5px', lineHeight: 1 }}
+                  >✕</button>
+                )}
+              </div>
+
+              {isEditing ? (
+                <div style={{ marginTop: '.4rem', display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
+                  <textarea
+                    value={editText}
+                    onChange={e => setEditText(e.target.value)}
+                    autoFocus
+                    maxLength={2000}
+                    rows={3}
+                    style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--gold)', borderRadius: 'var(--r)', padding: '.5rem .7rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.83rem', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }}
+                    onKeyDown={e => { if (e.key === 'Escape') setEditingId(null) }}
+                  />
+                  <div style={{ display: 'flex', gap: '.4rem', justifyContent: 'flex-end' }}>
+                    <button onClick={() => setEditingId(null)} className="btn btn-outline" style={{ fontSize: '.75rem', padding: '.3rem .7rem' }}>Annuler</button>
+                    <button onClick={() => saveEdit(p.id)} className="btn btn-gold" disabled={editLoading || !editText.trim()} style={{ fontSize: '.75rem', padding: '.3rem .7rem' }}>Enregistrer</button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ fontSize: '.83rem', color: 'var(--text2)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{p.content}</div>
+              )}
             </div>
-            <div style={{ fontSize: '.83rem', color: 'var(--text2)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{p.content}</div>
-          </div>
-        ))}
+          )
+        })}
         <div ref={bottomRef} />
       </div>
 

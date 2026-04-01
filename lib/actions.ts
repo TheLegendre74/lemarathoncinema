@@ -627,6 +627,23 @@ export async function deletePost(postId: string) {
   return { success: true }
 }
 
+export async function editPost(postId: string, content: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+
+  const sanitized = content.trim().slice(0, 2000)
+  if (!sanitized) return { error: 'Message vide.' }
+
+  const { data: post } = await supabase.from('posts').select('user_id').eq('id', postId).single()
+  if (!post) return { error: 'Post introuvable.' }
+  if (post.user_id !== user.id) return { error: 'Non autorisé.' }
+
+  const { error } = await (supabase as any).from('posts').update({ content: sanitized }).eq('id', postId)
+  if (error) return { error: error.message }
+  return { success: true }
+}
+
 // ── ADMIN ────────────────────────────────────────────────────
 
 export async function adminCreateDuel(film1Id: number, film2Id: number, weekNum: number) {
