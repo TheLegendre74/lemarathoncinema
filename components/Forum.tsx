@@ -425,6 +425,19 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
     if (low.includes('redrum')) { setShowShining(true); return }
   }
 
+  // Initial fetch on mount (initialPosts is always [] when called from a client component)
+  useEffect(() => {
+    const supabase = createClient()
+    supabase
+      .from('posts')
+      .select('id, topic, user_id, content, created_at, profiles(pseudo)')
+      .eq('topic', topic)
+      .order('created_at', { ascending: true })
+      .then(({ data }) => {
+        if (data) setPosts(data as any)
+      })
+  }, [topic])
+
   // Realtime subscription (for other users' messages)
   useEffect(() => {
     const supabase = createClient()
@@ -531,19 +544,19 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
                   {new Date(p.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                 </span>
                 {/* Actions */}
-                {isMe && !isEditing && (
-                  <button
-                    onClick={() => startEdit(p)}
-                    title="Modifier"
-                    style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: '.72rem', padding: '2px 5px', lineHeight: 1 }}
-                  >✏️</button>
-                )}
-                {(isMe || isAdmin) && !isEditing && (
-                  <button
-                    onClick={() => handleDelete(p.id)}
-                    title="Supprimer"
-                    style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: '.72rem', padding: '2px 5px', lineHeight: 1 }}
-                  >✕</button>
+                {!isEditing && (isMe || isAdmin) && (
+                  <div style={{ display: 'flex', gap: '.3rem', marginLeft: '.4rem' }}>
+                    {isMe && (
+                      <button
+                        onClick={() => startEdit(p)}
+                        style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 4, color: 'var(--text2)', cursor: 'pointer', fontSize: '.7rem', padding: '2px 7px', lineHeight: 1.6 }}
+                      >Modifier</button>
+                    )}
+                    <button
+                      onClick={() => handleDelete(p.id)}
+                      style={{ background: 'rgba(220,60,60,.1)', border: '1px solid rgba(220,60,60,.25)', borderRadius: 4, color: '#e05555', cursor: 'pointer', fontSize: '.7rem', padding: '2px 7px', lineHeight: 1.6 }}
+                    >Supprimer</button>
+                  </div>
                 )}
               </div>
 
