@@ -961,7 +961,7 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
           if (fightClubCount.current === 1) discoverEgg('fightclub')
         } else {
           fightClubCount.current = 0
-          setShowFightClub(true)
+          setFightClubRule(4)
         }
         return
       }
