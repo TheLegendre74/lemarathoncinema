@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { discoverEgg } from '@/lib/actions'
-import FightClubGame from './FightClubGame'
+import dynamic from 'next/dynamic'
+const FightClubGame = dynamic(() => import('./FightClubGame'), { ssr: false })
 import { KennyDeath, SouthParkBus, RandyMarsh } from './SouthParkEggs'
 import KillBillGame from './KillBillGame'
 import AVPEgg from './AVPEgg'
@@ -940,12 +941,11 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
         keyBuf.current = []
         return
       }
-      // "regle4" ou "regle°4" → lance direct le jeu
-      // On filtre les touches modificatrices (Shift, Control...) pour gérer l'AZERTY
+      // "n4" ou "n°4" → lance direct le jeu
+      // Filtre les touches multi-char (Shift, Control...) pour AZERTY où 4 = Shift+touche
       const cleanBuf = buf.filter(k => k.length === 1)
-      const cleanStr = cleanBuf.slice(-10).join('').toLowerCase()
-      if (cleanStr.endsWith('regle4') || cleanStr.endsWith('règle4') ||
-          cleanStr.endsWith('regle°4') || cleanStr.endsWith('règle°4')) {
+      const cleanStr = cleanBuf.slice(-4).join('').toLowerCase()
+      if (cleanStr.endsWith('n4') || cleanStr.endsWith('n°4')) {
         keyBuf.current = []
         fightClubCount.current = 0
         discoverEgg('fightclub')
