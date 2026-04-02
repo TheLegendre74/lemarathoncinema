@@ -60,15 +60,28 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
   useEffect(() => {
     discoverEgg('fightclub')
     if (!containerRef.current) return
-    let phaserGame: import('phaser').Game | null = null
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let phaserGame: any = null
 
     ;(async () => {
-      const Phaser = (await import('phaser')).default
+      // Chargement Phaser via CDN — évite le problème window is not defined au build Vercel
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const Phaser: any = await new Promise((resolve, reject) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if ((window as any).Phaser) { resolve((window as any).Phaser); return }
+        const s = document.createElement('script')
+        s.src = 'https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js'
+        s.onload  = () => resolve((window as any).Phaser) // eslint-disable-line @typescript-eslint/no-explicit-any
+        s.onerror = reject
+        document.head.appendChild(s)
+      })
 
       const VOL = { music: 65, sfx: 70 }
-      let currentMusic: Phaser.Sound.BaseSound | null = null
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let currentMusic: any = null
 
-      type G = Phaser.GameObjects.Graphics
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      type G = any
       const r  = (g: G, c: number, x: number, y: number, w: number, h: number) => { g.fillStyle(c, 1); g.fillRect(x, y, w, h) }
       const ra = (g: G, c: number, a: number, x: number, y: number, w: number, h: number) => { g.fillStyle(c, a); g.fillRect(x, y, w, h) }
 
@@ -407,12 +420,12 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
       }
 
       function makeBtn(
-        scene: Phaser.Scene,
+        scene: any,
         x: number, y: number, w: number,
         label: string,
         onClick: () => void,
         accent = 0xcc1111
-      ): Phaser.GameObjects.Text {
+      ): any {
         const h = 46
         const bg = scene.add.graphics()
         const paint = (hover: boolean) => {
@@ -566,12 +579,12 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             fontFamily: 'monospace', fontSize: '13px', color: '#ffffff'
           }).setOrigin(0, 0.5)
 
-          const adj = (key: 'music' | 'sfx', delta: number, lbl: Phaser.GameObjects.Text) => {
+          const adj = (key: 'music' | 'sfx', delta: number, lbl: any) => {
             VOL[key] = Math.max(0, Math.min(100, VOL[key] + delta))
             lbl.setText(`${VOL[key]}%`)
             drawBars()
             if (key === 'music' && currentMusic) {
-              try { (currentMusic as Phaser.Sound.WebAudioSound).setVolume(VOL.music / 100) } catch (_) {}
+              try { (currentMusic as any).setVolume(VOL.music / 100) } catch (_) {}
             }
           }
 
@@ -613,19 +626,19 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
         enemyHpGfx!: G; overlayGfx!: G
         hpBarGfx!: G; bossHpGfx!: G
 
-        hpLabel!: Phaser.GameObjects.Text
-        waveLabel!: Phaser.GameObjects.Text
-        scoreLabel!: Phaser.GameObjects.Text
-        comboLabel!: Phaser.GameObjects.Text
-        rageLabel!: Phaser.GameObjects.Text
-        blockLabel!: Phaser.GameObjects.Text
-        quoteText!: Phaser.GameObjects.Text
+        hpLabel!: any
+        waveLabel!: any
+        scoreLabel!: any
+        comboLabel!: any
+        rageLabel!: any
+        blockLabel!: any
+        quoteText!: any
 
-        floatTexts: Array<{ obj: Phaser.GameObjects.Text; vy: number; life: number; maxLife: number }> = []
+        floatTexts: Array<{ obj: any; vy: number; life: number; maxLife: number }> = []
         blood: Array<{ gfx: G; x: number; y: number; vx: number; vy: number; life: number; sz: number }> = []
 
-        keys!: Record<string, Phaser.Input.Keyboard.Key>
-        music?: Phaser.Sound.BaseSound
+        keys!: Record<string, any>
+        music?: any
 
         readonly QUOTES = [
           '"La première règle du Fight Club :\nne parlez pas du Fight Club."',
