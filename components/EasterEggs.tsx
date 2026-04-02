@@ -931,16 +931,16 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
         keyBuf.current = []
         return
       }
-      // "fight club regle n°4" (ou variante) → lance direct règle 4 + jeu
-      const recent26 = buf.slice(-26).join('').toLowerCase()
-      if (recent26.includes('fight') && recent26.includes('regle') && recent26.endsWith('4')) {
+      // "n4" ou "n°4" → lance direct le jeu
+      const tail6 = buf.slice(-6).join('').toLowerCase()
+      if (tail6.endsWith('n4') || tail6.endsWith('n°4')) {
         keyBuf.current = []
         fightClubCount.current = 0
         discoverEgg('fightclub')
-        setFightClubRule(4)
+        setShowFightClub(true)
         return
       }
-      // "fight club" → règles 1-3 puis jeu à la 4e
+      // "fight club" → règles 1-3 puis jeu direct à la 4e
       if (buf.slice(-10).join('').toLowerCase() === 'fight club') {
         fightClubCount.current = fightClubCount.current + 1
         keyBuf.current = []
@@ -949,7 +949,7 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
           if (fightClubCount.current === 1) discoverEgg('fightclub')
         } else {
           fightClubCount.current = 0
-          setFightClubRule(4)
+          setShowFightClub(true)
         }
         return
       }
@@ -1043,7 +1043,7 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
       {showBond       && <BondOverlay   onDone={() => setShowBond(false)}       bondLine={ee.bondLine} />}
       {showNoctambule && <NoctambuleNotif onDone={() => setShowNoctambule(false)} line1={ee.noctamLine1} line2={ee.noctamLine2} />}
       {fightClubRule  && <FightClubRule   rule={fightClubRule} onDone={() => { if (fightClubRule === 4) { setFightClubRule(null); setShowFightClub(true) } else { setFightClubRule(null) } }} />}
-      {showFightClub  && <FightClubGame   onDone={() => setShowFightClub(false)} gameOverText={ee.fightClubGameOver} />}
+      {showFightClub  && <FightClubGame   onDone={() => setShowFightClub(false)} />}
       {showKenny      && <KennyDeath      onDone={() => setShowKenny(false)}     text1={ee.kennyText1} text2={ee.kennyText2} />}
       {showSouthPark  && <SouthParkBus    onDone={() => setShowSouthPark(false)} />}
       {showRandy      && <RandyMarsh      onDone={() => setShowRandy(false)}     quote={ee.randyQuote} />}
