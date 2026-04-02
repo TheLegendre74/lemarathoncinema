@@ -884,6 +884,15 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
   const tarsShown = useRef(false)
   const noctambuleShown = useRef(false)
 
+  // URL hash trigger — #fightclub ouvre le jeu directement (pour test)
+  useEffect(() => {
+    if (window.location.hash === '#fightclub') {
+      discoverEgg('fightclub')
+      setShowFightClub(true)
+      history.replaceState(null, '', window.location.pathname)
+    }
+  }, [])
+
   // Keyboard easter eggs
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
