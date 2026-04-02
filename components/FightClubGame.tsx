@@ -1378,7 +1378,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             const darken = this.add.graphics().setDepth(700)
             this.tweens.add({
               targets: { v: 0 }, v: 0.88, duration: 1000,
-              onUpdate: (tw) => {
+              onUpdate: (tw: any) => {
                 darken.clear()
                 darken.fillStyle(0x000000, (tw.targets[0] as { v: number }).v)
                 darken.fillRect(0, 0, GW, GH)
