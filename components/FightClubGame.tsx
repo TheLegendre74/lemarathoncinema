@@ -1,668 +1,1553 @@
 'use client'
-
 import { useEffect, useRef, useState } from 'react'
 import { discoverEgg } from '@/lib/actions'
 
 const GW = 800, GH = 450
-const GROUND = GH - 72
-const GRAVITY = 0.72
-const JUMP_V = -15
-const PW = 36, PH = 54
-const BAR_X = 630, BAR_W = 150
+const FY1 = 255
+const FY2 = 378
+const PLAY_H = 390
+const HUD_H = GH - PLAY_H   // 60
+const GRAV = 0.68
+const JUMP_VEL = -14
+const PW = 34, PH = 54
+const HW = PW >> 1           // 17
 
-// ── Music notes ───────────────────────────────────────────────
-const N: Record<string,number> = {
-  E2:82.41, A2:110, B2:123.47, D3:146.83, E3:164.81,
-  G3:196, A3:220, B3:246.94, C4:261.63, D4:293.66, E4:329.63,
+const DIFFS = {
+  facile: { waves: 3,  hpM: 0.7,  dmgM: 0.7,  playerHp: 150, label: 'FACILE',          sub: '3 vagues · Ennemis légers'    },
+  normal: { waves: 6,  hpM: 1.0,  dmgM: 1.0,  playerHp: 120, label: 'NORMAL',          sub: '6 vagues · Combat équilibré'  },
+  jack:   { waves: 10, hpM: 1.5,  dmgM: 1.5,  playerHp: 80,  label: "L'OMBRE DE JACK", sub: '10 vagues · Brutal. Sans merci.' },
+} as const
+type Diff = keyof typeof DIFFS
+
+type LBEntry = { name: string; score: number }
+const LB_KEYS: Record<string, string> = {
+  facile: 'fc_lb_facile', normal: 'fc_lb_normal', jack: 'fc_lb_jack',
+}
+function getLB(d: string): LBEntry[] {
+  try { return JSON.parse(localStorage.getItem(LB_KEYS[d] ?? 'fc_lb_normal') ?? '[]') } catch { return [] }
+}
+function addToLB(d: string, name: string, score: number): LBEntry[] {
+  const all = getLB(d)
+  all.push({ name, score })
+  all.sort((a, b) => b.score - a.score)
+  const top10 = all.slice(0, 10)
+  try { localStorage.setItem(LB_KEYS[d] ?? 'fc_lb_normal', JSON.stringify(top10)) } catch {}
+  return top10
 }
 
-// ── Types ─────────────────────────────────────────────────────
-type CharState = 'idle'|'walk'|'jump'|'punch'|'kick'|'dead'
-interface Char {
-  x:number;y:number;vx:number;vy:number
-  hp:number;maxHp:number;onGround:boolean;face:1|-1
-  state:CharState;stateTimer:number;atkCD:number;hurtInv:number
-  speed:number;dmg:number;isPlayer:boolean
-}
-interface Proj { x:number;y:number;vx:number;vy:number;spin:number }
-interface FText { x:number;y:number;text:string;life:number;col:string;big:boolean }
-interface GS {
-  player:Char; enemies:Char[]
-  wave:number; waveTimer:number; cleared:boolean
-  fTexts:FText[]; over:boolean; deathTimer:number
-  lastPunchFrame:number; frame:number; keys:Set<string>
-  score:number; hasBottle:boolean; bottlesLeft:number; projectile:Proj|null
-}
+export default function FightClubGame({ onDone }: { onDone: () => void }) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [uiScale,  setUiScale]  = useState(1)
+  const [showName, setShowName] = useState(false)
+  const [showLB,   setShowLB]   = useState(false)
+  const [lbData,   setLbData]   = useState<LBEntry[]>([])
+  const [nameVal,  setNameVal]  = useState('')
+  const gameResult = useRef<{ score: number; diff: string } | null>(null)
 
-// ── Factory ───────────────────────────────────────────────────
-function makePlayer(): Char {
-  return { x:80,y:GROUND-PH,vx:0,vy:0,hp:120,maxHp:120,onGround:true,
-    face:1,state:'idle',stateTimer:0,atkCD:0,hurtInv:0,speed:3.5,dmg:0,isPlayer:true }
-}
-function makeEnemy(x:number, wave:number): Char {
-  const hp = Math.min(320, 40 + wave * 32)
-  return { x,y:GROUND-PH,vx:0,vy:0,hp,maxHp:hp,onGround:true,
-    face:-1,state:'idle',stateTimer:0,
-    atkCD:Math.max(24,65-wave*4),hurtInv:0,
-    speed:Math.min(3.2,1.2+wave*0.28),dmg:Math.min(18,4+wave*2),isPlayer:false }
-}
+  useEffect(() => {
+    const upd = () => setUiScale(Math.min(window.innerWidth / GW, window.innerHeight / GH, 1.6))
+    upd(); window.addEventListener('resize', upd)
+    return () => window.removeEventListener('resize', upd)
+  }, [])
 
-// ── 8-bit music (Where Is My Mind? — Pixies) ─────────────────
-function start8BitMusic(audioCtx: AudioContext): ()=>void {
-  const b = 60/134, e = b/2
-  const LEAD: [number,number][] = [
-    [N.E4,e],[N.D4,e],[N.B3,e],[N.A3,e*1.5],[N.G3,e*0.5],
-    [N.A3,e],[N.B3,e],[N.D4,e*1.5],[N.B3,e*0.5],[N.A3,b],
-    [N.G3,b],[N.E3,b],[0,e],
-    [N.B3,e],[N.B3,e],[N.A3,e],[N.G3,e],[N.E3,b*2],[0,b],
-    [N.E4,e],[N.D4,e],[N.B3,e],[N.A3,e*1.5],[N.G3,e*0.5],
-    [N.A3,e],[N.B3,e],[N.D4,e*1.5],[N.B3,e*0.5],[N.A3,b],
-    [N.G3,e],[N.A3,e],[N.B3,b],[N.A3,e],[N.G3,e],
-    [N.E3,b*3],[0,b*2],
-  ]
-  const BASS: [number,number][] = [
-    [N.E2,b*2],[N.A2,b*2],[N.D3,b*2],[N.A2,b*2],
-  ]
-  const master = audioCtx.createGain()
-  master.gain.value = 0.22
-  master.connect(audioCtx.destination)
-
-  const totalLen = LEAD.reduce((s,[,d])=>s+d,0)
-  const bassLen  = BASS.reduce((s,[,d])=>s+d,0)
-  let running = true, nextStart = audioCtx.currentTime
-
-  function scheduleLoop() {
-    const t0 = nextStart
-    nextStart += totalLen
-    let t = t0
-    for (const [freq,dur] of LEAD) {
-      if (freq > 0) {
-        const o = audioCtx.createOscillator(), g = audioCtx.createGain()
-        o.type = 'square'; o.frequency.value = freq
-        g.gain.setValueAtTime(0,t)
-        g.gain.linearRampToValueAtTime(0.1,t+0.01)
-        g.gain.setValueAtTime(0.1,t+dur-0.02)
-        g.gain.linearRampToValueAtTime(0,t+dur)
-        o.connect(g); g.connect(master)
-        o.start(t); o.stop(t+dur+0.01)
-      }
-      t += dur
-    }
-    const reps = Math.ceil(totalLen/bassLen)
-    for (let r=0;r<reps;r++) {
-      let tb = t0+r*bassLen
-      for (const [freq,dur] of BASS) {
-        if (freq>0 && tb < t0+totalLen) {
-          const o = audioCtx.createOscillator(), g = audioCtx.createGain()
-          o.type='triangle'; o.frequency.value=freq
-          g.gain.setValueAtTime(0,tb)
-          g.gain.linearRampToValueAtTime(0.07,tb+0.01)
-          g.gain.setValueAtTime(0.07,tb+dur-0.02)
-          g.gain.linearRampToValueAtTime(0,tb+dur)
-          o.connect(g); g.connect(master)
-          o.start(tb); o.stop(tb+dur+0.01)
-        }
-        tb += dur
-      }
-    }
-  }
-  scheduleLoop(); scheduleLoop()
-  const id = setInterval(()=>{
-    if (!running){ clearInterval(id); return }
-    if (nextStart - audioCtx.currentTime < totalLen*1.5) scheduleLoop()
-  }, 500)
-  return ()=>{
-    running=false; clearInterval(id)
-    master.gain.linearRampToValueAtTime(0, audioCtx.currentTime+0.4)
-    setTimeout(()=>{ try{master.disconnect()}catch{} },500)
-  }
-}
-
-// ── Draw Norton (player) ──────────────────────────────────────
-function drawNorton(ctx: CanvasRenderingContext2D, c: Char, frame: number, hasBottle: boolean) {
-  if (c.hp <= 0) return
-  if (c.hurtInv > 0 && Math.floor(c.hurtInv/3)%2===0) return
-  const {x,y,face,state} = c
-  ctx.save()
-  if (face===-1){ ctx.translate(x+PW,y); ctx.scale(-1,1); ctx.translate(-x,-y) }
-
-  ctx.fillStyle='rgba(0,0,0,0.2)'
-  ctx.beginPath(); ctx.ellipse(x+PW/2,GROUND+2,PW*0.5,5,0,0,Math.PI*2); ctx.fill()
-
-  const l1y=state==='walk'?Math.sin(frame*0.35)*4:0
-  const l2y=state==='walk'?-Math.sin(frame*0.35)*4:0
-  ctx.fillStyle='#1a1a2a'
-  ctx.fillRect(x+4,y+34+l1y,12,20-l1y)
-  ctx.fillRect(x+20,y+34+l2y,12,20-l2y)
-
-  if (state==='kick'){
-    ctx.fillStyle='#1a1a2a'
-    ctx.fillRect(x+20,y+28,12,14)
-    ctx.save(); ctx.translate(x+26,y+42); ctx.rotate(0.9)
-    ctx.fillRect(-6,0,24,12); ctx.restore()
-    ctx.fillStyle='#111'
-    ctx.save(); ctx.translate(x+40,y+42); ctx.rotate(0.9)
-    ctx.fillRect(-2,0,16,8); ctx.restore()
+  function confirmName() {
+    const res = gameResult.current; if (!res) return
+    const nm = nameVal.trim().toUpperCase().slice(0, 12) || 'ANONYME'
+    const entries = addToLB(res.diff, nm, res.score)
+    setLbData(entries); setNameVal(''); setShowName(false); setShowLB(true)
   }
 
-  ctx.fillStyle='#111'
-  ctx.fillRect(x+2,y+50,14,7); ctx.fillRect(x+18,y+50,14,7)
-
-  // Shirt
-  ctx.fillStyle='#c8c4b4'
-  ctx.fillRect(x+2,y+14,32,22)
-  ctx.fillStyle='rgba(0,0,0,0.06)'
-  ctx.fillRect(x+8,y+15,2,20); ctx.fillRect(x+18,y+15,2,20); ctx.fillRect(x+26,y+15,2,20)
-
-  const punchExt=state==='punch'?18:0
-  ctx.fillStyle='#c8c4b4'
-  ctx.fillRect(x-4,y+16,9,18)
-  ctx.fillRect(x+29+punchExt,y+16,9,18)
-  if (state==='punch'){ ctx.fillStyle='#d4a88a'; ctx.fillRect(x+36+punchExt,y+17,12,9) }
-
-  // Bottle in hand
-  if (hasBottle) {
-    ctx.fillStyle='rgba(70,150,60,0.8)'
-    ctx.fillRect(x-9,y+12,7,18)
-    ctx.fillRect(x-8,y+8,5,6)
-    ctx.fillStyle='#777'; ctx.fillRect(x-8,y+6,5,4)
-    ctx.fillStyle='rgba(255,255,255,0.2)'; ctx.fillRect(x-9,y+9,2,18)
-  }
-
-  // Head
-  ctx.fillStyle='#d4a88a'
-  ctx.fillRect(x+10,y+2,16,14)
-  ctx.fillStyle='#2a1810'
-  ctx.fillRect(x+9,y,18,5); ctx.fillRect(x+9,y,3,9)
-  // Eyes
-  ctx.fillStyle='#222'
-  ctx.fillRect(x+13,y+6,3,2); ctx.fillRect(x+20,y+6,3,2)
-  // Black eye
-  ctx.fillStyle='rgba(40,0,60,0.45)'
-  ctx.beginPath(); ctx.ellipse(x+14,y+7,4,3,0,0,Math.PI*2); ctx.fill()
-  // Mouth
-  ctx.fillStyle='#8a5544'
-  ctx.fillRect(x+14,y+12,6,1)
-  // Blood on lip
-  ctx.fillStyle='rgba(180,0,0,0.5)'
-  ctx.fillRect(x+15,y+13,3,2)
-
-  ctx.restore()
-}
-
-// ── Draw Tyler Durden (enemy) ─────────────────────────────────
-function drawTyler(ctx: CanvasRenderingContext2D, c: Char, frame: number) {
-  if (c.hp<=0 && c.stateTimer>45) return
-  if (c.hurtInv>0 && Math.floor(c.hurtInv/3)%2===0) return
-  const {x,y,face,state} = c
-  ctx.save()
-  if (face===-1){ ctx.translate(x+PW,y); ctx.scale(-1,1); ctx.translate(-x,-y) }
-
-  if (state==='dead'){
-    ctx.globalAlpha=Math.max(0,1-c.stateTimer/45)
-    ctx.fillStyle='#cc1111'
-    ctx.fillRect(x,y+20,PW+20,PH*0.4)
-    ctx.restore(); return
-  }
-
-  ctx.fillStyle='rgba(0,0,0,0.2)'
-  ctx.beginPath(); ctx.ellipse(x+PW/2,GROUND+2,PW*0.5,5,0,0,Math.PI*2); ctx.fill()
-
-  const l1y=state==='walk'?Math.sin(frame*0.38)*4:0
-  const l2y=state==='walk'?-Math.sin(frame*0.38)*4:0
-  ctx.fillStyle='#1a1a2a'
-  ctx.fillRect(x+4,y+34+l1y,12,20-l1y)
-  ctx.fillRect(x+20,y+34+l2y,12,20-l2y)
-
-  if (state==='kick'){
-    ctx.fillStyle='#1a1a2a'
-    ctx.fillRect(x+20,y+28,12,14)
-    ctx.save(); ctx.translate(x+26,y+42); ctx.rotate(0.9)
-    ctx.fillRect(-6,0,24,12); ctx.restore()
-    ctx.fillStyle='#111'
-    ctx.save(); ctx.translate(x+40,y+42); ctx.rotate(0.9)
-    ctx.fillRect(-2,0,16,8); ctx.restore()
-  }
-
-  ctx.fillStyle='#111'
-  ctx.fillRect(x+2,y+50,14,7); ctx.fillRect(x+18,y+50,14,7)
-
-  // Chest
-  ctx.fillStyle='#e8e0d0'; ctx.fillRect(x+12,y+14,12,22)
-  // Red jacket
-  ctx.fillStyle='#cc1111'
-  ctx.fillRect(x+2,y+14,11,22); ctx.fillRect(x+23,y+14,11,22)
-  ctx.fillStyle='#8b0000'
-  ctx.fillRect(x+8,y+14,5,14); ctx.fillRect(x+23,y+14,5,14)
-  ctx.fillStyle='#cc1111'; ctx.fillRect(x+12,y+12,12,6)
-
-  const punchExt=state==='punch'?18:0
-  ctx.fillStyle='#cc1111'
-  ctx.fillRect(x-4,y+16,9,18)
-  ctx.fillRect(x+29+punchExt,y+16,9,18)
-  if (state==='punch'){ ctx.fillStyle='#e0b090'; ctx.fillRect(x+36+punchExt,y+17,12,9) }
-
-  // Head
-  ctx.fillStyle='#e0b090'; ctx.fillRect(x+10,y+2,16,14)
-  // Blonde hair
-  ctx.fillStyle='#c8a440'
-  ctx.fillRect(x+9,y-3,18,7); ctx.fillRect(x+23,y-3,5,10); ctx.fillRect(x+9,y-2,4,4)
-  // Eyes
-  ctx.fillStyle='#222'
-  ctx.fillRect(x+13,y+5,3,3); ctx.fillRect(x+20,y+5,3,3)
-  // Smirk
-  ctx.fillStyle='#9a6655'
-  ctx.fillRect(x+13,y+11,9,2); ctx.fillRect(x+20,y+10,2,2)
-
-  ctx.restore()
-}
-
-// ── HP bars ───────────────────────────────────────────────────
-function drawEnemyHP(ctx: CanvasRenderingContext2D, c: Char) {
-  if (c.hp<=0) return
-  const W=44,H=5,bx=c.x+PW/2-W/2,by=c.y-14
-  ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(bx-1,by-1,W+2,H+2)
-  ctx.fillStyle='#222'; ctx.fillRect(bx,by,W,H)
-  const pct=c.hp/c.maxHp
-  ctx.fillStyle=pct>.5?'#cc2222':pct>.25?'#ff5500':'#ff0000'
-  ctx.fillRect(bx,by,W*pct,H)
-}
-
-function drawPlayerHP(ctx: CanvasRenderingContext2D, c: Char) {
-  const W=200,H=16,x=14,y=14
-  ctx.fillStyle='rgba(0,0,0,0.65)'; ctx.fillRect(x-2,y-2,W+4,H+4)
-  ctx.fillStyle='#111'; ctx.fillRect(x,y,W,H)
-  const pct=Math.max(0,c.hp/c.maxHp)
-  ctx.fillStyle=pct>.5?'#22cc44':pct>.25?'#ddaa22':'#dd2222'
-  ctx.fillRect(x,y,W*pct,H)
-  ctx.fillStyle='rgba(255,255,255,0.08)'; ctx.fillRect(x,y,W*pct,H/2)
-  ctx.strokeStyle='#444'; ctx.lineWidth=1; ctx.strokeRect(x,y,W,H)
-  ctx.fillStyle='#fff'; ctx.font='bold 10px monospace'
-  ctx.textAlign='left'
-  ctx.fillText(`${Math.max(0,c.hp)}/${c.maxHp}  Edward Norton`,x+4,y+H-3)
-}
-
-// ── Bar & bottles ─────────────────────────────────────────────
-function drawBottle(ctx: CanvasRenderingContext2D, x: number, y: number, spin=0) {
-  ctx.save()
-  ctx.translate(x+8,y+18); ctx.rotate(spin); ctx.translate(-(x+8),-(y+18))
-  ctx.fillStyle='rgba(70,150,55,0.75)'
-  ctx.fillRect(x+3,y+12,10,22)
-  ctx.fillRect(x+5,y+5,6,9)
-  ctx.fillStyle='#777'; ctx.fillRect(x+5,y+2,6,5)
-  ctx.fillStyle='rgba(255,255,255,0.22)'; ctx.fillRect(x+4,y+6,2,22)
-  ctx.restore()
-}
-
-function drawBar(ctx: CanvasRenderingContext2D, bottlesLeft: number) {
-  ctx.fillStyle='#4a2a14'; ctx.fillRect(BAR_X-5,GROUND-40,BAR_W+10,4)
-  ctx.fillStyle='#3a2010'; ctx.fillRect(BAR_X-5,GROUND-36,BAR_W+10,8)
-  ctx.fillStyle='#2a1508'; ctx.fillRect(BAR_X-5,GROUND-28,BAR_W+10,28)
-  for (let i=0;i<bottlesLeft;i++) drawBottle(ctx,BAR_X+14+i*34,GROUND-72)
-  ctx.fillStyle='rgba(255,200,100,0.35)'; ctx.font='8px monospace'; ctx.textAlign='center'
-  ctx.fillText('BAR',BAR_X+BAR_W/2,GROUND-14)
-}
-
-// ── Physics ───────────────────────────────────────────────────
-function updateChar(c: Char) {
-  c.vy=Math.min(20,c.vy+GRAVITY)
-  c.x+=c.vx; c.y+=c.vy; c.vx*=0.82
-  if (c.y+PH>=GROUND){ c.y=GROUND-PH; c.vy=0; c.onGround=true } else { c.onGround=false }
-  c.x=Math.max(0,Math.min(GW-PW,c.x))
-  if (c.stateTimer>0) c.stateTimer--
-  if (c.atkCD>0) c.atkCD--
-  if (c.hurtInv>0) c.hurtInv--
-  if (c.stateTimer===0 && ['punch','kick'].includes(c.state)) c.state='idle'
-}
-
-// ── Combat ────────────────────────────────────────────────────
-function doAttack(attacker: Char, targets: Char[], type: 'punch'|'kick', gs: GS) {
-  const dmg  =type==='punch'?18:28
-  const range=type==='kick'?76:60
-  const kbX  =type==='kick'?6:3
-  const kbY  =type==='kick'?-5:-2
-
-  for (const t of targets) {
-    if (t.hp<=0||t.hurtInv>0) continue
-    const dx=(t.x+PW/2)-(attacker.x+PW/2)
-    if (attacker.face===1?dx<0:dx>0) continue
-    if (Math.abs(dx)>range) continue
-    const ay1=attacker.y+8,ay2=attacker.y+PH
-    if (ay2<t.y+8||ay1>t.y+PH) continue
-
-    const actual=attacker.isPlayer?dmg:attacker.dmg
-    t.hp=Math.max(0,t.hp-actual)
-    t.vx=attacker.face*kbX; t.vy=kbY
-    t.hurtInv=attacker.isPlayer?14:20
-
-    if (attacker.isPlayer) {
-      gs.score+=actual
-      gs.fTexts.push({x:t.x+PW/2,y:t.y-8,text:`-${actual}`,life:35,col:type==='kick'?'#ffaa00':'#ff4444',big:type==='kick'})
-      if (t.hp<=0){ t.state='dead'; t.stateTimer=0 }
-    } else {
-      // Enemy hits player — NO state change, player keeps fighting
-      if (t.hp<=0){ t.state='dead'; t.stateTimer=0 }
-    }
-  }
-}
-
-// ── Enemy AI ──────────────────────────────────────────────────
-function updateAI(e: Char, player: Char, gs: GS) {
-  if (e.hp<=0||e.atkCD>0) return
-  const dx=(player.x+PW/2)-(e.x+PW/2)
-  const dist=Math.abs(dx)
-  e.face=dx>0?1:-1
-  if (dist<58&&e.onGround){
-    e.state='punch'; e.stateTimer=22; e.atkCD=Math.max(24,65-gs.wave*4)
-    doAttack(e,[player],'punch',gs)
-  } else if (dist<380){
-    e.vx=e.face*e.speed; e.state='walk'
-    if (e.onGround&&Math.random()<0.003) e.vy=JUMP_V*0.6
-  } else { e.state='idle' }
-}
-
-// ── Main component ────────────────────────────────────────────
-export default function FightClubGame({ onDone, gameOverText }: { onDone:()=>void; gameOverText?:string }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const rafRef    = useRef<number>(0)
-  const [scale, setScale] = useState(1)
-
-  useEffect(()=>{
-    function upd(){ setScale(Math.min(window.innerWidth/GW,window.innerHeight/GH,1.6)) }
-    upd(); window.addEventListener('resize',upd)
-    return ()=>window.removeEventListener('resize',upd)
-  },[])
-
-  useEffect(()=>{
+  useEffect(() => {
     discoverEgg('fightclub')
-    const canvas=canvasRef.current; if(!canvas) return
-    const ctx=canvas.getContext('2d')!
+    if (!containerRef.current) return
+    let phaserGame: import('phaser').Game | null = null
 
-    // Audio
-    const audio = new Audio('/sons/where-is-my-mind.opus')
-    audio.loop = true; audio.volume = 0.7
-    audio.play().catch(() => {})
-    let stopMusic:()=>void = () => { audio.pause() }
+    ;(async () => {
+      const Phaser = (await import('phaser')).default
 
-    const gs: GS = {
-      player:makePlayer(), enemies:[], wave:0, waveTimer:90, cleared:true,
-      fTexts:[], over:false, deathTimer:0,
-      lastPunchFrame:-999, frame:0, keys:new Set(),
-      score:0, hasBottle:false, bottlesLeft:4, projectile:null,
-    }
+      const VOL = { music: 65, sfx: 70 }
+      let currentMusic: Phaser.Sound.BaseSound | null = null
 
-    function spawnWave(){
-      gs.wave++; gs.cleared=false; gs.enemies=[]
-      const count=Math.min(1+gs.wave,5)
-      for (let i=0;i<count;i++) gs.enemies.push(makeEnemy(GW-60-i*80,gs.wave))
-    }
+      type G = Phaser.GameObjects.Graphics
+      const r  = (g: G, c: number, x: number, y: number, w: number, h: number) => { g.fillStyle(c, 1); g.fillRect(x, y, w, h) }
+      const ra = (g: G, c: number, a: number, x: number, y: number, w: number, h: number) => { g.fillStyle(c, a); g.fillRect(x, y, w, h) }
 
-    function loop(){
-      const {player,keys}=gs; gs.frame++
+      type CharState = 'idle' | 'walk' | 'jump' | 'punch' | 'kick' | 'hurt' | 'dead' | 'taunt' | 'block'
+      type CharType  = 'norton' | 'grunt' | 'bob' | 'toughguy' | 'tyler'
 
-      // ── Input ──────────────────────────────────────────
-      if (!gs.over&&player.hp>0){
-        const canMove=!['punch','kick'].includes(player.state)
-        const canAct =canMove&&player.atkCD===0  // NO hurt in list — player always fights back
-        if (canMove){
-          const left=keys.has('ArrowLeft'); const right=keys.has('ArrowRight')
-          if (left){ player.vx=-player.speed; player.face=-1; if(player.state==='idle'||player.state==='jump') player.state='walk' }
-          else if (right){ player.vx=player.speed; player.face=1; if(player.state==='idle'||player.state==='jump') player.state='walk' }
-          else if (player.state==='walk') player.state='idle'
+      interface Char {
+        gfx: G
+        x: number; floorY: number
+        jumpH: number; jumpV: number
+        vx: number; vy: number
+        hp: number; maxHp: number
+        face: 1 | -1
+        state: CharState; stateTimer: number
+        atkCD: number; hurtInv: number
+        speed: number; dmg: number
+        isPlayer: boolean; charType: CharType
+        wave: number; deadTimer: number
+        isBlocking: boolean; blockFrame: number
+        stunned: boolean; stunTimer: number
+      }
+
+      interface MarlaObj {
+        gfx: G; x: number; floorY: number; phase: 0|1|2; timer: number
+      }
+
+      // ══════════════════════════════════════════════════════
+      // DRAW FUNCTIONS
+      // ══════════════════════════════════════════════════════
+
+      function drawNorton(g: G, state: CharState, frame: number) {
+        g.clear()
+        if (state === 'dead') {
+          ra(g, 0xc8c4b4, 1, -HW - 10, -16, PW + 44, 14)
+          r(g, 0xd4a88a, HW + 26, -21, 16, 14)
+          r(g, 0x2a1810, HW + 25, -25, 18, 6)
+          ra(g, 0x280040, 0.5, HW + 28, -17, 10, 5)
+          return
         }
-      }
-
-      // ── Update ─────────────────────────────────────────
-      if (player.hp>0) updateChar(player)
-      for (const e of gs.enemies){
-        if (e.hp>0){ updateAI(e,player,gs); updateChar(e) }
-        else{ if(e.stateTimer<60) e.stateTimer++ }
-      }
-
-      // Projectile
-      if (gs.projectile){
-        const p=gs.projectile
-        p.vy=Math.min(20,p.vy+GRAVITY); p.x+=p.vx; p.y+=p.vy; p.spin+=0.3
-        let hit=false
-        for (const e of gs.enemies){
-          if (e.hp<=0) continue
-          if (Math.abs(p.x-(e.x+PW/2))<22&&Math.abs(p.y-(e.y+PH/2))<28){
-            e.hp=Math.max(0,e.hp-45); e.vx=player.face*5; e.vy=-3; e.hurtInv=14
-            gs.fTexts.push({x:e.x+PW/2,y:e.y-12,text:'💥 -45',life:45,col:'#88ff44',big:true})
-            if(e.hp<=0){ e.state='dead'; e.stateTimer=0 }
-            hit=true; break
-          }
+        if (state === 'block') {
+          r(g, 0x1a1a2a, -HW + 2, -22, 13, 22)
+          r(g, 0x1a1a2a, -HW + 19, -22, 13, 22)
+          r(g, 0x111111, -HW + 1, -8, 15, 8)
+          r(g, 0x111111, -HW + 18, -8, 15, 8)
+          r(g, 0xc8c4b4, -HW + 2, -PH + 10, PW - 4, 24)
+          r(g, 0xd4a88a, -HW - 6, -PH + 6, 9, 24)
+          r(g, 0xd4a88a, HW - 4, -PH + 6, 9, 24)
+          r(g, 0xd4a88a, -HW + 2, -PH - 2, PW + 2, 13)
+          r(g, 0xd4a88a, -HW + 7, -PH + 1, 20, 12)
+          ra(g, 0x4488ff, 0.28, -HW + 2, -PH - 2, PW + 2, 16)
+          return
         }
-        if (hit||p.x<-40||p.x>GW+40||p.y>GROUND) gs.projectile=null
-      }
-
-      // Wave logic
-      if (gs.enemies.length>0&&gs.enemies.every(e=>e.hp<=0)&&!gs.cleared){
-        gs.cleared=true; gs.waveTimer=120
-        gs.fTexts.push({x:GW/2,y:GH/2-30,text:`VAGUE ${gs.wave} — TERMINÉE`,life:90,col:'#ffdd00',big:true})
-      }
-      if (gs.cleared){
-        if (gs.waveTimer>0) gs.waveTimer--
-        else if (player.hp>0) spawnWave()
-      }
-
-      // Game over
-      if (player.hp<=0&&!gs.over){ gs.over=true; gs.deathTimer=0 }
-      if (gs.over) gs.deathTimer++
-
-      gs.fTexts=gs.fTexts.filter(t=>t.life>0)
-      gs.fTexts.forEach(t=>{ t.y-=0.7; t.life-- })
-
-      // ── Render ─────────────────────────────────────────
-      const bg=ctx.createLinearGradient(0,0,0,GH)
-      bg.addColorStop(0,'#08080e'); bg.addColorStop(1,'#12121a')
-      ctx.fillStyle=bg; ctx.fillRect(0,0,GW,GH)
-
-      // Bricks
-      ctx.strokeStyle='rgba(255,255,255,0.022)'; ctx.lineWidth=1
-      for(let r=0;r<9;r++) for(let c=0;c<17;c++){
-        const off=r%2===0?0:24; ctx.strokeRect(c*48+off,r*44,46,42)
-      }
-
-      // Ambient windows
-      for(let i=0;i<4;i++){
-        ctx.fillStyle=`rgba(255,200,80,${0.04+i*0.01})`
-        ctx.fillRect(60+i*160,20,60,38)
-      }
-
-      // Ground
-      const gr=ctx.createLinearGradient(0,GROUND,0,GH)
-      gr.addColorStop(0,'#18181e'); gr.addColorStop(1,'#0c0c12')
-      ctx.fillStyle=gr; ctx.fillRect(0,GROUND,GW,GH-GROUND)
-      ctx.strokeStyle='rgba(255,255,255,0.07)'; ctx.lineWidth=2
-      ctx.beginPath(); ctx.moveTo(0,GROUND); ctx.lineTo(GW,GROUND); ctx.stroke()
-
-      // Bar
-      drawBar(ctx,gs.bottlesLeft)
-
-      // Bottle pickup hint
-      if (!gs.hasBottle&&gs.bottlesLeft>0){
-        const near=player.x+PW>=BAR_X-70&&player.x<=BAR_X+BAR_W+20
-        if (near){
-          ctx.fillStyle='rgba(255,210,80,0.85)'; ctx.font='11px monospace'; ctx.textAlign='center'
-          ctx.fillText('[E] Prendre une bouteille',BAR_X+BAR_W/2,GROUND-88)
+        const bob = state === 'walk' ? Math.sin(frame * 0.36) * 2 : 0
+        const hrt = state === 'hurt' ? -4 : 0
+        const oy  = bob + hrt
+        const l1  = state === 'walk' ? Math.sin(frame * 0.36) * 4 : 0
+        const l2  = state === 'walk' ? -l1 : 0
+        r(g, 0x1a1a2a, -HW + 2, -22 + l1, 13, 22)
+        r(g, 0x1a1a2a, -HW + 19, -22 + l2, 13, 22)
+        r(g, 0x111111, -HW + 1, -8 + l1, 15, 8)
+        r(g, 0x111111, -HW + 18, -8 + l2, 15, 8)
+        if (state === 'kick') {
+          r(g, 0x1a1a2a, 4, -30, 13, 16)
+          r(g, 0x1a1a2a, 4, -14, 28, 13)
+          r(g, 0x111111, 24, -14, 16, 9)
         }
-      }
-      if (gs.hasBottle&&!gs.projectile){
-        ctx.fillStyle='rgba(255,210,80,0.7)'; ctx.font='10px monospace'; ctx.textAlign='center'
-        ctx.fillText('[E] Lancer',player.x+PW/2,player.y-18)
-      }
-
-      // Projectile
-      if (gs.projectile) drawBottle(ctx,gs.projectile.x-8,gs.projectile.y-18,gs.projectile.spin)
-
-      // Characters
-      for (const e of gs.enemies){ drawTyler(ctx,e,gs.frame); drawEnemyHP(ctx,e) }
-      if (!gs.over||gs.deathTimer<10) drawNorton(ctx,player,gs.frame,gs.hasBottle)
-
-      // Float texts
-      for (const t of gs.fTexts){
-        ctx.save(); ctx.globalAlpha=Math.min(1,t.life/12)
-        ctx.fillStyle=t.col; ctx.font=`${t.big?'bold ':''} ${t.big?18:14}px monospace`
-        ctx.textAlign='center'; ctx.shadowColor=t.col; ctx.shadowBlur=t.big?12:6
-        ctx.fillText(t.text,t.x,t.y); ctx.restore()
+        r(g, 0xc8c4b4, -HW + 2, -PH + 10 + oy, PW - 4, 24)
+        ra(g, 0x000000, 0.07, -HW + 7,  -PH + 11 + oy, 2, 22)
+        ra(g, 0x000000, 0.07, -HW + 14, -PH + 11 + oy, 2, 22)
+        ra(g, 0x000000, 0.07, -HW + 21, -PH + 11 + oy, 2, 22)
+        r(g, 0xc8c4b4, -HW - 6, -PH + 12 + oy, 9, 19)
+        const pX = state === 'punch' ? 19 : 0
+        r(g, 0xc8c4b4, HW - 4 + pX, -PH + 12 + oy, 9, 19)
+        if (state === 'punch') r(g, 0xd4a88a, HW + 2 + pX, -PH + 14 + oy, 13, 9)
+        r(g, 0xd4a88a, -HW + 8, -PH + oy, 18, 15)
+        r(g, 0x2a1810, -HW + 7, -PH - 4 + oy, 20, 7)
+        r(g, 0x2a1810, -HW + 7, -PH + oy, 4, 9)
+        r(g, 0x222222, -HW + 11, -PH + 6 + oy, 4, 2)
+        r(g, 0x222222, -HW + 19, -PH + 6 + oy, 4, 2)
+        ra(g, 0x280040, 0.5, -HW + 10, -PH + 5 + oy, 6, 5)
+        r(g, 0x8a5544, -HW + 13, -PH + 12 + oy, 7, 2)
+        ra(g, 0xaa0000, 0.65, -HW + 14, -PH + 14 + oy, 4, 2)
+        if (state === 'hurt') ra(g, 0xffffff, 0.28, -HW, -PH, PW, PH)
       }
 
-      // HUD
-      drawPlayerHP(ctx,player)
-
-      // Wave badge
-      ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(GW/2-65,10,130,26)
-      ctx.fillStyle='#ffdd00'; ctx.font='bold 13px monospace'; ctx.textAlign='center'
-      ctx.fillText(`VAGUE  ${gs.wave}`,GW/2,28)
-
-      // Score
-      ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(GW-130,10,120,22)
-      ctx.fillStyle='#aaa'; ctx.font='11px monospace'; ctx.textAlign='right'
-      ctx.fillText(`SCORE  ${gs.score}`,GW-14,26)
-
-      // Controls (first 300 frames)
-      if (gs.frame<300){
-        const a=Math.min(0.75,(300-gs.frame)/60)
-        ctx.fillStyle=`rgba(200,200,200,${a})`; ctx.font='10px monospace'; ctx.textAlign='center'
-        ctx.fillText('← → : Déplacer   Espace : Sauter   Z : Poing   A : Kick   E : Bouteille',GW/2,GH-14)
-      }
-
-      // Next wave countdown
-      if (gs.cleared&&gs.waveTimer>0&&player.hp>0){
-        ctx.fillStyle='rgba(255,220,0,0.65)'; ctx.font='13px monospace'; ctx.textAlign='center'
-        ctx.fillText(`Prochaine vague dans ${Math.ceil(gs.waveTimer/60)}s...`,GW/2,GH-35)
-      }
-
-      // ── Death animation ─────────────────────────────────
-      if (gs.over){
-        const dt=gs.deathTimer
-
-        // Norton lying on ground
-        const nx=Math.min(gs.player.x,GW-80)
-        const ny=GROUND-16
-        ctx.fillStyle='#c8c4b4'
-        ctx.fillRect(nx-10,ny+4,PW+44,14)  // body
-        ctx.fillStyle='#d4a88a'
-        ctx.fillRect(nx+PW+26,ny-1,16,14)   // head
-        ctx.fillStyle='#2a1810'
-        ctx.fillRect(nx+PW+25,ny-5,18,6)    // hair
-        // Bruised face
-        ctx.fillStyle='rgba(40,0,60,0.55)'
-        ctx.fillRect(nx+PW+28,ny+3,9,5)
-
-        // Tyler walks in from right (0→90 frames)
-        const TYLER_TARGET_X=nx+PW+4
-        if (dt<90){
-          const prog=dt/90
-          const tx=GW+50+(TYLER_TARGET_X-(GW+50))*prog
-          const fakeFace: Char={x:tx,y:GROUND-PH,vx:0,vy:0,hp:1,maxHp:1,onGround:true,
-            face:-1,state:dt>5?'walk':'idle',stateTimer:0,atkCD:0,hurtInv:0,speed:0,dmg:0,isPlayer:false}
-          drawTyler(ctx,fakeFace,dt)
+      function drawGrunt(g: G, state: CharState, frame: number, waveNum: number) {
+        g.clear()
+        if (state === 'dead') {
+          ra(g, 0x1a1a22, 1, -HW - 8, -16, PW + 36, 14)
+          r(g, 0xc49870, HW + 20, -21, 16, 14)
+          r(g, 0x222222, HW + 19, -25, 18, 5)
+          return
+        }
+        const bob = state === 'walk' ? Math.sin(frame * 0.40) * 2 : 0
+        const hrt = state === 'hurt' ? -3 : 0
+        const oy  = bob + hrt
+        const l1  = state === 'walk' ? Math.sin(frame * 0.40) * 4 : 0
+        const l2  = state === 'walk' ? -l1 : 0
+        r(g, 0x111116, -HW + 2, -22 + l1, 13, 22)
+        r(g, 0x111116, -HW + 19, -22 + l2, 13, 22)
+        r(g, 0x0a0a0a, -HW + 1, -8 + l1, 15, 8)
+        r(g, 0x0a0a0a, -HW + 18, -8 + l2, 15, 8)
+        r(g, 0x1a1a22, -HW + 2, -PH + 10 + oy, PW - 4, 24)
+        ra(g, 0x000000, 0.35, -5, -PH + 24 + oy, 10, 8)
+        if (waveNum >= 3) {
+          ra(g, 0xcc1111, 0.8, -HW + 9,  -PH + 13 + oy, 4, 7)
+          ra(g, 0xcc1111, 0.8, -HW + 9,  -PH + 12 + oy, 9, 2)
+          ra(g, 0xcc1111, 0.8, -HW + 18, -PH + 12 + oy, 5, 2)
+          ra(g, 0xcc1111, 0.8, -HW + 18, -PH + 15 + oy, 4, 2)
+        }
+        r(g, 0x1a1a22, -HW - 6, -PH + 12 + oy, 9, 19)
+        const pX = state === 'punch' ? 17 : 0
+        r(g, 0x1a1a22, HW - 4 + pX, -PH + 12 + oy, 9, 19)
+        if (state === 'punch') r(g, 0xc49870, HW + 2 + pX, -PH + 14 + oy, 12, 9)
+        r(g, 0xc49870, -HW + 8, -PH + oy, 18, 15)
+        if (waveNum >= 2) {
+          ra(g, 0x1a1a22, 0.92, -HW + 6, -PH - 3 + oy, 22, 9)
+          ra(g, 0x1a1a22, 0.7,  -HW + 6, -PH + 6 + oy, 5, 8)
+          ra(g, 0x1a1a22, 0.7,  HW - 3,  -PH + 6 + oy, 5, 8)
         } else {
-          // Tyler crouched on Norton
-          const crouchY=GROUND-PH*0.55
-          const fakeFace: Char={x:TYLER_TARGET_X,y:crouchY,vx:0,vy:0,hp:1,maxHp:1,onGround:true,
-            face:-1,state:'idle',stateTimer:0,atkCD:0,hurtInv:0,speed:0,dmg:0,isPlayer:false}
-          drawTyler(ctx,fakeFace,dt)
+          r(g, 0x222222, -HW + 7, -PH - 3 + oy, 20, 6)
+        }
+        r(g, 0x111111, -HW + 11, -PH + 5 + oy, 4, 3)
+        r(g, 0x111111, -HW + 19, -PH + 5 + oy, 4, 3)
+        ra(g, 0x111111, 0.8, -HW + 10, -PH + 3 + oy, 6, 2)
+        ra(g, 0x111111, 0.8, -HW + 18, -PH + 3 + oy, 6, 2)
+        r(g, 0x6a4a3a, -HW + 12, -PH + 12 + oy, 9, 2)
+        if (state === 'hurt') ra(g, 0xffffff, 0.28, -HW, -PH, PW, PH)
+      }
 
-          // Blood drips from Tyler's mouth to Norton's face
-          const numDrops=Math.min(10,Math.floor((dt-90)/7))
-          for (let d=0;d<numDrops;d++){
-            const progress=Math.min(1,(dt-90-d*7)/25)
-            const dropX=nx+PW+30+Math.sin(d*2.1)*5
-            const dropY=crouchY+8+progress*22
-            ctx.fillStyle=`rgba(160,0,0,${0.5+d*0.04})`
-            ctx.beginPath(); ctx.ellipse(dropX,dropY,3,4+d*0.3,0.2,0,Math.PI*2); ctx.fill()
+      // Robert Paulson — Bob — Project Mayhem, bitch tits
+      function drawBob(g: G, state: CharState, frame: number) {
+        g.clear()
+        const BW = 50, BH = 60, BHW = 25
+        if (state === 'dead') {
+          ra(g, 0x2a2a34, 1, -BHW - 12, -20, BW + 50, 18)
+          r(g, 0xc89860, BHW + 26, -26, 24, 18)
+          return
+        }
+        const step = state === 'walk' ? Math.sin(frame * 0.26) * 1.5 : 0
+        const jig  = state === 'walk' ? Math.sin(frame * 0.26 + 0.5) * 2.5 : 0
+        const hrt  = state === 'hurt' ? -3 : 0
+        const oy   = step + hrt
+        const l1   = state === 'walk' ? Math.sin(frame * 0.26) * 5 : 0
+        const l2   = state === 'walk' ? -l1 : 0
+        // Thick legs
+        r(g, 0x202030, -BHW + 2, -28 + l1, 22, 28)
+        r(g, 0x202030, -BHW + 28, -28 + l2, 22, 28)
+        r(g, 0x111111, -BHW + 1, -10 + l1, 24, 10)
+        r(g, 0x111111, -BHW + 27, -10 + l2, 24, 10)
+        // Sweatshirt body
+        r(g, 0x1e1e2a, -BHW + 2, -BH + 10 + oy, BW - 4, 34)
+        // PM label rough
+        ra(g, 0xcc1111, 0.7, -BHW + 14, -BH + 20 + oy, 5, 7)
+        ra(g, 0xcc1111, 0.7, -BHW + 14, -BH + 19 + oy, 8, 2)
+        ra(g, 0xcc1111, 0.7, -BHW + 24, -BH + 19 + oy, 7, 9)
+        ra(g, 0xcc1111, 0.7, -BHW + 32, -BH + 19 + oy, 5, 9)
+        // Open collar — chest skin visible
+        r(g, 0xc89860, -BHW + 16, -BH + 12 + oy, 18, 22)
+        ra(g, 0x1e1e2a, 0.8, -BHW + 2, -BH + 10 + oy, 16, 10)
+        ra(g, 0x1e1e2a, 0.8, -BHW + 34, -BH + 10 + oy, 14, 10)
+        // Moobs — anti-phase jiggle
+        r(g, 0xc89860, -BHW + 7,  -BH + 30 + oy + jig,  20, 13)
+        r(g, 0xc89860, -BHW + 25, -BH + 30 + oy - jig, 20, 13)
+        ra(g, 0x000000, 0.22, -BHW + 7,  -BH + 42 + oy, 20, 4)
+        ra(g, 0x000000, 0.22, -BHW + 25, -BH + 42 + oy, 20, 4)
+        // Big arms
+        r(g, 0x1e1e2a, -BHW - 10, -BH + 12 + oy, 13, 27)
+        const pX = state === 'punch' ? 22 : 0
+        r(g, 0x1e1e2a, BHW - 3 + pX, -BH + 12 + oy, 13, 27)
+        if (state === 'punch') r(g, 0xc89860, BHW + 8 + pX, -BH + 16 + oy, 16, 12)
+        // Big bald head
+        r(g, 0xc89860, -BHW + 9, -BH + oy, 32, 20)
+        ra(g, 0x555545, 0.16, -BHW + 9, -BH + 14 + oy, 32, 6)
+        ra(g, 0xffffff, 0.06, -BHW + 9, -BH + oy, 32, 7)
+        // Sad puppy eyes
+        r(g, 0x2a2a1a, -BHW + 13, -BH + 6 + oy, 6, 4)
+        r(g, 0x2a2a1a, -BHW + 24, -BH + 6 + oy, 6, 4)
+        ra(g, 0x111111, 0.85, -BHW + 12, -BH + 3 + oy, 9, 2)
+        ra(g, 0x111111, 0.85, -BHW + 23, -BH + 3 + oy, 9, 2)
+        r(g, 0x7a5545, -BHW + 15, -BH + 14 + oy, 14, 2)
+        if (state === 'hurt') ra(g, 0xffffff, 0.3, -BHW, -BH, BW, BH)
+      }
+
+      function drawToughGuy(g: G, state: CharState, frame: number) {
+        g.clear()
+        if (state === 'dead') {
+          ra(g, 0x888877, 1, -HW - 10, -16, PW + 44, 16)
+          r(g, 0xb08060, HW + 26, -22, 20, 16)
+          return
+        }
+        const bob = state === 'walk' ? Math.sin(frame * 0.30) * 2 : 0
+        const hrt = state === 'hurt' ? -3 : 0
+        const oy  = bob + hrt
+        const l1  = state === 'walk' ? Math.sin(frame * 0.30) * 4 : 0
+        const l2  = state === 'walk' ? -l1 : 0
+        r(g, 0x2a1608, -HW + 2, -22 + l1, 14, 22)
+        r(g, 0x2a1608, -HW + 18, -22 + l2, 14, 22)
+        r(g, 0x111111, -HW + 1, -8 + l1, 16, 9)
+        r(g, 0x111111, -HW + 17, -8 + l2, 16, 9)
+        r(g, 0x888877, -HW + 2, -PH + 10 + oy, PW - 4, 24)
+        r(g, 0x5a3810, -HW + 2,  -PH + 10 + oy, 8, 24)
+        r(g, 0x5a3810, HW - 8,   -PH + 10 + oy, 8, 24)
+        ra(g, 0x442200, 0.4, -HW + 8, -PH + 12 + oy, PW - 12, 8)
+        r(g, 0x888877, -HW - 8, -PH + 12 + oy, 11, 20)
+        const pX = state === 'punch' ? 20 : 0
+        r(g, 0x888877, HW - 4 + pX, -PH + 12 + oy, 11, 20)
+        if (state === 'punch') r(g, 0xb08060, HW + 4 + pX, -PH + 14 + oy, 14, 10)
+        r(g, 0xb08060, -HW + 7, -PH + oy, 20, 17)
+        ra(g, 0x444444, 0.2, -HW + 7, -PH + 10 + oy, 20, 7)
+        r(g, 0x111111, -HW + 9,  -PH + 5 + oy, 5, 3)
+        r(g, 0x111111, -HW + 18, -PH + 5 + oy, 5, 3)
+        ra(g, 0x111111, 0.9, -HW + 8,  -PH + 3 + oy, 7, 2)
+        ra(g, 0x111111, 0.9, -HW + 17, -PH + 3 + oy, 7, 2)
+        ra(g, 0xaa4444, 0.7, -HW + 16, -PH + 4 + oy, 1, 9)
+        r(g, 0x6a4a3a, -HW + 10, -PH + 13 + oy, 12, 2)
+        if (state === 'hurt') ra(g, 0xffffff, 0.3, -HW, -PH, PW, PH)
+      }
+
+      function drawTyler(g: G, state: CharState, frame: number) {
+        g.clear()
+        if (state === 'dead') {
+          ra(g, 0xcc1111, 1, -HW - 10, -16, PW + 44, 14)
+          r(g, 0xe0b090, HW + 26, -21, 16, 14)
+          r(g, 0xc8a440, HW + 25, -25, 18, 7)
+          return
+        }
+        const bob   = state === 'walk'  ? Math.sin(frame * 0.36) * 2 : 0
+        const taunt = state === 'taunt' ? Math.sin(frame * 0.12) * 3 : 0
+        const hrt   = state === 'hurt'  ? -4 : 0
+        const oy    = bob + taunt + hrt
+        const l1    = state === 'walk' ? Math.sin(frame * 0.36) * 4 : 0
+        const l2    = state === 'walk' ? -l1 : 0
+        r(g, 0x1a1a2a, -HW + 2,  -22 + l1, 13, 22)
+        r(g, 0x1a1a2a, -HW + 19, -22 + l2, 13, 22)
+        r(g, 0x111111, -HW + 1,  -8 + l1, 15, 8)
+        r(g, 0x111111, -HW + 18, -8 + l2, 15, 8)
+        if (state === 'kick') {
+          r(g, 0x1a1a2a, 4, -32, 13, 16)
+          r(g, 0x1a1a2a, 4, -16, 28, 13)
+          r(g, 0x111111, 24, -16, 18, 9)
+        }
+        r(g, 0xe8e0d0, -HW + 11, -PH + 10 + oy, 12, 24)
+        r(g, 0xcc1111, -HW + 2,  -PH + 10 + oy, 10, 24)
+        r(g, 0xcc1111, -HW + 22, -PH + 10 + oy, 10, 24)
+        r(g, 0x8b0000, -HW + 8,  -PH + 10 + oy, 5, 14)
+        r(g, 0x8b0000, -HW + 21, -PH + 10 + oy, 5, 14)
+        r(g, 0xcc1111, -HW + 11, -PH + 8 + oy, 12, 5)
+        r(g, 0xcc1111, -HW - 6,  -PH + 12 + oy, 9, 19)
+        const pX = state === 'punch' ? 20 : 0
+        r(g, 0xcc1111, HW - 4 + pX, -PH + 12 + oy, 9, 19)
+        if (state === 'punch') r(g, 0xe0b090, HW + 2 + pX, -PH + 14 + oy, 13, 9)
+        r(g, 0xe0b090, -HW + 8, -PH + oy, 18, 15)
+        r(g, 0xc8a440, -HW + 7, -PH - 4 + oy, 20, 7)
+        r(g, 0xc8a440, -HW + 23, -PH - 4 + oy, 5, 11)
+        r(g, 0xc8a440, -HW + 7,  -PH - 1 + oy, 4, 4)
+        r(g, 0x222222, -HW + 11, -PH + 5 + oy, 4, 3)
+        r(g, 0x222222, -HW + 19, -PH + 5 + oy, 4, 3)
+        r(g, 0x9a6655, -HW + 13, -PH + 12 + oy, 10, 2)
+        r(g, 0x9a6655, -HW + 21, -PH + 10 + oy, 2, 3)
+        if (state === 'taunt') {
+          r(g, 0xffeecc, HW + 5, -PH + 12 + oy, 12, 4)
+          ra(g, 0xff8800, 0.9, HW + 17, -PH + 13 + oy, 4, 3)
+          for (let i = 0; i < 4; i++) {
+            const sx = HW + 18 + Math.sin(frame * 0.08 + i * 1.2) * 4
+            ra(g, 0xcccccc, 0.1 + i * 0.04, sx - 3, -PH + 10 + oy - i * 5, 6 + i * 2, 6 + i * 2)
+          }
+        }
+        if (state === 'hurt') ra(g, 0xffffff, 0.32, -HW, -PH, PW, PH)
+      }
+
+      // Marla Singer — thin, dark trench coat, cigarette, messy dark hair
+      function drawMarla(g: G, state: CharState, frame: number) {
+        g.clear()
+        const MW = 26, MH = 52, MHW = 13
+        const bob = state === 'walk' ? Math.sin(frame * 0.38) * 1.5 : 0
+        const oy  = bob
+        const l1  = state === 'walk' ? Math.sin(frame * 0.38) * 3.5 : 0
+        const l2  = state === 'walk' ? -l1 : 0
+        r(g, 0x0e0e0e, -MHW + 3, -20 + l1, 9, 20)
+        r(g, 0x0e0e0e, -MHW + 14, -20 + l2, 9, 20)
+        r(g, 0x080808, -MHW + 2, -7 + l1, 11, 7)
+        r(g, 0x080808, -MHW + 13, -7 + l2, 11, 7)
+        r(g, 0x151518, -MHW + 2, -MH + 10 + oy, MW - 4, 30)
+        r(g, 0x0e0e10, -MHW + 2, -MH + 10 + oy, 5, 24)
+        r(g, 0x0e0e10, -MHW + 19, -MH + 10 + oy, 5, 24)
+        r(g, 0x1e1e20, -MHW + 6, -MH + 9 + oy, MW - 12, 5)
+        r(g, 0x151518, -MHW - 3, -MH + 12 + oy, 6, 20)
+        r(g, 0x151518, MHW - 1, -MH + 12 + oy, 6, 20)
+        // Cigarette in right hand
+        r(g, 0xeeeebb, MHW + 4, -MH + 22 + oy, 16, 3)
+        ra(g, 0xff8800, 0.95, MHW + 20, -MH + 23 + oy, 4, 2)
+        for (let i = 0; i < 4; i++) {
+          const sx = MHW + 20 + Math.sin(frame * 0.09 + i * 1.6) * 3
+          ra(g, 0xbbbbbb, 0.09 + i * 0.04, sx, -MH + 18 + oy - i * 6, 4 + i * 2, 4 + i * 2)
+        }
+        // Pale face
+        r(g, 0xcdc4b8, -MHW + 4, -MH + oy, 18, 14)
+        // Messy dark hair
+        r(g, 0x18141a, -MHW + 2, -MH - 6 + oy, 22, 9)
+        r(g, 0x18141a, -MHW + 1, -MH + oy, 5, 8)
+        r(g, 0x18141a, MHW - 1, -MH + oy, 5, 6)
+        r(g, 0x18141a, -MHW + 9, -MH - 9 + oy, 10, 5)
+        r(g, 0x18141a, -MHW + 18, -MH - 5 + oy, 6, 7)
+        // Dark eyes with heavy makeup
+        r(g, 0x111111, -MHW + 6, -MH + 5 + oy, 4, 3)
+        r(g, 0x111111, -MHW + 14, -MH + 5 + oy, 4, 3)
+        ra(g, 0x111111, 0.8, -MHW + 5, -MH + 3 + oy, 6, 3)
+        ra(g, 0x111111, 0.8, -MHW + 13, -MH + 3 + oy, 6, 3)
+        r(g, 0x882233, -MHW + 7, -MH + 11 + oy, 12, 2)
+      }
+
+      // ══════════════════════════════════════════════════════
+      // SCENE HELPERS
+      // ══════════════════════════════════════════════════════
+
+      function drawSceneBg(g: G) {
+        g.clear()
+        g.fillStyle(0x0d0d13, 1); g.fillRect(0, 0, GW, GH)
+        g.lineStyle(1, 0x1e1e2c, 0.55)
+        for (let row = 0; row < 12; row++) {
+          const off = row % 2 === 0 ? 0 : 23
+          for (let col = 0; col < 20; col++) g.strokeRect(col * 44 + off - 44, row * 40, 42, 38)
+        }
+        g.fillStyle(0x202020, 1); g.fillRect(0, 44, GW, 10)
+        g.fillStyle(0x2c2c2c, 1); g.fillRect(0, 48, GW, 4)
+        const bxs = [100, 270, 440, 610, 740]
+        for (const bx of bxs) {
+          g.fillStyle(0xffbb44, 0.04); g.fillTriangle(bx, 50, bx + 130, GH, bx - 130, GH)
+          g.fillStyle(0xffeeaa, 1); g.fillCircle(bx, 47, 5)
+          g.fillStyle(0xffffff, 0.65); g.fillCircle(bx, 47, 2)
+        }
+        // Floor strip
+        g.fillStyle(0x181820, 1); g.fillRect(0, GH - 60, GW, 60)
+        g.lineStyle(2, 0xcc1111, 0.35); g.lineBetween(0, GH - 60, GW, GH - 60)
+      }
+
+      function makeBtn(
+        scene: Phaser.Scene,
+        x: number, y: number, w: number,
+        label: string,
+        onClick: () => void,
+        accent = 0xcc1111
+      ): Phaser.GameObjects.Text {
+        const h = 46
+        const bg = scene.add.graphics()
+        const paint = (hover: boolean) => {
+          bg.clear()
+          bg.fillStyle(hover ? accent : 0x0a0a11, 1)
+          bg.fillRect(x - w / 2, y - h / 2, w, h)
+          bg.lineStyle(hover ? 2 : 1, accent, hover ? 1 : 0.45)
+          bg.strokeRect(x - w / 2, y - h / 2, w, h)
+        }
+        paint(false)
+        const t = scene.add.text(x, y, label, {
+          fontFamily: 'Impact, monospace', fontSize: '20px',
+          letterSpacing: 4, color: '#ffffff', align: 'center',
+        }).setOrigin(0.5, 0.5).setInteractive({ useHandCursor: true })
+        t.on('pointerover',  () => { paint(true);  t.setScale(1.04) })
+        t.on('pointerout',   () => { paint(false); t.setScale(1) })
+        t.on('pointerdown',  onClick)
+        return t
+      }
+
+      // ══════════════════════════════════════════════════════
+      // MENU SCENE
+      // ══════════════════════════════════════════════════════
+      class MenuScene extends Phaser.Scene {
+        constructor() { super({ key: 'Menu' }) }
+        create() {
+          const bg = this.add.graphics()
+          drawSceneBg(bg)
+          // Center card
+          bg.fillStyle(0x000000, 0.5); bg.fillRect(270, 115, 260, 205)
+          bg.lineStyle(1, 0xcc1111, 0.3); bg.strokeRect(269, 114, 262, 207)
+
+          this.add.text(GW / 2, 80, 'FIGHT CLUB', {
+            fontFamily: 'Impact', fontSize: '68px', color: '#cc1111',
+            stroke: '#000000', strokeThickness: 8, letterSpacing: 8,
+          }).setOrigin(0.5, 0.5)
+          this.add.text(GW / 2, 126, '— THE GAME —', {
+            fontFamily: 'monospace', fontSize: '13px', color: '#664433', letterSpacing: 7,
+          }).setOrigin(0.5, 0.5)
+
+          makeBtn(this, GW / 2, 192, 220, 'JOUER',   () => this.scene.start('Difficulty'), 0xcc1111)
+          makeBtn(this, GW / 2, 249, 220, 'OPTIONS', () => this.scene.start('Options'),    0x885522)
+          makeBtn(this, GW / 2, 306, 220, 'RETOUR',  () => onDone(),                        0x2a2a3a)
+
+          this.add.text(GW / 2, GH - 12,
+            'UN PROJET MAYHEM  ·  THE FIRST RULE: YOU DO NOT TALK ABOUT FIGHT CLUB', {
+            fontFamily: 'monospace', fontSize: '8px', color: 'rgba(90,60,50,0.55)', letterSpacing: 2
+          }).setOrigin(0.5, 1)
+        }
+      }
+
+      // ══════════════════════════════════════════════════════
+      // DIFFICULTY SCENE
+      // ══════════════════════════════════════════════════════
+      class DifficultyScene extends Phaser.Scene {
+        constructor() { super({ key: 'Difficulty' }) }
+        create() {
+          const bg = this.add.graphics()
+          drawSceneBg(bg)
+
+          this.add.text(GW / 2, 52, 'CHOISIR LA DIFFICULTÉ', {
+            fontFamily: 'Impact', fontSize: '32px', color: '#cccccc', letterSpacing: 6,
+            stroke: '#000000', strokeThickness: 4,
+          }).setOrigin(0.5, 0.5)
+
+          const diffs: Diff[] = ['facile', 'normal', 'jack']
+          const cxPos = [150, 400, 650]
+          const colors = [0x226633, 0xcc9922, 0xcc1111]
+
+          diffs.forEach((d, i) => {
+            const x = cxPos[i], y = 240
+            const cfg = DIFFS[d]
+            const col = colors[i]
+            const hexCol = `#${col.toString(16).padStart(6, '0')}`
+
+            const cg = this.add.graphics()
+            const paintCard = (hover: boolean) => {
+              cg.clear()
+              cg.fillStyle(col, hover ? 0.3 : 0.12); cg.fillRect(x - 120, y - 128, 240, 256)
+              cg.lineStyle(hover ? 2 : 1, col, hover ? 0.95 : 0.4); cg.strokeRect(x - 120, y - 128, 240, 256)
+            }
+            paintCard(false)
+
+            this.add.text(x, y - 80, cfg.label, {
+              fontFamily: 'Impact', fontSize: '22px', color: hexCol,
+              letterSpacing: 4, stroke: '#000000', strokeThickness: 3,
+            }).setOrigin(0.5, 0.5)
+            this.add.text(x, y - 42, cfg.sub, {
+              fontFamily: 'monospace', fontSize: '10px', color: '#999999',
+              align: 'center', wordWrap: { width: 210 },
+            }).setOrigin(0.5, 0.5)
+            this.add.text(x, y + 10, `HP joueur : ${cfg.playerHp}`, {
+              fontFamily: 'monospace', fontSize: '12px', color: '#66cc88',
+            }).setOrigin(0.5, 0.5)
+            this.add.text(x, y + 32, `Ennemis ×${cfg.hpM.toFixed(1)}`, {
+              fontFamily: 'monospace', fontSize: '11px', color: '#cc7777',
+            }).setOrigin(0.5, 0.5)
+            this.add.text(x, y + 56, `${cfg.waves} vague${cfg.waves > 1 ? 's' : ''}`, {
+              fontFamily: 'monospace', fontSize: '11px', color: '#888888',
+            }).setOrigin(0.5, 0.5)
+
+            const zone = this.add.zone(x, y, 240, 256).setInteractive({ useHandCursor: true })
+            zone.on('pointerover',  () => paintCard(true))
+            zone.on('pointerout',   () => paintCard(false))
+            zone.on('pointerdown',  () => this.scene.start('Game', { diff: d }))
+          })
+
+          makeBtn(this, 72, GH - 28, 110, '← RETOUR', () => this.scene.start('Menu'), 0x2a2a3a)
+        }
+      }
+
+      // ══════════════════════════════════════════════════════
+      // OPTIONS SCENE
+      // ══════════════════════════════════════════════════════
+      class OptionsScene extends Phaser.Scene {
+        constructor() { super({ key: 'Options' }) }
+        create() {
+          const bg = this.add.graphics()
+          drawSceneBg(bg)
+          bg.fillStyle(0x000000, 0.5); bg.fillRect(GW / 2 - 250, 70, 500, 300)
+          bg.lineStyle(1, 0x884422, 0.35); bg.strokeRect(GW / 2 - 251, 69, 502, 302)
+
+          this.add.text(GW / 2, 106, 'OPTIONS', {
+            fontFamily: 'Impact', fontSize: '36px', color: '#cc8833', letterSpacing: 8,
+            stroke: '#000000', strokeThickness: 4,
+          }).setOrigin(0.5, 0.5)
+
+          const barG = this.add.graphics()
+          const drawBars = () => {
+            barG.clear()
+            barG.fillStyle(0x111111, 1); barG.fillRect(GW / 2 - 160, 168, 320, 16)
+            barG.fillStyle(0xcc6633, 1); barG.fillRect(GW / 2 - 160, 168, 320 * VOL.music / 100, 16)
+            barG.lineStyle(1, 0x884422, 0.5); barG.strokeRect(GW / 2 - 160, 168, 320, 16)
+            barG.fillStyle(0x111111, 1); barG.fillRect(GW / 2 - 160, 232, 320, 16)
+            barG.fillStyle(0x336699, 1); barG.fillRect(GW / 2 - 160, 232, 320 * VOL.sfx / 100, 16)
+            barG.lineStyle(1, 0x225577, 0.5); barG.strokeRect(GW / 2 - 160, 232, 320, 16)
+          }
+          drawBars()
+
+          this.add.text(GW / 2 - 160, 148, 'MUSIQUE', {
+            fontFamily: 'monospace', fontSize: '11px', color: '#cc8833', letterSpacing: 3
+          })
+          this.add.text(GW / 2 - 160, 212, 'EFFETS SONORES', {
+            fontFamily: 'monospace', fontSize: '11px', color: '#6699cc', letterSpacing: 3
+          })
+
+          const mvT = this.add.text(GW / 2 + 178, 176, `${VOL.music}%`, {
+            fontFamily: 'monospace', fontSize: '13px', color: '#ffffff'
+          }).setOrigin(0, 0.5)
+          const sfxT = this.add.text(GW / 2 + 178, 240, `${VOL.sfx}%`, {
+            fontFamily: 'monospace', fontSize: '13px', color: '#ffffff'
+          }).setOrigin(0, 0.5)
+
+          const adj = (key: 'music' | 'sfx', delta: number, lbl: Phaser.GameObjects.Text) => {
+            VOL[key] = Math.max(0, Math.min(100, VOL[key] + delta))
+            lbl.setText(`${VOL[key]}%`)
+            drawBars()
+            if (key === 'music' && currentMusic) {
+              try { (currentMusic as Phaser.Sound.WebAudioSound).setVolume(VOL.music / 100) } catch (_) {}
+            }
+          }
+
+          makeBtn(this, GW / 2 - 200, 176, 38, '−', () => adj('music', -5, mvT), 0xcc6633)
+          makeBtn(this, GW / 2 + 160, 176, 38, '+', () => adj('music', 5, mvT),  0xcc6633)
+          makeBtn(this, GW / 2 - 200, 240, 38, '−', () => adj('sfx', -5, sfxT),  0x336699)
+          makeBtn(this, GW / 2 + 160, 240, 38, '+', () => adj('sfx', 5, sfxT),   0x336699)
+
+          this.add.text(GW / 2, 282,
+            'COMMANDES :   WASD / ←↑↓→  Bouger   Z Poing   X Kick   ESPACE Saut   Q Garde   C Rage', {
+            fontFamily: 'monospace', fontSize: '9.5px', color: '#777777',
+            align: 'center', wordWrap: { width: 460 },
+          }).setOrigin(0.5, 0)
+
+          makeBtn(this, 72, GH - 28, 110, '← RETOUR', () => this.scene.start('Menu'), 0x2a2a3a)
+        }
+      }
+
+      // ══════════════════════════════════════════════════════
+      // GAME SCENE
+      // ══════════════════════════════════════════════════════
+      class GameScene extends Phaser.Scene {
+        player!: Char
+        enemies: Char[] = []
+        marlaCh: MarlaObj | null = null
+
+        diff: Diff = 'normal'
+        wave = 0; waveCleared = true; waveTimer = 150
+        gameOver = false; gameOverTimer = 0
+        victory = false; isBossFight = false
+        frame = 0
+
+        score = 0; combo = 0; comboTimer = 0; maxCombo = 0
+        scoreMult = 1; comboNextThresh = 10
+        rage = 0; rageActive = false; rageDuration = 0
+        marlaUsed = false; marlaActive = false
+
+        bgGfx!: G; floorGfx!: G; marlaDraw!: G
+        enemyHpGfx!: G; overlayGfx!: G
+        hpBarGfx!: G; bossHpGfx!: G
+
+        hpLabel!: Phaser.GameObjects.Text
+        waveLabel!: Phaser.GameObjects.Text
+        scoreLabel!: Phaser.GameObjects.Text
+        comboLabel!: Phaser.GameObjects.Text
+        rageLabel!: Phaser.GameObjects.Text
+        blockLabel!: Phaser.GameObjects.Text
+        quoteText!: Phaser.GameObjects.Text
+
+        floatTexts: Array<{ obj: Phaser.GameObjects.Text; vy: number; life: number; maxLife: number }> = []
+        blood: Array<{ gfx: G; x: number; y: number; vx: number; vy: number; life: number; sz: number }> = []
+
+        keys!: Record<string, Phaser.Input.Keyboard.Key>
+        music?: Phaser.Sound.BaseSound
+
+        readonly QUOTES = [
+          '"La première règle du Fight Club :\nne parlez pas du Fight Club."',
+          '"La deuxième règle :\nVOUS NE PARLEZ PAS DU FIGHT CLUB."',
+          '"Vous n\'êtes pas votre boulot.\nVous n\'êtes pas l\'argent sur votre compte."',
+          '"C\'est seulement après avoir tout perdu\nqu\'on est libre de tout faire."',
+          '"Vous n\'êtes pas spécial.\nVous n\'êtes pas un beau flocon de neige unique."',
+          '"Sans douleur, sans sacrifice,\nnous n\'aurions rien."',
+          '"Après une nuit au Fight Club,\ntout le reste était du volume réglé trop bas."',
+        ]
+
+        constructor() { super({ key: 'Game' }) }
+
+        init(data: Record<string, unknown>) {
+          this.diff = (data.diff as Diff) || 'normal'
+        }
+
+        preload() {
+          this.load.audio('theme', '/sons/where-is-my-mind.opus')
+        }
+
+        create() {
+          this.bgGfx      = this.add.graphics().setDepth(0)
+          this.floorGfx   = this.add.graphics().setDepth(2)
+          this.marlaDraw  = this.add.graphics().setDepth(299)
+          this.enemyHpGfx = this.add.graphics().setDepth(400)
+          this.overlayGfx = this.add.graphics().setDepth(600)
+          this.hpBarGfx   = this.add.graphics().setDepth(500)
+          this.bossHpGfx  = this.add.graphics().setDepth(500).setVisible(false)
+
+          this.drawBackground()
+          this.drawFloor()
+
+          const cfg = DIFFS[this.diff]
+          const pg = this.add.graphics().setDepth(300)
+          this.player = {
+            gfx: pg, x: 130, floorY: (FY1 + FY2) / 2,
+            jumpH: 0, jumpV: 0, vx: 0, vy: 0,
+            hp: cfg.playerHp, maxHp: cfg.playerHp, face: 1,
+            state: 'idle', stateTimer: 0, atkCD: 0, hurtInv: 0,
+            speed: 3.8, dmg: 0, isPlayer: true,
+            charType: 'norton', wave: 0, deadTimer: 0,
+            isBlocking: false, blockFrame: 0, stunned: false, stunTimer: 0,
+          }
+          this.wave = 0; this.waveCleared = true; this.waveTimer = 150
+          this.gameOver = false; this.gameOverTimer = 0
+          this.victory = false; this.isBossFight = false
+          this.frame = 0
+          this.score = 0; this.combo = 0; this.comboTimer = 0; this.maxCombo = 0
+          this.scoreMult = 1; this.comboNextThresh = 10
+          this.rage = 0; this.rageActive = false; this.rageDuration = 0
+          this.marlaUsed = false; this.marlaActive = false; this.marlaCh = null
+          this.enemies = []; this.floatTexts = []; this.blood = []
+
+          const kb = this.input.keyboard!
+          this.keys = {
+            left:  kb.addKey('LEFT'),  right: kb.addKey('RIGHT'),
+            up:    kb.addKey('UP'),    down:  kb.addKey('DOWN'),
+            a: kb.addKey('A'), d: kb.addKey('D'),
+            w: kb.addKey('W'), s: kb.addKey('S'),
+            q: kb.addKey('Q'),
+          }
+          kb.on('keydown-Z',     () => this.playerAttack('punch'))
+          kb.on('keydown-X',     () => this.playerAttack('kick'))
+          kb.on('keydown-SPACE', () => this.playerJump())
+          kb.on('keydown-C',     () => this.activateRage())
+          kb.on('keydown-ESC',   () => { this.music?.stop(); this.scene.start('Menu') })
+
+          this.createHUD()
+
+          try {
+            this.music = this.sound.add('theme', { loop: true, volume: VOL.music / 100 })
+            currentMusic = this.music
+            this.music.play()
+          } catch (_) {}
+
+          this.scheduleFlicker()
+          this.showQuote('"La première règle du Fight Club..."')
+          this.time.delayedCall(3200, () => { if (!this.gameOver) this.spawnWave() })
+        }
+
+        // ── UPDATE ───────────────────────────────────────────
+        update() {
+          this.frame++
+          if (this.gameOver) { this.tickGameOver(); return }
+          if (this.victory)  return
+
+          this.handleInput()
+          this.tickChar(this.player)
+
+          for (const e of this.enemies) {
+            if (e.hp > 0) {
+              if (e.stunned) {
+                if (e.stunTimer > 0) { e.stunTimer--; if (e.stunTimer === 0) e.stunned = false }
+              } else {
+                this.tickAI(e)
+              }
+              this.tickChar(e)
+            } else {
+              e.deadTimer++
+            }
+          }
+
+          if (this.comboTimer > 0 && --this.comboTimer === 0) {
+            this.combo = 0; this.scoreMult = 1; this.comboNextThresh = 10
+            this.refreshCombo()
+          }
+          if (this.rageActive && --this.rageDuration <= 0) {
+            this.rageActive = false
+            this.cameras.main.flash(250, 255, 0, 0, false)
+          }
+
+          // Marla event
+          if (!this.marlaUsed && !this.marlaActive && this.player.hp > 0 &&
+              this.player.hp < this.player.maxHp * 0.15) {
+            this.triggerMarla()
+          }
+          if (this.marlaActive && this.marlaCh) this.updateMarla()
+
+          // Wave management
+          const allDead = this.enemies.length > 0 && this.enemies.every(e => e.hp <= 0)
+          if (allDead && !this.waveCleared) {
+            this.waveCleared = true; this.waveTimer = 200
+            if (this.isBossFight) {
+              this.triggerVictory()
+            } else {
+              const bonus = 150 + this.wave * 50
+              this.score += bonus
+              this.spawnFloatText(GW / 2, PLAY_H / 2 - 10, `VAGUE ${this.wave} OK  +${bonus}`, '#ffdd00', true)
+              this.time.delayedCall(600, () => this.showQuote(this.QUOTES[Math.min(this.wave, this.QUOTES.length - 1)]))
+            }
+          }
+          if (this.waveCleared && this.waveTimer > 0 && !this.victory) {
+            if (--this.waveTimer === 0 && this.player.hp > 0) this.spawnWave()
+          }
+          if (this.player.hp <= 0 && !this.gameOver) this.triggerGameOver()
+
+          this.tickBlood()
+          this.tickFloats()
+          this.renderAll()
+          this.updateHUD()
+        }
+
+        // ── INPUT ────────────────────────────────────────────
+        handleInput() {
+          const p = this.player
+          if (p.hp <= 0) return
+          const qDown    = this.keys.q.isDown
+          const canBlock = !['punch', 'kick', 'hurt', 'jump', 'dead'].includes(p.state) || p.isBlocking
+
+          if (qDown && canBlock) {
+            if (!p.isBlocking) { p.isBlocking = true; p.blockFrame = this.frame }
+            p.state = 'block'; p.stateTimer = 0
+            p.vx *= 0.35; p.vy *= 0.35
+            return
+          }
+          if (!qDown && p.isBlocking) {
+            p.isBlocking = false
+            if (p.state === 'block') p.state = 'idle'
+          }
+
+          const canMove = !['punch', 'kick'].includes(p.state)
+          const left  = this.keys.left.isDown  || this.keys.a.isDown
+          const right = this.keys.right.isDown || this.keys.d.isDown
+          const up    = this.keys.up.isDown    || this.keys.w.isDown
+          const down  = this.keys.down.isDown  || this.keys.s.isDown
+          const moving = left || right || up || down
+
+          if (canMove) {
+            if (left)        { p.vx = -p.speed; p.face = -1 }
+            else if (right)  { p.vx =  p.speed; p.face =  1 }
+            else               p.vx *= 0.72
+            if (up)          p.vy = -p.speed * 0.65
+            else if (down)   p.vy =  p.speed * 0.65
+            else               p.vy *= 0.72
+            if (moving && p.state !== 'jump')  p.state = 'walk'
+            else if (!moving && p.state === 'walk') p.state = 'idle'
           }
         }
 
-        // "Tyler a repris le contrôle" message
-        if (dt>=170){
-          const alpha=Math.min(1,(dt-170)/30)
-          ctx.fillStyle=`rgba(0,0,0,${alpha*0.88})`
-          ctx.fillRect(0,GH/2-55,GW,100)
-          ctx.globalAlpha=alpha
-          ctx.fillStyle='#cc0000'; ctx.shadowColor='#ff0000'; ctx.shadowBlur=25
-          ctx.font='bold 38px serif'; ctx.textAlign='center'
-          ctx.fillText('Tyler a repris le contrôle',GW/2,GH/2+2)
-          ctx.shadowBlur=0
-          if (dt>240){
-            ctx.fillStyle='rgba(255,255,255,0.28)'; ctx.font='12px monospace'
-            ctx.fillText('Échap pour fermer',GW/2,GH/2+42)
-          }
-          ctx.globalAlpha=1
-        }
-      }
+        // ── ATTACKS ──────────────────────────────────────────
+        playerAttack(type: 'punch' | 'kick') {
+          const p = this.player
+          if (p.hp <= 0 || p.atkCD > 0 || p.isBlocking || ['punch', 'kick'].includes(p.state)) return
+          p.state = type; p.stateTimer = type === 'punch' ? 18 : 24
+          p.atkCD = type === 'punch' ? 14 : 22
+          const base  = type === 'punch' ? 18 : 28
+          const range = type === 'punch' ? 90 : 112
 
-      rafRef.current=requestAnimationFrame(loop)
-    }
+          for (const e of this.enemies) {
+            if (e.hp <= 0 || e.hurtInv > 0) continue
+            const dx = e.x - p.x, dy = e.floorY - p.floorY
+            if (p.face === 1 ? dx < -14 : dx > 14) continue
+            if (Math.abs(dx) > range || Math.abs(dy) > 58) continue
 
-    function onKeyDown(e: KeyboardEvent){
-      gs.keys.add(e.key)
-      e.preventDefault()
+            const mult = this.rageActive ? 2.0 : 1.0
+            const dmg  = Math.round(base * mult * this.scoreMult)
+            e.hp = Math.max(0, e.hp - dmg)
+            e.vx = p.face * (type === 'punch' ? 3 : 6)
+            e.hurtInv = 16; e.state = 'hurt'; e.stateTimer = 12
 
-      if (e.key==='Escape'){ onDone(); return }
-      if (gs.over||gs.player.hp<=0) return
+            this.score += dmg
+            this.combo++; this.comboTimer = 90
+            if (this.combo > this.maxCombo) this.maxCombo = this.combo
+            this.rage = Math.min(100, this.rage + 8)
 
-      const p=gs.player
-      const canAct=!['punch','kick'].includes(p.state)&&p.atkCD===0
+            // Combo multiplier doubles every 10 combos
+            if (this.combo >= this.comboNextThresh) {
+              this.scoreMult *= 2; this.comboNextThresh = this.combo + 10
+              this.spawnFloatText(GW / 2, PLAY_H / 2 - 50,
+                `×${this.scoreMult} MULTIPLICATEUR !`, '#ffdd00', true)
+            }
 
-      // Z = Punch
-      if ((e.key==='z'||e.key==='Z')&&canAct){
-        p.state='punch'; p.stateTimer=18; p.atkCD=14
-        gs.lastPunchFrame=gs.frame
-        doAttack(p,gs.enemies,'punch',gs)
-      }
-      // A = Kick
-      if ((e.key==='a'||e.key==='A')&&canAct){
-        p.state='kick'; p.stateTimer=22; p.atkCD=22
-        doAttack(p,gs.enemies,'kick',gs)
-      }
-      // Space = Jump
-      if (e.key===' '&&p.onGround){ p.vy=JUMP_V; p.state='jump' }
-      // E = Bouteille
-      if (e.key==='e'||e.key==='E'){
-        if (!gs.hasBottle&&gs.bottlesLeft>0){
-          const near=p.x+PW>=BAR_X-80&&p.x<=BAR_X+BAR_W+30
-          if (near){ gs.hasBottle=true; gs.bottlesLeft-- }
-        } else if (gs.hasBottle&&!gs.projectile){
-          gs.hasBottle=false
-          gs.projectile={
-            x:p.face===1?p.x+PW+4:p.x-10,
-            y:p.y+12,
-            vx:p.face*10,
-            vy:-4,
-            spin:0,
+            this.spawnFloatText(e.x, e.floorY - PH - 12,
+              `-${dmg}`, type === 'kick' ? '#ffaa22' : '#ff4444', type === 'kick')
+
+            if (e.hp <= 0) {
+              e.state = 'dead'; e.deadTimer = 0
+              this.score += 50 + this.combo * 8
+              this.spawnBlood(e.x, e.floorY - PH / 2, 10)
+              this.cameras.main.shake(140, 0.007)
+            } else {
+              this.cameras.main.shake(70, 0.003)
+            }
+            this.refreshCombo(); break
           }
         }
+
+        playerJump() {
+          const p = this.player
+          if (p.hp <= 0 || p.jumpH > 0 || p.isBlocking) return
+          p.jumpV = JUMP_VEL
+        }
+
+        activateRage() {
+          if (this.rage < 100 || this.rageActive || this.player.hp <= 0) return
+          this.rage = 0; this.rageActive = true; this.rageDuration = 60 * 8
+          this.cameras.main.flash(350, 255, 60, 0, false)
+          this.spawnFloatText(this.player.x, this.player.floorY - PH - 30, 'RAGE MODE !', '#ff4400', true)
+        }
+
+        // ── PHYSICS ──────────────────────────────────────────
+        tickChar(c: Char) {
+          c.x += c.vx; c.vx *= 0.82
+          c.floorY += c.vy; c.vy *= 0.78
+          c.x = Math.max(20, Math.min(GW - 20, c.x))
+          c.floorY = Math.max(FY1 + 8, Math.min(FY2, c.floorY))
+          if (c.jumpV !== 0 || c.jumpH > 0) {
+            c.jumpV += GRAV
+            c.jumpH = Math.max(0, c.jumpH - c.jumpV)
+            if (c.jumpH === 0 && c.state === 'jump') c.state = 'idle'
+            if (c.jumpH > 0) c.state = 'jump'
+          }
+          if (c.stateTimer > 0 && --c.stateTimer === 0) {
+            if (['punch', 'kick', 'hurt', 'taunt'].includes(c.state)) c.state = 'idle'
+          }
+          if (c.atkCD > 0) c.atkCD--
+          if (c.hurtInv > 0) c.hurtInv--
+          c.gfx.setDepth(10 + c.floorY)
+        }
+
+        // ── AI ───────────────────────────────────────────────
+        tickAI(e: Char) {
+          if (e.atkCD > 0) return
+          const p = this.player
+          const dx = p.x - e.x, dy = p.floorY - e.floorY
+          const dist = Math.sqrt(dx * dx + dy * dy * 0.5)
+          e.face = dx > 0 ? 1 : -1
+
+          const hitRange = e.charType === 'tyler' ? 100 : e.charType === 'toughguy' ? 95 : e.charType === 'bob' ? 92 : 85
+
+          if (dist < hitRange && Math.abs(dy) < 52) {
+            const useKick = (e.charType === 'tyler' || e.charType === 'toughguy') && Math.random() < 0.3
+            e.state = useKick ? 'kick' : 'punch'
+            e.stateTimer = useKick ? 22 : 18
+            e.atkCD = Math.max(35, 85 - this.wave * 5)
+
+            if (p.hp > 0 && p.hurtInv === 0) {
+              const cfg    = DIFFS[this.diff]
+              const rawDmg = Math.round((e.dmg + (useKick ? 6 : 0)) * cfg.dmgM)
+              const isBoss = e.charType === 'tyler'
+
+              if (p.isBlocking && !isBoss) {
+                // 80% damage reduction; perfect block = stunned 2s
+                const isPerfect = (this.frame - p.blockFrame) < 90
+                p.hp = Math.max(0, p.hp - Math.round(rawDmg * 0.2))
+                p.hurtInv = 8
+                if (isPerfect) {
+                  e.stunned = true; e.stunTimer = 120
+                  this.cameras.main.flash(120, 0, 100, 255, false)
+                  this.spawnFloatText(e.x, e.floorY - PH - 22, 'PERFECT BLOCK !', '#44ddff', true)
+                } else {
+                  this.spawnFloatText(p.x, p.floorY - PH - 16, 'BLOQUÉ', '#8888ff', false)
+                }
+              } else {
+                p.hp = Math.max(0, p.hp - rawDmg)
+                p.vx = e.face * (useKick ? 5 : 2)
+                p.hurtInv = 22; p.state = 'hurt'; p.stateTimer = 14
+                this.rage = Math.min(100, this.rage + 12)
+                this.cameras.main.shake(90, 0.004)
+              }
+            }
+          } else if (dist < 600) {
+            e.vx = (dx / (Math.abs(dx) || 1)) * e.speed
+            e.vy = (dy / (Math.abs(dy) || 1)) * e.speed * 0.6
+            if (e.state !== 'hurt') e.state = 'walk'
+            if (e.charType === 'tyler' && dist > 200 && e.hp > e.maxHp * 0.5 && Math.random() < 0.0008) {
+              e.state = 'taunt'; e.stateTimer = 90; e.vx = 0; e.vy = 0
+            }
+          } else {
+            e.state = 'idle'; e.vx *= 0.85
+          }
+        }
+
+        // ── WAVES ────────────────────────────────────────────
+        spawnWave() {
+          this.wave++
+          this.waveCleared = false
+          for (const e of this.enemies) e.gfx.destroy()
+          this.enemies = []
+          this.bossHpGfx.setVisible(false)
+
+          const totalWaves = DIFFS[this.diff].waves
+          const isBoss = this.wave === totalWaves
+          this.isBossFight = isBoss
+
+          if (isBoss) {
+            this.spawnEnemy('tyler', GW - 110, (FY1 + FY2) / 2)
+            this.showBossIntro()
+          } else {
+            const progress = (this.wave - 1) / Math.max(1, totalWaves - 1)
+            const comps = this.getWaveComp(progress)
+            let i = 0
+            for (const [type, count] of comps) {
+              for (let j = 0; j < count; j++) {
+                const fromRight = i % 2 === 0
+                const ex = fromRight ? GW + 60 + i * 40 : -60 - i * 40
+                const ey = FY1 + 15 + Math.random() * (FY2 - FY1 - 20)
+                this.spawnEnemy(type, ex, ey); i++
+              }
+            }
+            this.showWaveAnnounce(this.wave)
+          }
+        }
+
+        getWaveComp(p: number): [CharType, number][] {
+          if (p < 0.2)  return [['grunt', 2]]
+          if (p < 0.38) return [['grunt', 3]]
+          if (p < 0.52) return [['grunt', 2], ['toughguy', 1]]
+          if (p < 0.66) return [['grunt', 2], ['bob', 1]]
+          if (p < 0.80) return [['grunt', 2], ['toughguy', 1], ['bob', 1]]
+          return             [['grunt', 2], ['toughguy', 1], ['bob', 2]]
+        }
+
+        spawnEnemy(type: CharType, x: number, floorY: number) {
+          const gfx = this.add.graphics().setDepth(10 + floorY)
+          const cfg  = DIFFS[this.diff]
+          const hpMap:  Record<string, number> = { grunt: 50, bob: 120, toughguy: 95, tyler: 290 }
+          const spdMap: Record<string, number> = { grunt: 1.8, bob: 1.35, toughguy: 1.5, tyler: 2.2 }
+          const dmgMap: Record<string, number> = { grunt: 9, bob: 15, toughguy: 14, tyler: 22 }
+          const hp = Math.round((hpMap[type] ?? 60) * cfg.hpM * (1 + (this.wave - 1) * 0.22))
+          this.enemies.push({
+            gfx, x, floorY, jumpH: 0, jumpV: 0, vx: 0, vy: 0,
+            hp, maxHp: hp, face: x > GW / 2 ? -1 : 1,
+            state: 'idle', stateTimer: 0, atkCD: 0, hurtInv: 0,
+            speed: Math.min(3.2, (spdMap[type] ?? 1.8) + this.wave * 0.18),
+            dmg:   Math.min(26, dmgMap[type] ?? 9),
+            isPlayer: false, charType: type, wave: this.wave, deadTimer: 0,
+            isBlocking: false, blockFrame: 0, stunned: false, stunTimer: 0,
+          })
+        }
+
+        // ── MARLA ────────────────────────────────────────────
+        triggerMarla() {
+          this.marlaUsed = true; this.marlaActive = true
+          this.marlaCh = { gfx: this.marlaDraw, x: -30, floorY: (FY1 + FY2) / 2, phase: 0, timer: 0 }
+          for (const e of this.enemies) e.atkCD = Math.max(e.atkCD, 130)
+        }
+
+        updateMarla() {
+          const m = this.marlaCh!
+          m.timer++
+          if (m.phase === 0) {
+            m.x += 2.2; if (m.x >= 145) { m.phase = 1; m.timer = 0 }
+          } else if (m.phase === 1) {
+            if (m.timer === 40) this.spawnFloatText(m.x, m.floorY - 88, '"Voilà une cigarette."', '#ff99cc', true)
+            if (m.timer === 100) {
+              this.player.hp = this.player.maxHp
+              this.spawnFloatText(this.player.x, this.player.floorY - 100, '♥ HP RESTAURÉ', '#ff4488', true)
+              this.cameras.main.flash(280, 255, 80, 180, false)
+            }
+            if (m.timer > 160) { m.phase = 2; m.timer = 0 }
+          } else {
+            m.x -= 2.2
+            if (m.x < -40) { this.marlaDraw.clear(); this.marlaCh = null; this.marlaActive = false }
+          }
+          if (this.marlaCh) {
+            const ds = this.depthScale(m.floorY) * 1.72 * 0.88
+            this.marlaDraw.setPosition(m.x, m.floorY)
+            this.marlaDraw.setScale(ds, ds)
+            drawMarla(this.marlaDraw, m.phase === 1 ? 'idle' : 'walk', this.frame)
+          }
+        }
+
+        // ── RENDER ───────────────────────────────────────────
+        renderAll() {
+          const p = this.player
+          const showP = p.hurtInv === 0 || Math.floor(p.hurtInv / 3) % 2 === 0
+          if (showP) {
+            const ds = this.depthScale(p.floorY) * 1.72
+            p.gfx.setPosition(p.x, p.floorY - p.jumpH)
+            p.gfx.setScale(p.face * ds, ds)
+            drawNorton(p.gfx, p.state, this.frame)
+          } else { p.gfx.clear() }
+
+          for (const e of this.enemies) {
+            if (e.deadTimer > 55) { e.gfx.clear(); continue }
+            const showE = e.hurtInv === 0 || Math.floor(e.hurtInv / 3) % 2 === 0
+            if (!showE) { e.gfx.clear(); continue }
+            const sz = e.charType === 'bob' ? 1.28 : e.charType === 'toughguy' ? 1.18 : e.charType === 'tyler' ? 1.14 : 1.0
+            const ds = this.depthScale(e.floorY) * 1.72 * sz
+            e.gfx.setPosition(e.x, e.floorY - e.jumpH)
+            e.gfx.setScale(e.face * ds, ds)
+            if (e.charType === 'grunt')         drawGrunt(e.gfx, e.state, this.frame, e.wave)
+            else if (e.charType === 'bob')      drawBob(e.gfx, e.state, this.frame)
+            else if (e.charType === 'toughguy') drawToughGuy(e.gfx, e.state, this.frame)
+            else if (e.charType === 'tyler')    drawTyler(e.gfx, e.state, this.frame)
+          }
+
+          this.overlayGfx.clear()
+          if (this.rageActive) {
+            const a = 0.06 + Math.sin(this.frame * 0.18) * 0.025
+            this.overlayGfx.fillStyle(0xff2200, a); this.overlayGfx.fillRect(0, 0, GW, PLAY_H)
+          }
+          for (const e of this.enemies) {
+            if (e.stunned && e.hp > 0) {
+              const pulse = 0.1 + Math.sin(this.frame * 0.22) * 0.06
+              this.overlayGfx.fillStyle(0x44ffff, pulse); this.overlayGfx.fillCircle(e.x, e.floorY - PH / 2, 30)
+            }
+          }
+        }
+
+        depthScale(fy: number): number {
+          return 0.88 + 0.12 * ((fy - FY1) / (FY2 - FY1))
+        }
+
+        drawBackground() {
+          const g = this.bgGfx; g.clear()
+          g.fillStyle(0x111118, 1); g.fillRect(0, 0, GW, PLAY_H)
+          g.fillStyle(0x1c1c28, 1); g.fillRect(0, FY1 - 30, GW, 30)
+          g.lineStyle(1, 0x232333, 0.6)
+          for (let row = 0; row < 7; row++) {
+            const off = row % 2 === 0 ? 0 : 24
+            for (let col = 0; col < 18; col++) g.strokeRect(col * 46 + off - 46, row * 38, 44, 36)
+          }
+          g.fillStyle(0x252525, 1); g.fillRect(0, 44, GW, 10)
+          g.fillStyle(0x303030, 1); g.fillRect(0, 48, GW, 4)
+          for (let i = 0; i < 5; i++) {
+            const vx = 80 + i * 140
+            g.fillStyle(0x3a3a38, 1); g.fillRect(vx - 10, 40, 20, 18)
+            g.fillStyle(0x2a2a28, 1); g.fillRect(vx - 14, 48, 28, 5)
+          }
+          for (let i = 0; i < 3; i++) {
+            const px = 90 + i * 290
+            g.fillStyle(0x181820, 1); g.fillRect(px, 64, 24, FY1 - 64)
+            g.fillStyle(0x222230, 1); g.fillRect(px + 20, 64, 4, FY1 - 64)
+          }
+          const bulbs = [100, 270, 440, 610, 740]
+          for (const bx of bulbs) {
+            g.fillStyle(0xffbb44, 0.07); g.fillTriangle(bx, 50, bx + 100, FY1, bx - 100, FY1)
+            g.fillStyle(0xffbb44, 0.04); g.fillTriangle(bx, 50, bx + 160, PLAY_H, bx - 160, PLAY_H)
+            g.fillStyle(0xffeeaa, 1);    g.fillCircle(bx, 47, 5)
+            g.fillStyle(0xffffff, 0.7);  g.fillCircle(bx, 47, 2)
+          }
+          g.fillStyle(0xcc1111, 0.14); g.fillRect(305, 80, 190, 48)
+          g.lineStyle(1, 0xcc1111, 0.25); g.strokeRect(304, 79, 192, 50)
+          for (let i = 0; i < 6; i++) {
+            const bx = 70 + i * 115 + Math.sin(i * 2.1) * 30
+            const by = FY1 + 15 + Math.cos(i * 2.6) * 25
+            g.fillStyle(0x660000, 0.22); g.fillEllipse(bx, by, 22 + i * 4, 8 + i * 2)
+          }
+        }
+
+        drawFloor() {
+          const g = this.floorGfx; g.clear()
+          g.fillStyle(0x1e1e2a, 1); g.fillRect(0, FY1, GW, PLAY_H - FY1)
+          g.lineStyle(3, 0x3a3a52, 0.9); g.lineBetween(0, FY1, GW, FY1)
+          g.lineStyle(1, 0x262636, 0.55)
+          for (let c = 0; c <= 20; c++) g.lineBetween(c * 42, FY1, c * 42, PLAY_H)
+          for (let rw = 0; rw <= 4; rw++) g.lineBetween(0, FY1 + rw * 32, GW, FY1 + rw * 32)
+          const bulbs = [100, 270, 440, 610, 740]
+          for (const bx of bulbs) {
+            g.fillStyle(0xffaa33, 0.055); g.fillEllipse(bx, FY1 + 18, 180, 36)
+            g.fillStyle(0xffaa33, 0.03);  g.fillEllipse(bx, FY1 + 40, 140, 28)
+          }
+          g.lineStyle(1, 0x141420, 0.7); g.strokeRect(GW / 2 - 24, FY2 - 20, 48, 14)
+          for (let i = 0; i < 6; i++) g.lineBetween(GW / 2 - 16 + i * 8, FY2 - 18, GW / 2 - 16 + i * 8, FY2 - 8)
+          g.fillStyle(0x08080e, 1); g.fillRect(0, PLAY_H, GW, HUD_H)
+          g.lineStyle(2, 0xcc1111, 0.55); g.lineBetween(0, PLAY_H, GW, PLAY_H)
+          g.fillStyle(0xcc1111, 0.06); g.fillRect(0, PLAY_H - 4, GW, 4)
+        }
+
+        // ── HUD ──────────────────────────────────────────────
+        createHUD() {
+          const D = 500, HY = PLAY_H
+
+          this.comboLabel = this.add.text(GW / 2, HY - 62, '', {
+            fontFamily: 'Impact, monospace', fontSize: '24px', color: '#ff8800',
+            align: 'center', stroke: '#000000', strokeThickness: 4,
+          }).setOrigin(0.5, 0.5).setDepth(D).setAlpha(0)
+
+          this.waveLabel = this.add.text(GW / 2, HY + 10, '', {
+            fontFamily: 'monospace', fontSize: '11px', color: '#aaaaaa', align: 'center', letterSpacing: 3,
+          }).setOrigin(0.5, 0).setDepth(D)
+
+          this.scoreLabel = this.add.text(GW / 2, HY + 28, '', {
+            fontFamily: 'monospace', fontSize: '16px', color: '#ffdd00', align: 'center', letterSpacing: 2,
+          }).setOrigin(0.5, 0).setDepth(D)
+
+          this.hpLabel = this.add.text(18, HY + 46, '', {
+            fontFamily: 'monospace', fontSize: '9px', color: '#888888',
+          }).setDepth(D)
+
+          this.rageLabel = this.add.text(18, HY + 52, '', {
+            fontFamily: 'monospace', fontSize: '9px', color: '#882200', letterSpacing: 1,
+          }).setDepth(D)
+
+          this.blockLabel = this.add.text(GW / 2, HY + HUD_H - 3, '', {
+            fontFamily: 'monospace', fontSize: '9px', color: '#6666cc', align: 'center', letterSpacing: 2,
+          }).setOrigin(0.5, 1).setDepth(D)
+
+          const diffCfg = DIFFS[this.diff]
+          this.add.text(18, HY + 6, 'NORTON', {
+            fontFamily: 'monospace', fontSize: '11px', color: '#cccccc', letterSpacing: 3,
+          }).setDepth(D)
+          this.add.text(GW - 18, HY + 56, diffCfg.label, {
+            fontFamily: 'monospace', fontSize: '9px', color: '#554433', letterSpacing: 2,
+          }).setOrigin(1, 1).setDepth(D)
+
+          this.quoteText = this.add.text(GW / 2, PLAY_H / 2, '', {
+            fontFamily: 'serif', fontSize: '20px', color: '#dddddd',
+            align: 'center', stroke: '#000000', strokeThickness: 5,
+            wordWrap: { width: 560 },
+          }).setOrigin(0.5, 0.5).setDepth(D + 10).setAlpha(0)
+
+          const ctrl = this.add.text(GW / 2, HY + HUD_H - 14,
+            'WASD / ←↑↓→  Bouger   |   Z Poing   X Kick   ESPACE Saut   Q Garde   C Rage', {
+            fontFamily: 'monospace', fontSize: '8px', color: 'rgba(200,200,200,0.32)', align: 'center',
+          }).setOrigin(0.5, 1).setDepth(D)
+          this.time.delayedCall(7000, () => this.tweens.add({ targets: ctrl, alpha: 0, duration: 2000 }))
+        }
+
+        updateHUD() {
+          const p = this.player
+          const g = this.hpBarGfx; g.clear()
+          const HY = PLAY_H
+
+          // Player HP bar
+          g.fillStyle(0x000000, 0.85); g.fillRect(14, HY + 18, 202, 14)
+          g.fillStyle(0x1a1a1a, 1);    g.fillRect(15, HY + 19, 200, 12)
+          const pct = Math.max(0, p.hp / p.maxHp)
+          const col = pct > 0.5 ? 0x22dd44 : pct > 0.25 ? 0xddaa22 : 0xee2222
+          g.fillStyle(col, 1); g.fillRect(15, HY + 19, Math.round(200 * pct), 12)
+          g.fillStyle(0xffffff, 0.08); g.fillRect(15, HY + 19, Math.round(200 * pct), 6)
+          g.lineStyle(1, 0x444444, 0.6); g.strokeRect(14, HY + 18, 202, 14)
+
+          // Rage bar
+          g.fillStyle(0x000000, 0.7); g.fillRect(14, HY + 34, 152, 8)
+          const rCol = this.rageActive ? 0xff4400 : this.rage >= 100 ? 0xff8800 : 0x661100
+          g.fillStyle(rCol, 1); g.fillRect(15, HY + 35, Math.max(0, Math.round(150 * this.rage / 100)), 6)
+          g.lineStyle(1, 0x333333, 0.5); g.strokeRect(14, HY + 34, 152, 8)
+
+          this.hpLabel.setText(`${Math.max(0, p.hp)} / ${p.maxHp}`)
+          this.rageLabel.setText(this.rageActive ? '★ RAGE ★' : this.rage >= 100 ? '  [C] RAGE ▶' : '  RAGE')
+          this.rageLabel.setColor(this.rageActive ? '#ff6600' : this.rage >= 100 ? '#ff8800' : '#553300')
+
+          // Block indicator (blinking when active)
+          if (p.isBlocking) {
+            const pulse = 0.55 + Math.sin(this.frame * 0.3) * 0.45
+            this.blockLabel.setText('[Q] GARDE ACTIVE — 80% réduc. dommages').setAlpha(pulse).setColor('#88aaff')
+          } else {
+            this.blockLabel.setText('[Q] GARDE').setAlpha(0.3).setColor('#555588')
+          }
+
+          // Wave / score / multiplier
+          if (this.scoreMult > 1) {
+            this.waveLabel.setText(`— VAGUE ${this.wave} —   ×${this.scoreMult} COMBO MULT`).setColor('#ffdd00')
+          } else {
+            this.waveLabel.setText(`— VAGUE ${this.wave} —`).setColor('#aaaaaa')
+          }
+          this.scoreLabel.setText(`${String(this.score).padStart(7, '0')}`)
+
+          // HUD dividers
+          g.lineStyle(1, 0x333344, 0.45)
+          g.lineBetween(230, HY + 4, 230, HY + HUD_H - 4)
+          g.lineBetween(GW - 230, HY + 4, GW - 230, HY + HUD_H - 4)
+
+          // Enemy HP bars (floating)
+          const eg = this.enemyHpGfx; eg.clear()
+          for (const e of this.enemies) {
+            if (e.hp <= 0) continue
+            const bw = e.charType === 'bob' ? 72 : 56
+            const ds = this.depthScale(e.floorY) * 1.72 * (e.charType === 'bob' ? 1.28 : 1.0)
+            const by = e.floorY - PH * ds - 16
+            const bx = e.x - bw / 2
+            eg.fillStyle(0x000000, 0.8); eg.fillRect(bx - 1, by - 1, bw + 2, 8)
+            eg.fillStyle(0x1a1a1a, 1);   eg.fillRect(bx, by, bw, 6)
+            const ep = Math.max(0, e.hp / e.maxHp)
+            const ec = e.charType === 'tyler' ? 0xcc1111 : e.charType === 'bob' ? 0xcc7722 : ep > 0.5 ? 0xcc3333 : ep > 0.25 ? 0xff5500 : 0xff0000
+            eg.fillStyle(ec, 1); eg.fillRect(bx, by, Math.round(bw * ep), 6)
+            if (e.stunned && e.stunTimer > 0) {
+              eg.fillStyle(0x44ffff, 1); eg.fillRect(bx, by - 4, Math.round(bw * e.stunTimer / 120), 3)
+            }
+          }
+
+          // Boss HP bar
+          if (this.isBossFight && this.enemies[0]) {
+            const boss = this.enemies[0]
+            this.bossHpGfx.setVisible(true)
+            const bg2 = this.bossHpGfx; bg2.clear()
+            bg2.fillStyle(0x000000, 0.85); bg2.fillRect(GW - 216, HY + 18, 202, 14)
+            bg2.fillStyle(0x1a1a1a, 1);    bg2.fillRect(GW - 215, HY + 19, 200, 12)
+            const bp = Math.max(0, boss.hp / boss.maxHp)
+            bg2.fillStyle(0xcc1111, 1); bg2.fillRect(GW - 215, HY + 19, Math.round(200 * bp), 12)
+            bg2.fillStyle(0xffffff, 0.08); bg2.fillRect(GW - 215, HY + 19, Math.round(200 * bp), 6)
+            bg2.lineStyle(1, 0x444444, 0.6); bg2.strokeRect(GW - 216, HY + 18, 202, 14)
+          }
+        }
+
+        refreshCombo() {
+          if (this.combo >= 2) {
+            this.comboLabel.setText(`${this.combo}×  COMBO`)
+            this.comboLabel.setAlpha(1).setScale(1.3)
+            this.tweens.add({ targets: this.comboLabel, scaleX: 1, scaleY: 1, duration: 200, ease: 'Back.Out' })
+          } else {
+            this.tweens.add({ targets: this.comboLabel, alpha: 0, duration: 500 })
+          }
+        }
+
+        // ── EFFECTS ──────────────────────────────────────────
+        showQuote(text: string) {
+          this.quoteText.setText(text).setAlpha(0)
+          this.tweens.add({
+            targets: this.quoteText, alpha: 1, duration: 700,
+            hold: 2800, yoyo: true, onComplete: () => this.quoteText.setAlpha(0),
+          })
+        }
+
+        showWaveAnnounce(wave: number) {
+          const t = this.add.text(GW / 2, PLAY_H / 2 - 20, `VAGUE  ${wave}`, {
+            fontFamily: 'Impact, monospace', fontSize: '56px', color: '#ffdd00',
+            stroke: '#000000', strokeThickness: 7,
+          }).setOrigin(0.5, 0.5).setDepth(550).setAlpha(0).setScale(1.8)
+          this.tweens.add({
+            targets: t, alpha: 1, scaleX: 1, scaleY: 1,
+            duration: 280, ease: 'Back.Out', hold: 1100, yoyo: true,
+            onComplete: () => t.destroy(),
+          })
+        }
+
+        showBossIntro() {
+          this.cameras.main.shake(700, 0.016)
+          this.time.delayedCall(400, () => {
+            const t1 = this.add.text(GW / 2, PLAY_H / 2 - 30, 'TYLER DURDEN', {
+              fontFamily: 'Impact', fontSize: '52px', color: '#cc1111', stroke: '#000000', strokeThickness: 6,
+            }).setOrigin(0.5, 0.5).setDepth(550).setAlpha(0)
+            this.tweens.add({ targets: t1, alpha: 1, duration: 500, hold: 1800, yoyo: true, onComplete: () => t1.destroy() })
+          })
+          this.time.delayedCall(2400, () => {
+            const t2 = this.add.text(GW / 2, PLAY_H / 2 + 10,
+              '"Fight Club. You\'re the all-singing,\nall-dancing crap of the world."', {
+              fontFamily: 'serif', fontSize: '18px', color: '#cccccc',
+              stroke: '#000000', strokeThickness: 4, align: 'center',
+            }).setOrigin(0.5, 0.5).setDepth(550).setAlpha(0)
+            this.tweens.add({ targets: t2, alpha: 1, duration: 600, hold: 2000, yoyo: true, onComplete: () => t2.destroy() })
+          })
+          this.time.delayedCall(100, () => {
+            this.add.text(GW - 18, PLAY_H + 6, 'TYLER DURDEN', {
+              fontFamily: 'monospace', fontSize: '11px', color: '#cc1111', letterSpacing: 3,
+            }).setOrigin(1, 0).setDepth(500)
+          })
+        }
+
+        spawnFloatText(x: number, y: number, text: string, color: string, big: boolean) {
+          const t = this.add.text(x, y, text, {
+            fontFamily: 'monospace', fontSize: big ? '18px' : '14px',
+            color, stroke: '#000000', strokeThickness: big ? 3 : 2,
+            fontStyle: big ? 'bold' : 'normal',
+          }).setOrigin(0.5, 0.5).setDepth(450)
+          this.floatTexts.push({ obj: t, vy: -1.3, life: 48, maxLife: 48 })
+        }
+
+        tickFloats() {
+          for (const ft of this.floatTexts) { ft.obj.y += ft.vy; ft.life--; ft.obj.setAlpha(ft.life / ft.maxLife) }
+          this.floatTexts.filter(f => f.life <= 0).forEach(f => f.obj.destroy())
+          this.floatTexts = this.floatTexts.filter(f => f.life > 0)
+        }
+
+        spawnBlood(x: number, y: number, count: number) {
+          for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2, spd = 1.5 + Math.random() * 3.5
+            const pg = this.add.graphics().setDepth(395)
+            this.blood.push({ gfx: pg, x, y, vx: Math.cos(angle) * spd, vy: Math.sin(angle) * spd - 1.5, life: 22 + Math.floor(Math.random() * 18), sz: 1.5 + Math.random() * 2.5 })
+          }
+        }
+
+        tickBlood() {
+          for (const b of this.blood) { b.x += b.vx; b.y += b.vy; b.vy += 0.32; b.life--; b.gfx.clear(); b.gfx.fillStyle(0xaa0000, b.life / 35); b.gfx.fillCircle(b.x, b.y, b.sz) }
+          this.blood.filter(b => b.life <= 0).forEach(b => b.gfx.destroy())
+          this.blood = this.blood.filter(b => b.life > 0)
+        }
+
+        scheduleFlicker() {
+          this.time.addEvent({
+            delay: 4000 + Math.random() * 9000,
+            callback: () => {
+              if (this.gameOver || this.victory) return
+              this.cameras.main.flash(60, 200, 200, 200, false)
+              this.time.delayedCall(90, () => this.cameras.main.flash(40, 0, 0, 0, false))
+              this.scheduleFlicker()
+            },
+          })
+        }
+
+        // ── GAME OVER ─────────────────────────────────────────
+        triggerGameOver() {
+          this.gameOver = true; this.gameOverTimer = 0
+          this.player.state = 'dead'; this.music?.stop()
+          this.cameras.main.shake(350, 0.014)
+        }
+
+        tickGameOver() {
+          this.gameOverTimer++; this.frame++
+          this.renderAll()
+
+          if (this.gameOverTimer === 160) {
+            const darken = this.add.graphics().setDepth(700)
+            this.tweens.add({
+              targets: { v: 0 }, v: 0.88, duration: 1000,
+              onUpdate: (tw) => {
+                darken.clear()
+                darken.fillStyle(0x000000, (tw.targets[0] as { v: number }).v)
+                darken.fillRect(0, 0, GW, GH)
+              },
+            })
+          }
+
+          if (this.gameOverTimer === 280) {
+            const q = this.add.text(GW / 2, PLAY_H / 2 - 52,
+              '"Je vais te couper les couilles à vif..."', {
+              fontFamily: 'serif', fontSize: '23px', color: '#cc1111',
+              stroke: '#000000', strokeThickness: 4, fontStyle: 'italic', align: 'center',
+            }).setOrigin(0.5, 0.5).setDepth(750).setAlpha(0)
+            this.tweens.add({ targets: q, alpha: 1, duration: 900 })
+
+            const attr = this.add.text(GW / 2, PLAY_H / 2 - 4, '— Tyler Durden', {
+              fontFamily: 'serif', fontSize: '15px', color: '#886644', fontStyle: 'italic',
+            }).setOrigin(0.5, 0.5).setDepth(751).setAlpha(0)
+            this.tweens.add({ targets: attr, alpha: 1, duration: 900, delay: 500 })
+
+            const stats = this.add.text(GW / 2, PLAY_H / 2 + 38,
+              `Score : ${this.score}   |   Combo max : ${this.maxCombo}×`, {
+              fontFamily: 'monospace', fontSize: '13px', color: '#888888',
+            }).setOrigin(0.5, 0.5).setDepth(750).setAlpha(0)
+            this.tweens.add({ targets: stats, alpha: 1, duration: 900, delay: 800 })
+
+            this.time.delayedCall(1600, () => {
+              gameResult.current = { score: this.score, diff: this.diff }
+              setShowName(true)
+            })
+          }
+        }
+
+        triggerVictory() {
+          this.victory = true; this.music?.stop()
+          this.cameras.main.shake(500, 0.022)
+
+          this.time.delayedCall(800, () => {
+            const title = this.add.text(GW / 2, PLAY_H / 2 - 52, 'YOU ARE NOT YOUR JOB.', {
+              fontFamily: 'Impact', fontSize: '46px', color: '#ffdd00', stroke: '#000000', strokeThickness: 6,
+            }).setOrigin(0.5, 0.5).setDepth(750).setAlpha(0)
+            this.tweens.add({ targets: title, alpha: 1, duration: 1000 })
+          })
+          this.time.delayedCall(1800, () => {
+            this.add.text(GW / 2, PLAY_H / 2 + 8,
+              `Score : ${this.score}  |  Combo max : ${this.maxCombo}×  |  Mult. ×${this.scoreMult}`, {
+              fontFamily: 'monospace', fontSize: '13px', color: '#888888',
+            }).setOrigin(0.5, 0.5).setDepth(750)
+          })
+          this.time.delayedCall(2400, () => {
+            gameResult.current = { score: this.score, diff: this.diff }
+            setShowName(true)
+          })
+        }
+
+        shutdown() { this.music?.stop(); currentMusic = null }
       }
-    }
-    function onKeyUp(e: KeyboardEvent){ gs.keys.delete(e.key) }
 
-    window.addEventListener('keydown',onKeyDown)
-    window.addEventListener('keyup',onKeyUp)
-    rafRef.current=requestAnimationFrame(loop)
+      // ── LAUNCH ───────────────────────────────────────────────────
+      phaserGame = new Phaser.Game({
+        type: Phaser.CANVAS,
+        width: GW, height: GH,
+        parent: containerRef.current!,
+        backgroundColor: '#06060c',
+        scene: [MenuScene, DifficultyScene, OptionsScene, GameScene],
+        input: { keyboard: true },
+        audio: { disableWebAudio: false },
+        banner: false,
+        render: { pixelArt: false, antialias: true },
+      })
+    })()
 
-    return ()=>{
-      stopMusic()
-      cancelAnimationFrame(rafRef.current)
-      window.removeEventListener('keydown',onKeyDown)
-      window.removeEventListener('keyup',onKeyUp)
-    }
-  },[onDone])
+    return () => { phaserGame?.destroy(true); phaserGame = null }
+  }, [onDone])
+
+  const lbDiff = (gameResult.current?.diff ?? 'normal') as Diff
 
   return (
-    <div style={{position:'fixed',inset:0,zIndex:10000,background:'#000',
-      display:'flex',alignItems:'center',justifyContent:'center'}}>
-      <canvas ref={canvasRef} width={GW} height={GH}
-        style={{display:'block',transform:`scale(${scale})`,transformOrigin:'center center',imageRendering:'pixelated'}} />
-      <button onClick={onDone} style={{
-        position:'absolute',top:'1rem',right:'1rem',
-        background:'rgba(255,255,255,0.08)',border:'1px solid rgba(255,255,255,0.2)',
-        color:'rgba(255,255,255,0.6)',borderRadius:6,padding:'4px 12px',
-        cursor:'pointer',fontSize:'.78rem',fontFamily:'monospace',letterSpacing:'1px',
-      }}>ESC</button>
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 10000, background: '#000',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <div ref={containerRef} style={{ transform: `scale(${uiScale})`, transformOrigin: 'center center' }} />
+
+      {/* Name entry overlay */}
+      {showName && (
+        <div style={{
+          position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.84)', zIndex: 200,
+        }}>
+          <div style={{ color: '#cc1111', fontFamily: 'Impact, serif', fontSize: '30px', letterSpacing: '6px', marginBottom: '6px' }}>
+            GAME OVER
+          </div>
+          <div style={{ color: '#888', fontFamily: 'monospace', fontSize: '13px', marginBottom: '22px' }}>
+            Score : <span style={{ color: '#ffdd00', fontWeight: 'bold' }}>{gameResult.current?.score ?? 0}</span>
+          </div>
+          <div style={{ color: '#555', fontFamily: 'monospace', fontSize: '10px', letterSpacing: '3px', marginBottom: '10px' }}>
+            ENTREZ VOTRE NOM :
+          </div>
+          <input
+            autoFocus
+            value={nameVal}
+            onChange={e => setNameVal(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') confirmName() }}
+            maxLength={12}
+            style={{
+              background: '#111', border: '1px solid #cc1111', color: '#fff',
+              fontFamily: 'monospace', fontSize: '22px', padding: '10px 22px',
+              textAlign: 'center', letterSpacing: '6px', marginBottom: '20px',
+              outline: 'none', width: '230px', textTransform: 'uppercase',
+            }}
+          />
+          <button
+            onClick={confirmName}
+            style={{
+              background: '#cc1111', border: 'none', color: '#fff',
+              fontFamily: 'Impact, monospace', fontSize: '14px',
+              letterSpacing: '4px', padding: '10px 32px', cursor: 'pointer',
+            }}
+          >
+            CONFIRMER
+          </button>
+        </div>
+      )}
+
+      {/* Leaderboard overlay */}
+      {showLB && !showName && (
+        <div style={{
+          position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.92)', zIndex: 200,
+        }}>
+          <div style={{ color: '#cc1111', fontFamily: 'Impact', fontSize: '26px', letterSpacing: '6px', marginBottom: '4px' }}>
+            CLASSEMENT
+          </div>
+          <div style={{ color: '#553322', fontFamily: 'monospace', fontSize: '10px', letterSpacing: '4px', marginBottom: '22px' }}>
+            {DIFFS[lbDiff]?.label ?? lbDiff.toUpperCase()}
+          </div>
+          <div style={{ width: '340px', marginBottom: '24px' }}>
+            {lbData.map((e, i) => (
+              <div key={i} style={{
+                display: 'flex', justifyContent: 'space-between',
+                fontFamily: 'monospace', fontSize: '13px', padding: '5px 0',
+                borderBottom: '1px solid #1a1a1a',
+                color: i === 0 ? '#ffdd00' : i <= 2 ? '#ccaa44' : '#777777',
+              }}>
+                <span style={{ color: '#444', marginRight: '14px', minWidth: '26px' }}>{String(i + 1).padStart(2, '0')}.</span>
+                <span style={{ flex: 1 }}>{e.name}</span>
+                <span>{String(e.score).padStart(7, '0')}</span>
+              </div>
+            ))}
+            {lbData.length === 0 && (
+              <div style={{ color: '#444', fontFamily: 'monospace', fontSize: '12px', textAlign: 'center', padding: '16px 0' }}>
+                Aucun score enregistré.
+              </div>
+            )}
+          </div>
+          <button
+            onClick={() => { setShowLB(false); onDone() }}
+            style={{
+              background: 'transparent', border: '1px solid #333', color: '#777',
+              fontFamily: 'monospace', fontSize: '11px', letterSpacing: '3px',
+              padding: '9px 26px', cursor: 'pointer',
+            }}
+          >
+            RETOUR AU MENU
+          </button>
+        </div>
+      )}
+
+      <button
+        onClick={onDone}
+        style={{
+          position: 'absolute', top: '1rem', right: '1rem',
+          background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
+          color: 'rgba(255,255,255,0.45)', borderRadius: 4, padding: '4px 10px',
+          cursor: 'pointer', fontSize: '.75rem', fontFamily: 'monospace', letterSpacing: '1px',
+        }}
+      >
+        ESC
+      </button>
     </div>
   )
 }
