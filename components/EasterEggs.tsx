@@ -931,9 +931,12 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
         keyBuf.current = []
         return
       }
-      // "n4" ou "n°4" → lance direct le jeu
-      const tail6 = buf.slice(-6).join('').toLowerCase()
-      if (tail6.endsWith('n4') || tail6.endsWith('n°4')) {
+      // "regle4" ou "regle°4" → lance direct le jeu
+      // On filtre les touches modificatrices (Shift, Control...) pour gérer l'AZERTY
+      const cleanBuf = buf.filter(k => k.length === 1)
+      const cleanStr = cleanBuf.slice(-10).join('').toLowerCase()
+      if (cleanStr.endsWith('regle4') || cleanStr.endsWith('règle4') ||
+          cleanStr.endsWith('regle°4') || cleanStr.endsWith('règle°4')) {
         keyBuf.current = []
         fightClubCount.current = 0
         discoverEgg('fightclub')
