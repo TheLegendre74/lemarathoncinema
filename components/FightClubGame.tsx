@@ -1247,8 +1247,8 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             if (this.bossCinemaTimer === 110) {
               this.spawnFloatText(GW / 2, PLAY_H / 2 - 20, 'NORTON...', '#ffffff', true)
             }
-            // Frame 210 : fin de cinématique — nettoyer le pistolet et déclencher victoire
-            if (this.bossCinemaTimer === 210) {
+            // Frame 380 : fin de cinématique — nettoyer le pistolet et déclencher victoire
+            if (this.bossCinemaTimer === 380) {
               this.bossCinematic = false
               this.heldWeapon = null     // enlève le pistolet pour ne pas bloquer le mode infini
               this.weaponGfx.clear()
@@ -2191,6 +2191,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             if (this.heldWeapon && p.state !== 'dead') {
               this.weaponGfx.setPosition(p.x - cam, p.floorY - p.jumpH)
               this.weaponGfx.setScale(p.face * ds, ds)
+              this.weaponGfx.setDepth(p.gfx.depth + 1)
               drawHeldWeapon(this.weaponGfx, this.heldWeapon.type, p.state)
             } else {
               this.weaponGfx.clear()
