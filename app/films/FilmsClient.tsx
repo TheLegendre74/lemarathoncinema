@@ -108,6 +108,7 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, watchPct, r
         document.documentElement.style.transform = 'rotate(0deg)'
         setTimeout(() => {
           document.documentElement.style.transition = ''
+          document.documentElement.style.transform  = ''   // supprime le transform pour ne pas casser position:fixed
           setInceptionTilt(false)
         }, 1600)
       }, 3200)
