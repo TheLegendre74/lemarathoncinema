@@ -922,6 +922,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
 
         bobTributeActive = false
         bobTributeTimer = 0
+        pendingBobTribute = false   // Bob mort, attend que tous les autres ennemis meurent
         tributeEnemy: Char | null = null
         tributeBobX = 0
         tributeBobY = 0
@@ -1031,7 +1032,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           this.endlessMode = false; this.endlessWave = 0; this.endlessHpMult = 1.0
           this.endlessTriggerX = 0; this.endlessNextX = 999999
           this.secretDoor = null; this.secretDoorUsed = false; this.secretDoorKeyWasDown = false
-          this.bobTributeActive = false; this.bobTributeTimer = 0
+          this.bobTributeActive = false; this.bobTributeTimer = 0; this.pendingBobTribute = false
           this.tributeEnemy = null; this.tributeBobX = 0; this.tributeBobY = 0; this.tributeTextObj = null
           this.marlaPauseActive = false; this.marlaPauseTimer = 0; this.marlaText = null
           this.gunPickupAnim = false; this.gunPickupAnimTimer = 0; this.gunReadyToFire = false; this.gunReadyText = null
@@ -1288,8 +1289,8 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
               }
             }
 
-            // Frame 170: "Il s'appelait Robert Paulson !" — texte grand, centré
-            if (this.bobTributeTimer === 170) {
+            // Frame 130: "Il s'appelait Robert Paulson !" — texte grand, centré (3 sec)
+            if (this.bobTributeTimer === 130) {
               if (this.tributeTextObj) { try { this.tributeTextObj.destroy() } catch (_) {} }
               this.tributeTextObj = this.add.text(
                 GW / 2, PLAY_H / 2 - 30,
@@ -1301,8 +1302,8 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
               this.cameras.main.flash(180, 255, 230, 80, false)
             }
 
-            // Frame 320: supprimer le texte avant la fin
-            if (this.bobTributeTimer === 320) {
+            // Frame 310: supprimer le texte (3 sec après frame 130)
+            if (this.bobTributeTimer === 310) {
               if (this.tributeTextObj) { try { this.tributeTextObj.destroy() } catch (_) {} this.tributeTextObj = null }
             }
 
@@ -1365,6 +1366,13 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           // Wave cleared check
           const allDead = this.enemies.length > 0 && this.enemies.every(e => e.hp <= 0)
           if (allDead && !this.waveCleared && !this.bossCinematic) {
+            // Si Bob était dans la vague et que le tribute n'a pas encore eu lieu → le déclencher
+            if (this.pendingBobTribute && !this.bobTributeActive) {
+              this.pendingBobTribute = false
+              this.triggerBobTribute(this.tributeBobX, this.tributeBobY)
+              // Ne pas valider la vague maintenant — le tribute va spawner un nouvel ennemi
+              return
+            }
             this.waveCleared = true
             if (this.isBossFight && !this.endlessMode) {
               // handled by cinematic / triggerVictory inside boss AI
@@ -1553,9 +1561,11 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
               this.score += 50 + this.combo * 8
               this.spawnBlood(e.x, e.floorY - PH / 2, 10)
               this.cameras.main.shake(140, 0.007)
-              // Bob tribute
+              // Bob mort : mémoriser sa position, attendre que tous les autres meurent
               if (e.charType === 'bob') {
-                this.triggerBobTribute(e.x, e.floorY)
+                this.pendingBobTribute = true
+                this.tributeBobX = e.x
+                this.tributeBobY = e.floorY
               }
               // Weapon drop — 14% chance, not from Tyler
               if (e.charType !== 'tyler' && Math.random() < 0.14) {
