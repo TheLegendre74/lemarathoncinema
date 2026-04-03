@@ -924,6 +924,12 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
         marlaPauseTimer = 0
         marlaText: G = null
 
+        // Gun pickup animation (boss phase 2)
+        gunPickupAnim = false
+        gunPickupAnimTimer = 0
+        gunReadyToFire = false
+        gunReadyText: G = null
+
         // Tyler boss pattern system
         bossPtrnState: BossPtrnState = 'approach'
         bossPtrnIdx = 0       // 0=combo, 1=charge, 2=grab
@@ -1020,6 +1026,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           this.bobTributeActive = false; this.bobTributeTimer = 0
           this.tributeEnemy = null; this.tributeBobX = 0; this.tributeBobY = 0; this.tributeTextObj = null
           this.marlaPauseActive = false; this.marlaPauseTimer = 0; this.marlaText = null
+          this.gunPickupAnim = false; this.gunPickupAnimTimer = 0; this.gunReadyToFire = false; this.gunReadyText = null
 
           // Place secret door at a random world X between zone 1 and second-to-last zone
           const minDoorZone = 1
@@ -1050,6 +1057,8 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             this.bossCinemaTimer = 0
             this.heldWeapon = null   // retire le pistolet
             this.weaponGfx.clear()
+            this.gunPickupAnim = false; this.gunPickupAnimTimer = 0; this.gunReadyToFire = false
+            if (this.gunReadyText) { try { this.gunReadyText.destroy() } catch (_) {} this.gunReadyText = null }
             // Réinitialiser l'état du joueur
             this.player.state = 'idle'; this.player.stateTimer = 0
             if (this.music && !this.music.isPlaying) try { this.music.play() } catch (_) {}
@@ -1097,9 +1106,37 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           if (this.gameOver) { this.tickGameOver(); return }
           if (this.victory)  return
 
-          if (!this.bobTributeActive) this.handleInput()
+          if (!this.bobTributeActive && !this.gunPickupAnim) this.handleInput()
           this.tickChar(this.player)
-          if (this.bobTributeActive) { this.player.vx = 0; this.player.vy = 0 }
+          if (this.bobTributeActive || this.gunPickupAnim) { this.player.vx = 0; this.player.vy = 0 }
+
+          // ── Animation ramassage pistolet (boss phase 2) ──────
+          if (this.gunPickupAnim) {
+            this.gunPickupAnimTimer++
+            const p = this.player
+            // Maintenir le joueur en état taunt (pistolet levé vers la bouche) chaque frame
+            p.state = 'taunt'; p.stateTimer = 0; p.vx = 0; p.vy = 0
+            // Légères secousses de caméra qui s'intensifient — tension
+            if (this.gunPickupAnimTimer === 20) this.cameras.main.shake(120, 0.003)
+            if (this.gunPickupAnimTimer === 45) this.cameras.main.shake(180, 0.005)
+            // Frame 75 : animation terminée — afficher "Tirer ?"
+            if (this.gunPickupAnimTimer === 75) {
+              this.gunPickupAnim = false
+              this.gunReadyToFire = true
+              if (this.gunReadyText) { try { this.gunReadyText.destroy() } catch (_) {} }
+              this.gunReadyText = this.add.text(
+                GW / 2, PLAY_H / 2 + 10,
+                `Tirer ?  [ ${kd(KEYS.punch)} ]`,
+                { fontFamily: 'Impact', fontSize: '30px', color: '#cc1111',
+                  stroke: '#000000', strokeThickness: 5 }
+              ).setOrigin(0.5, 0.5).setDepth(510)
+              this.tweens.add({
+                targets: this.gunReadyText,
+                alpha: { from: 1, to: 0.25 },
+                duration: 420, yoyo: true, repeat: -1,
+              })
+            }
+          }
 
           // Constrain player to camera left edge and maxPlayerWorldX
           const camLeft = this.cameraX + 36
@@ -1121,9 +1158,18 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
                 this.heldWeapon = { type: w.type, uses: w.maxUses, maxUses: w.maxUses }
                 w.gfx.destroy()
                 this.droppedWeapons.splice(i, 1)
-                const label = w.type === 'bat' ? 'BATTE' : w.type === 'chain' ? 'CHAÎNE' : w.type === 'gun' ? 'PISTOLET' : 'BOUTEILLE'
-                const labelCol = w.type === 'gun' ? '#ffdd44' : '#ffaa00'
-                this.spawnFloatText(this.player.x - this.cameraX, this.player.floorY - 80, `⚔ ${label} RAMASSÉ(E)`, labelCol, w.type === 'gun')
+                // Pistolet du boss phase 2 → animation de mise en bouche
+                if (w.type === 'gun' && this.bossPhase2) {
+                  this.gunPickupAnim = true
+                  this.gunPickupAnimTimer = 0
+                  this.gunReadyToFire = false
+                  this.player.state = 'taunt'; this.player.stateTimer = 0
+                  this.player.vx = 0; this.player.vy = 0
+                } else {
+                  const label = w.type === 'bat' ? 'BATTE' : w.type === 'chain' ? 'CHAÎNE' : w.type === 'gun' ? 'PISTOLET' : 'BOUTEILLE'
+                  const labelCol = w.type === 'gun' ? '#ffdd44' : '#ffaa00'
+                  this.spawnFloatText(this.player.x - this.cameraX, this.player.floorY - 80, `⚔ ${label} RAMASSÉ(E)`, labelCol, false)
+                }
                 break
               }
             }
@@ -1173,14 +1219,19 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
               this.spawnBlood(p.x + p.face * 18, p.floorY - PH + 12, 8)
               this.spawnFloatText(p.x - this.cameraX, p.floorY - PH - 45, 'PAN!', '#cc0000', true)
             }
-            // Frame 80 : Tyler s'effondre raide mort, crâne fracassé
+            // Frame 80 : giclée de sang du crâne de Tyler, puis il s'écrase au sol
             if (this.bossCinemaTimer === 80) {
               if (tyler) {
-                tyler.hp = 0; tyler.state = 'dead'; tyler.deadTimer = 0
-                // Sang jaillissant du crâne de Tyler
-                this.spawnBlood(tyler.x, tyler.floorY - PH + 2, 35)
-                this.spawnBlood(tyler.x + 10, tyler.floorY - PH + 8, 20)
-                this.cameras.main.shake(400, 0.020)
+                // Sang spectaculaire jaillit du crâne AVANT qu'il tombe
+                this.spawnBlood(tyler.x,      tyler.floorY - PH + 2,  40)
+                this.spawnBlood(tyler.x + 12, tyler.floorY - PH,      25)
+                this.spawnBlood(tyler.x - 8,  tyler.floorY - PH + 6,  20)
+                this.spawnBlood(tyler.x + 4,  tyler.floorY - PH - 4,  15)
+                this.cameras.main.shake(500, 0.025)
+                // Tyler s'effondre après la giclée (léger délai visuel)
+                this.time.delayedCall(80, () => {
+                  tyler.hp = 0; tyler.state = 'dead'; tyler.deadTimer = 0
+                })
               }
             }
             // Frame 110 : texte final
@@ -1420,11 +1471,14 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
         // ── ATTACKS ──────────────────────────────────────────
         playerAttack(type: 'punch' | 'kick') {
           const p = this.player
-          if (this.bossCinematic) return
-          // Gun cinematic: point gun at mouth → Tyler dies
+          if (this.bossCinematic || this.gunPickupAnim) return
+          // Pistolet boss : déclencher la cinématique seulement quand gunReadyToFire
           if (this.heldWeapon?.type === 'gun' && this.bossPhase2 && this.bossInvincible) {
+            if (!this.gunReadyToFire) return  // anim en cours, pas encore prêt
             const tyler = this.enemies.find(e => e.charType === 'tyler')
             if (tyler) {
+              this.gunReadyToFire = false
+              if (this.gunReadyText) { try { this.gunReadyText.destroy() } catch (_) {} this.gunReadyText = null }
               this.bossCinematic = true; this.bossCinemaTimer = 0
               p.state = 'taunt'; p.face = tyler.x > p.x ? 1 : -1
               p.vx = 0; p.vy = 0
@@ -2462,7 +2516,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           panel.lineStyle(1, 0xcc9944, 0.5); panel.strokeRect(panX, panY, panW, panH)
           panel.lineStyle(1, 0xcc9944, 0.2); panel.strokeRect(panX + 4, panY + 4, panW - 8, panH - 8)
 
-          this.add.text(GW / 2, panY + 16, '— COMMENT JOUER —', {
+          const title = this.add.text(GW / 2, panY + 16, '— COMMENT JOUER —', {
             fontFamily: 'monospace', fontSize: '10px', color: '#cc9944', letterSpacing: 4,
           }).setOrigin(0.5, 0).setDepth(701)
 
@@ -2484,7 +2538,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           let closed = false
           const close = () => {
             if (closed) return; closed = true
-            const objs = [panel, txt, skip]
+            const objs = [panel, title, txt, skip]
             this.tweens.add({
               targets: objs, alpha: 0, duration: 350,
               onComplete: () => objs.forEach(o => o.destroy()),
