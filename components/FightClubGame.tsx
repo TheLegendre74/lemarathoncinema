@@ -63,6 +63,11 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
   useEffect(() => {
     discoverEgg('fightclub')
     if (!containerRef.current) return
+    // Steal focus from any page element (e.g. forum input) so game keys don't go there
+    const prevFocused = document.activeElement as HTMLElement | null
+    if (prevFocused && prevFocused !== document.body && !(prevFocused instanceof HTMLCanvasElement)) {
+      prevFocused.blur()
+    }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let phaserGame: any = null
 
@@ -81,11 +86,26 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
 
       const VOL = { music: 65, sfx: 70 }
       // Remappable key bindings (Phaser key name strings)
+      // AZERTY mapping: physical key → Phaser key name
+      // AZERTY Z → keyCode 87 → Phaser W (up)
+      // AZERTY Q → keyCode 65 → Phaser A (left)
+      // AZERTY A → keyCode 81 → Phaser Q (punch)
+      // AZERTY W → keyCode 90 → Phaser Z (throw)
       const KEYS = {
-        left: 'Q', right: 'D', up: 'Z', down: 'S',
-        punch: 'A', kick: 'E', throw: 'W', block: 'B',
-        jump: 'SPACE', rage: 'C',
+        left: 'A',    // User presses AZERTY Q (keyCode 65 = Phaser A)
+        right: 'D',
+        up: 'W',      // User presses AZERTY Z (keyCode 87 = Phaser W)
+        down: 'S',
+        punch: 'Q',   // User presses AZERTY A (keyCode 81 = Phaser Q)
+        kick: 'E',
+        throw: 'Z',   // User presses AZERTY W (keyCode 90 = Phaser Z)
+        block: 'B',
+        jump: 'SPACE',
+        rage: 'C',
       }
+      // Maps Phaser key names to their AZERTY physical labels for display
+      const KEY_DISPLAY: Record<string, string> = { 'W': 'Z', 'A': 'Q', 'Q': 'A', 'Z': 'W' }
+      const kd = (k: string) => KEY_DISPLAY[k] ?? k
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let currentMusic: any = null
 
@@ -491,7 +511,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
       // Draw weapon held by player (in hand, facing right; mirrored by gfx scale)
       function drawHeldWeapon(g: G, type: WeaponType, state: CharState) {
         g.clear()
-        const swing = ['punch', 'kick'].includes(state) ? 8 : 0
+        const swing = ['punch', 'kick'].includes(state) ? 18 : 0  // increased for visible weapon swing
         if (type === 'gun') {
           // Gun pointed forward (or upward in taunt = at mouth)
           const isFinale = state === 'taunt'
@@ -776,7 +796,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           const refreshBtns = () => {
             for (const [id, btn] of Object.entries(keyBtns)) {
               const isWaiting = id === waitingFor
-              btn.setText(isWaiting ? ' ? ' : ` ${KEYS[id as KeyId]} `)
+              btn.setText(isWaiting ? ' ? ' : ` ${kd(KEYS[id as KeyId])} `)
               btn.setColor(isWaiting ? '#ffcc44' : '#ffffff')
               btn.setBackgroundColor(isWaiting ? '#662200' : '#1a1a1a')
             }
@@ -788,7 +808,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
               fontFamily: 'monospace', fontSize: '11px', color: '#888888',
             }).setOrigin(0, 0.5)
 
-            const btn = this.add.text(x + 130, y, ` ${KEYS[id]} `, {
+            const btn = this.add.text(x + 130, y, ` ${kd(KEYS[id])} `, {
               fontFamily: 'monospace', fontSize: '11px', color: '#ffffff',
               backgroundColor: '#1a1a1a', padding: { x: 6, y: 3 },
             }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true })
@@ -888,6 +908,8 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
         endlessMode = false
         endlessWave = 0
         endlessHpMult = 1.0
+        endlessTriggerX = 0
+        endlessNextX = 999999
 
         keys!: Record<string, any>
         music?: any
@@ -962,6 +984,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           this.bossVulnerable = false; this.bossInvincible = false
           this.bossPhase2 = false; this.bossCinematic = false; this.bossCinemaTimer = 0
           this.endlessMode = false; this.endlessWave = 0; this.endlessHpMult = 1.0
+          this.endlessTriggerX = 0; this.endlessNextX = 999999
           this.secretDoor = null; this.secretDoorUsed = false; this.secretDoorKeyWasDown = false
           this.bobTributeActive = false; this.bobTributeTimer = 0
 
@@ -978,12 +1001,20 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             this.endlessMode = true
             this.victory = false
             this.waveCleared = true
+            this.isBossFight = false
+            this.bossHpGfx.setVisible(false)
             this.currentZoneIdx = this.waveZones.length  // past all zones
+            // Remove scroll limit — player can go anywhere
             this.maxPlayerWorldX = this.worldWidth - 40
+            // Set endless trigger position — first wave spawns when player walks past boss zone
+            this.endlessTriggerX = this.waveZones[this.waveZones.length - 1]?.triggerX ?? 400
+            this.endlessNextX = this.endlessTriggerX + 400  // player needs to reach here for first endless wave
             if (this.music && !this.music.isPlaying) try { this.music.play() } catch (_) {}
           }
 
           const kb = this.input.keyboard!
+          // Allow browser default key handling so React inputs can receive all keys
+          try { kb.disableGlobalCapture() } catch (_) { try { (kb as any).manager && ((kb as any).manager.preventDefault = false) } catch (_2) {} }
           // Use remappable KEYS + always-available arrow fallbacks
           this.keys = {
             left:  kb.addKey(KEYS.left),   right: kb.addKey(KEYS.right),
@@ -1028,7 +1059,11 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
 
           // Constrain player to camera left edge and maxPlayerWorldX
           const camLeft = this.cameraX + 36
-          this.player.x = Math.max(camLeft, Math.min(this.maxPlayerWorldX, this.player.x))
+          if (this.isBossFight) {
+            this.player.x = Math.max(camLeft, this.player.x)  // only constrain left during boss fight
+          } else {
+            this.player.x = Math.max(camLeft, Math.min(this.maxPlayerWorldX, this.player.x))
+          }
 
           // Smooth camera — player stays around 25% from left
           const targetCam = this.player.x - 210
@@ -1062,14 +1097,22 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           // Boss cinematic tick
           if (this.bossCinematic) {
             this.bossCinemaTimer++
+            // Increasing camera shake as cinematic builds
+            if (this.bossCinemaTimer > 20 && this.bossCinemaTimer < 80) {
+              if (this.bossCinemaTimer % 10 === 0) {
+                this.cameras.main.shake(80, 0.004 + this.bossCinemaTimer * 0.0001)
+              }
+            }
             if (this.bossCinemaTimer === 80) {
               // Flash + Tyler explodes
               this.cameras.main.flash(500, 255, 0, 0, false)
+              this.cameras.main.shake(400, 0.022)
               const tyler = this.enemies.find(e => e.charType === 'tyler')
               if (tyler) {
                 tyler.hp = 0; tyler.state = 'dead'; tyler.deadTimer = 0
                 this.spawnBlood(tyler.x, tyler.floorY - PH, 24)
               }
+              this.spawnFloatText(GW / 2, PLAY_H / 2 - 30, 'NORTON...', '#ffffff', true)
             }
             if (this.bossCinemaTimer === 180) {
               this.bossCinematic = false
@@ -1131,13 +1174,9 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             if (this.isBossFight && !this.endlessMode) {
               // handled by cinematic / triggerVictory inside boss AI
             } else if (this.endlessMode) {
-              // Endless: next wave after delay
-              this.endlessWave++
-              this.endlessHpMult = 1 + this.endlessWave * 0.25
-              const bonus = 200 + this.endlessWave * 100
-              this.score += bonus
-              this.spawnFloatText(GW / 2, PLAY_H / 2 - 10, `VAGUE INFINIE ${this.endlessWave}  +${bonus}`, '#ff4444', true)
-              this.time.delayedCall(2000, () => { if (!this.gameOver) this.spawnEndlessWave() })
+              // Endless wave cleared — unlock scroll, player walks right to trigger next wave
+              this.endlessNextX = this.player.x + 400
+              this.maxPlayerWorldX = this.worldWidth - 40
             } else {
               const bonus = 150 + this.wave * 50
               this.score += bonus
@@ -1151,6 +1190,20 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
               } else {
                 this.maxPlayerWorldX = this.worldWidth - 40
               }
+            }
+          }
+
+          // Endless mode: trigger new wave when player walks far enough right
+          if (this.endlessMode && this.waveCleared && !this.gameOver && !this.victory) {
+            if (this.player.x >= this.endlessNextX) {
+              this.endlessWave++
+              this.endlessHpMult = 1 + this.endlessWave * 0.25
+              const bonus = 200 + this.endlessWave * 100
+              this.score += bonus
+              this.spawnFloatText(GW / 2, PLAY_H / 2 - 10, `VAGUE INFINIE ${this.endlessWave}  +${bonus}`, '#ff4444', true)
+              this.spawnEndlessWave()
+              // Next wave triggers 600px further right
+              this.endlessNextX = this.player.x + 600
             }
           }
 
@@ -1252,8 +1305,8 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           let isWep = false
           if (this.heldWeapon) {
             const wep = this.heldWeapon
-            base  = wep.type === 'bat' ? 42 : wep.type === 'chain' ? 32 : 55
-            range = wep.type === 'bat' ? 130 : wep.type === 'chain' ? 175 : 105
+            base  = wep.type === 'bat' ? 55 : wep.type === 'chain' ? 42 : 68
+            range = wep.type === 'bat' ? 140 : wep.type === 'chain' ? 195 : 115
             isWep = true
           } else {
             base  = type === 'punch' ? 18 : 28
@@ -1569,7 +1622,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             this.spawnFloatText(GW / 2, PLAY_H / 2 - 44,
               '"Si tu tires sur moi... tu te tires dessus."', '#cc1111', true)
             this.spawnFloatText(GW / 2, PLAY_H / 2 + 12,
-              `[Ramasse le pistolet → ${KEYS.punch} pour finir]`, '#ffcc44', false)
+              `[Ramasse le pistolet → ${kd(KEYS.punch)} pour finir]`, '#ffcc44', false)
           })
         }
 
@@ -1631,7 +1684,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
               i++
             }
           }
-          this.maxPlayerWorldX = this.player.x + 300
+          this.maxPlayerWorldX = this.player.x + 600  // lock player during combat
           this.showWaveAnnounce(this.endlessWave)
         }
 
@@ -2100,12 +2153,12 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
 
           // Permanent controls display (dynamic — reflects remapped keys)
           this.add.text(GW / 2, HY + 5,
-            `${KEYS.up}${KEYS.left}${KEYS.down}${KEYS.right}/←↑↓→ Déplacer  ·  ${KEYS.punch} Poing  ·  ${KEYS.kick} Kick  ·  ${KEYS.throw} Lancer  ·  ${KEYS.block} Garde  ·  ${KEYS.jump} Saut  ·  ${KEYS.rage} Rage`, {
+            `${kd(KEYS.up)}${kd(KEYS.left)}${kd(KEYS.down)}${kd(KEYS.right)}/←↑↓→ Déplacer  ·  ${kd(KEYS.punch)} Poing  ·  ${kd(KEYS.kick)} Kick  ·  ${kd(KEYS.throw)} Lancer  ·  ${kd(KEYS.block)} Garde  ·  ${kd(KEYS.jump)} Saut  ·  ${kd(KEYS.rage)} Rage`, {
             fontFamily: 'monospace', fontSize: '9.5px', color: 'rgba(220,220,220,0.55)', align: 'center',
           }).setOrigin(0.5, 0).setDepth(D)
           // Block reminder
           this.add.text(GW / 2, HY + 52,
-            `${KEYS.block}  ─  GARDE (parfait < 1s avant le coup = STUN ennemi)`, {
+            `${kd(KEYS.block)}  ─  GARDE (parfait < 1s avant le coup = STUN ennemi)`, {
             fontFamily: 'monospace', fontSize: '8px', color: 'rgba(100,120,200,0.60)', align: 'center',
           }).setOrigin(0.5, 0.5).setDepth(D)
         }
@@ -2246,9 +2299,9 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           }).setOrigin(0.5, 0).setDepth(701)
 
           const lines = [
-            `${KEYS.up} ${KEYS.left} ${KEYS.down} ${KEYS.right}  /  ←↑↓→   Déplacer        ${KEYS.jump}  Sauter        ${KEYS.rage}  Rage (jauge pleine)`,
-            `${KEYS.punch}  Poing          ${KEYS.kick}  Kick          ${KEYS.throw}  Lancer l'arme tenue`,
-            `${KEYS.block}  Garde  —  BLOQUER AU MOMENT du coup = STUN ennemi (surtout contre le boss !)`,
+            `${kd(KEYS.up)} ${kd(KEYS.left)} ${kd(KEYS.down)} ${kd(KEYS.right)}  /  ←↑↓→   Déplacer        ${kd(KEYS.jump)}  Sauter        ${kd(KEYS.rage)}  Rage (jauge pleine)`,
+            `${kd(KEYS.punch)}  Poing          ${kd(KEYS.kick)}  Kick          ${kd(KEYS.throw)}  Lancer l'arme tenue`,
+            `${kd(KEYS.block)}  Garde  —  BLOQUER AU MOMENT du coup = STUN ennemi (surtout contre le boss !)`,
             `Les ennemis drop des armes · ramasse-les · elles ont une durée limitée`,
           ]
           const txt = this.add.text(GW / 2, panY + 36, lines.join('\n'), {
@@ -2623,7 +2676,12 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             autoFocus
             value={nameVal}
             onChange={e => setNameVal(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') confirmName() }}
+            onKeyDown={e => {
+              e.stopPropagation()
+              e.nativeEvent.stopImmediatePropagation()
+              if (e.key === 'Enter') confirmName()
+            }}
+            onKeyUp={e => { e.stopPropagation(); e.nativeEvent.stopImmediatePropagation() }}
             maxLength={12}
             style={{
               background: '#111', border: '1px solid #cc1111', color: '#fff',
