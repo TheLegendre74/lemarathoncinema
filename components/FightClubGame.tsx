@@ -89,6 +89,54 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let currentMusic: any = null
 
+      function playSfx(type: 'punch' | 'kick' | 'hurt_player' | 'hurt_enemy' | 'weapon_hit' | 'marla') {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+          const osc = ctx.createOscillator()
+          const gain = ctx.createGain()
+          osc.connect(gain); gain.connect(ctx.destination)
+          const vol = VOL.sfx / 100
+          if (type === 'punch') {
+            osc.type = 'square'; osc.frequency.setValueAtTime(180, ctx.currentTime)
+            osc.frequency.exponentialRampToValueAtTime(60, ctx.currentTime + 0.08)
+            gain.gain.setValueAtTime(0.25 * vol, ctx.currentTime)
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.09)
+            osc.start(); osc.stop(ctx.currentTime + 0.09)
+          } else if (type === 'kick') {
+            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(220, ctx.currentTime)
+            osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.12)
+            gain.gain.setValueAtTime(0.30 * vol, ctx.currentTime)
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12)
+            osc.start(); osc.stop(ctx.currentTime + 0.12)
+          } else if (type === 'hurt_player') {
+            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(300, ctx.currentTime)
+            osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.15)
+            gain.gain.setValueAtTime(0.35 * vol, ctx.currentTime)
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15)
+            osc.start(); osc.stop(ctx.currentTime + 0.15)
+          } else if (type === 'hurt_enemy') {
+            osc.type = 'square'; osc.frequency.setValueAtTime(260, ctx.currentTime)
+            osc.frequency.exponentialRampToValueAtTime(90, ctx.currentTime + 0.07)
+            gain.gain.setValueAtTime(0.18 * vol, ctx.currentTime)
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.07)
+            osc.start(); osc.stop(ctx.currentTime + 0.07)
+          } else if (type === 'weapon_hit') {
+            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(400, ctx.currentTime)
+            osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.10)
+            gain.gain.setValueAtTime(0.28 * vol, ctx.currentTime)
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.10)
+            osc.start(); osc.stop(ctx.currentTime + 0.10)
+          } else if (type === 'marla') {
+            osc.type = 'sine'; osc.frequency.setValueAtTime(660, ctx.currentTime)
+            osc.frequency.setValueAtTime(880, ctx.currentTime + 0.05)
+            gain.gain.setValueAtTime(0.22 * vol, ctx.currentTime)
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6)
+            osc.start(); osc.stop(ctx.currentTime + 0.6)
+          }
+        } catch (_) {}
+      }
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       type G = any
       const r  = (g: G, c: number, x: number, y: number, w: number, h: number) => { g.fillStyle(c, 1); g.fillRect(x, y, w, h) }
@@ -486,6 +534,21 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
         r(g, 0x111111, -2, 2, 8, 8)
       }
 
+      function drawSecretDoor(g: G, frame: number) {
+        g.clear()
+        const pulse = 0.6 + Math.sin(frame * 0.05) * 0.4
+        ra(g, 0xcc1111, pulse * 0.3, -14, -44, 28, 44)   // glow
+        r(g, 0x4a1a1a, -12, -42, 24, 42)   // door frame
+        r(g, 0xcc2222, -10, -40, 20, 38)   // door panel
+        r(g, 0x8b0000, -10, -40, 9, 38)    // left half
+        r(g, 0x991111, 1, -40, 9, 38)      // right half
+        r(g, 0xffcc00, 7, -28, 3, 3)       // doorknob
+        // "?" label
+        g.fillStyle(0xffcc00, pulse)
+        g.fillRect(-3, -36, 6, 10)
+        g.fillRect(-3, -22, 6, 4)
+      }
+
       // ══════════════════════════════════════════════════════
       // SCENE HELPERS
       // ══════════════════════════════════════════════════════
@@ -803,6 +866,13 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
         weaponGfx!: G
         projectiles: Array<{ gfx: G; x: number; y: number; vx: number; dmg: number; face: 1|-1 }> = []
 
+        secretDoor: { x: number; y: number; gfx: G } | null = null
+        secretDoorUsed = false
+        secretDoorKeyWasDown = false
+
+        bobTributeActive = false
+        bobTributeTimer = 0
+
         // Tyler boss pattern system
         bossPtrnState: BossPtrnState = 'approach'
         bossPtrnIdx = 0       // 0=combo, 1=charge, 2=grab
@@ -892,6 +962,16 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           this.bossVulnerable = false; this.bossInvincible = false
           this.bossPhase2 = false; this.bossCinematic = false; this.bossCinemaTimer = 0
           this.endlessMode = false; this.endlessWave = 0; this.endlessHpMult = 1.0
+          this.secretDoor = null; this.secretDoorUsed = false; this.secretDoorKeyWasDown = false
+          this.bobTributeActive = false; this.bobTributeTimer = 0
+
+          // Place secret door at a random world X between zone 1 and second-to-last zone
+          const minDoorZone = 1
+          const maxDoorZone = Math.max(1, this.waveZones.length - 2)
+          const doorZoneIdx = minDoorZone + Math.floor(Math.random() * (maxDoorZone - minDoorZone + 1))
+          const doorX = this.waveZones[doorZoneIdx].triggerX + 200 + Math.random() * 300
+          const doorGfx = this.add.graphics().setDepth(6)
+          this.secretDoor = { x: doorX, y: FY1, gfx: doorGfx }
 
           // Expose endless start to React
           startEndlessRef.current = () => {
@@ -997,13 +1077,26 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             }
           }
 
+          // Bob tribute timer
+          if (this.bobTributeActive) {
+            this.bobTributeTimer++
+            if (this.bobTributeTimer >= 180) {   // 3 seconds at 60fps
+              this.bobTributeActive = false
+              this.bobTributeTimer = 0
+              // Resume enemies (reset atkCD to normal)
+              for (const e of this.enemies) {
+                if (e.hp > 0) e.atkCD = Math.min(e.atkCD, 60)
+              }
+            }
+          }
+
           for (const e of this.enemies) {
             if (e.hp > 0) {
               if (e.stunned) {
                 if (e.stunTimer > 0) { e.stunTimer--; if (e.stunTimer === 0) e.stunned = false }
               } else if (e.charType === 'tyler' && this.isBossFight) {
                 if (!this.bossCinematic) this.tickTylerAI(e)
-              } else {
+              } else if (!this.bobTributeActive) {
                 this.tickAI(e)
               }
               this.tickChar(e)
@@ -1062,6 +1155,21 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           }
 
           if (this.player.hp <= 0 && !this.gameOver) this.triggerGameOver()
+
+          // Secret door interaction
+          if (this.secretDoor && !this.secretDoorUsed) {
+            const kickKey = this.input.keyboard!.addKey(KEYS.kick)
+            const kickDown = kickKey.isDown
+            if (!this.secretDoorKeyWasDown && kickDown) {
+              const dist = Math.abs(this.player.x - this.secretDoor.x)
+              if (dist < 50 && Math.abs(this.player.floorY - this.secretDoor.y) < 80) {
+                this.secretDoorUsed = true
+                this.music?.stop()
+                this.scene.start('Cinematic')
+              }
+            }
+            this.secretDoorKeyWasDown = kickDown
+          }
 
           this.tickBlood()
           this.tickFloats()
@@ -1167,6 +1275,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             e.vx = p.face * (type === 'punch' ? 3 : 6)
             e.hurtInv = 16; e.state = 'hurt'; e.stateTimer = 12
             hit = true
+            playSfx(isWep ? 'weapon_hit' : type === 'kick' ? 'kick' : 'punch')
 
             this.score += dmg
             this.combo++; this.comboTimer = 90
@@ -1193,8 +1302,12 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
               this.score += 50 + this.combo * 8
               this.spawnBlood(e.x, e.floorY - PH / 2, 10)
               this.cameras.main.shake(140, 0.007)
-              // Weapon drop — 35% chance, not from Tyler
-              if (e.charType !== 'tyler' && Math.random() < 0.35) {
+              // Bob tribute
+              if (e.charType === 'bob') {
+                this.triggerBobTribute(e.x, e.floorY)
+              }
+              // Weapon drop — 14% chance, not from Tyler
+              if (e.charType !== 'tyler' && Math.random() < 0.14) {
                 this.dropWeapon(e.x, e.floorY)
               }
             } else {
@@ -1433,6 +1546,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             p.hurtInv = 25; p.state = 'hurt'; p.stateTimer = 16
             this.rage = Math.min(100, this.rage + 15)
             this.cameras.main.shake(110, 0.005)
+            playSfx('hurt_player')
           }
         }
 
@@ -1457,6 +1571,31 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             this.spawnFloatText(GW / 2, PLAY_H / 2 + 12,
               `[Ramasse le pistolet → ${KEYS.punch} pour finir]`, '#ffcc44', false)
           })
+        }
+
+        // ── BOB DEATH TRIBUTE ────────────────────────────────
+        triggerBobTribute(bobX: number, bobY: number) {
+          this.bobTributeActive = true
+          this.bobTributeTimer = 0
+          // Freeze all living enemies
+          for (const e of this.enemies) {
+            if (e.hp > 0) { e.atkCD = 999; e.vx = 0; e.vy = 0 }
+          }
+          // Find nearest living non-Bob enemy to react
+          let nearest: Char | null = null
+          let nearDist = Infinity
+          for (const e of this.enemies) {
+            if (e.hp <= 0 || e.charType === 'bob') continue
+            const d = Math.abs(e.x - bobX)
+            if (d < nearDist) { nearDist = d; nearest = e }
+          }
+          if (nearest) {
+            nearest.state = 'idle'
+            nearest.face = nearest.x > bobX ? -1 : 1
+            this.spawnFloatText(nearest.x - this.cameraX, nearest.floorY - PH - 30, 'SON NOM EST ROBERT PAULSON !', '#ffdd44', true)
+          }
+          this.spawnFloatText(bobX - this.cameraX, bobY - 40, 'SON NOM EST ROBERT PAULSON !', '#ffcc00', true)
+          this.cameras.main.shake(200, 0.008)
         }
 
         // ── ENDLESS WAVES ────────────────────────────────────
@@ -1573,6 +1712,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
                 p.hurtInv = 22; p.state = 'hurt'; p.stateTimer = 14
                 this.rage = Math.min(100, this.rage + 12)
                 this.cameras.main.shake(90, 0.004)
+                playSfx('hurt_player')
               }
             }
           } else if (dist < 700) {
@@ -1608,6 +1748,8 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           this.maxPlayerWorldX = zone.triggerX + 190
 
           if (isBoss) {
+            // Boss fight: allow player to reach Tyler and the gun
+            this.maxPlayerWorldX = this.worldWidth - 40
             // Tyler is invincible from the start — only vulnerable during special windows
             this.bossInvincible = true
             this.spawnEnemy('tyler', zone.triggerX + 480, (FY1 + FY2) / 2)
@@ -1679,7 +1821,11 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           const targetWorldX = this.cameraX + 145   // ~145px from left of screen
           if (m.phase === 0) {
             m.x += 2.2
-            if (m.x >= targetWorldX) { m.phase = 1; m.timer = 0 }
+            if (m.x >= targetWorldX) {
+              m.phase = 1; m.timer = 0
+              playSfx('marla')
+              this.spawnFloatText(this.player.x - this.cameraX, this.player.floorY - 110, 'Marla ?!', '#ff99cc', true)
+            }
           } else if (m.phase === 1) {
             if (m.timer === 40)
               this.spawnFloatText(m.x - this.cameraX, m.floorY - 88, '"Voilà une cigarette."', '#ff99cc', true)
@@ -1711,6 +1857,24 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           this.drawBackground(cam)
           this.drawFloor(cam)
 
+          // Render secret door
+          if (this.secretDoor && !this.secretDoorUsed) {
+            const sx = this.secretDoor.x - cam
+            if (sx > -60 && sx < GW + 60) {
+              this.secretDoor.gfx.setPosition(sx, this.secretDoor.y)
+              drawSecretDoor(this.secretDoor.gfx, this.frame)
+              // Show hint label if player is close
+              if (Math.abs(this.player.x - this.secretDoor.x) < 80) {
+                this.overlayGfx.fillStyle(0xffcc00, 0.85)
+                this.overlayGfx.fillRect(sx - 48, this.secretDoor.y - 62, 96, 14)
+                this.overlayGfx.fillStyle(0x000000, 0.9)
+                this.overlayGfx.fillRect(sx - 47, this.secretDoor.y - 61, 94, 12)
+              }
+            } else {
+              this.secretDoor.gfx.clear()
+            }
+          }
+
           // Render weapons on ground
           for (const w of this.droppedWeapons) {
             const sx = w.x - cam
@@ -1727,7 +1891,9 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             const ds = this.depthScale(p.floorY) * 1.72
             p.gfx.setPosition(p.x - cam, p.floorY - p.jumpH)
             p.gfx.setScale(p.face * ds, ds)
-            drawNorton(p.gfx, p.state, this.frame)
+            // When holding a weapon, don't show the bare fist punch — weapon handles the swing
+            const bodyState = (this.heldWeapon && (p.state === 'punch' || p.state === 'kick')) ? 'idle' : p.state
+            drawNorton(p.gfx, bodyState, this.frame)
             // Draw held weapon on player
             if (this.heldWeapon && p.state !== 'dead') {
               this.weaponGfx.setPosition(p.x - cam, p.floorY - p.jumpH)
@@ -2090,7 +2256,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             align: 'center', lineSpacing: 8,
           }).setOrigin(0.5, 0).setDepth(701)
 
-          const skip = this.add.text(GW / 2, panY + panH - 14, '[ appuie sur n\'importe quelle touche pour fermer · fermeture auto dans 8s ]', {
+          const skip = this.add.text(GW / 2, panY + panH - 14, '[ appuie sur n\'importe quelle touche pour fermer · fermeture auto dans 14s ]', {
             fontFamily: 'monospace', fontSize: '8.5px', color: '#555555',
           }).setOrigin(0.5, 1).setDepth(701)
 
@@ -2105,7 +2271,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             // Show opening quote after tutorial closes
             this.time.delayedCall(200, () => this.showQuote('"La première règle du Fight Club..."'))
           }
-          this.time.delayedCall(8000, close)
+          this.time.delayedCall(14000, close)
           this.input.keyboard!.once('keydown', close)
         }
 
@@ -2259,13 +2425,165 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
         shutdown() { this.music?.stop(); currentMusic = null }
       }
 
+      // ══════════════════════════════════════════════════════
+      // CINEMATIC SCENE — secret door ending
+      // ══════════════════════════════════════════════════════
+      class CinematicScene extends Phaser.Scene {
+        cinFrame = 0
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        buildings: Array<{ x: number; h: number; w: number; col: number; fallAngle: number; fallSpeed: number }> = []
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        particles: Array<{ x: number; y: number; vx: number; vy: number; life: number; col: number }> = []
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        overlayG!: any
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        textObjs: any[] = []
+
+        constructor() { super({ key: 'Cinematic' }) }
+
+        create() {
+          this.cinFrame = 0
+          this.buildings = []
+          this.particles = []
+
+          // Generate city buildings
+          for (let i = 0; i < 12; i++) {
+            const bx = 30 + i * 68 + Math.random() * 20
+            const bh = 80 + Math.random() * 140
+            const bw = 30 + Math.random() * 40
+            const cols = [0x1a1a22, 0x141420, 0x1e1e28, 0x181820]
+            const col = cols[Math.floor(Math.random() * cols.length)]
+            this.buildings.push({ x: bx, h: bh, w: bw, col, fallAngle: 0, fallSpeed: (Math.random() * 0.008 + 0.003) * (Math.random() < 0.5 ? 1 : -1) })
+          }
+
+          this.overlayG = this.add.graphics().setDepth(10)
+
+          // Delayed text sequence
+          this.time.delayedCall(1200, () => {
+            const t1 = this.add.text(GW / 2, PLAY_H / 2 - 50, 'LE PROJET CHAOS A RÉUSSI.', {
+              fontFamily: 'Impact', fontSize: '36px', color: '#ffdd00',
+              stroke: '#000000', strokeThickness: 5,
+            }).setOrigin(0.5, 0.5).setDepth(20).setAlpha(0)
+            this.tweens.add({ targets: t1, alpha: 1, duration: 1000 })
+            this.textObjs.push(t1)
+          })
+          this.time.delayedCall(3000, () => {
+            const t2 = this.add.text(GW / 2, PLAY_H / 2 + 10,
+              'Tyler est parti, mais pour combien de temps ?...', {
+              fontFamily: 'serif', fontSize: '20px', color: '#cccccc',
+              stroke: '#000000', strokeThickness: 4, fontStyle: 'italic',
+            }).setOrigin(0.5, 0.5).setDepth(20).setAlpha(0)
+            this.tweens.add({ targets: t2, alpha: 1, duration: 1200 })
+            this.textObjs.push(t2)
+          })
+          this.time.delayedCall(5500, () => {
+            const tExit = this.add.text(GW / 2, PLAY_H - 30, '[ appuyez sur une touche pour continuer ]', {
+              fontFamily: 'monospace', fontSize: '10px', color: '#555555',
+            }).setOrigin(0.5, 1).setDepth(20)
+            this.textObjs.push(tExit)
+            this.input.keyboard!.once('keydown', () => { this.scene.start('Menu') })
+          })
+        }
+
+        update() {
+          this.cinFrame++
+          const g = this.overlayG
+          g.clear()
+
+          // Black sky
+          g.fillStyle(0x06060c, 1); g.fillRect(0, 0, GW, GH)
+
+          // Stars
+          for (let i = 0; i < 40; i++) {
+            const sx = (i * 193 + 7) % GW
+            const sy = (i * 97 + 13) % (PLAY_H * 0.55)
+            const bright = 0.3 + Math.sin(this.cinFrame * 0.04 + i) * 0.2
+            g.fillStyle(0xffffff, bright); g.fillRect(sx, sy, 1, 1)
+          }
+
+          // Distant buildings (silhouette) with fall/collapse
+          for (const b of this.buildings) {
+            b.fallAngle += b.fallSpeed * (this.cinFrame > 60 ? 1 : 0)
+            b.fallAngle = Math.max(-0.8, Math.min(0.8, b.fallAngle))
+            // Simple rotated rect approximation via shear
+            const shear = Math.sin(b.fallAngle) * b.h * 0.5
+            g.fillStyle(b.col, 1)
+            g.fillRect(b.x + shear - b.w / 2, PLAY_H - b.h, b.w, b.h)
+            // Windows
+            for (let wy = 0; wy < 5; wy++) {
+              for (let wx = 0; wx < 3; wx++) {
+                const lit = Math.sin(this.cinFrame * 0.06 + wy * 2.1 + wx * 1.3 + b.x) > 0.6
+                if (lit) {
+                  g.fillStyle(0xffeeaa, 0.55)
+                  g.fillRect(b.x + shear - b.w / 2 + 4 + wx * 9, PLAY_H - b.h + 8 + wy * 14, 5, 7)
+                }
+              }
+            }
+          }
+
+          // Explosion particles
+          if (this.cinFrame > 40 && this.cinFrame % 8 === 0) {
+            const ex = 80 + Math.random() * (GW - 160)
+            const ey = 60 + Math.random() * (PLAY_H * 0.5)
+            for (let i = 0; i < 8; i++) {
+              const angle = Math.random() * Math.PI * 2
+              const spd = 1 + Math.random() * 4
+              const cols = [0xff4400, 0xff8800, 0xffcc00, 0xff2200]
+              this.particles.push({
+                x: ex, y: ey, vx: Math.cos(angle) * spd, vy: Math.sin(angle) * spd,
+                life: 20 + Math.floor(Math.random() * 20),
+                col: cols[Math.floor(Math.random() * cols.length)],
+              })
+            }
+          }
+          // Tick + draw particles
+          for (let i = this.particles.length - 1; i >= 0; i--) {
+            const pt = this.particles[i]
+            pt.x += pt.vx; pt.y += pt.vy; pt.vy += 0.12; pt.life--
+            if (pt.life <= 0) { this.particles.splice(i, 1); continue }
+            g.fillStyle(pt.col, pt.life / 35); g.fillRect(pt.x - 2, pt.y - 2, 4, 4)
+          }
+
+          // Foreground rooftop
+          g.fillStyle(0x0a0a10, 1); g.fillRect(200, PLAY_H - 55, 400, 55)
+          g.fillStyle(0x111118, 1); g.fillRect(198, PLAY_H - 58, 404, 8)
+
+          // Norton figure on rooftop
+          const norX = GW / 2 - 30
+          const norY = PLAY_H - 55
+          g.fillStyle(0xd4a88a, 1); g.fillRect(norX - 8, norY - 48, 16, 14)    // head
+          g.fillStyle(0x1a1a2a, 1); g.fillRect(norX - 9, norY - 36, 18, 28)    // body
+          g.fillStyle(0x1a1a2a, 1); g.fillRect(norX - 14, norY - 34, 8, 20)    // arm L
+          g.fillStyle(0x1a1a2a, 1); g.fillRect(norX + 6, norY - 34, 8, 20)     // arm R
+          g.fillStyle(0x1a1a2a, 1); g.fillRect(norX - 7, norY - 8, 10, 20)     // leg L
+          g.fillStyle(0x1a1a2a, 1); g.fillRect(norX + 1, norY - 8, 10, 20)     // leg R
+
+          // Marla figure on rooftop
+          const marX = GW / 2 + 10
+          const marY = PLAY_H - 55
+          g.fillStyle(0xcdc4b8, 1); g.fillRect(marX - 6, marY - 50, 12, 12)    // head
+          g.fillStyle(0x151518, 1); g.fillRect(marX - 7, marY - 40, 14, 28)    // body
+          g.fillStyle(0x151518, 1); g.fillRect(marX - 11, marY - 38, 5, 18)    // arm L
+          g.fillStyle(0x151518, 1); g.fillRect(marX + 6, marY - 38, 5, 18)     // arm R
+          g.fillStyle(0x0e0e0e, 1); g.fillRect(marX - 6, marY - 12, 8, 20)     // leg L
+          g.fillStyle(0x0e0e0e, 1); g.fillRect(marX + 1, marY - 12, 8, 20)     // leg R
+          // Cigarette
+          g.fillStyle(0xeeeebb, 1); g.fillRect(marX + 11, marY - 30, 12, 2)
+          ra(g, 0xff8800, 0.9, marX + 23, marY - 30, 3, 2)
+
+          // Subtle vignette
+          ra(g, 0x000000, 0.25, 0, 0, GW, GH / 4)
+          ra(g, 0x000000, 0.20, 0, GH * 0.75, GW, GH / 4)
+        }
+      }
+
       // ── LAUNCH ───────────────────────────────────────────────────
       phaserGame = new Phaser.Game({
         type: Phaser.CANVAS,
         width: GW, height: GH,
         parent: containerRef.current!,
         backgroundColor: '#06060c',
-        scene: [MenuScene, DifficultyScene, OptionsScene, GameScene],
+        scene: [MenuScene, DifficultyScene, OptionsScene, GameScene, CinematicScene],
         input: { keyboard: true },
         audio: { disableWebAudio: false },
         banner: false,
