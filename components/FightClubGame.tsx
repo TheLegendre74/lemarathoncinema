@@ -108,7 +108,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let currentMusic: any = null
 
-      function playSfx(type: 'punch' | 'kick' | 'hurt_player' | 'hurt_enemy' | 'weapon_hit' | 'marla') {
+      function playSfx(type: 'punch' | 'kick' | 'hurt_player' | 'hurt_enemy' | 'weapon_hit' | 'marla' | 'gun_cock' | 'gun_bang') {
         try {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
@@ -152,6 +152,20 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             gain.gain.setValueAtTime(0.22 * vol, ctx.currentTime)
             gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6)
             osc.start(); osc.stop(ctx.currentTime + 0.6)
+          } else if (type === 'gun_cock') {
+            // Cliquetis mécanique du pistolet
+            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(900, ctx.currentTime)
+            osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.04)
+            gain.gain.setValueAtTime(0.40 * vol, ctx.currentTime)
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05)
+            osc.start(); osc.stop(ctx.currentTime + 0.05)
+          } else if (type === 'gun_bang') {
+            // Coup de feu — son grave et violent
+            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(120, ctx.currentTime)
+            osc.frequency.exponentialRampToValueAtTime(18, ctx.currentTime + 0.30)
+            gain.gain.setValueAtTime(0.90 * vol, ctx.currentTime)
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35)
+            osc.start(); osc.stop(ctx.currentTime + 0.35)
           }
         } catch (_) {}
       }
@@ -903,6 +917,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
         tributeEnemy: Char | null = null
         tributeBobX = 0
         tributeBobY = 0
+        tributeTextObj: G = null
 
         // Marla arrival pause
         marlaPauseActive = false
@@ -1003,7 +1018,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           this.endlessTriggerX = 0; this.endlessNextX = 999999
           this.secretDoor = null; this.secretDoorUsed = false; this.secretDoorKeyWasDown = false
           this.bobTributeActive = false; this.bobTributeTimer = 0
-          this.tributeEnemy = null; this.tributeBobX = 0; this.tributeBobY = 0
+          this.tributeEnemy = null; this.tributeBobX = 0; this.tributeBobY = 0; this.tributeTextObj = null
           this.marlaPauseActive = false; this.marlaPauseTimer = 0; this.marlaText = null
 
           // Place secret door at a random world X between zone 1 and second-to-last zone
@@ -1027,6 +1042,16 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             // Set endless trigger position — first wave spawns when player walks past boss zone
             this.endlessTriggerX = this.waveZones[this.waveZones.length - 1]?.triggerX ?? 400
             this.endlessNextX = this.endlessTriggerX + 400  // player needs to reach here for first endless wave
+            // Reset boss state — crucial pour éviter le bug pistolet en mode infini
+            this.bossPhase2 = false
+            this.bossInvincible = false
+            this.bossVulnerable = false
+            this.bossCinematic = false
+            this.bossCinemaTimer = 0
+            this.heldWeapon = null   // retire le pistolet
+            this.weaponGfx.clear()
+            // Réinitialiser l'état du joueur
+            this.player.state = 'idle'; this.player.stateTimer = 0
             if (this.music && !this.music.isPlaying) try { this.music.play() } catch (_) {}
           }
 
@@ -1117,37 +1142,55 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             this.bossCinemaTimer++
             const p = this.player
             const tyler = this.enemies.find(e => e.charType === 'tyler')
-            // Phase 1 (0-60): Norton lève lentement le pistolet — tension
-            if (this.bossCinemaTimer < 60) {
-              if (this.bossCinemaTimer % 18 === 0) {
-                this.cameras.main.shake(35, 0.003)
+
+            // Maintenir le joueur en état taunt avec le pistolet levé vers la bouche
+            p.state = 'taunt'; p.stateTimer = 0; p.vx = 0
+
+            // Phase 1 (0-55): tension progressive — petites secousses
+            if (this.bossCinemaTimer < 55) {
+              if (this.bossCinemaTimer % 22 === 0) {
+                this.cameras.main.shake(30, 0.002)
               }
             }
-            // Phase BANG (frame 60) — coup de feu
-            if (this.bossCinemaTimer === 60) {
-              this.cameras.main.flash(600, 255, 255, 255, false)
-              this.cameras.main.shake(600, 0.030)
-              // Sang jaillit de la bouche de Norton
-              this.spawnBlood(p.x, p.floorY - PH + 10, 22)
-              this.spawnBlood(p.x + p.face * 10, p.floorY - PH + 5, 12)
-              this.spawnFloatText(p.x - this.cameraX, p.floorY - PH - 40, 'BANG!', '#cc0000', true)
+            // Frame 10 : texte d'intro cinématique
+            if (this.bossCinemaTimer === 10) {
+              this.spawnFloatText(GW / 2, PLAY_H / 2 - 50, 'Tu avais raison, Tyler...', '#cccccc', false)
             }
-            // Phase 2 (75-110): Tyler s'effondre, crâne ouvert
-            if (this.bossCinemaTimer === 75) {
+            // Frame 50 : son du chien armé (CLIC)
+            if (this.bossCinemaTimer === 50) {
+              playSfx('gun_cock')
+              this.spawnFloatText(GW / 2, PLAY_H / 2 - 30, 'CLIC', '#888888', false)
+            }
+            // Frame 65 : BANG — coup de feu
+            if (this.bossCinemaTimer === 65) {
+              playSfx('gun_bang')
+              this.cameras.main.flash(700, 255, 255, 255, false)
+              this.cameras.main.shake(700, 0.035)
+              // Sang qui jaillit de la bouche de Norton
+              this.spawnBlood(p.x, p.floorY - PH + 10, 25)
+              this.spawnBlood(p.x + p.face * 12, p.floorY - PH + 6, 14)
+              this.spawnBlood(p.x + p.face * 18, p.floorY - PH + 12, 8)
+              this.spawnFloatText(p.x - this.cameraX, p.floorY - PH - 45, 'PAN!', '#cc0000', true)
+            }
+            // Frame 80 : Tyler s'effondre raide mort, crâne fracassé
+            if (this.bossCinemaTimer === 80) {
               if (tyler) {
                 tyler.hp = 0; tyler.state = 'dead'; tyler.deadTimer = 0
-                // Sang du crâne — trou dans la tête
-                this.spawnBlood(tyler.x, tyler.floorY - PH + 2, 30)
-                this.spawnBlood(tyler.x - 8, tyler.floorY - PH + 8, 18)
-                this.cameras.main.shake(350, 0.018)
+                // Sang jaillissant du crâne de Tyler
+                this.spawnBlood(tyler.x, tyler.floorY - PH + 2, 35)
+                this.spawnBlood(tyler.x + 10, tyler.floorY - PH + 8, 20)
+                this.cameras.main.shake(400, 0.020)
               }
             }
-            // Phase 3 (100): texte final
-            if (this.bossCinemaTimer === 100) {
-              this.spawnFloatText(GW / 2, PLAY_H / 2 - 30, 'NORTON...', '#ffffff', true)
+            // Frame 110 : texte final
+            if (this.bossCinemaTimer === 110) {
+              this.spawnFloatText(GW / 2, PLAY_H / 2 - 20, 'NORTON...', '#ffffff', true)
             }
-            if (this.bossCinemaTimer === 200) {
+            // Frame 210 : fin de cinématique — nettoyer le pistolet et déclencher victoire
+            if (this.bossCinemaTimer === 210) {
               this.bossCinematic = false
+              this.heldWeapon = null     // enlève le pistolet pour ne pas bloquer le mode infini
+              this.weaponGfx.clear()
               this.triggerVictory()
             }
           }
@@ -1156,37 +1199,53 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           if (this.bobTributeActive) {
             this.bobTributeTimer++
             const te = this.tributeEnemy
-            // Phase 1 (0-80): tribute enemy walks toward Bob's body
-            if (this.bobTributeTimer < 80 && te && te.hp > 0) {
+
+            // Phase 1 (0-85): tribute enemy marche vers le corps, état forcé chaque frame
+            if (this.bobTributeTimer <= 85 && te && te.hp > 0) {
               const dx = this.tributeBobX - te.x
-              if (Math.abs(dx) > 12) {
-                te.vx = (dx > 0 ? 1 : -1) * 1.4
+              te.stateTimer = 0  // empêche tickChar de réinitialiser l'état
+              if (Math.abs(dx) > 14) {
+                te.vx = (dx > 0 ? 1 : -1) * 1.5
                 te.face = dx > 0 ? 1 : -1
                 te.state = 'walk'
               } else {
-                te.vx = 0; te.state = 'idle'
+                te.vx = 0
+                te.state = 'taunt'
+                te.face = te.x > this.tributeBobX ? -1 : 1
               }
             }
-            // Phase 2 (80): arrive — bends over (taunt pose)
-            if (this.bobTributeTimer === 80 && te && te.hp > 0) {
-              te.vx = 0; te.state = 'taunt'
-              te.face = te.x > this.tributeBobX ? -1 : 1
+            // Phase 2 (86-240): penché sur le corps — état taunt maintenu chaque frame
+            if (this.bobTributeTimer > 85 && this.bobTributeTimer < 240 && te && te.hp > 0) {
+              te.vx = 0; te.stateTimer = 0; te.state = 'taunt'
             }
-            // Phase 3 (130): yell text + camera shake
-            if (this.bobTributeTimer === 130) {
+            // Phase 3 (120): texte persistant "Il s'appellait Robert Paulson !!"
+            if (this.bobTributeTimer === 120) {
               const tx = te ? te.x - this.cameraX : this.tributeBobX - this.cameraX
               const ty = te ? te.floorY : this.tributeBobY
-              this.spawnFloatText(tx, ty - PH - 32, '"Il s\'appellait Robert Paulson !!"', '#ffdd44', true)
-              this.cameras.main.shake(400, 0.014)
-              this.cameras.main.flash(150, 255, 220, 80, false)
+              // Détruire texte précédent si existe
+              if (this.tributeTextObj) { try { this.tributeTextObj.destroy() } catch (_) {} }
+              this.tributeTextObj = this.add.text(
+                GW / 2, ty - PH - 50,
+                '"Il s\'appellait Robert Paulson !!"',
+                { fontFamily: 'Impact', fontSize: '24px', color: '#ffee44',
+                  stroke: '#000000', strokeThickness: 4 }
+              ).setOrigin(0.5, 0.5).setDepth(600)
+              // Shake + flash dramatique
+              this.cameras.main.shake(500, 0.016)
+              this.cameras.main.flash(200, 255, 230, 80, false)
+              // Détruire le texte après 3 secondes
+              this.time.delayedCall(3000, () => {
+                if (this.tributeTextObj) { try { this.tributeTextObj.destroy() } catch (_) {} this.tributeTextObj = null }
+              })
             }
-            // End tribute (~4 sec)
+            // Fin du tribute (~4 sec = 240 frames)
             if (this.bobTributeTimer >= 240) {
               this.bobTributeActive = false; this.bobTributeTimer = 0
+              if (this.tributeTextObj) { try { this.tributeTextObj.destroy() } catch (_) {} this.tributeTextObj = null }
               for (const e of this.enemies) {
                 if (e.hp > 0) {
                   e.atkCD = 0; e.state = 'idle'
-                  if (e === te) { e.speed = Math.min(e.speed * 1.6, 4.5) }  // tribute enemy goes berserk
+                  if (e === te) { e.speed = Math.min(e.speed * 1.7, 5.0); e.atkCD = 0 }
                 }
               }
               this.tributeEnemy = null
@@ -2561,10 +2620,11 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
       // ══════════════════════════════════════════════════════
       class CinematicScene extends Phaser.Scene {
         cinFrame = 0
+        // collapseProgress 0→1 : immeuble intact→ détruit
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        buildings: Array<{ x: number; h: number; w: number; col: number; fallAngle: number; fallSpeed: number; fallStartFrame: number; exploded: boolean }> = []
+        buildings: Array<{ x: number; fullH: number; curH: number; w: number; col: number; collapseStart: number; collapsing: boolean; done: boolean }> = []
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        particles: Array<{ x: number; y: number; vx: number; vy: number; life: number; col: number }> = []
+        particles: Array<{ x: number; y: number; vx: number; vy: number; life: number; maxLife: number; col: number; sz: number }> = []
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         overlayG!: any
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -2577,41 +2637,40 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           this.buildings = []
           this.particles = []
 
-          // Immeubles qui s'effondrent UN PAR UN, chacun a son propre frame de chute
-          const positions = [30, 90, 155, 220, 285, 350, 415, 480, 545, 610, 670, 725]
+          // 12 immeubles répartis — chacun s'effondre à un moment différent
+          const positions = [25, 85, 148, 210, 270, 332, 395, 458, 518, 578, 635, 700]
           for (let i = 0; i < positions.length; i++) {
-            const bx = positions[i] + Math.random() * 18
-            const bh = 90 + Math.random() * 130
-            const bw = 32 + Math.random() * 36
-            const cols = [0x1a1a22, 0x141420, 0x1e1e28, 0x181820]
+            const bx = positions[i] + Math.random() * 14
+            const fullH = 95 + Math.random() * 130
+            const bw = 34 + Math.random() * 34
+            const cols = [0x1a1a22, 0x141420, 0x1e1e28, 0x18182a, 0x12121e]
             const col = cols[Math.floor(Math.random() * cols.length)]
-            const dir = Math.random() < 0.5 ? 1 : -1
-            // fallStartFrame : chaque immeuble tombe à un moment différent
-            const fallStartFrame = 60 + i * 28 + Math.floor(Math.random() * 20)
-            this.buildings.push({ x: bx, h: bh, w: bw, col, fallAngle: 0, fallSpeed: (0.006 + Math.random() * 0.006) * dir, fallStartFrame, exploded: false })
+            // Chaque bâtiment commence à s'effondrer à un frame différent
+            const collapseStart = 50 + i * 30 + Math.floor(Math.random() * 22)
+            this.buildings.push({ x: bx, fullH, curH: fullH, w: bw, col, collapseStart, collapsing: false, done: false })
           }
 
           this.overlayG = this.add.graphics().setDepth(10)
 
-          // Séquence textes
-          this.time.delayedCall(800, () => {
+          // Textes
+          this.time.delayedCall(600, () => {
             const t1 = this.add.text(GW / 2, PLAY_H / 2 - 80, 'LE PROJET CHAOS A RÉUSSI.', {
               fontFamily: 'Impact', fontSize: '32px', color: '#ffdd00',
               stroke: '#000000', strokeThickness: 5,
             }).setOrigin(0.5, 0.5).setDepth(20).setAlpha(0)
-            this.tweens.add({ targets: t1, alpha: 1, duration: 900 })
+            this.tweens.add({ targets: t1, alpha: 1, duration: 800 })
             this.textObjs.push(t1)
           })
-          this.time.delayedCall(3000, () => {
-            const t2 = this.add.text(GW / 2, PLAY_H / 2 - 40,
+          this.time.delayedCall(3200, () => {
+            const t2 = this.add.text(GW / 2, PLAY_H / 2 - 44,
               'Tu m\'entends maintenant ?', {
               fontFamily: 'serif', fontSize: '18px', color: '#cccccc',
               stroke: '#000000', strokeThickness: 3, fontStyle: 'italic',
             }).setOrigin(0.5, 0.5).setDepth(20).setAlpha(0)
-            this.tweens.add({ targets: t2, alpha: 1, duration: 1000 })
+            this.tweens.add({ targets: t2, alpha: 1, duration: 900 })
             this.textObjs.push(t2)
           })
-          this.time.delayedCall(6000, () => {
+          this.time.delayedCall(6500, () => {
             const tExit = this.add.text(GW / 2, PLAY_H - 28, '[ appuyez sur une touche pour continuer ]', {
               fontFamily: 'monospace', fontSize: '10px', color: '#555555',
             }).setOrigin(0.5, 1).setDepth(20)
@@ -2620,129 +2679,177 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           })
         }
 
+        spawnExplosion(x: number, y: number, count: number) {
+          for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2
+            const spd = 1.5 + Math.random() * 5
+            const flameCols = [0xff4400, 0xff8800, 0xffcc00, 0xff2200, 0xffaa00]
+            const dustCols  = [0x888880, 0x666660, 0xaaaaaa, 0x999990]
+            const isFlame = i < count * 0.6
+            const col = isFlame
+              ? flameCols[Math.floor(Math.random() * flameCols.length)]
+              : dustCols[Math.floor(Math.random() * dustCols.length)]
+            const life = isFlame ? 18 + Math.floor(Math.random() * 20) : 30 + Math.floor(Math.random() * 30)
+            this.particles.push({
+              x, y,
+              vx: Math.cos(angle) * spd * (isFlame ? 1 : 0.55),
+              vy: Math.sin(angle) * spd - (isFlame ? 2 : 0.5),
+              life, maxLife: life,
+              col, sz: isFlame ? 3 + Math.floor(Math.random() * 3) : 4 + Math.floor(Math.random() * 5),
+            })
+          }
+        }
+
         update() {
           this.cinFrame++
           const g = this.overlayG
           g.clear()
 
-          // Ciel sombre
-          g.fillStyle(0x06060c, 1); g.fillRect(0, 0, GW, GH)
+          // Ciel nuit
+          g.fillStyle(0x04040a, 1); g.fillRect(0, 0, GW, GH)
+
+          // Lueur orangée au sol qui grossit avec les explosions
+          const glowIntensity = Math.min(0.35, this.cinFrame * 0.0008)
+          ra(g, 0xff4400, glowIntensity, 0, PLAY_H - 80, GW, 80)
+          ra(g, 0xff8800, glowIntensity * 0.5, 0, PLAY_H - 140, GW, 60)
 
           // Étoiles
-          for (let i = 0; i < 40; i++) {
+          for (let i = 0; i < 45; i++) {
             const sx = (i * 193 + 7) % GW
-            const sy = (i * 97 + 13) % (PLAY_H * 0.55)
-            const bright = 0.3 + Math.sin(this.cinFrame * 0.04 + i) * 0.2
+            const sy = (i * 97 + 13) % (PLAY_H * 0.5)
+            const bright = 0.25 + Math.sin(this.cinFrame * 0.04 + i) * 0.18
             g.fillStyle(0xffffff, bright); g.fillRect(sx, sy, 1, 1)
           }
 
-          // Immeubles qui tombent un par un
+          // ── Immeubles — s'écroulent sur eux-mêmes ──
           for (const b of this.buildings) {
-            if (this.cinFrame >= b.fallStartFrame) {
-              b.fallAngle += b.fallSpeed
-              b.fallAngle = Math.max(-1.1, Math.min(1.1, b.fallAngle))
-              // Explosion au début de la chute
-              if (!b.exploded && Math.abs(b.fallAngle) > 0.12) {
-                b.exploded = true
-                for (let i = 0; i < 10; i++) {
-                  const angle = Math.random() * Math.PI * 2
-                  const spd = 1.5 + Math.random() * 4
-                  const cols = [0xff4400, 0xff8800, 0xffcc00, 0xff2200]
-                  this.particles.push({
-                    x: b.x, y: PLAY_H - b.h,
-                    vx: Math.cos(angle) * spd, vy: Math.sin(angle) * spd - 2,
-                    life: 25 + Math.floor(Math.random() * 25),
-                    col: cols[Math.floor(Math.random() * cols.length)],
-                  })
-                }
+            if (!b.done && this.cinFrame >= b.collapseStart) {
+              if (!b.collapsing) {
+                // Début de l'effondrement : EXPLOSION au sommet
+                b.collapsing = true
+                this.spawnExplosion(b.x, PLAY_H - b.fullH, 28)
+                // Flash bref
+                this.cameras.main.flash(120, 255, 140, 40, false)
+                this.cameras.main.shake(140, 0.010)
               }
+              // L'immeuble s'écrase vers le bas — hauteur diminue rapidement
+              const collapseSpeed = 1.8 + (b.fullH / 120)  // les grands s'écroulent plus vite
+              b.curH = Math.max(0, b.curH - collapseSpeed)
+              // Débris continus pendant la chute
+              if (b.curH > 0 && Math.random() < 0.5) {
+                this.spawnExplosion(
+                  b.x + (Math.random() - 0.5) * b.w,
+                  PLAY_H - b.curH,
+                  6
+                )
+              }
+              if (b.curH <= 0) { b.done = true }
             }
-            const shear = Math.sin(b.fallAngle) * b.h * 0.55
-            g.fillStyle(b.col, 1)
-            g.fillRect(b.x + shear - b.w / 2, PLAY_H - b.h, b.w, b.h)
-            // Fenêtres
-            for (let wy = 0; wy < 5; wy++) {
-              for (let wx = 0; wx < 3; wx++) {
-                const lit = Math.sin(this.cinFrame * 0.06 + wy * 2.1 + wx * 1.3 + b.x) > 0.55
-                if (lit) {
-                  g.fillStyle(0xffeeaa, 0.50)
-                  g.fillRect(b.x + shear - b.w / 2 + 4 + wx * 9, PLAY_H - b.h + 8 + wy * 14, 5, 7)
+
+            const drawH = b.curH
+            if (drawH > 0) {
+              // Corps du bâtiment — tremble légèrement pendant l'effondrement
+              const jx = b.collapsing ? (Math.random() - 0.5) * 3 : 0
+              g.fillStyle(b.col, 1)
+              g.fillRect(b.x - b.w / 2 + jx, PLAY_H - drawH, b.w, drawH)
+              // Fenêtres qui s'éteignent au fur et à mesure
+              const visiblePct = drawH / b.fullH
+              for (let wy = 0; wy < 5; wy++) {
+                for (let wx = 0; wx < 3; wx++) {
+                  const winY = PLAY_H - drawH + 8 + wy * 14
+                  if (winY < PLAY_H - 4) {
+                    const lit = Math.sin(this.cinFrame * 0.06 + wy * 2.1 + wx * 1.3 + b.x) > 0.55
+                    const alpha = lit ? Math.min(0.55, visiblePct * 0.8) : 0
+                    if (alpha > 0) {
+                      g.fillStyle(0xffeeaa, alpha)
+                      g.fillRect(b.x - b.w / 2 + jx + 4 + wx * 9, winY, 5, 7)
+                    }
+                  }
                 }
               }
+            } else if (b.done) {
+              // Tas de décombres (rectangle court et large)
+              g.fillStyle(0x2a2020, 1)
+              g.fillRect(b.x - b.w / 2 - 4, PLAY_H - 14, b.w + 8, 14)
+              g.fillStyle(0x3a2820, 0.8)
+              g.fillRect(b.x - b.w / 2 - 2, PLAY_H - 20, b.w + 4, 8)
             }
           }
 
-          // Particules de débris
-          if (this.cinFrame > 60 && this.cinFrame % 12 === 0) {
-            const ex = 80 + Math.random() * (GW - 160)
-            const ey = 40 + Math.random() * (PLAY_H * 0.45)
-            for (let i = 0; i < 6; i++) {
-              const angle = Math.random() * Math.PI * 2
-              const spd = 0.8 + Math.random() * 3
-              const cols = [0xff4400, 0xff8800, 0xffcc00, 0xff2200]
-              this.particles.push({
-                x: ex, y: ey, vx: Math.cos(angle) * spd, vy: Math.sin(angle) * spd,
-                life: 18 + Math.floor(Math.random() * 18),
-                col: cols[Math.floor(Math.random() * cols.length)],
-              })
-            }
-          }
+          // ── Particules (flammes + poussière) ──
           for (let i = this.particles.length - 1; i >= 0; i--) {
             const pt = this.particles[i]
-            pt.x += pt.vx; pt.y += pt.vy; pt.vy += 0.14; pt.life--
+            pt.x += pt.vx; pt.y += pt.vy; pt.vy += 0.10; pt.life--
             if (pt.life <= 0) { this.particles.splice(i, 1); continue }
-            g.fillStyle(pt.col, pt.life / 35); g.fillRect(pt.x - 2, pt.y - 2, 4, 4)
+            const alpha = pt.life / pt.maxLife
+            g.fillStyle(pt.col, alpha)
+            g.fillRect(pt.x - pt.sz / 2, pt.y - pt.sz / 2, pt.sz, pt.sz)
           }
 
-          // ─── Plan rapproché : Norton et Marla s'embrassent ───
-          const roofY = PLAY_H - 52
+          // ── Plan avant : toit + Norton & Marla qui s'embrassent ──
+          const roofY = PLAY_H - 55
+
+          // Ombre portée du toit (profondeur)
+          ra(g, 0x000000, 0.55, 220, roofY, 360, 55)
           // Toit
-          g.fillStyle(0x0a0a10, 1); g.fillRect(240, roofY, 320, 52)
-          g.fillStyle(0x111118, 1); g.fillRect(238, roofY - 4, 324, 7)
+          g.fillStyle(0x0a0a12, 1); g.fillRect(222, roofY, 356, 55)
+          g.fillStyle(0x14141e, 1); g.fillRect(220, roofY - 5, 360, 8)
+          // Détails toit (tuyaux, boites techniques)
+          g.fillStyle(0x1a1a26, 1); g.fillRect(235, roofY - 14, 18, 12)
+          g.fillStyle(0x1a1a26, 1); g.fillRect(545, roofY - 18, 22, 16)
 
-          // Norton (face à droite) — côté gauche du baiser
-          const norX = GW / 2 - 22
+          // Norton face à Marla — légèrement penché vers elle
+          const norX = GW / 2 - 24
           const norY = roofY
-          // Corps Norton
           g.fillStyle(0x1a1a2a, 1)
-          g.fillRect(norX - 9, norY - 36, 18, 28)    // torse
-          g.fillRect(norX - 7, norY - 8, 9, 20)      // jambe g
-          g.fillRect(norX + 2, norY - 8, 9, 20)      // jambe d
-          // Bras Norton enlacent Marla (bras droits vers elle)
+          g.fillRect(norX - 9, norY - 37, 18, 29)      // torse
+          g.fillRect(norX - 8, norY - 9, 9, 20)        // jambe g
+          g.fillRect(norX + 2, norY - 9, 9, 20)        // jambe d
+          // Bras gauche de Norton derrière Marla (enlaçant)
           g.fillStyle(0x1a1a2a, 1)
-          g.fillRect(norX - 14, norY - 34, 8, 18)    // bras g (derrière)
-          g.fillRect(norX + 8, norY - 32, 8, 16)     // bras d (vers Marla)
-          // Tête Norton penchée vers Marla
-          g.fillStyle(0xd4a88a, 1); g.fillRect(norX - 5, norY - 52, 14, 14)  // visage
-          g.fillStyle(0x2a2018, 1); g.fillRect(norX - 6, norY - 57, 16, 8)   // cheveux
+          g.fillRect(norX + 7, norY - 35, 14, 6)       // bras d vers Marla
+          g.fillRect(norX - 15, norY - 35, 9, 18)      // bras g (derrière)
+          // Tête Norton penchée — touches avec Marla
+          g.fillStyle(0xd4a88a, 1); g.fillRect(norX - 4, norY - 53, 13, 14)
+          g.fillStyle(0x221a10, 1); g.fillRect(norX - 5, norY - 59, 15, 8)
+          // Cicatrice sur la joue (detail fidèle au film)
+          g.fillStyle(0xb07860, 0.8); g.fillRect(norX + 3, norY - 47, 4, 2)
 
-          // Marla (face à gauche) — côté droit du baiser
-          const marX = GW / 2 + 18
+          // Marla — penchée vers Norton, bras autour de lui
+          const marX = GW / 2 + 20
           const marY = roofY
-          // Corps Marla
           g.fillStyle(0x1c1020, 1)
-          g.fillRect(marX - 8, marY - 38, 15, 28)    // robe
-          g.fillRect(marX - 6, marY - 10, 7, 20)     // jambe g
-          g.fillRect(marX + 2, marY - 10, 7, 20)     // jambe d
-          // Étole fourrure Marla
-          g.fillStyle(0x4a4438, 1); g.fillRect(marX - 12, marY - 40, 22, 7)
-          // Bras Marla autour de Norton
+          g.fillRect(marX - 7, marY - 39, 14, 29)      // robe
+          g.fillRect(marX - 5, marY - 11, 7, 20)       // jambe g
+          g.fillRect(marX + 2, marY - 11, 7, 20)       // jambe d
+          // Étole fourrure
+          g.fillStyle(0x4a4438, 1); g.fillRect(marX - 11, marY - 41, 22, 8)
+          ra(g, 0x7a7060, 0.55, marX - 10, marY - 40, 20, 5)
+          // Bras Marla autour du cou/épaules de Norton
           g.fillStyle(0x1c1020, 1)
-          g.fillRect(marX - 18, marY - 34, 8, 16)    // bras g (vers Norton)
-          g.fillRect(marX + 8, marY - 34, 6, 16)     // bras d
-          // Tête Marla penchée vers Norton
-          g.fillStyle(0xcdc4b8, 1); g.fillRect(marX - 4, marY - 52, 13, 12)  // visage
-          g.fillStyle(0x1e1420, 1); g.fillRect(marX - 5, marY - 58, 16, 8)   // cheveux
-          // Cigarette de Marla (pendant derrière elle)
-          g.fillStyle(0xeeeebb, 1); g.fillRect(marX + 14, marY - 32, 11, 2)
-          ra(g, 0xff8800, 0.9, marX + 25, marY - 32, 3, 2)
+          g.fillRect(marX - 20, marY - 36, 14, 6)      // bras g vers Norton
+          g.fillRect(marX + 7, marY - 36, 6, 16)       // bras d
+          // Tête Marla — touchant celle de Norton
+          g.fillStyle(0xcdc4b8, 1); g.fillRect(marX - 3, marY - 53, 12, 12)
+          g.fillStyle(0x1e1420, 1); g.fillRect(marX - 4, marY - 59, 15, 8)
+          // Cigarette allumée (tient entre ses doigts derrière elle)
+          g.fillStyle(0xeeeebb, 1); g.fillRect(marX + 13, marY - 28, 12, 2)
+          ra(g, 0xff8800, 0.92, marX + 25, marY - 29, 4, 2)
+          // Fumée cigarette
+          for (let i = 0; i < 4; i++) {
+            const sy = -3 - i * 6
+            ra(g, 0xcccccc, 0.06 + i * 0.02, marX + 26 + Math.sin(this.cinFrame * 0.09 + i) * 3, marY - 29 + sy, 4 + i * 2, 4 + i * 2)
+          }
 
-          // Lueur émotionnelle entre les deux (rose chaud)
-          ra(g, 0xff88cc, 0.06 + Math.sin(this.cinFrame * 0.04) * 0.04, GW / 2 - 20, roofY - 60, 40, 40)
+          // Lueur tendre entre eux
+          const glow = 0.07 + Math.sin(this.cinFrame * 0.035) * 0.04
+          ra(g, 0xff88cc, glow, GW / 2 - 18, roofY - 62, 38, 38)
 
-          // Vignette
-          ra(g, 0x000000, 0.28, 0, 0, GW, GH / 4)
-          ra(g, 0x000000, 0.22, 0, GH * 0.75, GW, GH / 4)
+          // Vignette latérale + haut/bas
+          ra(g, 0x000000, 0.40, 0, 0, GW, GH / 5)
+          ra(g, 0x000000, 0.35, 0, GH * 0.78, GW, GH * 0.22)
+          ra(g, 0x000000, 0.20, 0, 0, 80, GH)
+          ra(g, 0x000000, 0.20, GW - 80, 0, 80, GH)
         }
       }
 
