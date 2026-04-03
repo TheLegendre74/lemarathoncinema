@@ -1053,8 +1053,8 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             this.isBossFight = false
             this.bossHpGfx.setVisible(false)
             this.currentZoneIdx = this.waveZones.length  // past all zones
-            // Remove scroll limit — player can go anywhere
-            this.maxPlayerWorldX = this.worldWidth - 40
+            // Remove scroll limit — player can go anywhere (world grows dynamically)
+            this.maxPlayerWorldX = Number.MAX_SAFE_INTEGER
             // Set endless trigger position — first wave spawns when player walks past boss zone
             this.endlessTriggerX = this.waveZones[this.waveZones.length - 1]?.triggerX ?? 400
             this.endlessNextX = this.endlessTriggerX + 400  // player needs to reach here for first endless wave
@@ -1153,6 +1153,11 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             this.player.x = Math.max(camLeft, this.player.x)  // only constrain left during boss fight
           } else {
             this.player.x = Math.max(camLeft, Math.min(this.maxPlayerWorldX, this.player.x))
+          }
+
+          // In endless mode, grow the world as the player advances so scroll never stops
+          if (this.endlessMode) {
+            this.worldWidth = Math.max(this.worldWidth, this.player.x + 4000)
           }
 
           // Smooth camera — player stays around 25% from left
@@ -1379,7 +1384,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             } else if (this.endlessMode) {
               // Endless wave cleared — unlock scroll, player walks right to trigger next wave
               this.endlessNextX = this.player.x + 400
-              this.maxPlayerWorldX = this.worldWidth - 40
+              this.maxPlayerWorldX = Number.MAX_SAFE_INTEGER
             } else {
               const bonus = 150 + this.wave * 50
               this.score += bonus
@@ -1897,13 +1902,14 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
               const hpBase = ({ grunt: 42, bob: 100, toughguy: 80, tyler: 240 } as Record<string, number>)[type] ?? 50
               const hp = Math.round(hpBase * this.endlessHpMult)
               const spdBase = ({ grunt: 1.6, bob: 1.2, toughguy: 1.4, tyler: 2.0 } as Record<string, number>)[type] ?? 1.6
+              const dmgBase = ({ grunt: 8, bob: 13, toughguy: 12, tyler: 20 } as Record<string, number>)[type] ?? 8
               this.enemies.push({
                 gfx, x: ex, floorY: ey,
                 jumpH: 0, jumpV: 0, vx: 0, vy: 0,
                 hp, maxHp: hp, face: -1,
                 state: 'idle', stateTimer: 0, atkCD: 0, hurtInv: 0,
-                speed: Math.min(3.5, spdBase + this.endlessWave * 0.12),
-                dmg: Math.round((({ grunt: 8, bob: 13, toughguy: 12, tyler: 20 } as Record<string, number>)[type] ?? 8) * Math.min(this.endlessHpMult, 2.5)),
+                speed: Math.min(5.5, spdBase + this.endlessWave * 0.14),
+                dmg: Math.round(dmgBase * this.endlessHpMult),
                 isPlayer: false, charType: type as CharType, wave: this.endlessWave, deadTimer: 0,
                 isBlocking: false, blockFrame: 0, stunned: false, stunTimer: 0,
               })
