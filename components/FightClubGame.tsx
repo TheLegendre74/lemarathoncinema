@@ -80,6 +80,12 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
       })
 
       const VOL = { music: 65, sfx: 70 }
+      // Remappable key bindings (Phaser key name strings)
+      const KEYS = {
+        left: 'Q', right: 'D', up: 'Z', down: 'S',
+        punch: 'A', kick: 'E', throw: 'W', block: 'B',
+        jump: 'SPACE', rage: 'C',
+      }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let currentMusic: any = null
 
@@ -537,7 +543,16 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
       // ══════════════════════════════════════════════════════
       class MenuScene extends Phaser.Scene {
         constructor() { super({ key: 'Menu' }) }
+        preload() { this.load.audio('theme', '/sons/where-is-my-mind.opus') }
         create() {
+          // Menu music — restart if stopped (e.g. coming back from game over)
+          try {
+            if (!currentMusic || !currentMusic.isPlaying) {
+              if (currentMusic) { try { currentMusic.destroy() } catch(_) {} }
+              const m = this.sound.add('theme', { loop: true, volume: VOL.music / 100 })
+              currentMusic = m; m.play()
+            }
+          } catch(_) {}
           const bg = this.add.graphics()
           drawSceneBg(bg)
           // Center card
@@ -624,65 +639,119 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
       }
 
       // ══════════════════════════════════════════════════════
-      // OPTIONS SCENE
+      // OPTIONS SCENE  — volume + key remapping
       // ══════════════════════════════════════════════════════
       class OptionsScene extends Phaser.Scene {
         constructor() { super({ key: 'Options' }) }
         create() {
           const bg = this.add.graphics()
           drawSceneBg(bg)
-          bg.fillStyle(0x000000, 0.5); bg.fillRect(GW / 2 - 250, 70, 500, 300)
-          bg.lineStyle(1, 0x884422, 0.35); bg.strokeRect(GW / 2 - 251, 69, 502, 302)
+          bg.fillStyle(0x000000, 0.55); bg.fillRect(GW / 2 - 270, 40, 540, 370)
+          bg.lineStyle(1, 0x884422, 0.35); bg.strokeRect(GW / 2 - 271, 39, 542, 372)
 
-          this.add.text(GW / 2, 106, 'OPTIONS', {
-            fontFamily: 'Impact', fontSize: '36px', color: '#cc8833', letterSpacing: 8,
+          this.add.text(GW / 2, 72, 'OPTIONS', {
+            fontFamily: 'Impact', fontSize: '32px', color: '#cc8833', letterSpacing: 8,
             stroke: '#000000', strokeThickness: 4,
           }).setOrigin(0.5, 0.5)
 
+          // ── Volume bars ──────────────────────────────────────
           const barG = this.add.graphics()
           const drawBars = () => {
             barG.clear()
-            barG.fillStyle(0x111111, 1); barG.fillRect(GW / 2 - 160, 168, 320, 16)
-            barG.fillStyle(0xcc6633, 1); barG.fillRect(GW / 2 - 160, 168, 320 * VOL.music / 100, 16)
-            barG.lineStyle(1, 0x884422, 0.5); barG.strokeRect(GW / 2 - 160, 168, 320, 16)
-            barG.fillStyle(0x111111, 1); barG.fillRect(GW / 2 - 160, 232, 320, 16)
-            barG.fillStyle(0x336699, 1); barG.fillRect(GW / 2 - 160, 232, 320 * VOL.sfx / 100, 16)
-            barG.lineStyle(1, 0x225577, 0.5); barG.strokeRect(GW / 2 - 160, 232, 320, 16)
+            barG.fillStyle(0x111111, 1); barG.fillRect(GW / 2 - 140, 108, 280, 12)
+            barG.fillStyle(0xcc6633, 1); barG.fillRect(GW / 2 - 140, 108, 280 * VOL.music / 100, 12)
+            barG.lineStyle(1, 0x884422, 0.5); barG.strokeRect(GW / 2 - 140, 108, 280, 12)
+            barG.fillStyle(0x111111, 1); barG.fillRect(GW / 2 - 140, 148, 280, 12)
+            barG.fillStyle(0x336699, 1); barG.fillRect(GW / 2 - 140, 148, 280 * VOL.sfx / 100, 12)
+            barG.lineStyle(1, 0x225577, 0.5); barG.strokeRect(GW / 2 - 140, 148, 280, 12)
           }
           drawBars()
 
-          this.add.text(GW / 2 - 160, 148, 'MUSIQUE', {
-            fontFamily: 'monospace', fontSize: '11px', color: '#cc8833', letterSpacing: 3
-          })
-          this.add.text(GW / 2 - 160, 212, 'EFFETS SONORES', {
-            fontFamily: 'monospace', fontSize: '11px', color: '#6699cc', letterSpacing: 3
-          })
+          this.add.text(GW / 2 - 140, 93, 'MUSIQUE', { fontFamily: 'monospace', fontSize: '10px', color: '#cc8833', letterSpacing: 3 })
+          this.add.text(GW / 2 - 140, 133, 'EFFETS SONORES', { fontFamily: 'monospace', fontSize: '10px', color: '#6699cc', letterSpacing: 3 })
 
-          const mvT = this.add.text(GW / 2 + 178, 176, `${VOL.music}%`, {
-            fontFamily: 'monospace', fontSize: '13px', color: '#ffffff'
-          }).setOrigin(0, 0.5)
-          const sfxT = this.add.text(GW / 2 + 178, 240, `${VOL.sfx}%`, {
-            fontFamily: 'monospace', fontSize: '13px', color: '#ffffff'
-          }).setOrigin(0, 0.5)
+          const mvT  = this.add.text(GW / 2 + 148, 114, `${VOL.music}%`, { fontFamily: 'monospace', fontSize: '12px', color: '#ffffff' }).setOrigin(0, 0.5)
+          const sfxT = this.add.text(GW / 2 + 148, 154, `${VOL.sfx}%`,   { fontFamily: 'monospace', fontSize: '12px', color: '#ffffff' }).setOrigin(0, 0.5)
 
           const adj = (key: 'music' | 'sfx', delta: number, lbl: any) => {
             VOL[key] = Math.max(0, Math.min(100, VOL[key] + delta))
-            lbl.setText(`${VOL[key]}%`)
-            drawBars()
-            if (key === 'music' && currentMusic) {
-              try { (currentMusic as any).setVolume(VOL.music / 100) } catch (_) {}
+            lbl.setText(`${VOL[key]}%`); drawBars()
+            if (key === 'music' && currentMusic) { try { currentMusic.setVolume(VOL.music / 100) } catch (_) {} }
+          }
+          makeBtn(this, GW / 2 - 175, 114, 32, '−', () => adj('music', -5, mvT),  0xcc6633)
+          makeBtn(this, GW / 2 + 140, 114, 32, '+', () => adj('music',  5, mvT),  0xcc6633)
+          makeBtn(this, GW / 2 - 175, 154, 32, '−', () => adj('sfx',  -5, sfxT), 0x336699)
+          makeBtn(this, GW / 2 + 140, 154, 32, '+', () => adj('sfx',    5, sfxT), 0x336699)
+
+          // ── Separator ────────────────────────────────────────
+          bg.lineStyle(1, 0x553322, 0.4); bg.lineBetween(GW / 2 - 240, 178, GW / 2 + 240, 178)
+          this.add.text(GW / 2, 190, 'CONTRÔLES — cliquez une touche pour la rebind', {
+            fontFamily: 'monospace', fontSize: '10px', color: '#886644', letterSpacing: 2,
+          }).setOrigin(0.5, 0.5)
+
+          // ── Key bindings grid ────────────────────────────────
+          type KeyId = keyof typeof KEYS
+          const actions: Array<{ id: KeyId; label: string; col: 0 | 1; row: number }> = [
+            { id: 'left',  label: 'Aller à gauche', col: 0, row: 0 },
+            { id: 'right', label: 'Aller à droite', col: 0, row: 1 },
+            { id: 'up',    label: 'Aller en haut',  col: 0, row: 2 },
+            { id: 'down',  label: 'Aller en bas',   col: 0, row: 3 },
+            { id: 'jump',  label: 'Sauter',          col: 0, row: 4 },
+            { id: 'punch', label: 'Poing',           col: 1, row: 0 },
+            { id: 'kick',  label: 'Kick',            col: 1, row: 1 },
+            { id: 'throw', label: 'Lancer arme',     col: 1, row: 2 },
+            { id: 'block', label: 'Garde',           col: 1, row: 3 },
+            { id: 'rage',  label: 'Rage',            col: 1, row: 4 },
+          ]
+          const colX = [GW / 2 - 220, GW / 2 + 30]
+          const rowY0 = 218; const rowH = 28
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const keyBtns: Record<string, any> = {}
+          let waitingFor: string | null = null
+
+          const refreshBtns = () => {
+            for (const [id, btn] of Object.entries(keyBtns)) {
+              const isWaiting = id === waitingFor
+              btn.setText(isWaiting ? ' ? ' : ` ${KEYS[id as KeyId]} `)
+              btn.setColor(isWaiting ? '#ffcc44' : '#ffffff')
+              btn.setBackgroundColor(isWaiting ? '#662200' : '#1a1a1a')
             }
           }
 
-          makeBtn(this, GW / 2 - 200, 176, 38, '−', () => adj('music', -5, mvT), 0xcc6633)
-          makeBtn(this, GW / 2 + 160, 176, 38, '+', () => adj('music', 5, mvT),  0xcc6633)
-          makeBtn(this, GW / 2 - 200, 240, 38, '−', () => adj('sfx', -5, sfxT),  0x336699)
-          makeBtn(this, GW / 2 + 160, 240, 38, '+', () => adj('sfx', 5, sfxT),   0x336699)
+          for (const { id, label, col, row } of actions) {
+            const x = colX[col], y = rowY0 + row * rowH
+            this.add.text(x, y, label, {
+              fontFamily: 'monospace', fontSize: '11px', color: '#888888',
+            }).setOrigin(0, 0.5)
 
-          this.add.text(GW / 2, 282,
-            'COMMANDES :   ZQSD / Flèches  Déplacer  ·  A Poing  ·  E Kick  ·  W Lancer  ·  B Garde  ·  Espace Saut  ·  C Rage', {
-            fontFamily: 'monospace', fontSize: '9.5px', color: '#777777',
-            align: 'center', wordWrap: { width: 460 },
+            const btn = this.add.text(x + 130, y, ` ${KEYS[id]} `, {
+              fontFamily: 'monospace', fontSize: '11px', color: '#ffffff',
+              backgroundColor: '#1a1a1a', padding: { x: 6, y: 3 },
+            }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true })
+
+            btn.on('pointerover', () => { if (waitingFor !== id) btn.setColor('#ffdd88') })
+            btn.on('pointerout',  () => { if (waitingFor !== id) btn.setColor('#ffffff') })
+            btn.on('pointerdown', () => { waitingFor = id; refreshBtns() })
+            keyBtns[id] = btn
+          }
+
+          // Capture keypress for remapping
+          this.input.keyboard!.on('keydown', (ev: any) => {
+            if (!waitingFor) return
+            // Convert KeyboardEvent.code to Phaser key string
+            let k: string = ev.code
+            if (k.startsWith('Key'))    k = k.slice(3)
+            else if (k === 'Space')     k = 'SPACE'
+            else if (k.startsWith('Arrow')) k = k.slice(5).toUpperCase()
+            else if (k.startsWith('Digit')) k = k.slice(5)
+            else k = k.toUpperCase()
+            KEYS[waitingFor as KeyId] = k
+            waitingFor = null; refreshBtns()
+          })
+
+          this.add.text(GW / 2, rowY0 + 5 * rowH + 6, '← flèches toujours disponibles en parallèle', {
+            fontFamily: 'monospace', fontSize: '9px', color: '#444444', align: 'center',
           }).setOrigin(0.5, 0)
 
           makeBtn(this, 72, GH - 28, 110, '← RETOUR', () => this.scene.start('Menu'), 0x2a2a3a)
@@ -835,31 +904,37 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           }
 
           const kb = this.input.keyboard!
-          // AZERTY layout: ZQSD move, A punch, E kick, W throw, B block, Space jump, C rage
+          // Use remappable KEYS + always-available arrow fallbacks
           this.keys = {
-            left:  kb.addKey('LEFT'),  right: kb.addKey('RIGHT'),
-            up:    kb.addKey('UP'),    down:  kb.addKey('DOWN'),
-            z: kb.addKey('Z'), d: kb.addKey('D'),   // Z=forward, D=right
-            q: kb.addKey('Q'), s: kb.addKey('S'),   // Q=left, S=back
-            b: kb.addKey('B'),                       // B=block
+            left:  kb.addKey(KEYS.left),   right: kb.addKey(KEYS.right),
+            up:    kb.addKey(KEYS.up),     down:  kb.addKey(KEYS.down),
+            block: kb.addKey(KEYS.block),
+            aLeft: kb.addKey('LEFT'),  aRight: kb.addKey('RIGHT'),
+            aUp:   kb.addKey('UP'),    aDown:  kb.addKey('DOWN'),
           }
-          kb.on('keydown-A',     () => this.playerAttack('punch'))
-          kb.on('keydown-E',     () => this.playerAttack('kick'))
-          kb.on('keydown-W',     () => this.throwWeapon())
-          kb.on('keydown-SPACE', () => this.playerJump())
-          kb.on('keydown-C',     () => this.activateRage())
-          kb.on('keydown-ESC',   () => { this.music?.stop(); this.scene.start('Menu') })
+          kb.on(`keydown-${KEYS.punch}`, () => this.playerAttack('punch'))
+          kb.on(`keydown-${KEYS.kick}`,  () => this.playerAttack('kick'))
+          kb.on(`keydown-${KEYS.throw}`, () => this.throwWeapon())
+          kb.on(`keydown-${KEYS.jump}`,  () => this.playerJump())
+          kb.on(`keydown-${KEYS.rage}`,  () => this.activateRage())
+          kb.on('keydown-ESC', () => { this.music?.stop(); this.scene.start('Menu') })
 
           this.createHUD()
 
+          // Continue menu music seamlessly, or start fresh
           try {
-            this.music = this.sound.add('theme', { loop: true, volume: VOL.music / 100 })
-            currentMusic = this.music
-            this.music.play()
+            if (currentMusic && currentMusic.isPlaying) {
+              this.music = currentMusic  // reuse menu music
+            } else {
+              if (currentMusic) { try { currentMusic.destroy() } catch(_) {} }
+              this.music = this.sound.add('theme', { loop: true, volume: VOL.music / 100 })
+              currentMusic = this.music
+              this.music.play()
+            }
           } catch (_) {}
 
           this.scheduleFlicker()
-          this.showQuote('"La première règle du Fight Club..."')
+          this.showTutorial()
         }
 
         // ── UPDATE ───────────────────────────────────────────
@@ -887,8 +962,9 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
                 this.heldWeapon = { type: w.type, uses: w.maxUses, maxUses: w.maxUses }
                 w.gfx.destroy()
                 this.droppedWeapons.splice(i, 1)
-                const label = w.type === 'bat' ? 'BATTE' : w.type === 'chain' ? 'CHAÎNE' : 'BOUTEILLE'
-                this.spawnFloatText(this.player.x - this.cameraX, this.player.floorY - 80, `⚔ ${label} RAMASSÉE`, '#ffaa00', false)
+                const label = w.type === 'bat' ? 'BATTE' : w.type === 'chain' ? 'CHAÎNE' : w.type === 'gun' ? 'PISTOLET' : 'BOUTEILLE'
+                const labelCol = w.type === 'gun' ? '#ffdd44' : '#ffaa00'
+                this.spawnFloatText(this.player.x - this.cameraX, this.player.floorY - 80, `⚔ ${label} RAMASSÉ(E)`, labelCol, w.type === 'gun')
                 break
               }
             }
@@ -997,7 +1073,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
         handleInput() {
           const p = this.player
           if (p.hp <= 0 || this.bossCinematic) return
-          const bDown    = this.keys.b.isDown
+          const bDown    = this.keys.block.isDown
           const canBlock = !['punch', 'kick', 'hurt', 'jump', 'dead'].includes(p.state) || p.isBlocking
 
           if (bDown && canBlock) {
@@ -1012,10 +1088,10 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           }
 
           const canMove = !['punch', 'kick'].includes(p.state)
-          const left  = this.keys.left.isDown  || this.keys.q.isDown   // Q=left (AZERTY)
-          const right = this.keys.right.isDown || this.keys.d.isDown
-          const up    = this.keys.up.isDown    || this.keys.z.isDown   // Z=forward (AZERTY)
-          const down  = this.keys.down.isDown  || this.keys.s.isDown
+          const left  = this.keys.left.isDown  || this.keys.aLeft.isDown
+          const right = this.keys.right.isDown || this.keys.aRight.isDown
+          const up    = this.keys.up.isDown    || this.keys.aUp.isDown
+          const down  = this.keys.down.isDown  || this.keys.aDown.isDown
           const moving = left || right || up || down
 
           if (canMove) {
@@ -1106,6 +1182,12 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             const dmgColor = isWep ? '#ffcc00' : type === 'kick' ? '#ffaa22' : '#ff4444'
             this.spawnFloatText(esx, e.floorY - PH - 12, `-${dmg}`, dmgColor, isWep || type === 'kick')
 
+            // Boss phase 2 check — triggered AS SOON as HP drops to ≤10%
+            if (e.charType === 'tyler' && !this.bossPhase2 && e.hp <= e.maxHp * 0.10) {
+              this.triggerBossPhase2(e)
+              break
+            }
+
             if (e.hp <= 0) {
               e.state = 'dead'; e.deadTimer = 0
               this.score += 50 + this.combo * 8
@@ -1195,21 +1277,9 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             return
           }
 
-          // Check 10% HP threshold
+          // Check 10% HP threshold (safety net — primary check is in playerAttack)
           if (!this.bossPhase2 && tyler.hp <= tyler.maxHp * 0.10) {
-            this.bossPhase2 = true; this.bossInvincible = true
-            tyler.hp = Math.round(tyler.maxHp * 0.10)  // lock at 10%
-            tyler.state = 'taunt'; tyler.vx = 0; tyler.vy = 0
-            // Drop gun
-            this.time.delayedCall(800, () => {
-              this.dropWeapon(tyler.x + tyler.face * 60, tyler.floorY, 'gun')
-              this.cameras.main.shake(400, 0.018)
-              this.spawnFloatText(GW / 2, PLAY_H / 2 - 40,
-                '"Si tu tires sur moi... tu te tires dessus."', '#cc1111', true)
-              this.spawnFloatText(GW / 2, PLAY_H / 2 + 10,
-                '[Ramasse le pistolet → A pour finir]', '#ffcc44', false)
-            })
-            return
+            this.triggerBossPhase2(tyler); return
           }
 
           // Stunned (by perfect block) = vulnerable
@@ -1327,13 +1397,12 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             case 'invincible': break
           }
 
-          // Enforce invincibility (override any hp reduction done outside this method)
-          if (this.bossInvincible && !this.bossVulnerable) {
-            tyler.hp = Math.max(tyler.hp, Math.round(tyler.maxHp * 0.10 + 1))
-          }
-          if (!this.bossVulnerable && tyler.charType === 'tyler') {
-            // Can't be killed while not vulnerable
-            tyler.hp = Math.max(1, tyler.hp)
+          // Enforce invincibility — Tyler can never die outside a vulnerable window
+          if (!this.bossVulnerable) {
+            const floor = this.bossPhase2
+              ? Math.round(tyler.maxHp * 0.10)   // post-phase2: lock at 10%
+              : Math.round(tyler.maxHp * 0.11)   // pre-phase2: keep above trigger threshold
+            tyler.hp = Math.max(floor, tyler.hp)
           }
         }
 
@@ -1365,6 +1434,29 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             this.rage = Math.min(100, this.rage + 15)
             this.cameras.main.shake(110, 0.005)
           }
+        }
+
+        // ── BOSS PHASE 2 TRIGGER ────────────────────────────
+        triggerBossPhase2(tyler: Char) {
+          if (this.bossPhase2) return   // guard against double-trigger
+          this.bossPhase2 = true
+          this.bossInvincible = true
+          this.bossVulnerable = false
+          tyler.hp = Math.round(tyler.maxHp * 0.10)
+          tyler.stunned = false; tyler.stunTimer = 0
+          tyler.state = 'taunt'; tyler.vx = 0; tyler.vy = 0
+          this.bossPtrnState = 'invincible'
+          this.cameras.main.shake(300, 0.014)
+          this.cameras.main.flash(200, 255, 50, 0, false)
+          this.time.delayedCall(700, () => {
+            const tx = tyler.x + tyler.face * 60
+            this.dropWeapon(tx, tyler.floorY, 'gun')
+            this.cameras.main.shake(400, 0.018)
+            this.spawnFloatText(GW / 2, PLAY_H / 2 - 44,
+              '"Si tu tires sur moi... tu te tires dessus."', '#cc1111', true)
+            this.spawnFloatText(GW / 2, PLAY_H / 2 + 12,
+              `[Ramasse le pistolet → ${KEYS.punch} pour finir]`, '#ffcc44', false)
+          })
         }
 
         // ── ENDLESS WAVES ────────────────────────────────────
@@ -1516,7 +1608,8 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           this.maxPlayerWorldX = zone.triggerX + 190
 
           if (isBoss) {
-            // Tyler spawns ahead of player
+            // Tyler is invincible from the start — only vulnerable during special windows
+            this.bossInvincible = true
             this.spawnEnemy('tyler', zone.triggerX + 480, (FY1 + FY2) / 2)
             this.showBossIntro()
           } else {
@@ -1667,13 +1760,30 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             this.overlayGfx.fillStyle(0xff2200, a); this.overlayGfx.fillRect(0, 0, GW, PLAY_H)
           }
           for (const e of this.enemies) {
-            if (e.stunned && e.hp > 0) {
-              const sx = e.x - cam
-              if (sx > -40 && sx < GW + 40) {
-                const pulse = 0.1 + Math.sin(this.frame * 0.22) * 0.06
-                this.overlayGfx.fillStyle(0x44ffff, pulse)
-                this.overlayGfx.fillCircle(sx, e.floorY - PH / 2, 30)
-              }
+            if (e.hp <= 0) continue
+            const sx = e.x - cam
+            if (sx < -60 || sx > GW + 60) continue
+
+            // Stun shimmer (cyan)
+            if (e.stunned) {
+              const pulse = 0.1 + Math.sin(this.frame * 0.22) * 0.06
+              this.overlayGfx.fillStyle(0x44ffff, pulse)
+              this.overlayGfx.fillCircle(sx, e.floorY - PH / 2, 30)
+            }
+
+            // Attack wind-up shimmer — yellow/orange flash when enemy is about to strike
+            if (!e.stunned && (e.state === 'punch' || e.state === 'kick') && e.stateTimer > 5) {
+              const shimA = 0.22 + Math.sin(this.frame * 0.9) * 0.14
+              const sz = e.charType === 'bob' ? 1.28 : e.charType === 'toughguy' ? 1.18 : 1.0
+              this.overlayGfx.fillStyle(0xffcc00, shimA)
+              this.overlayGfx.fillRect(sx - 26 * sz, e.floorY - PH * 1.15 * sz, 52 * sz, PH * 1.15 * sz)
+            }
+
+            // Tyler boss wind-up telegraph (stronger, red) during 'wind' pattern phase
+            if (e.charType === 'tyler' && this.bossPtrnState === 'wind') {
+              const shimA = 0.25 + Math.sin(this.frame * 1.1) * 0.18
+              this.overlayGfx.fillStyle(0xff3300, shimA)
+              this.overlayGfx.fillRect(sx - 32, e.floorY - PH * 1.3, 64, PH * 1.3)
             }
           }
         }
@@ -1822,13 +1932,14 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             wordWrap: { width: 560 },
           }).setOrigin(0.5, 0.5).setDepth(D + 10).setAlpha(0)
 
-          // Permanent controls display
-          this.add.text(GW / 2, HY + 5, 'ZQSD / ←↑↓→  Déplacer  ·  A Poing  ·  E Kick  ·  W Lancer  ·  B Garde  ·  ESPACE Saut  ·  C Rage', {
+          // Permanent controls display (dynamic — reflects remapped keys)
+          this.add.text(GW / 2, HY + 5,
+            `${KEYS.up}${KEYS.left}${KEYS.down}${KEYS.right}/←↑↓→ Déplacer  ·  ${KEYS.punch} Poing  ·  ${KEYS.kick} Kick  ·  ${KEYS.throw} Lancer  ·  ${KEYS.block} Garde  ·  ${KEYS.jump} Saut  ·  ${KEYS.rage} Rage`, {
             fontFamily: 'monospace', fontSize: '9.5px', color: 'rgba(220,220,220,0.55)', align: 'center',
           }).setOrigin(0.5, 0).setDepth(D)
-          // Block reminder (bigger)
+          // Block reminder
           this.add.text(GW / 2, HY + 52,
-            'B  ─  GARDE (blocage parfait < 1s avant le coup = STUN)', {
+            `${KEYS.block}  ─  GARDE (parfait < 1s avant le coup = STUN ennemi)`, {
             fontFamily: 'monospace', fontSize: '8px', color: 'rgba(100,120,200,0.60)', align: 'center',
           }).setOrigin(0.5, 0.5).setDepth(D)
         }
@@ -1954,6 +2065,48 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             duration: 280, ease: 'Back.Out', hold: 1100, yoyo: true,
             onComplete: () => t.destroy(),
           })
+        }
+
+        // ── MINI TUTORIAL ─────────────────────────────────────
+        showTutorial() {
+          const panW = 560, panH = 164, panX = GW / 2 - panW / 2, panY = PLAY_H / 2 - panH / 2 - 20
+          const panel = this.add.graphics().setDepth(700)
+          panel.fillStyle(0x000000, 0.88); panel.fillRect(panX, panY, panW, panH)
+          panel.lineStyle(1, 0xcc9944, 0.5); panel.strokeRect(panX, panY, panW, panH)
+          panel.lineStyle(1, 0xcc9944, 0.2); panel.strokeRect(panX + 4, panY + 4, panW - 8, panH - 8)
+
+          this.add.text(GW / 2, panY + 16, '— COMMENT JOUER —', {
+            fontFamily: 'monospace', fontSize: '10px', color: '#cc9944', letterSpacing: 4,
+          }).setOrigin(0.5, 0).setDepth(701)
+
+          const lines = [
+            `${KEYS.up} ${KEYS.left} ${KEYS.down} ${KEYS.right}  /  ←↑↓→   Déplacer        ${KEYS.jump}  Sauter        ${KEYS.rage}  Rage (jauge pleine)`,
+            `${KEYS.punch}  Poing          ${KEYS.kick}  Kick          ${KEYS.throw}  Lancer l'arme tenue`,
+            `${KEYS.block}  Garde  —  BLOQUER AU MOMENT du coup = STUN ennemi (surtout contre le boss !)`,
+            `Les ennemis drop des armes · ramasse-les · elles ont une durée limitée`,
+          ]
+          const txt = this.add.text(GW / 2, panY + 36, lines.join('\n'), {
+            fontFamily: 'monospace', fontSize: '11.5px', color: '#dddddd',
+            align: 'center', lineSpacing: 8,
+          }).setOrigin(0.5, 0).setDepth(701)
+
+          const skip = this.add.text(GW / 2, panY + panH - 14, '[ appuie sur n\'importe quelle touche pour fermer · fermeture auto dans 8s ]', {
+            fontFamily: 'monospace', fontSize: '8.5px', color: '#555555',
+          }).setOrigin(0.5, 1).setDepth(701)
+
+          let closed = false
+          const close = () => {
+            if (closed) return; closed = true
+            const objs = [panel, txt, skip]
+            this.tweens.add({
+              targets: objs, alpha: 0, duration: 350,
+              onComplete: () => objs.forEach(o => o.destroy()),
+            })
+            // Show opening quote after tutorial closes
+            this.time.delayedCall(200, () => this.showQuote('"La première règle du Fight Club..."'))
+          }
+          this.time.delayedCall(8000, close)
+          this.input.keyboard!.once('keydown', close)
         }
 
         showBossIntro() {
