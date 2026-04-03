@@ -38,12 +38,14 @@ function addToLB(d: string, name: string, score: number): LBEntry[] {
 
 export default function FightClubGame({ onDone }: { onDone: () => void }) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [uiScale,  setUiScale]  = useState(1)
-  const [showName, setShowName] = useState(false)
-  const [showLB,   setShowLB]   = useState(false)
-  const [lbData,   setLbData]   = useState<LBEntry[]>([])
-  const [nameVal,  setNameVal]  = useState('')
+  const [uiScale,          setUiScale]          = useState(1)
+  const [showName,         setShowName]         = useState(false)
+  const [showLB,           setShowLB]           = useState(false)
+  const [showEndlessChoice,setShowEndlessChoice] = useState(false)
+  const [lbData,           setLbData]           = useState<LBEntry[]>([])
+  const [nameVal,          setNameVal]          = useState('')
   const gameResult = useRef<{ score: number; diff: string } | null>(null)
+  const startEndlessRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     const upd = () => setUiScale(Math.min(window.innerWidth / GW, window.innerHeight / GH, 1.6))
@@ -88,7 +90,8 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
 
       type CharState  = 'idle' | 'walk' | 'jump' | 'punch' | 'kick' | 'hurt' | 'dead' | 'taunt' | 'block'
       type CharType   = 'norton' | 'grunt' | 'bob' | 'toughguy' | 'tyler'
-      type WeaponType = 'bat' | 'chain' | 'bottle'
+      type WeaponType = 'bat' | 'chain' | 'bottle' | 'gun'
+      type BossPtrnState = 'approach' | 'wind' | 'attack' | 'recover' | 'vulnerable' | 'invincible'
 
       interface DroppedWeapon {
         gfx: G; x: number; y: number   // world position
@@ -418,11 +421,16 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             ra(g, 0x888888, 1, cx - 3, -3, 8, 6)
             ra(g, 0x444444, 0.8, cx - 1, -4, 4, 8)
           }
-        } else {  // bottle
-          r(g, 0x224411, -6, -14, 12, 14)    // body
-          r(g, 0x2a5518, -4, -20, 8, 8)      // shoulder
-          r(g, 0x33661e, -2, -26, 4, 8)      // neck
-          ra(g, 0x88ff44, 0.15, -5, -13, 10, 12)  // glass shine
+        } else if (type === 'bottle') {
+          r(g, 0x224411, -6, -14, 12, 14)
+          r(g, 0x2a5518, -4, -20, 8, 8)
+          r(g, 0x33661e, -2, -26, 4, 8)
+          ra(g, 0x88ff44, 0.15, -5, -13, 10, 12)
+        } else {  // gun
+          r(g, 0x222222, -16, -6, 32, 8)    // barrel
+          r(g, 0x333333, -4, -12, 12, 18)   // grip
+          r(g, 0x444444, 8, -6, 10, 4)      // slide
+          r(g, 0x111111, -2, 2, 8, 8)       // trigger guard
         }
       }
 
@@ -430,6 +438,19 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
       function drawHeldWeapon(g: G, type: WeaponType, state: CharState) {
         g.clear()
         const swing = ['punch', 'kick'].includes(state) ? 8 : 0
+        if (type === 'gun') {
+          // Gun pointed forward (or upward in taunt = at mouth)
+          const isFinale = state === 'taunt'
+          if (isFinale) {
+            r(g, 0x222222, -4, -PH - swing, 8, 26)   // barrel pointing up
+            r(g, 0x333333, -6, -PH + 14 - swing, 12, 14)
+          } else {
+            r(g, 0x222222, 6, -40 - swing, 28, 8)
+            r(g, 0x333333, 6, -48 - swing, 12, 14)
+            r(g, 0x444444, 18, -40 - swing, 10, 4)
+          }
+          return
+        }
         if (type === 'bat') {
           r(g, 0x3a1c08, 6, -36 - swing, 6, 18)        // grip
           r(g, 0x5a3010, 6, -48 - swing, 8, 14)         // taper
@@ -446,6 +467,17 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           r(g, 0x33661e, 8, -62 - swing, 8, 10)
           ra(g, 0x88ff44, 0.18, 7, -45 - swing, 5, 12)
         }
+      }
+
+      // Draw gun pickup glow
+      function drawGunPickup(g: G, frame: number) {
+        g.clear()
+        const pulse = 0.6 + Math.sin(frame * 0.08) * 0.4
+        ra(g, 0xffcc00, pulse * 0.4, -22, -18, 44, 28)
+        r(g, 0x222222, -16, -6, 32, 8)
+        r(g, 0x333333, -4, -12, 12, 18)
+        r(g, 0x444444, 8, -6, 10, 4)
+        r(g, 0x111111, -2, 2, 8, 8)
       }
 
       // ══════════════════════════════════════════════════════
@@ -648,7 +680,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           makeBtn(this, GW / 2 + 160, 240, 38, '+', () => adj('sfx', 5, sfxT),   0x336699)
 
           this.add.text(GW / 2, 282,
-            'COMMANDES :   WASD / ←↑↓→  Bouger   Z Poing   X Kick   ESPACE Saut   Q Garde   C Rage', {
+            'COMMANDES :   ZQSD / Flèches  Déplacer  ·  A Poing  ·  E Kick  ·  W Lancer  ·  B Garde  ·  Espace Saut  ·  C Rage', {
             fontFamily: 'monospace', fontSize: '9.5px', color: '#777777',
             align: 'center', wordWrap: { width: 460 },
           }).setOrigin(0.5, 0)
@@ -700,6 +732,23 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
         droppedWeapons: DroppedWeapon[] = []
         heldWeapon: { type: WeaponType; uses: number; maxUses: number } | null = null
         weaponGfx!: G
+        projectiles: Array<{ gfx: G; x: number; y: number; vx: number; dmg: number; face: 1|-1 }> = []
+
+        // Tyler boss pattern system
+        bossPtrnState: BossPtrnState = 'approach'
+        bossPtrnIdx = 0       // 0=combo, 1=charge, 2=grab
+        bossPtrnTimer = 0
+        bossPtrnsDone = 0
+        bossVulnerable = false
+        bossInvincible = false
+        bossPhase2 = false    // at 10% HP — gun phase
+        bossCinematic = false
+        bossCinemaTimer = 0
+
+        // Endless mode
+        endlessMode = false
+        endlessWave = 0
+        endlessHpMult = 1.0
 
         keys!: Record<string, any>
         music?: any
@@ -768,18 +817,35 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           this.rage = 0; this.rageActive = false; this.rageDuration = 0
           this.marlaUsed = false; this.marlaActive = false; this.marlaCh = null
           this.enemies = []; this.floatTexts = []; this.blood = []
-          this.droppedWeapons = []; this.heldWeapon = null
+          this.droppedWeapons = []; this.heldWeapon = null; this.projectiles = []
+          this.bossPtrnState = 'approach'; this.bossPtrnIdx = 0
+          this.bossPtrnTimer = 0; this.bossPtrnsDone = 0
+          this.bossVulnerable = false; this.bossInvincible = false
+          this.bossPhase2 = false; this.bossCinematic = false; this.bossCinemaTimer = 0
+          this.endlessMode = false; this.endlessWave = 0; this.endlessHpMult = 1.0
+
+          // Expose endless start to React
+          startEndlessRef.current = () => {
+            this.endlessMode = true
+            this.victory = false
+            this.waveCleared = true
+            this.currentZoneIdx = this.waveZones.length  // past all zones
+            this.maxPlayerWorldX = this.worldWidth - 40
+            if (this.music && !this.music.isPlaying) try { this.music.play() } catch (_) {}
+          }
 
           const kb = this.input.keyboard!
+          // AZERTY layout: ZQSD move, A punch, E kick, W throw, B block, Space jump, C rage
           this.keys = {
             left:  kb.addKey('LEFT'),  right: kb.addKey('RIGHT'),
             up:    kb.addKey('UP'),    down:  kb.addKey('DOWN'),
-            a: kb.addKey('A'), d: kb.addKey('D'),
-            w: kb.addKey('W'), s: kb.addKey('S'),
-            q: kb.addKey('Q'),
+            z: kb.addKey('Z'), d: kb.addKey('D'),   // Z=forward, D=right
+            q: kb.addKey('Q'), s: kb.addKey('S'),   // Q=left, S=back
+            b: kb.addKey('B'),                       // B=block
           }
-          kb.on('keydown-Z',     () => this.playerAttack('punch'))
-          kb.on('keydown-X',     () => this.playerAttack('kick'))
+          kb.on('keydown-A',     () => this.playerAttack('punch'))
+          kb.on('keydown-E',     () => this.playerAttack('kick'))
+          kb.on('keydown-W',     () => this.throwWeapon())
           kb.on('keydown-SPACE', () => this.playerJump())
           kb.on('keydown-C',     () => this.activateRage())
           kb.on('keydown-ESC',   () => { this.music?.stop(); this.scene.start('Menu') })
@@ -837,20 +903,41 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             }
           }
 
+          // Boss cinematic tick
+          if (this.bossCinematic) {
+            this.bossCinemaTimer++
+            if (this.bossCinemaTimer === 80) {
+              // Flash + Tyler explodes
+              this.cameras.main.flash(500, 255, 0, 0, false)
+              const tyler = this.enemies.find(e => e.charType === 'tyler')
+              if (tyler) {
+                tyler.hp = 0; tyler.state = 'dead'; tyler.deadTimer = 0
+                this.spawnBlood(tyler.x, tyler.floorY - PH, 24)
+              }
+            }
+            if (this.bossCinemaTimer === 180) {
+              this.bossCinematic = false
+              this.triggerVictory()
+            }
+          }
+
           for (const e of this.enemies) {
             if (e.hp > 0) {
               if (e.stunned) {
                 if (e.stunTimer > 0) { e.stunTimer--; if (e.stunTimer === 0) e.stunned = false }
+              } else if (e.charType === 'tyler' && this.isBossFight) {
+                if (!this.bossCinematic) this.tickTylerAI(e)
               } else {
                 this.tickAI(e)
               }
               this.tickChar(e)
-              // Keep enemies near the combat zone
               e.x = Math.max(20, Math.min(this.worldWidth - 20, e.x))
             } else {
               e.deadTimer++
             }
           }
+
+          this.tickProjectiles()
 
           if (this.comboTimer > 0 && --this.comboTimer === 0) {
             this.combo = 0; this.scoreMult = 1; this.comboNextThresh = 10
@@ -870,10 +957,18 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
 
           // Wave cleared check
           const allDead = this.enemies.length > 0 && this.enemies.every(e => e.hp <= 0)
-          if (allDead && !this.waveCleared) {
+          if (allDead && !this.waveCleared && !this.bossCinematic) {
             this.waveCleared = true
-            if (this.isBossFight) {
-              this.triggerVictory()
+            if (this.isBossFight && !this.endlessMode) {
+              // handled by cinematic / triggerVictory inside boss AI
+            } else if (this.endlessMode) {
+              // Endless: next wave after delay
+              this.endlessWave++
+              this.endlessHpMult = 1 + this.endlessWave * 0.25
+              const bonus = 200 + this.endlessWave * 100
+              this.score += bonus
+              this.spawnFloatText(GW / 2, PLAY_H / 2 - 10, `VAGUE INFINIE ${this.endlessWave}  +${bonus}`, '#ff4444', true)
+              this.time.delayedCall(2000, () => { if (!this.gameOver) this.spawnEndlessWave() })
             } else {
               const bonus = 150 + this.wave * 50
               this.score += bonus
@@ -901,25 +996,25 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
         // ── INPUT ────────────────────────────────────────────
         handleInput() {
           const p = this.player
-          if (p.hp <= 0) return
-          const qDown    = this.keys.q.isDown
+          if (p.hp <= 0 || this.bossCinematic) return
+          const bDown    = this.keys.b.isDown
           const canBlock = !['punch', 'kick', 'hurt', 'jump', 'dead'].includes(p.state) || p.isBlocking
 
-          if (qDown && canBlock) {
+          if (bDown && canBlock) {
             if (!p.isBlocking) { p.isBlocking = true; p.blockFrame = this.frame }
             p.state = 'block'; p.stateTimer = 0
             p.vx *= 0.35; p.vy *= 0.35
             return
           }
-          if (!qDown && p.isBlocking) {
+          if (!bDown && p.isBlocking) {
             p.isBlocking = false
             if (p.state === 'block') p.state = 'idle'
           }
 
           const canMove = !['punch', 'kick'].includes(p.state)
-          const left  = this.keys.left.isDown  || this.keys.a.isDown
+          const left  = this.keys.left.isDown  || this.keys.q.isDown   // Q=left (AZERTY)
           const right = this.keys.right.isDown || this.keys.d.isDown
-          const up    = this.keys.up.isDown    || this.keys.w.isDown
+          const up    = this.keys.up.isDown    || this.keys.z.isDown   // Z=forward (AZERTY)
           const down  = this.keys.down.isDown  || this.keys.s.isDown
           const moving = left || right || up || down
 
@@ -935,9 +1030,34 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           }
         }
 
+        // ── THROW WEAPON ─────────────────────────────────────
+        throwWeapon() {
+          if (!this.heldWeapon || this.heldWeapon.type === 'gun') return
+          const p = this.player
+          if (p.hp <= 0 || p.isBlocking) return
+          const wep = this.heldWeapon
+          const dmgMap: Record<string, number> = { bat: 30, chain: 22, bottle: 40 }
+          const pg = this.add.graphics().setDepth(300)
+          this.projectiles.push({ gfx: pg, x: p.x, y: p.floorY - PH * 0.6, vx: p.face * 14, dmg: dmgMap[wep.type] ?? 25, face: p.face })
+          this.heldWeapon = null
+          this.weaponGfx.clear()
+          this.spawnFloatText(p.x - this.cameraX, p.floorY - 80, 'LANCÉ !', '#ffaa00', false)
+        }
+
         // ── ATTACKS ──────────────────────────────────────────
         playerAttack(type: 'punch' | 'kick') {
           const p = this.player
+          if (this.bossCinematic) return
+          // Gun cinematic: point gun at mouth → Tyler dies
+          if (this.heldWeapon?.type === 'gun' && this.bossPhase2 && this.bossInvincible) {
+            const tyler = this.enemies.find(e => e.charType === 'tyler')
+            if (tyler) {
+              this.bossCinematic = true; this.bossCinemaTimer = 0
+              p.state = 'taunt'; p.face = tyler.x > p.x ? 1 : -1
+              p.vx = 0; p.vy = 0
+            }
+            return
+          }
           if (p.hp <= 0 || p.atkCD > 0 || p.isBlocking || ['punch', 'kick'].includes(p.state)) return
           p.state = type; p.stateTimer = type === 'punch' ? 18 : 24
           p.atkCD = type === 'punch' ? 14 : 22
@@ -963,6 +1083,8 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             if (p.face === 1 ? dx < -14 : dx > 14) continue
             if (Math.abs(dx) > range || Math.abs(dy) > 58) continue
 
+            // Tyler invincible unless vulnerable
+            if (e.charType === 'tyler' && this.bossInvincible && !this.bossVulnerable) continue
             const mult = this.rageActive ? 2.0 : 1.0
             const dmg  = Math.round(base * mult * this.scoreMult)
             e.hp = Math.max(0, e.hp - dmg)
@@ -1014,12 +1136,272 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
         }
 
         // Drop a random weapon at world position
-        dropWeapon(x: number, y: number) {
+        dropWeapon(x: number, y: number, forced?: WeaponType) {
           const types: WeaponType[] = ['bat', 'chain', 'bottle']
-          const usesMap: Record<WeaponType, number> = { bat: 4, chain: 3, bottle: 2 }
-          const type = types[Math.floor(Math.random() * types.length)]
+          const usesMap: Record<string, number> = { bat: 4, chain: 3, bottle: 2, gun: 1 }
+          const type = forced ?? types[Math.floor(Math.random() * types.length)]
           const gfx = this.add.graphics().setDepth(5)
-          this.droppedWeapons.push({ gfx, x, y, type, maxUses: usesMap[type] })
+          this.droppedWeapons.push({ gfx, x, y, type, maxUses: usesMap[type] ?? 1 })
+        }
+
+        // Tick thrown projectiles
+        tickProjectiles() {
+          const cam = this.cameraX
+          for (const proj of this.projectiles) {
+            proj.x += proj.vx
+            const sx = proj.x - cam
+            proj.gfx.clear()
+            if (sx < -80 || sx > GW + 80) { proj.gfx.destroy(); continue }
+            // Draw as spinning object
+            const angle = this.frame * 0.35 * proj.face
+            proj.gfx.fillStyle(0x886633, 1)
+            proj.gfx.fillRect(sx - 14, proj.y - 3, 28, 6)
+            proj.gfx.fillStyle(0xccaa44, 0.7)
+            proj.gfx.fillRect(sx - 14 + Math.cos(angle) * 10, proj.y + Math.sin(angle) * 4, 10, 4)
+
+            // Hit check
+            for (const e of this.enemies) {
+              if (e.hp <= 0 || e.hurtInv > 0) continue
+              const dist = Math.abs(e.x - proj.x)
+              if (dist < 40 && Math.abs(e.floorY - proj.y) < 50) {
+                e.hp = Math.max(0, e.hp - proj.dmg)
+                e.hurtInv = 14; e.state = 'hurt'; e.stateTimer = 12
+                e.vx = proj.face * 4
+                this.spawnFloatText(e.x - cam, e.floorY - PH - 10, `-${proj.dmg}`, '#ffcc00', true)
+                this.spawnBlood(e.x, e.floorY - PH / 2, 4)
+                if (e.hp <= 0) { e.state = 'dead'; e.deadTimer = 0 }
+                proj.gfx.destroy()
+                this.projectiles = this.projectiles.filter(p => p !== proj)
+                break
+              }
+            }
+          }
+          this.projectiles = this.projectiles.filter(p => {
+            const sx = p.x - this.cameraX
+            if (sx < -80 || sx > GW + 80) { p.gfx.destroy(); return false }
+            return true
+          })
+        }
+
+        // ── TYLER BOSS PATTERN AI ────────────────────────────
+        tickTylerAI(tyler: Char) {
+          const p = this.player
+          const dx = p.x - tyler.x
+          tyler.face = dx > 0 ? 1 : -1
+
+          // Phase 2: gun dropped, Tyler is invincible — just idle
+          if (this.bossPhase2) {
+            tyler.state = 'idle'; tyler.vx *= 0.9; tyler.vy *= 0.9
+            return
+          }
+
+          // Check 10% HP threshold
+          if (!this.bossPhase2 && tyler.hp <= tyler.maxHp * 0.10) {
+            this.bossPhase2 = true; this.bossInvincible = true
+            tyler.hp = Math.round(tyler.maxHp * 0.10)  // lock at 10%
+            tyler.state = 'taunt'; tyler.vx = 0; tyler.vy = 0
+            // Drop gun
+            this.time.delayedCall(800, () => {
+              this.dropWeapon(tyler.x + tyler.face * 60, tyler.floorY, 'gun')
+              this.cameras.main.shake(400, 0.018)
+              this.spawnFloatText(GW / 2, PLAY_H / 2 - 40,
+                '"Si tu tires sur moi... tu te tires dessus."', '#cc1111', true)
+              this.spawnFloatText(GW / 2, PLAY_H / 2 + 10,
+                '[Ramasse le pistolet → A pour finir]', '#ffcc44', false)
+            })
+            return
+          }
+
+          // Stunned (by perfect block) = vulnerable
+          if (tyler.stunned) {
+            this.bossVulnerable = true
+            return
+          }
+          if (!tyler.stunned && this.bossVulnerable && tyler.hurtInv === 0 && this.bossPtrnState !== 'vulnerable') {
+            this.bossVulnerable = false
+          }
+
+          this.bossPtrnTimer++
+
+          switch (this.bossPtrnState) {
+            case 'approach': {
+              // Walk toward player, decide next pattern
+              if (Math.abs(dx) > 200) {
+                tyler.vx = (dx / Math.abs(dx)) * 2.2
+                tyler.state = 'walk'
+              } else {
+                tyler.vx *= 0.8
+                if (this.bossPtrnTimer > 60) {
+                  this.bossPtrnTimer = 0
+                  this.bossPtrnState = 'wind'
+                }
+              }
+              break
+            }
+            case 'wind': {
+              // Telegraphing: back up slightly and pause
+              tyler.vx = -tyler.face * 1.5
+              tyler.state = 'idle'
+              if (this.bossPtrnTimer > 55) {
+                this.bossPtrnTimer = 0
+                this.bossPtrnState = 'attack'
+              }
+              break
+            }
+            case 'attack': {
+              const ptn = this.bossPtrnIdx % 3
+              if (ptn === 0) {
+                // Pattern 1 — Combo: 3 rapid punches
+                if (this.bossPtrnTimer % 18 === 0 && this.bossPtrnTimer <= 54) {
+                  tyler.state = 'punch'; tyler.stateTimer = 14
+                  tyler.atkCD = 10
+                  if (p.hp > 0 && p.hurtInv === 0 && Math.abs(p.x - tyler.x) < 100 && Math.abs(p.floorY - tyler.floorY) < 52) {
+                    this.dealBossHit(tyler, p, 'punch')
+                  }
+                }
+                if (this.bossPtrnTimer > 65) {
+                  this.bossPtrnTimer = 0; this.bossPtrnState = 'recover'
+                }
+              } else if (ptn === 1) {
+                // Pattern 2 — Charge kick: rush + powerful kick
+                if (this.bossPtrnTimer < 30) {
+                  tyler.vx = tyler.face * 5.5
+                  tyler.state = 'walk'
+                } else if (this.bossPtrnTimer === 30) {
+                  tyler.state = 'kick'; tyler.stateTimer = 24; tyler.atkCD = 20
+                  if (p.hp > 0 && p.hurtInv === 0 && Math.abs(p.x - tyler.x) < 120 && Math.abs(p.floorY - tyler.floorY) < 52) {
+                    this.dealBossHit(tyler, p, 'kick')
+                  }
+                }
+                if (this.bossPtrnTimer > 60) {
+                  this.bossPtrnTimer = 0; this.bossPtrnState = 'recover'
+                }
+              } else {
+                // Pattern 3 — Grab: slow approach, unavoidable grab
+                if (this.bossPtrnTimer < 70) {
+                  tyler.vx = tyler.face * 1.2
+                  tyler.state = 'walk'
+                } else if (this.bossPtrnTimer === 70) {
+                  tyler.state = 'punch'; tyler.stateTimer = 30; tyler.atkCD = 20
+                  if (p.hp > 0 && p.hurtInv === 0 && Math.abs(p.x - tyler.x) < 80 && Math.abs(p.floorY - tyler.floorY) < 40) {
+                    this.dealBossHit(tyler, p, 'grab')
+                  }
+                }
+                if (this.bossPtrnTimer > 90) {
+                  this.bossPtrnTimer = 0; this.bossPtrnState = 'recover'
+                }
+              }
+              break
+            }
+            case 'recover': {
+              tyler.vx *= 0.85; tyler.state = 'idle'
+              if (this.bossPtrnTimer > 45) {
+                this.bossPtrnsDone++
+                this.bossPtrnIdx++
+                this.bossPtrnTimer = 0
+                if (this.bossPtrnsDone >= 3) {
+                  // After 3 patterns → vulnerable window
+                  this.bossPtrnsDone = 0
+                  this.bossPtrnState = 'vulnerable'
+                  this.bossVulnerable = true
+                  tyler.stunned = true; tyler.stunTimer = 150
+                  this.cameras.main.flash(200, 255, 200, 0, false)
+                  this.spawnFloatText(tyler.x - this.cameraX, tyler.floorY - PH - 30, 'FRAPPEZ !', '#ffdd00', true)
+                } else {
+                  this.bossPtrnState = 'approach'
+                }
+              }
+              break
+            }
+            case 'vulnerable': {
+              tyler.vx *= 0.8; tyler.state = 'idle'
+              if (this.bossPtrnTimer > 150) {
+                this.bossVulnerable = false
+                tyler.stunned = false
+                this.bossPtrnTimer = 0
+                this.bossPtrnState = 'approach'
+                this.spawnFloatText(GW / 2, PLAY_H / 2, 'TYLER REPREND LE DESSUS...', '#cc1111', false)
+              }
+              break
+            }
+            case 'invincible': break
+          }
+
+          // Enforce invincibility (override any hp reduction done outside this method)
+          if (this.bossInvincible && !this.bossVulnerable) {
+            tyler.hp = Math.max(tyler.hp, Math.round(tyler.maxHp * 0.10 + 1))
+          }
+          if (!this.bossVulnerable && tyler.charType === 'tyler') {
+            // Can't be killed while not vulnerable
+            tyler.hp = Math.max(1, tyler.hp)
+          }
+        }
+
+        // Deal boss hit to player (respects block)
+        dealBossHit(tyler: Char, p: Char, hitType: 'punch' | 'kick' | 'grab') {
+          const cfg  = DIFFS[this.diff]
+          const base = hitType === 'grab' ? 35 : hitType === 'kick' ? 28 : 20
+          const rawDmg = Math.round(base * cfg.dmgM)
+
+          if (p.isBlocking && hitType !== 'grab') {
+            // Perfect block check (< 1s = 60 frames since block started)
+            const isPerfect = (this.frame - p.blockFrame) < 65
+            p.hp = Math.max(0, p.hp - Math.round(rawDmg * 0.2))
+            p.hurtInv = 8
+            if (isPerfect) {
+              tyler.stunned = true; tyler.stunTimer = 140
+              this.bossVulnerable = true
+              tyler.state = 'idle'; tyler.vx = 0
+              this.bossPtrnState = 'vulnerable'; this.bossPtrnTimer = 0
+              this.cameras.main.flash(150, 0, 100, 255, false)
+              this.spawnFloatText(tyler.x - this.cameraX, tyler.floorY - PH - 26, 'PERFECT BLOCK → STUNNÉ !', '#44ddff', true)
+            } else {
+              this.spawnFloatText(p.x - this.cameraX, p.floorY - PH - 16, 'BLOQUÉ', '#8888ff', false)
+            }
+          } else {
+            p.hp = Math.max(0, p.hp - rawDmg)
+            p.vx = tyler.face * (hitType === 'kick' ? 6 : 3)
+            p.hurtInv = 25; p.state = 'hurt'; p.stateTimer = 16
+            this.rage = Math.min(100, this.rage + 15)
+            this.cameras.main.shake(110, 0.005)
+          }
+        }
+
+        // ── ENDLESS WAVES ────────────────────────────────────
+        spawnEndlessWave() {
+          this.waveCleared = false
+          for (const e of this.enemies) e.gfx.destroy()
+          this.enemies = []
+          for (const w of this.droppedWeapons) w.gfx.destroy()
+          this.droppedWeapons = []
+
+          // Max 4 enemies at once; difficulty increases via hp/dmg mults
+          const count = Math.min(4, 1 + Math.floor(this.endlessWave * 0.5))
+          const comps = this.getWaveComp(count)
+          let i = 0
+          for (const [type, c] of comps) {
+            for (let j = 0; j < c; j++) {
+              const ex = this.player.x + 300 + i * 120 + Math.random() * 80
+              const ey = FY1 + 18 + Math.random() * (FY2 - FY1 - 25)
+              const gfx = this.add.graphics().setDepth(10 + ey)
+              const hpBase = ({ grunt: 42, bob: 100, toughguy: 80, tyler: 240 } as Record<string, number>)[type] ?? 50
+              const hp = Math.round(hpBase * this.endlessHpMult)
+              const spdBase = ({ grunt: 1.6, bob: 1.2, toughguy: 1.4, tyler: 2.0 } as Record<string, number>)[type] ?? 1.6
+              this.enemies.push({
+                gfx, x: ex, floorY: ey,
+                jumpH: 0, jumpV: 0, vx: 0, vy: 0,
+                hp, maxHp: hp, face: -1,
+                state: 'idle', stateTimer: 0, atkCD: 0, hurtInv: 0,
+                speed: Math.min(3.5, spdBase + this.endlessWave * 0.12),
+                dmg: Math.round((({ grunt: 8, bob: 13, toughguy: 12, tyler: 20 } as Record<string, number>)[type] ?? 8) * Math.min(this.endlessHpMult, 2.5)),
+                isPlayer: false, charType: type as CharType, wave: this.endlessWave, deadTimer: 0,
+                isBlocking: false, blockFrame: 0, stunned: false, stunTimer: 0,
+              })
+              i++
+            }
+          }
+          this.maxPlayerWorldX = this.player.x + 300
+          this.showWaveAnnounce(this.endlessWave)
         }
 
         playerJump() {
@@ -1240,10 +1622,10 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           for (const w of this.droppedWeapons) {
             const sx = w.x - cam
             if (sx < -60 || sx > GW + 60) { w.gfx.clear(); continue }
-            // Slight floating bob
             const bob = Math.sin(this.frame * 0.06) * 2
             w.gfx.setPosition(sx, w.y - 8 + bob)
-            drawWeaponGround(w.gfx, w.type)
+            if (w.type === 'gun') drawGunPickup(w.gfx, this.frame)
+            else drawWeaponGround(w.gfx, w.type)
           }
 
           const p = this.player
@@ -1440,11 +1822,15 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             wordWrap: { width: 560 },
           }).setOrigin(0.5, 0.5).setDepth(D + 10).setAlpha(0)
 
-          const ctrl = this.add.text(GW / 2, HY + HUD_H - 14,
-            'WASD / ←↑↓→  Bouger   |   Z Poing   X Kick   ESPACE Saut   Q Garde   C Rage', {
-            fontFamily: 'monospace', fontSize: '8px', color: 'rgba(200,200,200,0.32)', align: 'center',
-          }).setOrigin(0.5, 1).setDepth(D)
-          this.time.delayedCall(7000, () => this.tweens.add({ targets: ctrl, alpha: 0, duration: 2000 }))
+          // Permanent controls display
+          this.add.text(GW / 2, HY + 5, 'ZQSD / ←↑↓→  Déplacer  ·  A Poing  ·  E Kick  ·  W Lancer  ·  B Garde  ·  ESPACE Saut  ·  C Rage', {
+            fontFamily: 'monospace', fontSize: '9.5px', color: 'rgba(220,220,220,0.55)', align: 'center',
+          }).setOrigin(0.5, 0).setDepth(D)
+          // Block reminder (bigger)
+          this.add.text(GW / 2, HY + 52,
+            'B  ─  GARDE (blocage parfait < 1s avant le coup = STUN)', {
+            fontFamily: 'monospace', fontSize: '8px', color: 'rgba(100,120,200,0.60)', align: 'center',
+          }).setOrigin(0.5, 0.5).setDepth(D)
         }
 
         updateHUD() {
@@ -1487,9 +1873,9 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           // Block indicator
           if (p.isBlocking) {
             const pulse = 0.55 + Math.sin(this.frame * 0.3) * 0.45
-            this.blockLabel.setText('[Q] GARDE ACTIVE — 80% réduc. dommages').setAlpha(pulse).setColor('#88aaff')
+            this.blockLabel.setText('[B] GARDE ACTIVE — 80% réduc. dommages').setAlpha(pulse).setColor('#88aaff')
           } else {
-            this.blockLabel.setText('[Q] GARDE').setAlpha(0.3).setColor('#555588')
+            this.blockLabel.setText('[B] GARDE').setAlpha(0.3).setColor('#555588')
           }
 
           // Wave / score
@@ -1707,13 +2093,13 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           })
           this.time.delayedCall(1800, () => {
             this.add.text(GW / 2, PLAY_H / 2 + 8,
-              `Score : ${this.score}  |  Combo max : ${this.maxCombo}×  |  Mult. ×${this.scoreMult}`, {
+              `Score : ${this.score}  |  Combo max : ${this.maxCombo}×`, {
               fontFamily: 'monospace', fontSize: '13px', color: '#888888',
             }).setOrigin(0.5, 0.5).setDepth(750)
           })
-          this.time.delayedCall(2400, () => {
-            gameResult.current = { score: this.score, diff: this.diff }
-            setShowName(true)
+          this.time.delayedCall(3200, () => {
+            // Show endless choice overlay
+            setShowEndlessChoice(true)
           })
         }
 
@@ -1780,6 +2166,42 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             fontFamily: 'Impact', fontSize: '18px', letterSpacing: '4px',
             padding: '10px 40px', cursor: 'pointer',
           }}>VALIDER</button>
+        </div>
+      )}
+
+      {/* Endless mode choice overlay */}
+      {showEndlessChoice && (
+        <div style={{
+          position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.92)', zIndex: 200,
+        }}>
+          <div style={{ color: '#ffdd00', fontFamily: 'Impact', fontSize: '38px', letterSpacing: '6px', marginBottom: '10px' }}>
+            TYLER EST VAINCU.
+          </div>
+          <div style={{ color: '#888', fontFamily: 'serif', fontSize: '18px', fontStyle: 'italic', marginBottom: '32px', textAlign: 'center', maxWidth: '500px' }}>
+            "Jusqu'à ce que mort s'en suive..."<br/>
+            <span style={{ color: '#555', fontSize: '14px' }}>Vagues infinies — difficulté croissante</span>
+          </div>
+          <div style={{ display: 'flex', gap: '24px' }}>
+            <button onClick={() => {
+              setShowEndlessChoice(false)
+              startEndlessRef.current?.()
+            }} style={{
+              background: '#cc1111', border: 'none', color: '#fff',
+              fontFamily: 'Impact', fontSize: '20px', letterSpacing: '4px',
+              padding: '14px 40px', cursor: 'pointer',
+            }}>CONTINUER</button>
+            <button onClick={() => {
+              setShowEndlessChoice(false)
+              gameResult.current = { score: gameResult.current?.score ?? 0, diff: gameResult.current?.diff ?? 'normal' }
+              setShowName(true)
+            }} style={{
+              background: 'transparent', border: '1px solid #554433', color: '#886644',
+              fontFamily: 'monospace', fontSize: '14px', letterSpacing: '3px',
+              padding: '14px 30px', cursor: 'pointer',
+            }}>QUITTER</button>
+          </div>
         </div>
       )}
 
