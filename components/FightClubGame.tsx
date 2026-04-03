@@ -160,12 +160,20 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05)
             osc.start(); osc.stop(ctx.currentTime + 0.05)
           } else if (type === 'gun_bang') {
-            // Coup de feu — son grave et violent
-            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(120, ctx.currentTime)
-            osc.frequency.exponentialRampToValueAtTime(18, ctx.currentTime + 0.30)
-            gain.gain.setValueAtTime(0.90 * vol, ctx.currentTime)
-            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35)
-            osc.start(); osc.stop(ctx.currentTime + 0.35)
+            // Coup de feu — double oscillateur : corps grave + crack aigu
+            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(140, ctx.currentTime)
+            osc.frequency.exponentialRampToValueAtTime(16, ctx.currentTime + 0.40)
+            gain.gain.setValueAtTime(1.0 * vol, ctx.currentTime)
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45)
+            osc.start(); osc.stop(ctx.currentTime + 0.45)
+            // Crack aigu superposé
+            const osc2 = ctx.createOscillator(); const gain2 = ctx.createGain()
+            osc2.connect(gain2); gain2.connect(ctx.destination)
+            osc2.type = 'square'; osc2.frequency.setValueAtTime(1800, ctx.currentTime)
+            osc2.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.06)
+            gain2.gain.setValueAtTime(0.55 * vol, ctx.currentTime)
+            gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08)
+            osc2.start(); osc2.stop(ctx.currentTime + 0.08)
           }
         } catch (_) {}
       }
@@ -2181,7 +2189,9 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
 
           for (const e of this.enemies) {
             const sx = e.x - cam
-            if (e.deadTimer > 55) { e.gfx.clear(); continue }
+            // Corps de Bob reste visible pendant toute la durée du tribute
+            const keepDead = e.charType === 'bob' && this.bobTributeActive
+            if (e.deadTimer > 55 && !keepDead) { e.gfx.clear(); continue }
             if (sx < -90 || sx > GW + 90) { e.gfx.clear(); continue }   // off-screen cull
             const showE = e.hurtInv === 0 || Math.floor(e.hurtInv / 3) % 2 === 0
             if (!showE) { e.gfx.clear(); continue }
@@ -2199,6 +2209,44 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           if (this.rageActive) {
             const a = 0.06 + Math.sin(this.frame * 0.18) * 0.025
             this.overlayGfx.fillStyle(0xff2200, a); this.overlayGfx.fillRect(0, 0, GW, PLAY_H)
+          }
+
+          // ── Cinématique pistolet : flash canon + sang bouche ──
+          if (this.bossCinematic) {
+            const p = this.player
+            const psx = p.x - cam
+            const mouthY = p.floorY - PH + 8   // hauteur bouche du joueur
+            // Flash de bouche de canon (frames 63-72)
+            if (this.bossCinemaTimer >= 63 && this.bossCinemaTimer <= 72) {
+              const age = this.bossCinemaTimer - 63
+              const intensity = Math.max(0, 1 - age / 9)
+              // Lueur jaune-blanc au bout du pistolet (vers la bouche)
+              this.overlayGfx.fillStyle(0xffffff, intensity * 0.9)
+              this.overlayGfx.fillCircle(psx, mouthY - 4, 18 * intensity)
+              this.overlayGfx.fillStyle(0xffdd44, intensity * 0.7)
+              this.overlayGfx.fillCircle(psx, mouthY - 4, 28 * intensity)
+              this.overlayGfx.fillStyle(0xff8800, intensity * 0.4)
+              this.overlayGfx.fillCircle(psx, mouthY - 4, 38 * intensity)
+            }
+            // Sang qui coule de la bouche (frames 65 → fin cinématique)
+            if (this.bossCinemaTimer >= 65) {
+              const elapsed = this.bossCinemaTimer - 65
+              // Filet de sang qui descend progressivement
+              const drip1 = Math.min(elapsed * 1.2, 28)
+              const drip2 = Math.min(Math.max(0, (elapsed - 8) * 1.0), 22)
+              const drip3 = Math.min(Math.max(0, (elapsed - 16) * 0.8), 18)
+              this.overlayGfx.fillStyle(0xcc0000, 0.92)
+              this.overlayGfx.fillRect(psx - 2, mouthY, 4, drip1)        // filet central
+              this.overlayGfx.fillStyle(0xaa0000, 0.80)
+              this.overlayGfx.fillRect(psx - 5, mouthY + 4, 3, drip2)   // filet gauche
+              this.overlayGfx.fillRect(psx + 3, mouthY + 2, 3, drip3)   // filet droit
+              // Goutte qui tombe au bout
+              if (drip1 >= 20) {
+                const dropY = mouthY + drip1 + Math.sin(elapsed * 0.3) * 3
+                this.overlayGfx.fillStyle(0xcc0000, 0.85)
+                this.overlayGfx.fillCircle(psx - 1, dropY, 3)
+              }
+            }
           }
           for (const e of this.enemies) {
             if (e.hp <= 0) continue
