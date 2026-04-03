@@ -1097,8 +1097,9 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           if (this.gameOver) { this.tickGameOver(); return }
           if (this.victory)  return
 
-          this.handleInput()
+          if (!this.bobTributeActive) this.handleInput()
           this.tickChar(this.player)
+          if (this.bobTributeActive) { this.player.vx = 0; this.player.vy = 0 }
 
           // Constrain player to camera left edge and maxPlayerWorldX
           const camLeft = this.cameraX + 36
@@ -1195,58 +1196,69 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             }
           }
 
-          // Bob tribute timer — phases
+          // Bob tribute timer — 6 secondes exactes (360 frames)
           if (this.bobTributeActive) {
             this.bobTributeTimer++
             const te = this.tributeEnemy
 
-            // Phase 1 (0-85): tribute enemy marche vers le corps, état forcé chaque frame
-            if (this.bobTributeTimer <= 85 && te && te.hp > 0) {
+            // Phase 1 (0-110): l'ennemi marche vers le corps de Bob
+            if (this.bobTributeTimer <= 110 && te && te.hp > 0) {
               const dx = this.tributeBobX - te.x
-              te.stateTimer = 0  // empêche tickChar de réinitialiser l'état
-              if (Math.abs(dx) > 14) {
-                te.vx = (dx > 0 ? 1 : -1) * 1.5
+              te.stateTimer = 0
+              if (Math.abs(dx) > 16) {
+                te.vx = (dx > 0 ? 1 : -1) * 1.8
                 te.face = dx > 0 ? 1 : -1
                 te.state = 'walk'
               } else {
-                te.vx = 0
-                te.state = 'taunt'
+                te.vx = 0; te.stateTimer = 0; te.state = 'taunt'
                 te.face = te.x > this.tributeBobX ? -1 : 1
               }
             }
-            // Phase 2 (86-240): penché sur le corps — état taunt maintenu chaque frame
-            if (this.bobTributeTimer > 85 && this.bobTributeTimer < 240 && te && te.hp > 0) {
+
+            // Phase 2 (111-340): penché sur le corps, pleure
+            if (this.bobTributeTimer > 110 && this.bobTributeTimer <= 340 && te && te.hp > 0) {
               te.vx = 0; te.stateTimer = 0; te.state = 'taunt'
+              te.face = te.x > this.tributeBobX ? -1 : 1
+              // Larmes — petits points bleus qui remontent
+              if (this.bobTributeTimer % 14 === 0) {
+                this.spawnFloatText(
+                  te.x - this.cameraX + (te.face > 0 ? 5 : -5),
+                  te.floorY - PH - 4,
+                  '·', '#99bbff', false
+                )
+              }
             }
-            // Phase 3 (120): texte persistant "Il s'appellait Robert Paulson !!"
-            if (this.bobTributeTimer === 120) {
-              const tx = te ? te.x - this.cameraX : this.tributeBobX - this.cameraX
-              const ty = te ? te.floorY : this.tributeBobY
-              // Détruire texte précédent si existe
+
+            // Frame 170: "Il s'appelait Robert Paulson !" — texte grand, centré
+            if (this.bobTributeTimer === 170) {
               if (this.tributeTextObj) { try { this.tributeTextObj.destroy() } catch (_) {} }
               this.tributeTextObj = this.add.text(
-                GW / 2, ty - PH - 50,
-                '"Il s\'appellait Robert Paulson !!"',
-                { fontFamily: 'Impact', fontSize: '24px', color: '#ffee44',
-                  stroke: '#000000', strokeThickness: 4 }
-              ).setOrigin(0.5, 0.5).setDepth(600)
-              // Shake + flash dramatique
-              this.cameras.main.shake(500, 0.016)
-              this.cameras.main.flash(200, 255, 230, 80, false)
-              // Détruire le texte après 3 secondes
-              this.time.delayedCall(3000, () => {
-                if (this.tributeTextObj) { try { this.tributeTextObj.destroy() } catch (_) {} this.tributeTextObj = null }
-              })
+                GW / 2, PLAY_H / 2 - 30,
+                '"Il s\'appelait Robert Paulson !"',
+                { fontFamily: 'Impact', fontSize: '28px', color: '#ffee44',
+                  stroke: '#000000', strokeThickness: 5, align: 'center' }
+              ).setOrigin(0.5, 0.5).setDepth(610)
+              this.cameras.main.shake(600, 0.018)
+              this.cameras.main.flash(180, 255, 230, 80, false)
             }
-            // Fin du tribute (~4 sec = 240 frames)
-            if (this.bobTributeTimer >= 240) {
+
+            // Frame 320: supprimer le texte avant la fin
+            if (this.bobTributeTimer === 320) {
+              if (this.tributeTextObj) { try { this.tributeTextObj.destroy() } catch (_) {} this.tributeTextObj = null }
+            }
+
+            // Frame 360 (6 sec): fin — l'ennemi tribute attaque, joueur libéré
+            if (this.bobTributeTimer >= 360) {
               this.bobTributeActive = false; this.bobTributeTimer = 0
               if (this.tributeTextObj) { try { this.tributeTextObj.destroy() } catch (_) {} this.tributeTextObj = null }
+              // Libérer tous les ennemis gelés
               for (const e of this.enemies) {
-                if (e.hp > 0) {
-                  e.atkCD = 0; e.state = 'idle'
-                  if (e === te) { e.speed = Math.min(e.speed * 1.7, 5.0); e.atkCD = 0 }
-                }
+                if (e.hp > 0) { e.atkCD = 0; e.state = 'idle' }
+              }
+              // L'ennemi tribute fonce sur le joueur — enragé
+              if (te && te.hp > 0) {
+                te.speed = Math.min(te.speed * 2.0, 5.5)
+                te.atkCD = 0; te.state = 'idle'
               }
               this.tributeEnemy = null
             }
@@ -1752,26 +1764,45 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
 
         // ── BOB DEATH TRIBUTE ────────────────────────────────
         triggerBobTribute(bobX: number, bobY: number) {
+          if (this.bobTributeActive) return  // déjà actif
           this.bobTributeActive = true
           this.bobTributeTimer = 0
           this.tributeBobX = bobX
           this.tributeBobY = bobY
-          // Freeze all living enemies
+
+          // Freeze joueur immédiatement
+          this.player.vx = 0; this.player.vy = 0
+
+          // Freeze tous les ennemis vivants
           for (const e of this.enemies) {
-            if (e.hp > 0) { e.atkCD = 9999; e.vx = 0; e.vy = 0 }
+            if (e.hp > 0) { e.atkCD = 9999; e.vx = 0; e.vy = 0; e.state = 'idle'; e.stateTimer = 0 }
           }
-          // Find nearest living non-Bob enemy to walk toward body
-          let nearest: Char | null = null
-          let nearDist = Infinity
-          for (const e of this.enemies) {
-            if (e.hp <= 0 || e.charType === 'bob') continue
-            const d = Math.abs(e.x - bobX)
-            if (d < nearDist) { nearDist = d; nearest = e }
+
+          // Spawner un NOUVEL ennemi — le "frère de Fight Club" qui vient rendre hommage
+          const spawnX = bobX + 280 + Math.random() * 80
+          const spawnY = bobY
+          const gfx = this.add.graphics().setDepth(10 + spawnY)
+          const cfg = DIFFS[this.diff]
+          const hp = Math.round(70 * cfg.hpM)
+          const tributeChar: Char = {
+            gfx, x: spawnX, floorY: spawnY,
+            jumpH: 0, jumpV: 0, vx: 0, vy: 0,
+            hp, maxHp: hp, face: -1,
+            state: 'walk', stateTimer: 0,
+            atkCD: 9999, hurtInv: 0,
+            speed: 2.0,
+            dmg: Math.round(14 * cfg.dmgM),
+            isPlayer: false, charType: 'toughguy',
+            wave: this.wave, deadTimer: 0,
+            isBlocking: false, blockFrame: 0,
+            stunned: false, stunTimer: 0,
           }
-          this.tributeEnemy = nearest
-          // Pause sfx / flash
-          this.cameras.main.flash(200, 30, 30, 30, false)
-          this.cameras.main.shake(180, 0.007)
+          this.enemies.push(tributeChar)
+          this.tributeEnemy = tributeChar
+
+          // Freeze bref de l'écran
+          this.cameras.main.flash(300, 8, 8, 8, false)
+          this.cameras.main.shake(120, 0.005)
         }
 
         // ── ENDLESS WAVES ────────────────────────────────────
