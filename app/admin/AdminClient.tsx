@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminBatchFlaggedDecisions, adminSet18Flag, adminApproveAllPending, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, adminFetchFrenchPosters, adminScanAgeRestrictions, updateFilm, adminResolveReport, adminSetConfig, adminVerifyPosters, adminSetAdmin, adminAddNews, adminDeleteNews, adminAddRecommendation, adminDeleteRecommendation, deleteForumTopic, adminEndSeason } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
@@ -327,6 +327,9 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
   const [flag18Filter, setFlag18Filter] = useState<'all' | '18' | 'normal'>('all')
   const [localPending, setLocalPending] = useState<Film[]>(pendingFilms18)
   const [approveAllLoading, setApproveAllLoading] = useState(false)
+
+  // Sync localPending avec les props après router.refresh()
+  useEffect(() => { setLocalPending(pendingFilms18) }, [pendingFilms18])
   const [showAllFilms18, setShowAllFilms18] = useState(false)
   const [brokenPosters, setBrokenPosters] = useState<{ id: number; titre: string; poster: string }[]>([])
   const [verifyNextId, setVerifyNextId] = useState<number | null>(0)
