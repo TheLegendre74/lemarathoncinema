@@ -1161,6 +1161,13 @@ export async function adminScanAgeRestrictions(fromId: number = 0) {
   const key = process.env.TMDB_API_KEY
   if (!key) return { error: 'Clé TMDB_API_KEY manquante.' }
 
+  // Vérifier que la clé TMDB est valide avant de lancer le scan
+  const testRes = await fetch(`https://api.themoviedb.org/3/configuration?api_key=${key}`, { cache: 'no-store' })
+  const testData = await testRes.json()
+  if (testData.status_code) {
+    return { error: `Clé TMDB invalide ou expirée : ${testData.status_message ?? testData.status_code}` }
+  }
+
   // Inclure flagged_18plus pour ne pas re-pendre les films déjà confirmés manuellement
   const { data: films } = await supabase
     .from('films')
@@ -1189,19 +1196,33 @@ export async function adminScanAgeRestrictions(fromId: number = 0) {
       }
 
       if (!tmdbId) {
-        // Pas de TMDB : impossible de déterminer → nettoyer flagged_18_pending pour ne pas laisser en queue
-        await adminClient.from('films').update({ flagged_18_pending: false }).eq('id', film.id)
         details.push({ id: film.id, titre: film.titre, tmdbId: null, flagged18: false, flagged16: false, certs: {}, status: 'no_tmdb' })
         count++
         continue
       }
 
-      // Fetch release_dates ET détails du film (flag adult) en parallèle
+      // Fetch release_dates ET détails du film en parallèle
       const [relRes, detailRes] = await Promise.all([
         fetch(`https://api.themoviedb.org/3/movie/${tmdbId}/release_dates?api_key=${key}`, { cache: 'no-store' }),
         fetch(`https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${key}`, { cache: 'no-store' }),
       ])
+
+      // Si TMDB retourne une erreur HTTP (401 rate limit, 404, etc.) → skip sans modifier la DB
+      if (!relRes.ok || !detailRes.ok) {
+        details.push({ id: film.id, titre: film.titre, tmdbId, flagged18: false, flagged16: false, certs: {}, status: `http_error: ${relRes.status}/${detailRes.status}` })
+        count++
+        continue
+      }
+
       const [relData, detailData] = await Promise.all([relRes.json(), detailRes.json()])
+
+      // Si TMDB retourne un status_code → erreur applicative (ex: film introuvable)
+      if (relData.status_code) {
+        details.push({ id: film.id, titre: film.titre, tmdbId, flagged18: false, flagged16: false, certs: {}, status: `tmdb_err: ${relData.status_message ?? relData.status_code}` })
+        count++
+        continue
+      }
+
       const isAdult = detailData.adult === true
       const { flagged18, flagged16, certs } = parseTMDBCertifications(relData.results ?? [], isAdult)
 
@@ -1216,7 +1237,7 @@ export async function adminScanAgeRestrictions(fromId: number = 0) {
         // Déjà confirmé manuellement → ne pas toucher
         details.push({ id: film.id, titre: film.titre, tmdbId, flagged18: true, flagged16: false, certs, status: 'already_confirmed' })
       } else {
-        // Pas 18+ → nettoyer automatiquement
+        // Pas 18+ selon TMDB → nettoyer
         await adminClient.from('films')
           .update({ flagged_18plus: false, flagged_18_pending: false, flagged_16plus: flagged16 })
           .eq('id', film.id)
@@ -1224,9 +1245,8 @@ export async function adminScanAgeRestrictions(fromId: number = 0) {
       }
       count++
     } catch (err) {
-      // En cas d'erreur API → nettoyer flagged_18_pending pour ne pas laisser en queue
-      try { await adminClient.from('films').update({ flagged_18_pending: false }).eq('id', film.id) } catch { /* best-effort */ }
-      details.push({ id: film.id, titre: film.titre, tmdbId: film.tmdb_id, flagged18: false, flagged16: false, certs: {}, status: `error: ${String(err).slice(0, 80)}` })
+      // Erreur réseau ou parsing → skip sans modifier la DB (on ne veut pas effacer un flag existant)
+      details.push({ id: film.id, titre: film.titre, tmdbId: film.tmdb_id, flagged18: false, flagged16: false, certs: {}, status: `error: ${String(err).slice(0, 100)}` })
       count++
     }
   }
