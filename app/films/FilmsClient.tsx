@@ -5,7 +5,7 @@ import Image from 'next/image'
 import Poster from '@/components/Poster'
 import Forum from '@/components/Forum'
 import { useToast } from '@/components/ToastProvider'
-import { toggleWatched, markWatched, upsertRating, addFilm, updateFilm, reportFilm, discoverEgg, getFilmWatchProviders, searchFilmTMDB } from '@/lib/actions'
+import { toggleWatched, markWatched, upsertRating, addFilm, updateFilm, reportFilm, discoverEgg, getFilmWatchProviders, searchFilmTMDB, adminSetFilmCategory } from '@/lib/actions'
 import type { TMDBSuggestion } from '@/lib/actions'
 import { CONFIG } from '@/lib/config'
 import { useRouter } from 'next/navigation'
@@ -696,6 +696,8 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
   const [addModal, setAddModal] = useState(false)
   const [showRestricted18, setShowRestricted18] = useState(false)
   const [ageWarnModal, setAgeWarnModal] = useState<18 | null>(null)
+  const [adminCategoryOpen, setAdminCategoryOpen] = useState<number | null>(null)
+  const [categoryOverrides, setCategoryOverrides] = useState<Record<number, 'normal' | '18plus' | 'strange'>>({})
   const watchedSet = useMemo(() => new Set(watchedIds), [watchedIds])
 
   // ── Shark easter egg ───────────────────────────────────────
@@ -724,13 +726,14 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
   const reals   = useMemo(() => [...new Set(films.map(f => f.realisateur))].sort(), [films])
 
   const filtered = useMemo(() => films.filter(f => {
-    if (f.flagged_18plus && !showRestricted18) return false
+    const eff18 = categoryOverrides[f.id] === '18plus' || categoryOverrides[f.id] === 'strange' || (!categoryOverrides[f.id] && f.flagged_18plus)
+    if (eff18 && !showRestricted18) return false
     const q = search.toLowerCase()
     return (!q || f.titre.toLowerCase().includes(q) || f.realisateur.toLowerCase().includes(q))
       && (!filterGenre  || f.genre === filterGenre)
       && (!filterDecade || Math.floor(f.annee / 10) * 10 === parseInt(filterDecade))
       && (!filterReal   || f.realisateur === filterReal)
-  }), [films, search, filterGenre, filterDecade, filterReal, showRestricted18])
+  }), [films, search, filterGenre, filterDecade, filterReal, showRestricted18, categoryOverrides])
 
   function getWatchPct(filmId: number) {
     if (!totalUsers) return 0
@@ -738,6 +741,13 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
   }
 
   function isMajority(filmId: number) { return getWatchPct(filmId) >= CONFIG.SEUIL_MAJORITY }
+
+  async function handleSetCategory(film: Film, category: 'normal' | '18plus' | 'strange') {
+    setCategoryOverrides(prev => ({ ...prev, [film.id]: category }))
+    setAdminCategoryOpen(null)
+    await adminSetFilmCategory(film.id, category)
+    router.refresh()
+  }
 
   function pickRandom() {
     const unwatched = films.filter(f => f.saison === 1 && !watchedSet.has(f.id) && !isMajority(f.id))
@@ -834,20 +844,27 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 155px))', gap: '1rem', justifyContent: 'center' }}>
         {filtered.map(film => {
           const isWatched = watchedSet.has(film.id)
-          const maj   = isMajority(film.id)
-          const s2    = film.saison === 2
-          const rat   = avgRating(ratingMap[film.id])
+          const maj    = isMajority(film.id)
+          const s2     = film.saison === 2
+          const rat    = avgRating(ratingMap[film.id])
           const isWeek = weekFilmId === film.id
+          const isAdmin = !!profile?.is_admin
+          const catOverride = categoryOverrides[film.id]
+          const isStrange  = catOverride === 'strange'  || (!catOverride && (film as any).flagged_18strange)
+          const is18       = catOverride === '18plus' || catOverride === 'strange' || (!catOverride && film.flagged_18plus)
+          const menuOpen   = adminCategoryOpen === film.id
 
-          const is18 = film.flagged_18plus
+          const cardGlow = isStrange
+            ? { boxShadow: '0 0 0 2px rgba(160,0,220,.85), 0 0 22px rgba(160,0,220,.4)', borderRadius: 'var(--rl)' }
+            : is18
+            ? { boxShadow: '0 0 0 2px rgba(200,0,0,.8), 0 0 22px rgba(200,0,0,.4)', borderRadius: 'var(--rl)' }
+            : undefined
+
           return (
             <div key={film.id}
               className={`film-card ${isWatched ? 'watched' : ''} ${maj ? 'majority' : ''} ${s2 ? 's2' : ''}`}
-              onClick={() => setModal(film)}
-              style={is18 ? {
-                boxShadow: '0 0 0 2px rgba(200,0,0,.8), 0 0 22px rgba(200,0,0,.4)',
-                borderRadius: 'var(--rl)',
-              } : undefined}
+              onClick={() => { if (menuOpen) { setAdminCategoryOpen(null); return } setModal(film) }}
+              style={cardGlow}
             >
               <div style={{ width: '100%', aspectRatio: '2/3', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Poster film={film} fill style={{ objectFit: 'cover' }} />
@@ -859,13 +876,48 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                 {!isWatched && s2 && <div style={{ position: 'absolute', top: 7, left: 7, background: 'var(--red)', color: '#fff', fontSize: '.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: 99 }}>S2</div>}
                 {!isWatched && maj && <div style={{ position: 'absolute', top: 7, right: 7, background: 'rgba(255,255,255,.12)', color: '#aaa', fontSize: '.58rem', padding: '2px 7px', borderRadius: 99 }}>60%+</div>}
                 {isWeek && <div style={{ position: 'absolute', bottom: 7, left: 7, background: 'var(--gold)', color: '#0a0a0f', fontSize: '.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: 99 }}>⭐ SEMAINE</div>}
-                {is18 && (
-                  <div style={{
-                    position: 'absolute', bottom: 0, left: 0, right: 0,
-                    background: 'linear-gradient(to top, rgba(160,0,0,.97) 0%, rgba(160,0,0,.65) 60%, transparent 100%)',
-                    padding: '.5rem .4rem .4rem', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <div style={{ fontSize: '.6rem', fontWeight: 800, color: '#fff', letterSpacing: '.5px' }}>🔞 -18</div>
+
+                {/* Bannière 18+ (rouge) */}
+                {is18 && !isStrange && (
+                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(to top, rgba(180,0,0,1) 0%, rgba(180,0,0,.75) 55%, transparent 100%)', padding: '.5rem .4rem .4rem', textAlign: 'center' }}>
+                    <div style={{ fontSize: '.62rem', fontWeight: 900, color: '#fff', letterSpacing: '1px', textTransform: 'uppercase' }}>🔞 18+</div>
+                  </div>
+                )}
+
+                {/* Bannière 18+ Étrange (violet) */}
+                {isStrange && (
+                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(to top, rgba(120,0,200,1) 0%, rgba(120,0,200,.75) 55%, transparent 100%)', padding: '.5rem .4rem .4rem', textAlign: 'center' }}>
+                    <div style={{ fontSize: '.58rem', fontWeight: 900, color: '#f0c0ff', letterSpacing: '1px', textTransform: 'uppercase' }}>🔞 18+ ÉTRANGE</div>
+                  </div>
+                )}
+
+                {/* Bouton admin catégorie (coin haut gauche) */}
+                {isAdmin && (
+                  <button
+                    onClick={e => { e.stopPropagation(); setAdminCategoryOpen(menuOpen ? null : film.id) }}
+                    style={{ position: 'absolute', top: 5, left: 5, background: 'rgba(0,0,0,.7)', border: '1px solid rgba(255,255,255,.25)', borderRadius: 4, padding: '2px 5px', fontSize: '.55rem', color: '#ccc', cursor: 'pointer', zIndex: 10, lineHeight: 1.4 }}
+                    title="Catégorie admin"
+                  >⚙</button>
+                )}
+
+                {/* Menu admin catégorie */}
+                {isAdmin && menuOpen && (
+                  <div
+                    onClick={e => e.stopPropagation()}
+                    style={{ position: 'absolute', top: 24, left: 5, zIndex: 20, background: 'rgba(10,10,20,.97)', border: '1px solid rgba(255,255,255,.2)', borderRadius: 6, padding: '.3rem', display: 'flex', flexDirection: 'column', gap: '.2rem', minWidth: 110 }}
+                  >
+                    {([
+                      { key: 'normal', label: '✓ Normal', color: '#aaa', bg: 'transparent' },
+                      { key: '18plus', label: '🔞 18+', color: '#ff6b6b', bg: 'rgba(180,0,0,.2)' },
+                      { key: 'strange', label: '🔞 18+ Étrange', color: '#d0a0ff', bg: 'rgba(120,0,200,.2)' },
+                    ] as const).map(opt => {
+                      const active = catOverride === opt.key || (!catOverride && (opt.key === 'strange' ? (film as any).flagged_18strange : opt.key === '18plus' ? film.flagged_18plus && !(film as any).flagged_18strange : !film.flagged_18plus))
+                      return (
+                        <button key={opt.key} onClick={() => handleSetCategory(film, opt.key)}
+                          style={{ background: active ? opt.bg : 'transparent', border: active ? `1px solid ${opt.color}40` : '1px solid transparent', borderRadius: 4, padding: '.25rem .4rem', fontSize: '.65rem', color: opt.color, cursor: 'pointer', textAlign: 'left', fontWeight: active ? 700 : 400 }}
+                        >{opt.label}</button>
+                      )
+                    })}
                   </div>
                 )}
               </div>

@@ -857,6 +857,26 @@ export async function adminSet18Flag(filmId: number, is18: boolean) {
   return { success: true }
 }
 
+// Catégorisation manuelle admin : normal / 18+ / 18+ étrange
+export async function adminSetFilmCategory(filmId: number, category: 'normal' | '18plus' | 'strange') {
+  const supabase = await createClient()
+  const adminClient = createAdminClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Non autorisé.' }
+
+  const update =
+    category === 'normal'  ? { flagged_18plus: false, flagged_18strange: false, flagged_18_pending: false } :
+    category === '18plus'  ? { flagged_18plus: true,  flagged_18strange: false, flagged_18_pending: false } :
+                             { flagged_18plus: true,  flagged_18strange: true,  flagged_18_pending: false }
+
+  await adminClient.from('films').update(update).eq('id', filmId)
+  revalidatePath('/films')
+  revalidatePath('/admin')
+  return { success: true }
+}
+
 export async function adminApproveFlaggedFilm(filmId: number) {
   return adminSet18Flag(filmId, false)
 }
