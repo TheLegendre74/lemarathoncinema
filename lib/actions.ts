@@ -822,6 +822,7 @@ export async function adminSet18Flag(filmId: number, is18: boolean) {
 
   await adminClient.from('films').update({ flagged_18plus: is18, flagged_18_pending: false }).eq('id', filmId)
   revalidatePath('/films')
+  revalidatePath('/admin')
   return { success: true }
 }
 

@@ -591,6 +591,7 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
       setFlag18Overrides(prev => ({ ...prev, [film.id]: is18 }))
       setLocalPending(prev => prev.filter(f => f.id !== film.id))
       addToast(is18 ? `🔞 "${film.titre}" confirmé 18+` : `✓ "${film.titre}" — pas 18+, film conservé`, '✅')
+      router.refresh()
     }
   }
 
