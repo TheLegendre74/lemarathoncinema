@@ -88,18 +88,29 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
       })
 
       const VOL = { music: 65, sfx: 70 }
-      // Remappable key bindings — Phaser uses keyCode based on the key CHARACTER,
-      // so AZERTY key labels match Phaser key names directly:
-      // AZERTY Z key → keyCode 90 → Phaser 'Z'
-      // AZERTY Q key → keyCode 81 → Phaser 'Q'
-      // AZERTY A key → keyCode 65 → Phaser 'A'
-      // AZERTY W key → keyCode 87 → Phaser 'W'
-      // Load saved key bindings (v2 = ev.key based, AZERTY-correct; v1 was broken ev.code)
-      const defaultKeys = { left: 'Q', right: 'D', up: 'Z', down: 'S', punch: 'A', kick: 'E', throw: 'W', block: 'B', jump: 'SPACE', rage: 'C' }
-      const savedKeys = (() => { try { return JSON.parse(localStorage.getItem('fc_keys_v2') ?? 'null') } catch { return null } })()
+      // Remappable key bindings — stored as ev.code (physical key, layout-independent)
+      // codeLabel maps physical ev.code → AZERTY display label
+      const codeLabel: Record<string, string> = {
+        KeyQ:'A', KeyW:'Z', KeyE:'E', KeyR:'R', KeyT:'T', KeyY:'Y', KeyU:'U', KeyI:'I', KeyO:'O', KeyP:'P',
+        KeyA:'Q', KeyS:'S', KeyD:'D', KeyF:'F', KeyG:'G', KeyH:'H', KeyJ:'J', KeyK:'K', KeyL:'L',
+        KeyZ:'W', KeyX:'X', KeyC:'C', KeyV:'V', KeyB:'B', KeyN:'N', KeyM:'M',
+        Space:'ESPACE', ArrowLeft:'←', ArrowRight:'→', ArrowUp:'↑', ArrowDown:'↓', Enter:'ENTRÉE',
+      }
+      // v3: keys stored as ev.code strings (e.g. 'KeyA', 'Space') — layout-independent
+      const defaultKeys = { left: 'KeyA', right: 'KeyD', up: 'KeyW', down: 'KeyS', punch: 'KeyQ', kick: 'KeyE', throw: 'KeyZ', block: 'KeyB', jump: 'Space', rage: 'KeyC' }
+      const savedKeys = (() => {
+        try {
+          const s = JSON.parse(localStorage.getItem('fc_keys_v3') ?? 'null')
+          if (!s) return null
+          // Validate: values must be ev.code format (length >= 3, e.g. 'KeyA')
+          const vals = Object.values(s) as string[]
+          if (vals.some(v => typeof v !== 'string' || v.length < 3)) return null
+          return s
+        } catch { return null }
+      })()
       const KEYS = Object.assign({}, defaultKeys, savedKeys ?? {})
-      // kd() = identity: Phaser key names ARE the AZERTY labels
-      const kd = (k: string) => k
+      // kd() converts ev.code to AZERTY display label
+      const kd = (code: string) => codeLabel[code] ?? code
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let currentMusic: any = null
 
@@ -798,7 +809,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           }).setOrigin(0.5, 0.5)
 
           // ── Key bindings grid ────────────────────────────────
-          type KeyId = keyof typeof KEYS
+          type KeyId = keyof typeof defaultKeys
           const actions: Array<{ id: KeyId; label: string; col: 0 | 1; row: number }> = [
             { id: 'left',  label: 'Aller à gauche', col: 0, row: 0 },
             { id: 'right', label: 'Aller à droite', col: 0, row: 1 },
@@ -844,24 +855,13 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             keyBtns[id] = btn
           }
 
-          // Capture keypress for remapping — listener natif window (ev.key = AZERTY-correct)
-          // On n'utilise PAS le système Phaser qui peut wrapper/transformer les events
+          // Capture keypress for remapping — ev.code = physical key position, layout-independent
           const nativeKeyCapture = (e: KeyboardEvent) => {
             if (!waitingFor) return
             e.preventDefault(); e.stopPropagation()
-            const raw = e.key
-            if (raw === 'Escape') { waitingFor = null; refreshBtns(); return }
-            let k: string
-            if (raw === ' ')             k = 'SPACE'
-            else if (raw === 'ArrowLeft')  k = 'LEFT'
-            else if (raw === 'ArrowRight') k = 'RIGHT'
-            else if (raw === 'ArrowUp')    k = 'UP'
-            else if (raw === 'ArrowDown')  k = 'DOWN'
-            else if (raw === 'Enter')      k = 'ENTER'
-            else if (raw.length === 1)     k = raw.toUpperCase()
-            else                           k = raw.toUpperCase()
-            KEYS[waitingFor as KeyId] = k
-            try { localStorage.setItem('fc_keys_v2', JSON.stringify(KEYS)) } catch (_) {}
+            if (e.code === 'Escape') { waitingFor = null; refreshBtns(); return }
+            KEYS[waitingFor as KeyId] = e.code
+            try { localStorage.setItem('fc_keys_v3', JSON.stringify(KEYS)) } catch (_) {}
             waitingFor = null; refreshBtns()
           }
           window.addEventListener('keydown', nativeKeyCapture)
@@ -965,7 +965,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
         endlessTriggerX = 0
         endlessNextX = 999999
 
-        keys!: Record<string, any>
+        gameKeys: Record<string, boolean> = {}
         music?: any
 
         readonly QUOTES = [
@@ -1096,23 +1096,28 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             if (this.music && !this.music.isPlaying) try { this.music.play() } catch (_) {}
           }
 
-          const kb = this.input.keyboard!
-          // Allow browser default key handling so React inputs can receive all keys
-          try { kb.disableGlobalCapture() } catch (_) { try { (kb as any).manager && ((kb as any).manager.preventDefault = false) } catch (_2) {} }
-          // Use remappable KEYS + always-available arrow fallbacks
-          this.keys = {
-            left:  kb.addKey(KEYS.left),   right: kb.addKey(KEYS.right),
-            up:    kb.addKey(KEYS.up),     down:  kb.addKey(KEYS.down),
-            block: kb.addKey(KEYS.block),
-            aLeft: kb.addKey('LEFT'),  aRight: kb.addKey('RIGHT'),
-            aUp:   kb.addKey('UP'),    aDown:  kb.addKey('DOWN'),
+          // Native window keyboard listeners — ev.code is physical position, truly layout-independent
+          this.gameKeys = {}
+          const prevKeys: Record<string, boolean> = {}
+          const onKeyDown = (e: KeyboardEvent) => {
+            this.gameKeys[e.code] = true
+            if (!prevKeys[e.code]) {
+              if (e.code === KEYS.punch)       { if (!this.bossCinematic && !this.gunPickupAnim) this.playerAttack('punch') }
+              else if (e.code === KEYS.kick)   { if (!this.bossCinematic && !this.gunPickupAnim) this.playerAttack('kick') }
+              else if (e.code === KEYS.throw)  this.throwWeapon()
+              else if (e.code === KEYS.jump)   this.playerJump()
+              else if (e.code === KEYS.rage)   this.activateRage()
+              else if (e.code === 'Escape')    { this.music?.stop(); this.scene.start('Menu') }
+            }
+            prevKeys[e.code] = true
           }
-          kb.on(`keydown-${KEYS.punch}`, () => this.playerAttack('punch'))
-          kb.on(`keydown-${KEYS.kick}`,  () => this.playerAttack('kick'))
-          kb.on(`keydown-${KEYS.throw}`, () => this.throwWeapon())
-          kb.on(`keydown-${KEYS.jump}`,  () => this.playerJump())
-          kb.on(`keydown-${KEYS.rage}`,  () => this.activateRage())
-          kb.on('keydown-ESC', () => { this.music?.stop(); this.scene.start('Menu') })
+          const onKeyUp = (e: KeyboardEvent) => { this.gameKeys[e.code] = false; prevKeys[e.code] = false }
+          window.addEventListener('keydown', onKeyDown)
+          window.addEventListener('keyup', onKeyUp)
+          this.events.on('shutdown', () => {
+            window.removeEventListener('keydown', onKeyDown)
+            window.removeEventListener('keyup', onKeyUp)
+          })
 
           this.createHUD()
 
@@ -1476,7 +1481,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
         handleInput() {
           const p = this.player
           if (p.hp <= 0 || this.bossCinematic) return
-          const bDown    = this.keys.block.isDown
+          const bDown    = this.gameKeys[KEYS.block]
           const canBlock = !['punch', 'kick', 'hurt', 'jump', 'dead'].includes(p.state) || p.isBlocking
 
           if (bDown && canBlock) {
@@ -1491,10 +1496,10 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           }
 
           const canMove = !['punch', 'kick'].includes(p.state)
-          const left  = this.keys.left.isDown  || this.keys.aLeft.isDown
-          const right = this.keys.right.isDown || this.keys.aRight.isDown
-          const up    = this.keys.up.isDown    || this.keys.aUp.isDown
-          const down  = this.keys.down.isDown  || this.keys.aDown.isDown
+          const left  = this.gameKeys[KEYS.left]  || this.gameKeys['ArrowLeft']
+          const right = this.gameKeys[KEYS.right] || this.gameKeys['ArrowRight']
+          const up    = this.gameKeys[KEYS.up]    || this.gameKeys['ArrowUp']
+          const down  = this.gameKeys[KEYS.down]  || this.gameKeys['ArrowDown']
           const moving = left || right || up || down
 
           if (canMove) {
@@ -1597,6 +1602,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
 
             if (e.hp <= 0) {
               e.state = 'dead'; e.deadTimer = 0
+              if (e.charType === 'bob') e.hurtInv = 0  // corps visible immédiatement, pas de clignotement
               this.score += 50 + this.combo * 8
               this.spawnBlood(e.x, e.floorY - PH / 2, 10)
               this.cameras.main.shake(140, 0.007)
@@ -1674,7 +1680,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
                 e.vx = proj.face * 4
                 this.spawnFloatText(e.x - cam, e.floorY - PH - 10, `-${proj.dmg}`, '#ffcc00', true)
                 this.spawnBlood(e.x, e.floorY - PH / 2, 4)
-                if (e.hp <= 0) { e.state = 'dead'; e.deadTimer = 0 }
+                if (e.hp <= 0) { e.state = 'dead'; e.deadTimer = 0; if (e.charType === 'bob') e.hurtInv = 0 }
                 proj.gfx.destroy()
                 this.projectiles = this.projectiles.filter(p => p !== proj)
                 break
