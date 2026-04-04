@@ -115,85 +115,85 @@ async function verifyWithTMDB(titre: string, annee: number): Promise<{
   }
 }
 
-// Détermine les restrictions d'âge à partir des certifications TMDB (toutes régions)
-// isAdult = flag TMDB movie.adult (films adultes explicites)
+// Détermine les restrictions d'âge à partir des certifications TMDB (TOUTES régions)
 function parseTMDBCertifications(
   releaseDates: any[],
   isAdult = false
 ): { flagged18: boolean; flagged16: boolean; certs: Record<string, string> } {
-  // Si TMDB marque le film comme "adult" → 18+ immédiat
   if (isAdult) return { flagged18: true, flagged16: false, certs: { adult: 'true' } }
 
-  // getCert : préfère la sortie cinéma (type 3), puis limitée (type 2), puis n'importe laquelle
-  const getCert = (iso: string): string => {
-    const country = releaseDates.find((r: any) => r.iso_3166_1 === iso)
-    if (!country?.release_dates?.length) return ''
-    const withCert = (country.release_dates as any[]).filter(d => d.certification && d.certification !== '')
+  // Extrait la meilleure certification pour un pays donné
+  // Priorité : type 3 (ciné) > 2 (limité) > 4 (digital) > 5 (physique) > reste
+  const extractBestCert = (country: any): string => {
+    const dates = (country.release_dates ?? []) as any[]
+    const withCert = dates.filter((d: any) => d.certification && d.certification.trim() !== '')
     if (!withCert.length) return ''
-    // Priorité : type 3 (ciné) > 2 (ciné limité) > 4 (digital) > 5 (physique) > reste
     const priority = [3, 2, 4, 5, 1, 6]
-    withCert.sort((a, b) => {
+    withCert.sort((a: any, b: any) => {
       const pa = priority.indexOf(a.type)
       const pb = priority.indexOf(b.type)
       return (pa === -1 ? 99 : pa) - (pb === -1 ? 99 : pb)
     })
-    return withCert[0].certification
+    return withCert[0].certification.trim()
   }
 
-  const fr = getCert('FR')
-  const us = getCert('US')
-  const gb = getCert('GB')
-  const de = getCert('DE')
-  const au = getCert('AU')
-  const nl = getCert('NL')
-  const it = getCert('IT')
-  const es = getCert('ES')
-  const jp = getCert('JP')
-  const be = getCert('BE')
-  const ch = getCert('CH')
-
+  // Collecte TOUTES les certifications de TOUS les pays retournés par TMDB
   const certs: Record<string, string> = {}
-  if (fr) certs['FR'] = fr
-  if (us) certs['US'] = us
-  if (gb) certs['GB'] = gb
-  if (de) certs['DE'] = de
-  if (au) certs['AU'] = au
-  if (nl) certs['NL'] = nl
-  if (it) certs['IT'] = it
-  if (es) certs['ES'] = es
-  if (jp) certs['JP'] = jp
-  if (be) certs['BE'] = be
-  if (ch) certs['CH'] = ch
+  for (const country of releaseDates) {
+    const iso = country.iso_3166_1 as string
+    const cert = extractBestCert(country)
+    if (cert) certs[iso] = cert
+  }
 
-  // ─── 18+ ────────────────────────────────────────────────
-  // FR : CNC "18" (interdit -18 ans)
-  if (fr === '18') return { flagged18: true, flagged16: false, certs }
-  // US : NC-17 ou X (ancienne notation avant 1990)
-  if (['NC-17', 'X'].includes(us)) return { flagged18: true, flagged16: false, certs }
-  // GB : BBFC "18" ou "R18" (uniquement en sex shops)
-  if (['18', 'R18'].includes(gb)) return { flagged18: true, flagged16: false, certs }
-  // DE : FSK "18"
-  if (de === '18') return { flagged18: true, flagged16: false, certs }
-  // AU : "X18+" (classif. explicite) ou "RC" (Refused Classification)
-  if (['X18+', 'RC'].includes(au)) return { flagged18: true, flagged16: false, certs }
-  // NL : "18"
-  if (nl === '18') return { flagged18: true, flagged16: false, certs }
-  // IT : "VM18" (vietato minori 18 anni)
-  if (it === 'VM18') return { flagged18: true, flagged16: false, certs }
-  // ES : "18"
-  if (es === '18') return { flagged18: true, flagged16: false, certs }
-  // JP : "R18+"
-  if (jp === 'R18+') return { flagged18: true, flagged16: false, certs }
-  // BE : "18"
-  if (be === '18') return { flagged18: true, flagged16: false, certs }
-  // CH : "18"
-  if (ch === '18') return { flagged18: true, flagged16: false, certs }
+  // Détecte si 18+ : vérifie TOUTES les certifications connues pour "18+"
+  const is18 = (c: string): boolean => {
+    const u = c.toUpperCase()
+    return (
+      u === '18' ||          // FR, DE, NL, ES, BE, CH, PT, PL, CZ, HU, RO, etc.
+      u === '18+' ||
+      u === '18A' ||         // Canada Alberta
+      u === 'NC-17' ||       // US
+      u === 'X' ||           // US (avant 1990), ancienne notation
+      u === 'R18' ||         // UK (sexshops)
+      u === 'R18+' ||        // Japon
+      u === 'RX' ||          // Japon (explicite)
+      u === 'X18+' ||        // Australie
+      u === 'RC' ||          // Australie (Refused Classification)
+      u === 'VM18' ||        // Italie (Vietato Minori 18)
+      u === 'D' ||           // Suède (Vuxna/Adults)
+      u === 'XXX' ||
+      u === 'AO'             // Adults Only (ESRB-style)
+    )
+  }
 
-  // ─── 16+ ────────────────────────────────────────────────
-  if (fr === '16') return { flagged18: false, flagged16: true, certs }
-  if (us === 'R')  return { flagged18: false, flagged16: true, certs }
-  if (gb === '15') return { flagged18: false, flagged16: true, certs }
-  if (de === '16') return { flagged18: false, flagged16: true, certs }
+  // Détecte 16+
+  const is16 = (c: string): boolean => {
+    const u = c.toUpperCase()
+    return (
+      u === '16' || u === '16+' ||
+      u === 'R' ||           // US (Restricted, 17+)
+      u === '15' ||          // UK
+      u === 'VM16' ||        // Italie
+      u === '14A' || u === '14' // Canada
+    )
+  }
+
+  // Priorité aux certifications des pays clés (FR, DE, GB, US) sinon prend n'importe quel pays
+  const keyCountries = ['FR', 'DE', 'GB', 'US', 'BE', 'CH', 'NL', 'ES', 'IT', 'AU', 'JP']
+  for (const iso of keyCountries) {
+    const c = certs[iso]
+    if (!c) continue
+    if (is18(c)) return { flagged18: true, flagged16: false, certs }
+    if (is16(c)) return { flagged18: false, flagged16: true, certs }
+  }
+
+  // Si aucun pays clé → cherche dans TOUS les pays
+  for (const c of Object.values(certs)) {
+    if (is18(c)) return { flagged18: true, flagged16: false, certs }
+  }
+  for (const c of Object.values(certs)) {
+    if (is16(c)) return { flagged18: false, flagged16: true, certs }
+  }
 
   return { flagged18: false, flagged16: false, certs }
 }
