@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminBatchFlaggedDecisions, adminSet18Flag, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, adminFetchFrenchPosters, adminScanAgeRestrictions, updateFilm, adminResolveReport, adminSetConfig, adminVerifyPosters, adminSetAdmin, adminAddNews, adminDeleteNews, adminAddRecommendation, adminDeleteRecommendation, deleteForumTopic, adminEndSeason } from '@/lib/actions'
+import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminBatchFlaggedDecisions, adminSet18Flag, adminApproveAllPending, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, adminFetchFrenchPosters, adminScanAgeRestrictions, updateFilm, adminResolveReport, adminSetConfig, adminVerifyPosters, adminSetAdmin, adminAddNews, adminDeleteNews, adminAddRecommendation, adminDeleteRecommendation, deleteForumTopic, adminEndSeason } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
 import { CONFIG } from '@/lib/config'
 import type { Film, Profile } from '@/lib/supabase/types'
@@ -326,6 +326,7 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
   const [flag18Saving, setFlag18Saving] = useState<Record<number, boolean>>({})
   const [flag18Filter, setFlag18Filter] = useState<'all' | '18' | 'normal'>('all')
   const [localPending, setLocalPending] = useState<Film[]>(pendingFilms18)
+  const [approveAllLoading, setApproveAllLoading] = useState(false)
   const [showAllFilms18, setShowAllFilms18] = useState(false)
   const [brokenPosters, setBrokenPosters] = useState<{ id: number; titre: string; poster: string }[]>([])
   const [verifyNextId, setVerifyNextId] = useState<number | null>(0)
@@ -602,6 +603,17 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
     }
   }
 
+  async function approveAllPending() {
+    if (!localPending.length) return
+    setApproveAllLoading(true)
+    const result = await adminApproveAllPending()
+    setApproveAllLoading(false)
+    if ('error' in result) { addToast(result.error!, '⚠️'); return }
+    addToast(`🔞 ${result.count} film(s) confirmés 18+ — catégorie mise à jour`, '✅')
+    setLocalPending([])
+    router.refresh()
+  }
+
   return (
     <div style={{ overflowAnchor: 'none' }}>
       <div style={{ marginBottom: '2rem' }}>
@@ -771,8 +783,18 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
         {/* Films détectés 18+ par le scan → confirmation requise */}
         {localPending.length > 0 ? (
           <>
-            <div style={{ fontSize: '.78rem', color: 'var(--text2)', marginBottom: '.9rem', lineHeight: 1.5 }}>
-              Ces films ont été détectés <strong style={{ color: 'var(--red)' }}>18+ par TMDB/CNC</strong>. Confirme ou refuse — le film n'est <em>jamais</em> supprimé.
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '.9rem', flexWrap: 'wrap' }}>
+              <div style={{ fontSize: '.78rem', color: 'var(--text2)', lineHeight: 1.5 }}>
+                Ces films ont été détectés <strong style={{ color: 'var(--red)' }}>18+ par TMDB/CNC</strong>. Confirme ou refuse — le film n'est <em>jamais</em> supprimé.
+              </div>
+              <button
+                type="button"
+                disabled={approveAllLoading}
+                onClick={approveAllPending}
+                style={{ flexShrink: 0, padding: '.4rem 1rem', borderRadius: 'var(--r)', border: '1px solid rgba(232,90,90,.5)', background: 'rgba(232,90,90,.15)', color: 'var(--red)', fontSize: '.78rem', fontWeight: 700, cursor: approveAllLoading ? 'wait' : 'pointer', whiteSpace: 'nowrap' }}
+              >
+                {approveAllLoading ? '⏳ En cours…' : `🔞 Valider tous (${localPending.length})`}
+              </button>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 80px', gap: '.5rem', padding: '0 .5rem', marginBottom: '.3rem' }}>
               <div style={{ fontSize: '.65rem', letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--text3)' }}>Film détecté 18+ (CNC)</div>

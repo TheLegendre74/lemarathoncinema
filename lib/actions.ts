@@ -887,6 +887,26 @@ export async function adminBatchFlaggedDecisions(decisions: Record<string, 'appr
   return { approved: toMark18.length, rejected: toUnflag.length }
 }
 
+// Valide TOUS les films en attente de vérification 18+ d'un coup
+export async function adminApproveAllPending() {
+  const supabase = await createClient()
+  const adminClient = createAdminClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Non autorisé.' }
+
+  const { data: pending } = await supabase.from('films').select('id').eq('flagged_18_pending', true)
+  if (!pending?.length) return { success: true, count: 0 }
+
+  const ids = pending.map((f: { id: number }) => f.id)
+  await adminClient.from('films').update({ flagged_18plus: true, flagged_18_pending: false, flagged_16plus: false }).in('id', ids)
+
+  revalidatePath('/films')
+  revalidatePath('/admin')
+  return { success: true, count: ids.length }
+}
+
 // ── POSTER MANAGEMENT ────────────────────────────────────────
 
 async function tmdbSearchMovie(titre: string, annee: number, key: string) {
