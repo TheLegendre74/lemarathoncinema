@@ -784,7 +784,8 @@ export async function adminCleanDuels() {
   return { success: true }
 }
 
-export async function adminApproveFlaggedFilm(filmId: number) {
+// Marquer / démarquer un film comme 18+ — ne supprime JAMAIS le film
+export async function adminSet18Flag(filmId: number, is18: boolean) {
   const supabase = await createClient()
   const adminClient = createAdminClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -793,10 +794,13 @@ export async function adminApproveFlaggedFilm(filmId: number) {
   const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
   if (!profile?.is_admin) return { error: 'Non autorisé.' }
 
-  await adminClient.from('films').update({ flagged_18plus: false }).eq('id', filmId)
-  revalidatePath('/admin')
+  await adminClient.from('films').update({ flagged_18plus: is18 }).eq('id', filmId)
   revalidatePath('/films')
   return { success: true }
+}
+
+export async function adminApproveFlaggedFilm(filmId: number) {
+  return adminSet18Flag(filmId, false)
 }
 
 export async function adminBatchFlaggedDecisions(decisions: Record<string, 'approve' | 'reject'>) {
@@ -808,20 +812,21 @@ export async function adminBatchFlaggedDecisions(decisions: Record<string, 'appr
   const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
   if (!profile?.is_admin) return { error: 'Non autorisé.' }
 
-  const toApprove = Object.entries(decisions)
+  // "approve" = confirmer 18+, "reject" = retirer le flag 18+ — JAMAIS de suppression
+  const toMark18 = Object.entries(decisions)
     .filter(([, d]) => d === 'approve')
     .map(([id]) => parseInt(id, 10))
     .filter(n => !Number.isNaN(n))
-  const toReject = Object.entries(decisions)
+  const toUnflag = Object.entries(decisions)
     .filter(([, d]) => d === 'reject')
     .map(([id]) => parseInt(id, 10))
     .filter(n => !Number.isNaN(n))
 
-  if (toApprove.length) await adminClient.from('films').update({ flagged_18plus: false }).in('id', toApprove)
-  if (toReject.length)  await adminClient.from('films').delete().in('id', toReject)
+  if (toMark18.length)  await adminClient.from('films').update({ flagged_18plus: true  }).in('id', toMark18)
+  if (toUnflag.length)  await adminClient.from('films').update({ flagged_18plus: false }).in('id', toUnflag)
 
   revalidatePath('/films')
-  return { approved: toApprove.length, rejected: toReject.length }
+  return { approved: toMark18.length, rejected: toUnflag.length }
 }
 
 // ── POSTER MANAGEMENT ────────────────────────────────────────

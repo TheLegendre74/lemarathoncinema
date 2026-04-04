@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminBatchFlaggedDecisions, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, adminFetchFrenchPosters, adminScanAgeRestrictions, updateFilm, adminResolveReport, adminSetConfig, adminVerifyPosters, adminSetAdmin, adminAddNews, adminDeleteNews, adminAddRecommendation, adminDeleteRecommendation, deleteForumTopic, adminEndSeason } from '@/lib/actions'
+import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminBatchFlaggedDecisions, adminSet18Flag, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, adminFetchFrenchPosters, adminScanAgeRestrictions, updateFilm, adminResolveReport, adminSetConfig, adminVerifyPosters, adminSetAdmin, adminAddNews, adminDeleteNews, adminAddRecommendation, adminDeleteRecommendation, deleteForumTopic, adminEndSeason } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
 import { CONFIG } from '@/lib/config'
 import type { Film, Profile } from '@/lib/supabase/types'
@@ -320,9 +320,9 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
   const [frenchPostersRunning, setFrenchPostersRunning] = useState(false)
   const [ageScanNextId, setAgeScanNextId] = useState<number | null>(0)
   const [ageScanRunning, setAgeScanRunning] = useState(false)
-  const [localFlaggedFilms, setLocalFlaggedFilms] = useState<Film[]>(flaggedFilms)
-  const [flaggedDecisions, setFlaggedDecisions] = useState<Record<number, 'approve' | 'reject'>>({})
-  const [flaggedSubmitting, setFlaggedSubmitting] = useState(false)
+  const [flag18Overrides, setFlag18Overrides] = useState<Record<number, boolean>>({})
+  const [flag18Saving, setFlag18Saving] = useState<Record<number, boolean>>({})
+  const [flag18Filter, setFlag18Filter] = useState<'all' | '18' | 'normal'>('all')
   const [brokenPosters, setBrokenPosters] = useState<{ id: number; titre: string; poster: string }[]>([])
   const [verifyNextId, setVerifyNextId] = useState<number | null>(0)
   const [verifyRunning, setVerifyRunning] = useState(false)
@@ -579,29 +579,15 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
     router.refresh()
   }
 
-  async function approveFilm(filmId: number, titre: string) {
-    const result = await adminApproveFlaggedFilm(filmId)
-    if (result.error) addToast(result.error, '⚠️')
-    else { addToast(`"${titre}" approuvé`, '✅'); router.refresh() }
-  }
-
-  async function rejectFilm(filmId: number, titre: string) {
-    if (!confirm(`Retirer "${titre}" de la liste (film -18 ans refusé) ?`)) return
-    await adminDeleteFilm(filmId)
-    addToast(`"${titre}" retiré`, '🗑️')
-    router.refresh()
-  }
-
-  async function submitFlaggedDecisions() {
-    if (!Object.keys(flaggedDecisions).length) return
-    setFlaggedSubmitting(true)
-    const processedIds = new Set(Object.keys(flaggedDecisions).map(Number))
-    const result = await adminBatchFlaggedDecisions(flaggedDecisions as Record<string, 'approve' | 'reject'>)
-    setLocalFlaggedFilms(prev => prev.filter(f => !processedIds.has(f.id)))
-    setFlaggedDecisions({})
-    setFlaggedSubmitting(false)
+  async function setFilm18(film: Film, is18: boolean) {
+    setFlag18Saving(prev => ({ ...prev, [film.id]: true }))
+    const result = await adminSet18Flag(film.id, is18)
+    setFlag18Saving(prev => { const n = { ...prev }; delete n[film.id]; return n })
     if ('error' in result) addToast(result.error!, '⚠️')
-    else addToast(`${result.approved} approuvé(s), ${result.rejected} refusé(s)`, '✅')
+    else {
+      setFlag18Overrides(prev => ({ ...prev, [film.id]: is18 }))
+      addToast(is18 ? `🔞 "${film.titre}" marqué 18+` : `✓ "${film.titre}" — restriction retirée`, '✅')
+    }
   }
 
   return (
@@ -612,15 +598,15 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
       </div>
 
       {/* 18+ alert banner */}
-      {localFlaggedFilms.length > 0 && (
+      {films.filter(f => (flag18Overrides[f.id] ?? f.flagged_18plus)).length > 0 && (
         <div style={{ background: 'rgba(232,90,90,.12)', border: '2px solid var(--red)', borderRadius: 'var(--rl)', padding: '1rem 1.3rem', marginBottom: '1.2rem', display: 'flex', alignItems: 'center', gap: '.8rem' }}>
           <span style={{ fontSize: '1.4rem' }}>🔞</span>
           <div>
             <div style={{ fontWeight: 700, color: 'var(--red)', fontSize: '.9rem' }}>
-              {localFlaggedFilms.length} film{localFlaggedFilms.length > 1 ? 's' : ''} interdit{localFlaggedFilms.length > 1 ? 's' : ''} aux moins de 18 ans en attente de validation
+              {films.filter(f => (flag18Overrides[f.id] ?? f.flagged_18plus)).length} film{films.filter(f => (flag18Overrides[f.id] ?? f.flagged_18plus)).length > 1 ? 's' : ''} marqué{films.filter(f => (flag18Overrides[f.id] ?? f.flagged_18plus)).length > 1 ? 's' : ''} 18+
             </div>
             <div style={{ fontSize: '.76rem', color: 'var(--text2)', marginTop: '.2rem' }}>
-              Voir la section « Films 18+ » ci-dessous pour approuver ou refuser.
+              Badge 🔞 affiché sur ces films. Gérer dans la section « Vérification 18+ » ci-dessous.
             </div>
           </div>
         </div>
@@ -767,79 +753,95 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
         </div>
       </Section>
 
-      {/* 18+ flagged films */}
-      {localFlaggedFilms.length > 0 && (
-        <Section icon="🔞" title={`Films +18 ans à valider (${localFlaggedFilms.length})`}>
-          <div style={{ fontSize: '.78rem', color: 'var(--text2)', marginBottom: '1rem' }}>
-            Coche chaque film puis valide en une fois.
-          </div>
+      {/* Vérification 18+ — tous les films */}
+      {(() => {
+        const count18 = films.filter(f => (flag18Overrides[f.id] ?? f.flagged_18plus)).length
+        const filtered18 = films.filter(f => {
+          const is18 = flag18Overrides[f.id] ?? f.flagged_18plus
+          if (flag18Filter === '18') return is18
+          if (flag18Filter === 'normal') return !is18
+          return true
+        })
+        return (
+          <Section icon="🔞" title={`Vérification 18+ — tous les films (${count18} marqués)`}>
+            <div style={{ fontSize: '.78rem', color: 'var(--text2)', marginBottom: '1rem', lineHeight: 1.5 }}>
+              Marque chaque film 18+ ou non. Le badge 🔞 s'affiche sur les cartes. Un film marqué <strong>Non</strong> reste visible normalement — il n'est jamais supprimé.
+            </div>
 
-          {/* Header colonnes */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px 90px', gap: '.5rem', padding: '0 .5rem', marginBottom: '.4rem' }}>
-            <div />
-            <div style={{ fontSize: '.68rem', letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--green)', textAlign: 'center' }}>✓ Oui</div>
-            <div style={{ fontSize: '.68rem', letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--red)', textAlign: 'center' }}>✕ Non</div>
-          </div>
+            {/* Filtres */}
+            <div style={{ display: 'flex', gap: '.5rem', marginBottom: '.9rem', flexWrap: 'wrap' }}>
+              {([['all', `Tous (${films.length})`], ['18', `🔞 18+ (${count18})`], ['normal', `✓ Sans restriction (${films.length - count18})`]] as [typeof flag18Filter, string][]).map(([val, label]) => (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => setFlag18Filter(val)}
+                  style={{
+                    padding: '.35rem .8rem', borderRadius: 99, fontSize: '.75rem', cursor: 'pointer',
+                    border: `1px solid ${flag18Filter === val ? 'var(--red)' : 'var(--border2)'}`,
+                    background: flag18Filter === val ? 'rgba(232,90,90,.15)' : 'var(--bg3)',
+                    color: flag18Filter === val ? 'var(--red)' : 'var(--text2)',
+                    fontWeight: flag18Filter === val ? 600 : 400,
+                  }}
+                >{label}</button>
+              ))}
+            </div>
 
-          {/* Lignes films */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '.3rem', marginBottom: '1rem' }}>
-            {localFlaggedFilms.map(f => {
-              const dec = flaggedDecisions[f.id]
-              return (
-                <div key={f.id} style={{
-                  display: 'grid', gridTemplateColumns: '1fr 90px 90px', gap: '.5rem', alignItems: 'center',
-                  background: dec === 'approve' ? 'rgba(79,217,138,.07)' : dec === 'reject' ? 'rgba(232,90,90,.07)' : 'var(--bg3)',
-                  border: `1px solid ${dec === 'approve' ? 'rgba(79,217,138,.3)' : dec === 'reject' ? 'rgba(232,90,90,.3)' : 'var(--border)'}`,
-                  borderRadius: 'var(--r)', padding: '.55rem .8rem', transition: 'background .15s, border-color .15s'
-                }}>
-                  <span style={{ fontSize: '.85rem', fontWeight: 500 }}>
-                    {f.titre}
-                    <span style={{ color: 'var(--text3)', fontSize: '.72rem', marginLeft: '.4rem' }}>({f.annee}) · {f.realisateur}</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => { lockScrollFor150ms(); setFlaggedDecisions(d => ({ ...d, [f.id]: 'approve' })) }}
-                    style={{
-                      width: '100%', padding: '.4rem 0', borderRadius: 'var(--r)', border: '1px solid',
-                      cursor: 'pointer', fontSize: '.8rem', fontWeight: 600, transition: 'all .15s',
-                      background: dec === 'approve' ? 'var(--green2)' : 'transparent',
-                      borderColor: dec === 'approve' ? 'rgba(79,217,138,.5)' : 'var(--border)',
-                      color: dec === 'approve' ? 'var(--green)' : 'var(--text3)',
-                    }}
-                  >✓</button>
-                  <button
-                    type="button"
-                    onClick={() => { lockScrollFor150ms(); setFlaggedDecisions(d => ({ ...d, [f.id]: 'reject' })) }}
-                    style={{
-                      width: '100%', padding: '.4rem 0', borderRadius: 'var(--r)', border: '1px solid',
-                      cursor: 'pointer', fontSize: '.8rem', fontWeight: 600, transition: 'all .15s',
-                      background: dec === 'reject' ? 'var(--red2)' : 'transparent',
-                      borderColor: dec === 'reject' ? 'rgba(232,90,90,.5)' : 'var(--border)',
-                      color: dec === 'reject' ? 'var(--red)' : 'var(--text3)',
-                    }}
-                  >✕</button>
-                </div>
-              )
-            })}
-          </div>
+            {/* Colonnes */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 80px', gap: '.5rem', padding: '0 .5rem', marginBottom: '.3rem' }}>
+              <div style={{ fontSize: '.65rem', letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--text3)' }}>Film</div>
+              <div style={{ fontSize: '.65rem', letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--red)', textAlign: 'center' }}>🔞 18+</div>
+              <div style={{ fontSize: '.65rem', letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--green)', textAlign: 'center' }}>✓ Normal</div>
+            </div>
 
-          {/* Bouton valider */}
-          {(() => {
-            const count = Object.keys(flaggedDecisions).length
-            return (
-              <button
-                type="button"
-                className="btn btn-gold"
-                disabled={count === 0 || flaggedSubmitting}
-                onClick={submitFlaggedDecisions}
-                style={{ fontSize: '.82rem' }}
-              >
-                {flaggedSubmitting ? '⏳ En cours…' : count === 0 ? 'Aucune sélection' : `Valider ${count} / ${localFlaggedFilms.length} film${count > 1 ? 's' : ''}`}
-              </button>
-            )
-          })()}
-        </Section>
-      )}
+            {/* Lignes */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '.3rem', maxHeight: 480, overflowY: 'auto' }}>
+              {filtered18.map(f => {
+                const is18 = flag18Overrides[f.id] ?? f.flagged_18plus
+                const saving = !!flag18Saving[f.id]
+                return (
+                  <div key={f.id} style={{
+                    display: 'grid', gridTemplateColumns: '1fr 80px 80px', gap: '.5rem', alignItems: 'center',
+                    background: is18 ? 'rgba(232,90,90,.07)' : 'var(--bg3)',
+                    border: `1px solid ${is18 ? 'rgba(232,90,90,.3)' : 'var(--border)'}`,
+                    borderRadius: 'var(--r)', padding: '.5rem .8rem', transition: 'background .15s, border-color .15s',
+                    opacity: saving ? 0.6 : 1,
+                  }}>
+                    <span style={{ fontSize: '.82rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {is18 && <span style={{ marginRight: '.3rem', fontSize: '.7rem' }}>🔞</span>}
+                      {f.titre}
+                      <span style={{ color: 'var(--text3)', fontSize: '.7rem', marginLeft: '.35rem' }}>({f.annee})</span>
+                    </span>
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={() => { lockScrollFor150ms(); setFilm18(f, true) }}
+                      style={{
+                        width: '100%', padding: '.38rem 0', borderRadius: 'var(--r)', border: '1px solid',
+                        cursor: saving ? 'default' : 'pointer', fontSize: '.78rem', fontWeight: 600, transition: 'all .15s',
+                        background: is18 ? 'rgba(232,90,90,.22)' : 'transparent',
+                        borderColor: is18 ? 'rgba(232,90,90,.5)' : 'var(--border)',
+                        color: is18 ? 'var(--red)' : 'var(--text3)',
+                      }}
+                    >{saving ? '…' : 'Oui'}</button>
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={() => { lockScrollFor150ms(); setFilm18(f, false) }}
+                      style={{
+                        width: '100%', padding: '.38rem 0', borderRadius: 'var(--r)', border: '1px solid',
+                        cursor: saving ? 'default' : 'pointer', fontSize: '.78rem', fontWeight: 600, transition: 'all .15s',
+                        background: !is18 ? 'rgba(79,217,138,.12)' : 'transparent',
+                        borderColor: !is18 ? 'rgba(79,217,138,.4)' : 'var(--border)',
+                        color: !is18 ? 'var(--green)' : 'var(--text3)',
+                      }}
+                    >{saving ? '…' : 'Non'}</button>
+                  </div>
+                )
+              })}
+            </div>
+          </Section>
+        )
+      })()}
 
       {/* Films */}
       <Section icon="🎥" title={`Films (${films.length})`}>
