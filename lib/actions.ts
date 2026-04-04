@@ -619,7 +619,7 @@ export async function addFilm(formData: FormData) {
   if (!titre || !annee || !realisateur || !genre) return { error: 'Champs requis manquants.' }
   if (annee < 1888 || annee > 2030) return { error: 'Année invalide.' }
 
-  // Check duplicate
+  // Check duplicate par titre+année
   const { data: dup } = await supabase
     .from('films')
     .select('id, titre')
@@ -633,20 +633,34 @@ export async function addFilm(formData: FormData) {
   const tmdb = await verifyWithTMDB(titre, annee)
   if (!tmdb.ok) return { error: tmdb.error }
 
+  // Check duplicate par tmdb_id (même film avec titre légèrement différent)
+  if (tmdb.tmdbId) {
+    const { data: dupTmdb } = await supabase
+      .from('films')
+      .select('id, titre')
+      .eq('tmdb_id', tmdb.tmdbId)
+      .single()
+    if (dupTmdb) return { error: `⚠️ "${dupTmdb.titre}" est déjà dans la liste (même film TMDB) !` }
+  }
+
   // Use manual poster URL if provided, otherwise use TMDB poster
   const poster = manualPoster || tmdb.posterUrl || null
 
   const saison = isMarathonLive() ? CONFIG.SAISON_NUMERO + 1 : CONFIG.SAISON_NUMERO
 
+  // Si TMDB détecte 18+, on met en attente de validation admin (flagged_18_pending)
+  // jamais directement flagged_18plus=true sans confirmation manuelle
   const { error } = await supabase.from('films').insert({
     titre, annee, realisateur, genre, poster, saison, added_by: user.id,
     tmdb_id: tmdb.tmdbId ?? null,
-    flagged_18plus: tmdb.flagged18 ?? false,
+    flagged_18plus: false,
     flagged_16plus: tmdb.flagged16 ?? false,
-  })
+    flagged_18_pending: tmdb.flagged18 ?? false,
+  } as any)
 
   if (error) return { error: error.message }
   revalidatePath('/films')
+  revalidatePath('/admin')
   return { success: true, saison, flagged18: tmdb.flagged18 ?? false, flagged16: tmdb.flagged16 ?? false }
 }
 
@@ -851,10 +865,54 @@ export async function adminSet18Flag(filmId: number, is18: boolean) {
   const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
   if (!profile?.is_admin) return { error: 'Non autorisé.' }
 
-  await adminClient.from('films').update({ flagged_18plus: is18, flagged_18_pending: false }).eq('id', filmId)
+  // Séparer les updates pour éviter l'échec silencieux si une colonne n'existe pas encore
+  const { error } = await adminClient.from('films').update({ flagged_18plus: is18 }).eq('id', filmId)
+  if (error) return { error: error.message }
+  await adminClient.from('films').update({ flagged_18_pending: false } as any).eq('id', filmId)
   revalidatePath('/films')
   revalidatePath('/admin')
   return { success: true }
+}
+
+// Test TMDB certification pour un film spécifique (debug)
+export async function adminTestFilmCertification(filmId: number) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Non autorisé.' }
+
+  const key = process.env.TMDB_API_KEY
+  if (!key) return { error: 'Clé TMDB_API_KEY manquante.' }
+
+  const { data: film } = await supabase.from('films').select('id, titre, annee, tmdb_id').eq('id', filmId).single()
+  if (!film) return { error: 'Film introuvable.' }
+
+  let tmdbId = film.tmdb_id
+  if (!tmdbId) {
+    const found = await tmdbSearchMovie(film.titre, film.annee, key)
+    tmdbId = found?.id ?? null
+  }
+  if (!tmdbId) return { error: `Aucun ID TMDB trouvé pour "${film.titre}"`, titre: film.titre }
+
+  const [relRes, detailRes] = await Promise.all([
+    fetch(`https://api.themoviedb.org/3/movie/${tmdbId}/release_dates?api_key=${key}`, { cache: 'no-store' }),
+    fetch(`https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${key}`, { cache: 'no-store' }),
+  ])
+  const [relData, detailData] = await Promise.all([relRes.json(), detailRes.json()])
+
+  const isAdult = detailData.adult === true
+  const { flagged18, flagged16, certs } = parseTMDBCertifications(relData.results ?? [], isAdult)
+
+  // Retourner toutes les certifications brutes pour debug
+  const rawCerts: Record<string, string[]> = {}
+  for (const country of (relData.results ?? [])) {
+    const dates = (country.release_dates ?? []) as any[]
+    const certsForCountry = dates.filter((d: any) => d.certification && d.certification.trim() !== '').map((d: any) => `type${d.type}:${d.certification}`)
+    if (certsForCountry.length) rawCerts[country.iso_3166_1] = certsForCountry
+  }
+
+  return { titre: film.titre, tmdbId, isAdult, flagged18, flagged16, certs, rawCerts }
 }
 
 // Catégorisation manuelle admin : normal / 18+ / 18+ étrange
@@ -866,15 +924,20 @@ export async function adminSetFilmCategory(filmId: number, category: 'normal' | 
   const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
   if (!profile?.is_admin) return { error: 'Non autorisé.' }
 
-  // D'abord mettre à jour flagged_18plus et flagged_18_pending (colonnes qui existent depuis l'origine)
-  const base18 = category === 'normal' ? false : true
+  const base18 = category !== 'normal'
+
+  // Update flagged_18plus (colonne de base, existe toujours)
   const { error: baseErr } = await adminClient.from('films')
-    .update({ flagged_18plus: base18, flagged_18_pending: false })
+    .update({ flagged_18plus: base18 })
     .eq('id', filmId)
   if (baseErr) return { error: baseErr.message }
 
-  // Ensuite tenter de mettre à jour flagged_18strange séparément (colonne ajoutée plus tard)
-  // Si la colonne n'existe pas encore en DB, on ignore l'erreur mais la feature est dégradée
+  // Tenter flagged_18_pending séparément (colonne optionnelle — migration requise)
+  await adminClient.from('films')
+    .update({ flagged_18_pending: false } as any)
+    .eq('id', filmId)
+
+  // Tenter flagged_18strange séparément (colonne optionnelle — migration requise)
   await adminClient.from('films')
     .update({ flagged_18strange: category === 'strange' } as any)
     .eq('id', filmId)
@@ -1178,6 +1241,31 @@ export async function adminFetchFrenchPosters(fromId: number = 0) {
 }
 
 // Scan par lot les restrictions d'âge de tous les films via TMDB
+export async function adminDiagnostic() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+
+  const adminClient = createAdminClient()
+
+  // Test 1: count avec adminClient
+  const { data: d1, error: e1 } = await adminClient.from('films').select('id', { count: 'exact', head: true })
+  // Test 2: select id simple avec adminClient
+  const { data: d2, error: e2 } = await adminClient.from('films').select('id').limit(3)
+  // Test 3: select avec supabase normal
+  const { data: d3, error: e3 } = await supabase.from('films').select('id').limit(3)
+  // Test 4: clé TMDB
+  const tmdbKey = process.env.TMDB_API_KEY
+
+  return {
+    adminCount: { data: d1, error: e1?.message ?? null },
+    adminSelect: { data: d2, error: e2?.message ?? null },
+    userSelect: { data: d3, error: e3?.message ?? null },
+    tmdbKey: tmdbKey ? `présente (${tmdbKey.slice(0, 8)}...)` : 'MANQUANTE',
+    serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'présente' : 'MANQUANTE',
+  }
+}
+
 export async function adminScanAgeRestrictions(fromId: number = 0) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -1185,27 +1273,30 @@ export async function adminScanAgeRestrictions(fromId: number = 0) {
   const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
   if (!profile?.is_admin) return { error: 'Non autorisé.' }
 
-  const key = process.env.TMDB_API_KEY
-  if (!key) return { error: 'Clé TMDB_API_KEY manquante.' }
+  const adminClient = createAdminClient()
 
-  // Vérifier que la clé TMDB est valide avant de lancer le scan
+  // 1. Vérifier DB d'abord (adminClient bypasse RLS)
+  const { data: films, error: filmsErr } = await adminClient
+    .from('films')
+    .select('id, titre, annee, tmdb_id, flagged_18plus')
+    .gt('id', fromId)
+    .order('id')
+    .limit(40)
+
+  if (filmsErr) return { error: `Erreur DB : ${filmsErr.message}` }
+  if (!films?.length) return { success: true, count: 0, pendingCount: 0, nextId: null, details: [] }
+
+  // 2. Vérifier clé TMDB (après la DB pour diagnostic clair)
+  const key = process.env.TMDB_API_KEY
+  if (!key) return { error: `Clé TMDB_API_KEY manquante sur Vercel. ${films.length} films trouvés en DB.` }
+
+  // 3. Vérifier validité de la clé TMDB
   const testRes = await fetch(`https://api.themoviedb.org/3/configuration?api_key=${key}`, { cache: 'no-store' })
   const testData = await testRes.json()
   if (testData.status_code) {
     return { error: `Clé TMDB invalide ou expirée : ${testData.status_message ?? testData.status_code}` }
   }
 
-  // Ne sélectionner que les colonnes existantes depuis l'origine (pas flagged_18strange)
-  const { data: films } = await supabase
-    .from('films')
-    .select('id, titre, annee, tmdb_id, flagged_18plus, flagged_18_pending')
-    .gt('id', fromId)
-    .order('id')
-    .limit(40)
-
-  if (!films?.length) return { success: true, count: 0, pendingCount: 0, nextId: null, details: [] }
-
-  const adminClient = createAdminClient()
   let count = 0
   let pendingCount = 0
   const details: Array<{ id: number; titre: string; tmdbId: number | null; flagged18: boolean; flagged16: boolean; certs: Record<string, string>; status: string }> = []

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminBatchFlaggedDecisions, adminSet18Flag, adminApproveAllPending, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, adminFetchFrenchPosters, adminScanAgeRestrictions, updateFilm, adminResolveReport, adminSetConfig, adminVerifyPosters, adminSetAdmin, adminAddNews, adminDeleteNews, adminAddRecommendation, adminDeleteRecommendation, deleteForumTopic, adminEndSeason } from '@/lib/actions'
+import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminBatchFlaggedDecisions, adminSet18Flag, adminApproveAllPending, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, adminFetchFrenchPosters, adminScanAgeRestrictions, adminTestFilmCertification, adminDiagnostic, updateFilm, adminResolveReport, adminSetConfig, adminVerifyPosters, adminSetAdmin, adminAddNews, adminDeleteNews, adminAddRecommendation, adminDeleteRecommendation, deleteForumTopic, adminEndSeason } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
 import { CONFIG } from '@/lib/config'
 import type { Film, Profile } from '@/lib/supabase/types'
@@ -322,9 +322,16 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
   const [ageScanNextId, setAgeScanNextId] = useState<number | null>(0)
   const [ageScanRunning, setAgeScanRunning] = useState(false)
   const [ageScanDetails, setAgeScanDetails] = useState<Array<{ id: number; titre: string; tmdbId: number | null; flagged18: boolean; flagged16: boolean; certs: Record<string, string>; status: string }> | null>(null)
+  const [ageScanDone, setAgeScanDone] = useState(false)
+  const [ageScanError, setAgeScanError] = useState<string | null>(null)
+  const [diagResult, setDiagResult] = useState<any>(null)
+  const [diagLoading, setDiagLoading] = useState(false)
   const [flag18Saving, setFlag18Saving] = useState<Record<number, boolean>>({})
   const [localPending, setLocalPending] = useState<Film[]>(pendingFilms18)
   const [approveAllLoading, setApproveAllLoading] = useState(false)
+  const [testFilmId, setTestFilmId] = useState('')
+  const [testResult, setTestResult] = useState<any>(null)
+  const [testLoading, setTestLoading] = useState(false)
 
   // Sync localPending avec les props après router.refresh()
   useEffect(() => { setLocalPending(pendingFilms18) }, [pendingFilms18])
@@ -549,13 +556,20 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
   async function scanAgeRestrictionsAuto() {
     setAgeScanRunning(true)
     setAgeScanDetails(null)
+    setAgeScanDone(false)
+    setAgeScanError(null)
     let nextId: number | null = 0
     let total = 0
     let totalPending = 0
-    const allDetails: typeof ageScanDetails = []
+    let lastError: string | null = null
+    const allDetails: Array<{ id: number; titre: string; tmdbId: number | null; flagged18: boolean; flagged16: boolean; certs: Record<string, string>; status: string }> = []
     while (nextId !== null) {
       const result = await adminScanAgeRestrictions(nextId)
-      if (result.error) { addToast(result.error, '⚠️'); break }
+      if (result.error) {
+        lastError = result.error
+        addToast(result.error, '⚠️')
+        break
+      }
       total += result.count ?? 0
       totalPending += result.pendingCount ?? 0
       if (result.details) allDetails.push(...result.details)
@@ -565,8 +579,19 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
     setAgeScanNextId(null)
     setAgeScanRunning(false)
     setAgeScanDetails(allDetails)
-    addToast(`✅ ${total} film(s) scannés — ${totalPending} détecté(s) 18+`, '🔞')
-    router.refresh()
+    setAgeScanDone(true)
+    setAgeScanError(lastError)
+    if (!lastError) {
+      const detected18 = allDetails.filter(d => d.flagged18).length
+      const alreadyConfirmed = allDetails.filter(d => d.status === 'already_confirmed').length
+      const adminOverride = allDetails.filter(d => d.status === 'admin_override').length
+      const parts = [`${total} scannés`, `${detected18} 18+ selon TMDB`]
+      if (totalPending > 0) parts.push(`${totalPending} nouveaux à confirmer`)
+      if (alreadyConfirmed > 0) parts.push(`${alreadyConfirmed} déjà confirmés`)
+      if (adminOverride > 0) parts.push(`${adminOverride} admin override`)
+      addToast(`✅ ${parts.join(' · ')}`, '🔞')
+      router.refresh()
+    }
   }
 
   async function forceRefreshAllAuto() {
@@ -833,6 +858,159 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
             <span>✅</span> Aucun film en attente de confirmation — lance le scanner pour détecter les 18+ automatiquement.
           </div>
         )}
+
+        {/* Bouton scan + résultats */}
+        <div style={{ marginTop: '1.2rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+          <div style={{ display: 'flex', gap: '.5rem', marginBottom: '.6rem', flexWrap: 'wrap' }}>
+            <button
+              className="btn btn-outline"
+              style={{ fontSize: '.8rem' }}
+              disabled={ageScanRunning}
+              onClick={scanAgeRestrictionsAuto}
+            >
+              {ageScanRunning ? '⏳ Scan TMDB en cours…' : '🔞 Scanner tous les films (TMDB)'}
+            </button>
+            <button
+              className="btn btn-outline"
+              style={{ fontSize: '.8rem' }}
+              disabled={diagLoading}
+              onClick={async () => {
+                setDiagLoading(true)
+                const r = await adminDiagnostic()
+                setDiagResult(r)
+                setDiagLoading(false)
+              }}
+            >
+              {diagLoading ? '⏳…' : '🔬 Tester connexion DB'}
+            </button>
+          </div>
+          {diagResult && (
+            <div style={{ background: 'rgba(0,0,0,.3)', border: '1px solid rgba(255,255,0,.3)', borderRadius: 'var(--r)', padding: '.75rem', marginBottom: '.6rem', fontSize: '.72rem', fontFamily: 'monospace' }}>
+              <div style={{ color: 'yellow', fontWeight: 700, marginBottom: '.4rem' }}>🔬 Diagnostic DB</div>
+              {'error' in diagResult ? (
+                <div style={{ color: 'orange' }}>Erreur: {diagResult.error}</div>
+              ) : (
+                <>
+                  <div>adminClient count: <span style={{ color: diagResult.adminCount?.error ? 'red' : 'lime' }}>{diagResult.adminCount?.error ? `ERREUR: ${diagResult.adminCount.error}` : JSON.stringify(diagResult.adminCount?.data)}</span></div>
+                  <div>adminClient select: <span style={{ color: diagResult.adminSelect?.error ? 'red' : 'lime' }}>{diagResult.adminSelect?.error ? `ERREUR: ${diagResult.adminSelect.error}` : `${diagResult.adminSelect?.data?.length ?? 0} films`} {diagResult.adminSelect?.data?.length ? `(ids: ${diagResult.adminSelect.data.map((f: any) => f.id).join(', ')})` : ''}</span></div>
+                  <div>supabase select:   <span style={{ color: diagResult.userSelect?.error ? 'red' : 'lime' }}>{diagResult.userSelect?.error ? `ERREUR: ${diagResult.userSelect.error}` : `${diagResult.userSelect?.data?.length ?? 0} films`}</span></div>
+                  <div>TMDB_API_KEY: <span style={{ color: diagResult.tmdbKey === 'MANQUANTE' ? 'red' : 'lime' }}>{diagResult.tmdbKey}</span></div>
+                  <div>SERVICE_ROLE_KEY: <span style={{ color: diagResult.serviceKey === 'MANQUANTE' ? 'red' : 'lime' }}>{diagResult.serviceKey}</span></div>
+                </>
+              )}
+            </div>
+          )}
+
+          {ageScanDone && (
+            <div style={{ background: 'rgba(0,0,0,.25)', border: `2px solid ${ageScanError ? 'rgba(255,150,0,.6)' : 'rgba(255,255,255,.12)'}`, borderRadius: 'var(--r)', padding: '.85rem', maxHeight: '360px', overflowY: 'auto' }}>
+              {ageScanError ? (
+                <div style={{ color: 'orange', fontSize: '.82rem', fontWeight: 700 }}>⚠️ {ageScanError}</div>
+              ) : !ageScanDetails?.length ? (
+                <div style={{ color: 'orange', fontSize: '.82rem', fontWeight: 700 }}>
+                  ⚠️ 0 films trouvés en DB — vérifie SUPABASE_SERVICE_ROLE_KEY sur Vercel.
+                </div>
+              ) : (
+                <>
+                  <div style={{ fontSize: '.75rem', fontWeight: 700, marginBottom: '.5rem', display: 'flex', gap: '.8rem', flexWrap: 'wrap' }}>
+                    <span style={{ color: 'var(--accent)' }}>📋 {ageScanDetails.length} scannés</span>
+                    <span style={{ color: 'var(--red)' }}>🔞 {ageScanDetails.filter(d => d.status === 'pending').length} nouveaux 18+</span>
+                    <span style={{ color: 'var(--green)' }}>✅ {ageScanDetails.filter(d => d.status === 'already_confirmed').length} déjà confirmés</span>
+                    <span style={{ color: '#a78bfa' }}>🛡 {ageScanDetails.filter(d => d.status === 'admin_override').length} override admin</span>
+                    <span style={{ color: 'var(--text3)' }}>❓ {ageScanDetails.filter(d => d.status === 'no_tmdb').length} sans TMDB</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '.18rem' }}>
+                    {ageScanDetails.map(d => {
+                      const color = d.status === 'pending' ? 'var(--red)' : d.status === 'already_confirmed' ? 'var(--green)' : d.status === 'admin_override' ? '#a78bfa' : d.status === 'no_tmdb' ? 'var(--text3)' : d.status.startsWith('error') || d.status.startsWith('http') || d.status.startsWith('db_') ? 'orange' : 'var(--text2)'
+                      const icon = d.status === 'pending' ? '🔞' : d.status === 'already_confirmed' ? '✅' : d.status === 'admin_override' ? '🛡' : d.status === 'no_tmdb' ? '❓' : d.status.startsWith('error') || d.status.startsWith('http') || d.status.startsWith('db_') ? '⚠' : '✓'
+                      const label = d.status === 'no_tmdb' ? 'pas de TMDB' : d.status === 'already_confirmed' ? 'déjà confirmé' : d.status === 'admin_override' ? 'admin override' : d.status === 'pending' ? (Object.entries(d.certs).map(([k, v]) => `${k}:${v}`).join(' ') || 'adult=true') : d.status.startsWith('error') || d.status.startsWith('http') || d.status.startsWith('db_') ? d.status : Object.entries(d.certs).map(([k, v]) => `${k}:${v}`).join(' ') || '—'
+                      return (
+                        <div key={d.id} style={{ fontSize: '.68rem', display: 'flex', gap: '.5rem', color }}>
+                          <span style={{ flexShrink: 0 }}>{icon}</span>
+                          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.titre}</span>
+                          <span style={{ color: 'var(--text3)', flexShrink: 0, fontSize: '.62rem' }}>{label}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Outil de test : certification TMDB pour un film spécifique */}
+        <div style={{ marginTop: '1.2rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+          <div style={{ fontSize: '.68rem', letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: '.6rem' }}>
+            🔬 Tester la certification TMDB d'un film
+          </div>
+          <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+            <select
+              value={testFilmId}
+              onChange={e => { setTestFilmId(e.target.value); setTestResult(null) }}
+              style={{ flex: 1, minWidth: 200, background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.4rem .6rem', color: 'var(--text)', fontSize: '.8rem' }}
+            >
+              <option value="">— Choisir un film —</option>
+              {films.map(f => (
+                <option key={f.id} value={String(f.id)}>{f.titre} ({f.annee})</option>
+              ))}
+            </select>
+            <button
+              type="button"
+              disabled={!testFilmId || testLoading}
+              onClick={async () => {
+                if (!testFilmId) return
+                setTestLoading(true)
+                setTestResult(null)
+                const r = await adminTestFilmCertification(Number(testFilmId))
+                setTestResult(r)
+                setTestLoading(false)
+              }}
+              style={{ padding: '.4rem .9rem', borderRadius: 'var(--r)', border: '1px solid rgba(99,179,237,.4)', background: 'rgba(99,179,237,.1)', color: '#63b3ed', fontSize: '.8rem', fontWeight: 600, cursor: testFilmId && !testLoading ? 'pointer' : 'default' }}
+            >
+              {testLoading ? '⏳ Test…' : '🔬 Tester'}
+            </button>
+          </div>
+          {testResult && (
+            <div style={{ marginTop: '.75rem', background: 'rgba(0,0,0,.2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.75rem', fontSize: '.75rem' }}>
+              {'error' in testResult ? (
+                <div style={{ color: 'orange' }}>⚠️ {testResult.error}</div>
+              ) : (
+                <>
+                  <div style={{ fontWeight: 700, marginBottom: '.4rem', color: testResult.flagged18 ? 'var(--red)' : 'var(--green)' }}>
+                    {testResult.flagged18 ? '🔞 18+ détecté' : '✅ Pas 18+'} — {testResult.titre}
+                    {testResult.flagged16 && !testResult.flagged18 && <span style={{ color: 'orange', marginLeft: '.5rem' }}>⚠ 16+</span>}
+                    {testResult.isAdult && <span style={{ color: 'var(--red)', marginLeft: '.5rem' }}>(adult=true)</span>}
+                  </div>
+                  {Object.keys(testResult.certs ?? {}).length > 0 && (
+                    <div style={{ marginBottom: '.4rem' }}>
+                      <span style={{ color: 'var(--text3)' }}>Certifs clés : </span>
+                      {Object.entries(testResult.certs).map(([k, v]) => (
+                        <span key={k} style={{ marginRight: '.5rem', color: 'var(--accent)' }}>{k}:{String(v)}</span>
+                      ))}
+                    </div>
+                  )}
+                  {Object.keys(testResult.rawCerts ?? {}).length > 0 ? (
+                    <details>
+                      <summary style={{ cursor: 'pointer', color: 'var(--text2)', fontSize: '.7rem' }}>
+                        Toutes les certifications TMDB ({Object.keys(testResult.rawCerts).length} pays)
+                      </summary>
+                      <div style={{ marginTop: '.4rem', display: 'flex', flexDirection: 'column', gap: '.15rem' }}>
+                        {Object.entries(testResult.rawCerts).map(([country, certs]) => (
+                          <div key={country} style={{ display: 'flex', gap: '.5rem' }}>
+                            <span style={{ color: 'var(--text3)', minWidth: 32 }}>{country}</span>
+                            <span>{(certs as string[]).join(', ')}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  ) : (
+                    <div style={{ color: 'var(--text3)', fontSize: '.72rem' }}>Aucune certification disponible dans TMDB pour ce film.</div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </Section>
 
       {/* Films */}
@@ -873,33 +1051,7 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
           >
             {frenchPostersRunning ? '⏳ Affiches FR en cours…' : '🇫🇷 Récupérer affiches françaises'}
           </button>
-          <button
-            className="btn btn-outline"
-            style={{ fontSize: '.78rem' }}
-            disabled={ageScanRunning}
-            onClick={scanAgeRestrictionsAuto}
-          >
-            {ageScanRunning ? '⏳ Scan âge en cours…' : '🔞 Scanner restrictions d\'âge'}
-          </button>
         </div>
-        {ageScanDetails && ageScanDetails.length > 0 && (
-          <div style={{ background: 'rgba(0,0,0,.15)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 'var(--r)', padding: '.75rem', marginBottom: '.6rem', maxHeight: '300px', overflowY: 'auto' }}>
-            <div style={{ fontSize: '.72rem', color: 'var(--accent)', fontWeight: 600, marginBottom: '.4rem' }}>
-              📋 Résultats du scan — {ageScanDetails.filter(d => d.flagged18).length} film(s) 18+ détecté(s) sur {ageScanDetails.length}
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '.2rem' }}>
-              {ageScanDetails.map(d => (
-                <div key={d.id} style={{ fontSize: '.68rem', display: 'flex', gap: '.5rem', alignItems: 'center', color: d.flagged18 ? 'var(--red)' : d.status === 'no_tmdb' ? 'var(--text3)' : d.status.startsWith('error') ? 'orange' : 'var(--text2)' }}>
-                  <span style={{ minWidth: '14px' }}>{d.flagged18 ? '🔞' : d.status === 'no_tmdb' ? '?' : d.status.startsWith('error') ? '⚠' : '✓'}</span>
-                  <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.titre}</span>
-                  <span style={{ color: 'var(--text3)', flexShrink: 0 }}>
-                    {d.status === 'no_tmdb' ? 'pas de TMDB' : d.status.startsWith('error') ? d.status : Object.entries(d.certs).map(([k, v]) => `${k}:${v}`).join(' ') || '—'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
         {brokenPosters.length > 0 && (
           <div style={{ background: 'rgba(232,90,90,.07)', border: '1px solid rgba(232,90,90,.3)', borderRadius: 'var(--r)', padding: '.75rem', marginBottom: '.6rem' }}>
             <div style={{ fontSize: '.72rem', color: 'var(--red)', fontWeight: 600, marginBottom: '.4rem' }}>

@@ -532,7 +532,11 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
     const result = await addFilm(fd)
     if (result.error) { setErr(result.error); setLoading(false); return }
     const saison = result.saison
-    addToast(saison && saison > saisonNumero ? `Film réservé pour la Saison ${saison} 🔴` : 'Film ajouté à la liste ! 🎬', '✅')
+    if (result.flagged18) {
+      addToast('Film ajouté — détecté 18+ par TMDB, en attente de validation admin 🔞', '⚠️')
+    } else {
+      addToast(saison && saison > saisonNumero ? `Film réservé pour la Saison ${saison} 🔴` : 'Film ajouté à la liste ! 🎬', '✅')
+    }
     onRefresh(); onClose()
   }
 
@@ -688,6 +692,7 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
 // ─── MAIN FILMS CLIENT ───────────────────────────────────────────────────────
 export default function FilmsClient({ films, profile, watchedIds, watchedPreMap, myRatings, watchCountMap, ratingMap, totalUsers, weekFilmId, isMarathonLive, saisonNumero }: Props) {
   const router = useRouter()
+  const { addToast } = useToast()
   const [search, setSearch] = useState('')
   const [filterGenre, setFilterGenre] = useState('')
   const [filterDecade, setFilterDecade] = useState('')
@@ -743,9 +748,18 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
   function isMajority(filmId: number) { return getWatchPct(filmId) >= CONFIG.SEUIL_MAJORITY }
 
   async function handleSetCategory(film: Film, category: 'normal' | '18plus' | 'strange') {
+    // Optimistic update immédiat
     setCategoryOverrides(prev => ({ ...prev, [film.id]: category }))
     setAdminCategoryOpen(null)
-    await adminSetFilmCategory(film.id, category)
+    const result = await adminSetFilmCategory(film.id, category)
+    if (result && 'error' in result) {
+      // Revert si erreur
+      setCategoryOverrides(prev => { const n = { ...prev }; delete n[film.id]; return n })
+      addToast(result.error!, '⚠️')
+      return
+    }
+    const label = category === 'normal' ? '✓ Normal' : category === 'strange' ? '🔞 18+ Étrange' : '🔞 18+'
+    addToast(`"${film.titre}" → ${label}`, '⚙')
     router.refresh()
   }
 
@@ -811,33 +825,39 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
       {/* Age restriction toggles */}
       <div style={{ display: 'flex', gap: '.6rem', flexWrap: 'wrap', marginBottom: '1.3rem' }}>
         {/* -18 toggle */}
-        {films.some(f => f.flagged_18plus) && (
-          <div
-            onClick={() => { if (!showRestricted18) setAgeWarnModal(18); else setShowRestricted18(false) }}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: '.6rem',
-              padding: '.45rem .9rem', borderRadius: 'var(--r)', cursor: 'pointer',
-              background: showRestricted18 ? 'rgba(180,0,0,.14)' : 'rgba(255,255,255,.03)',
-              border: `1px solid ${showRestricted18 ? 'rgba(220,30,30,.5)' : 'var(--border2)'}`,
-              transition: 'all .2s', userSelect: 'none',
-            }}
-          >
-            <div style={{
-              width: 16, height: 16, borderRadius: 3, flexShrink: 0,
-              background: showRestricted18 ? 'var(--red)' : 'transparent',
-              border: `2px solid ${showRestricted18 ? 'var(--red)' : 'rgba(255,255,255,.3)'}`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .15s',
-            }}>
-              {showRestricted18 && <span style={{ color: '#fff', fontSize: '.6rem', fontWeight: 700, lineHeight: 1 }}>✓</span>}
+        {(() => {
+          const count18 = films.filter(f => {
+            const ov = categoryOverrides[f.id]
+            return ov === '18plus' || ov === 'strange' || (!ov && f.flagged_18plus)
+          }).length
+          return count18 > 0 ? (
+            <div
+              onClick={() => { if (!showRestricted18) setAgeWarnModal(18); else setShowRestricted18(false) }}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '.6rem',
+                padding: '.45rem .9rem', borderRadius: 'var(--r)', cursor: 'pointer',
+                background: showRestricted18 ? 'rgba(180,0,0,.14)' : 'rgba(255,255,255,.03)',
+                border: `1px solid ${showRestricted18 ? 'rgba(220,30,30,.5)' : 'var(--border2)'}`,
+                transition: 'all .2s', userSelect: 'none',
+              }}
+            >
+              <div style={{
+                width: 16, height: 16, borderRadius: 3, flexShrink: 0,
+                background: showRestricted18 ? 'var(--red)' : 'transparent',
+                border: `2px solid ${showRestricted18 ? 'var(--red)' : 'rgba(255,255,255,.3)'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .15s',
+              }}>
+                {showRestricted18 && <span style={{ color: '#fff', fontSize: '.6rem', fontWeight: 700, lineHeight: 1 }}>✓</span>}
+              </div>
+              <span style={{ fontSize: '.78rem', color: showRestricted18 ? '#ff6b6b' : 'var(--text3)' }}>
+                🔞 Films <strong style={{ color: showRestricted18 ? '#ff6b6b' : undefined }}>-18 ans</strong>
+              </span>
+              <span style={{ fontSize: '.65rem', background: 'rgba(220,30,30,.2)', color: '#ff6b6b', border: '1px solid rgba(220,30,30,.35)', borderRadius: 99, padding: '1px 7px' }}>
+                {count18}
+              </span>
             </div>
-            <span style={{ fontSize: '.78rem', color: showRestricted18 ? '#ff6b6b' : 'var(--text3)' }}>
-              🔞 Films <strong style={{ color: showRestricted18 ? '#ff6b6b' : undefined }}>-18 ans</strong>
-            </span>
-            <span style={{ fontSize: '.65rem', background: 'rgba(220,30,30,.2)', color: '#ff6b6b', border: '1px solid rgba(220,30,30,.35)', borderRadius: 99, padding: '1px 7px' }}>
-              {films.filter(f => f.flagged_18plus).length}
-            </span>
-          </div>
-        )}
+          ) : null
+        })()}
       </div>
 
       {/* Grid */}
