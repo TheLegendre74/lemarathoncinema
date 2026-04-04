@@ -321,6 +321,7 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
   const [frenchPostersRunning, setFrenchPostersRunning] = useState(false)
   const [ageScanNextId, setAgeScanNextId] = useState<number | null>(0)
   const [ageScanRunning, setAgeScanRunning] = useState(false)
+  const [ageScanDetails, setAgeScanDetails] = useState<Array<{ id: number; titre: string; tmdbId: number | null; flagged18: boolean; flagged16: boolean; certs: Record<string, string>; status: string }> | null>(null)
   const [flag18Overrides, setFlag18Overrides] = useState<Record<number, boolean>>({})
   const [flag18Saving, setFlag18Saving] = useState<Record<number, boolean>>({})
   const [flag18Filter, setFlag18Filter] = useState<'all' | '18' | 'normal'>('all')
@@ -546,18 +547,24 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
 
   async function scanAgeRestrictionsAuto() {
     setAgeScanRunning(true)
+    setAgeScanDetails(null)
     let nextId: number | null = 0
     let total = 0
+    let totalPending = 0
+    const allDetails: typeof ageScanDetails = []
     while (nextId !== null) {
       const result = await adminScanAgeRestrictions(nextId)
       if (result.error) { addToast(result.error, '⚠️'); break }
       total += result.count ?? 0
+      totalPending += result.pendingCount ?? 0
+      if (result.details) allDetails.push(...result.details)
       nextId = result.nextId ?? null
       if (nextId !== null) await new Promise(r => setTimeout(r, 600))
     }
     setAgeScanNextId(null)
     setAgeScanRunning(false)
-    addToast(`✅ ${total} film(s) scannés pour les restrictions d'âge !`, '🔞')
+    setAgeScanDetails(allDetails)
+    addToast(`✅ ${total} film(s) scannés — ${totalPending} détecté(s) 18+`, '🔞')
     router.refresh()
   }
 
@@ -916,6 +923,24 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
             {ageScanRunning ? '⏳ Scan âge en cours…' : '🔞 Scanner restrictions d\'âge'}
           </button>
         </div>
+        {ageScanDetails && ageScanDetails.length > 0 && (
+          <div style={{ background: 'rgba(0,0,0,.15)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 'var(--r)', padding: '.75rem', marginBottom: '.6rem', maxHeight: '300px', overflowY: 'auto' }}>
+            <div style={{ fontSize: '.72rem', color: 'var(--accent)', fontWeight: 600, marginBottom: '.4rem' }}>
+              📋 Résultats du scan — {ageScanDetails.filter(d => d.flagged18).length} film(s) 18+ détecté(s) sur {ageScanDetails.length}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '.2rem' }}>
+              {ageScanDetails.map(d => (
+                <div key={d.id} style={{ fontSize: '.68rem', display: 'flex', gap: '.5rem', alignItems: 'center', color: d.flagged18 ? 'var(--red)' : d.status === 'no_tmdb' ? 'var(--text3)' : d.status.startsWith('error') ? 'orange' : 'var(--text2)' }}>
+                  <span style={{ minWidth: '14px' }}>{d.flagged18 ? '🔞' : d.status === 'no_tmdb' ? '?' : d.status.startsWith('error') ? '⚠' : '✓'}</span>
+                  <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.titre}</span>
+                  <span style={{ color: 'var(--text3)', flexShrink: 0 }}>
+                    {d.status === 'no_tmdb' ? 'pas de TMDB' : d.status.startsWith('error') ? d.status : Object.entries(d.certs).map(([k, v]) => `${k}:${v}`).join(' ') || '—'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {brokenPosters.length > 0 && (
           <div style={{ background: 'rgba(232,90,90,.07)', border: '1px solid rgba(232,90,90,.3)', borderRadius: 'var(--r)', padding: '.75rem', marginBottom: '.6rem' }}>
             <div style={{ fontSize: '.72rem', color: 'var(--red)', fontWeight: 600, marginBottom: '.4rem' }}>

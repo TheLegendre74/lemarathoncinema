@@ -117,9 +117,12 @@ async function verifyWithTMDB(titre: string, annee: number): Promise<{
 
 // Détermine les restrictions d'âge à partir des certifications TMDB (toutes régions)
 // isAdult = flag TMDB movie.adult (films adultes explicites)
-function parseTMDBCertifications(releaseDates: any[], isAdult = false): { flagged18: boolean; flagged16: boolean } {
+function parseTMDBCertifications(
+  releaseDates: any[],
+  isAdult = false
+): { flagged18: boolean; flagged16: boolean; certs: Record<string, string> } {
   // Si TMDB marque le film comme "adult" → 18+ immédiat
-  if (isAdult) return { flagged18: true, flagged16: false }
+  if (isAdult) return { flagged18: true, flagged16: false, certs: { adult: 'true' } }
 
   // getCert : préfère la sortie cinéma (type 3), puis limitée (type 2), puis n'importe laquelle
   const getCert = (iso: string): string => {
@@ -143,28 +146,56 @@ function parseTMDBCertifications(releaseDates: any[], isAdult = false): { flagge
   const de = getCert('DE')
   const au = getCert('AU')
   const nl = getCert('NL')
+  const it = getCert('IT')
+  const es = getCert('ES')
+  const jp = getCert('JP')
+  const be = getCert('BE')
+  const ch = getCert('CH')
+
+  const certs: Record<string, string> = {}
+  if (fr) certs['FR'] = fr
+  if (us) certs['US'] = us
+  if (gb) certs['GB'] = gb
+  if (de) certs['DE'] = de
+  if (au) certs['AU'] = au
+  if (nl) certs['NL'] = nl
+  if (it) certs['IT'] = it
+  if (es) certs['ES'] = es
+  if (jp) certs['JP'] = jp
+  if (be) certs['BE'] = be
+  if (ch) certs['CH'] = ch
 
   // ─── 18+ ────────────────────────────────────────────────
   // FR : CNC "18" (interdit -18 ans)
-  if (fr === '18') return { flagged18: true, flagged16: false }
+  if (fr === '18') return { flagged18: true, flagged16: false, certs }
   // US : NC-17 ou X (ancienne notation avant 1990)
-  if (['NC-17', 'X'].includes(us)) return { flagged18: true, flagged16: false }
+  if (['NC-17', 'X'].includes(us)) return { flagged18: true, flagged16: false, certs }
   // GB : BBFC "18" ou "R18" (uniquement en sex shops)
-  if (['18', 'R18'].includes(gb)) return { flagged18: true, flagged16: false }
+  if (['18', 'R18'].includes(gb)) return { flagged18: true, flagged16: false, certs }
   // DE : FSK "18"
-  if (de === '18') return { flagged18: true, flagged16: false }
+  if (de === '18') return { flagged18: true, flagged16: false, certs }
   // AU : "X18+" (classif. explicite) ou "RC" (Refused Classification)
-  if (['X18+', 'RC'].includes(au)) return { flagged18: true, flagged16: false }
+  if (['X18+', 'RC'].includes(au)) return { flagged18: true, flagged16: false, certs }
   // NL : "18"
-  if (nl === '18') return { flagged18: true, flagged16: false }
+  if (nl === '18') return { flagged18: true, flagged16: false, certs }
+  // IT : "VM18" (vietato minori 18 anni)
+  if (it === 'VM18') return { flagged18: true, flagged16: false, certs }
+  // ES : "18"
+  if (es === '18') return { flagged18: true, flagged16: false, certs }
+  // JP : "R18+"
+  if (jp === 'R18+') return { flagged18: true, flagged16: false, certs }
+  // BE : "18"
+  if (be === '18') return { flagged18: true, flagged16: false, certs }
+  // CH : "18"
+  if (ch === '18') return { flagged18: true, flagged16: false, certs }
 
   // ─── 16+ ────────────────────────────────────────────────
-  if (['16', '12'].includes(fr)) return { flagged18: false, flagged16: true }
-  if (us === 'R')                return { flagged18: false, flagged16: true }
-  if (gb === '15')               return { flagged18: false, flagged16: true }
-  if (['16', '12'].includes(de)) return { flagged18: false, flagged16: true }
+  if (fr === '16') return { flagged18: false, flagged16: true, certs }
+  if (us === 'R')  return { flagged18: false, flagged16: true, certs }
+  if (gb === '15') return { flagged18: false, flagged16: true, certs }
+  if (de === '16') return { flagged18: false, flagged16: true, certs }
 
-  return { flagged18: false, flagged16: false }
+  return { flagged18: false, flagged16: false, certs }
 }
 
 // ── TMDB SEARCH SUGGESTIONS ──────────────────────────────────
@@ -1118,11 +1149,12 @@ export async function adminScanAgeRestrictions(fromId: number = 0) {
     .order('id')
     .limit(40)
 
-  if (!films?.length) return { success: true, count: 0, pendingCount: 0, nextId: null }
+  if (!films?.length) return { success: true, count: 0, pendingCount: 0, nextId: null, details: [] }
 
   const adminClient = createAdminClient()
   let count = 0
   let pendingCount = 0
+  const details: Array<{ id: number; titre: string; tmdbId: number | null; flagged18: boolean; flagged16: boolean; certs: Record<string, string>; status: string }> = []
 
   for (const film of films) {
     try {
@@ -1137,7 +1169,9 @@ export async function adminScanAgeRestrictions(fromId: number = 0) {
       }
 
       if (!tmdbId) {
-        // Pas de TMDB : on ne peut pas déterminer → laisser tel quel
+        // Pas de TMDB : impossible de déterminer → nettoyer flagged_18_pending pour ne pas laisser en queue
+        await adminClient.from('films').update({ flagged_18_pending: false }).eq('id', film.id)
+        details.push({ id: film.id, titre: film.titre, tmdbId: null, flagged18: false, flagged16: false, certs: {}, status: 'no_tmdb' })
         count++
         continue
       }
@@ -1149,29 +1183,38 @@ export async function adminScanAgeRestrictions(fromId: number = 0) {
       ])
       const [relData, detailData] = await Promise.all([relRes.json(), detailRes.json()])
       const isAdult = detailData.adult === true
-      const { flagged18, flagged16 } = parseTMDBCertifications(relData.results ?? [], isAdult)
+      const { flagged18, flagged16, certs } = parseTMDBCertifications(relData.results ?? [], isAdult)
 
       if (flagged18 && !film.flagged_18plus) {
-        // CNC détecte 18+ et pas encore confirmé → mettre en attente de validation
+        // TMDB détecte 18+ et pas encore confirmé → mettre en attente de validation manuelle
         await adminClient.from('films')
           .update({ flagged_16plus: false, flagged_18_pending: true })
           .eq('id', film.id)
+        details.push({ id: film.id, titre: film.titre, tmdbId, flagged18: true, flagged16: false, certs, status: 'pending' })
         pendingCount++
-      } else if (!flagged18) {
-        // CNC dit clairement pas 18+ → nettoyer automatiquement (sauf si confirmé manuellement)
+      } else if (flagged18 && film.flagged_18plus) {
+        // Déjà confirmé manuellement → ne pas toucher
+        details.push({ id: film.id, titre: film.titre, tmdbId, flagged18: true, flagged16: false, certs, status: 'already_confirmed' })
+      } else {
+        // Pas 18+ → nettoyer automatiquement
         await adminClient.from('films')
           .update({ flagged_18plus: false, flagged_18_pending: false, flagged_16plus: flagged16 })
           .eq('id', film.id)
+        details.push({ id: film.id, titre: film.titre, tmdbId, flagged18: false, flagged16, certs, status: flagged16 ? 'cleared_16plus' : 'cleared' })
       }
-      // Si flagged18 && film.flagged_18plus → déjà confirmé, ne pas re-pendre
       count++
-    } catch { /* skip */ }
+    } catch (err) {
+      // En cas d'erreur API → nettoyer flagged_18_pending pour ne pas laisser en queue
+      try { await adminClient.from('films').update({ flagged_18_pending: false }).eq('id', film.id) } catch { /* best-effort */ }
+      details.push({ id: film.id, titre: film.titre, tmdbId: film.tmdb_id, flagged18: false, flagged16: false, certs: {}, status: `error: ${String(err).slice(0, 80)}` })
+      count++
+    }
   }
 
   const nextId = films.length === 40 ? films[films.length - 1].id : null
   revalidatePath('/films')
   revalidatePath('/admin')
-  return { success: true, count, pendingCount, nextId }
+  return { success: true, count, pendingCount, nextId, details }
 }
 
 export async function adminForceRefreshAllPosters(fromId: number = 0) {
