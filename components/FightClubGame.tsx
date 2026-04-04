@@ -844,11 +844,13 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             keyBtns[id] = btn
           }
 
-          // Capture keypress for remapping — uses ev.key (layout-aware, works on AZERTY/QWERTY)
-          this.input.keyboard!.on('keydown', (ev: any) => {
+          // Capture keypress for remapping — listener natif window (ev.key = AZERTY-correct)
+          // On n'utilise PAS le système Phaser qui peut wrapper/transformer les events
+          const nativeKeyCapture = (e: KeyboardEvent) => {
             if (!waitingFor) return
-            const raw: string = ev.key
-            if (raw === 'Escape') return  // ne pas binder ESC
+            e.preventDefault(); e.stopPropagation()
+            const raw = e.key
+            if (raw === 'Escape') { waitingFor = null; refreshBtns(); return }
             let k: string
             if (raw === ' ')             k = 'SPACE'
             else if (raw === 'ArrowLeft')  k = 'LEFT'
@@ -861,7 +863,9 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             KEYS[waitingFor as KeyId] = k
             try { localStorage.setItem('fc_keys_v2', JSON.stringify(KEYS)) } catch (_) {}
             waitingFor = null; refreshBtns()
-          })
+          }
+          window.addEventListener('keydown', nativeKeyCapture)
+          this.events.on('shutdown', () => window.removeEventListener('keydown', nativeKeyCapture))
 
           this.add.text(GW / 2, rowY0 + 5 * rowH + 6, '← flèches toujours disponibles en parallèle', {
             fontFamily: 'monospace', fontSize: '9px', color: '#444444', align: 'center',
