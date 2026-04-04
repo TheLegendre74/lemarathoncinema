@@ -94,9 +94,9 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
       // AZERTY Q key → keyCode 81 → Phaser 'Q'
       // AZERTY A key → keyCode 65 → Phaser 'A'
       // AZERTY W key → keyCode 87 → Phaser 'W'
-      // Load saved key bindings (or defaults)
+      // Load saved key bindings (v2 = ev.key based, AZERTY-correct; v1 was broken ev.code)
       const defaultKeys = { left: 'Q', right: 'D', up: 'Z', down: 'S', punch: 'A', kick: 'E', throw: 'W', block: 'B', jump: 'SPACE', rage: 'C' }
-      const savedKeys = (() => { try { return JSON.parse(localStorage.getItem('fc_keys') ?? 'null') } catch { return null } })()
+      const savedKeys = (() => { try { return JSON.parse(localStorage.getItem('fc_keys_v2') ?? 'null') } catch { return null } })()
       const KEYS = Object.assign({}, defaultKeys, savedKeys ?? {})
       // kd() = identity: Phaser key names ARE the AZERTY labels
       const kd = (k: string) => k
@@ -859,7 +859,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             else if (raw.length === 1)     k = raw.toUpperCase()
             else                           k = raw.toUpperCase()
             KEYS[waitingFor as KeyId] = k
-            try { localStorage.setItem('fc_keys', JSON.stringify(KEYS)) } catch (_) {}
+            try { localStorage.setItem('fc_keys_v2', JSON.stringify(KEYS)) } catch (_) {}
             waitingFor = null; refreshBtns()
           })
 
