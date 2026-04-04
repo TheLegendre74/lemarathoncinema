@@ -15,8 +15,8 @@ const ZONE_SPACING = 950     // world units between wave trigger zones
 
 const DIFFS = {
   facile: { waves: 5,  hpM: 0.42, dmgM: 0.40, playerHp: 200, label: 'FACILE',          sub: '5 vagues · Défilement · Ennemis légers'   },
-  normal: { waves: 7,  hpM: 0.85, dmgM: 0.85, playerHp: 130, label: 'NORMAL',          sub: '7 vagues · Défilement · Combat équilibré'  },
-  jack:   { waves: 10, hpM: 1.5,  dmgM: 1.5,  playerHp: 80,  label: "L'OMBRE DE JACK", sub: '10 vagues · Brutal. Sans merci.'           },
+  normal: { waves: 7,  hpM: 0.62, dmgM: 0.60, playerHp: 160, label: 'NORMAL',          sub: '7 vagues · Défilement · Combat équilibré'  },
+  jack:   { waves: 10, hpM: 1.1,  dmgM: 1.1,  playerHp: 105, label: "L'OMBRE DE JACK", sub: '10 vagues · Brutal. Sans merci.'           },
 } as const
 type Diff = keyof typeof DIFFS
 
@@ -42,10 +42,13 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
   const [showName,         setShowName]         = useState(false)
   const [showLB,           setShowLB]           = useState(false)
   const [showEndlessChoice,setShowEndlessChoice] = useState(false)
+  const [showDoorPrompt,   setShowDoorPrompt]   = useState(false)
   const [lbData,           setLbData]           = useState<LBEntry[]>([])
   const [nameVal,          setNameVal]          = useState('')
   const gameResult = useRef<{ score: number; diff: string } | null>(null)
   const startEndlessRef = useRef<(() => void) | null>(null)
+  const confirmDoorRef  = useRef<(() => void) | null>(null)
+  const cancelDoorRef   = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     const upd = () => setUiScale(Math.min(window.innerWidth / GW, window.innerHeight / GH, 1.6))
@@ -918,7 +921,8 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
 
         secretDoor: { x: number; y: number; gfx: G } | null = null
         secretDoorUsed = false
-        secretDoorKeyWasDown = false
+        secretDoorPromptShown = false
+        healItems: { gfx: G; x: number; y: number }[] = []
 
         bobTributeActive = false
         bobTributeTimer = 0
@@ -1044,6 +1048,19 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           const doorX = this.waveZones[doorZoneIdx].triggerX + 200 + Math.random() * 300
           const doorGfx = this.add.graphics().setDepth(6)
           this.secretDoor = { x: doorX, y: FY1, gfx: doorGfx }
+
+          // Expose door confirm/cancel to React
+          confirmDoorRef.current = () => {
+            setShowDoorPrompt(false)
+            this.secretDoorUsed = true
+            this.secretDoorPromptShown = false
+            this.music?.stop()
+            this.scene.start('Cinematic')
+          }
+          cancelDoorRef.current = () => {
+            setShowDoorPrompt(false)
+            this.secretDoorPromptShown = false
+          }
 
           // Expose endless start to React
           startEndlessRef.current = () => {
@@ -1186,6 +1203,18 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
                 }
                 break
               }
+            }
+          }
+
+          // ── Heal item pickup ──────────────────────────────
+          for (let i = this.healItems.length - 1; i >= 0; i--) {
+            const h = this.healItems[i]
+            if (Math.abs(h.x - this.player.x) < 30 && Math.abs(h.y - this.player.floorY) < 28) {
+              const heal = 25
+              this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal)
+              h.gfx.destroy(); this.healItems.splice(i, 1)
+              this.spawnFloatText(this.player.x - this.cameraX, this.player.floorY - 80, `+${heal} HP`, '#44ff88', true)
+              break
             }
           }
 
@@ -1417,19 +1446,17 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
 
           if (this.player.hp <= 0 && !this.gameOver) this.triggerGameOver()
 
-          // Secret door interaction
+          // Secret door proximity prompt
           if (this.secretDoor && !this.secretDoorUsed) {
-            const kickKey = this.input.keyboard!.addKey(KEYS.kick)
-            const kickDown = kickKey.isDown
-            if (!this.secretDoorKeyWasDown && kickDown) {
-              const dist = Math.abs(this.player.x - this.secretDoor.x)
-              if (dist < 50 && Math.abs(this.player.floorY - this.secretDoor.y) < 80) {
-                this.secretDoorUsed = true
-                this.music?.stop()
-                this.scene.start('Cinematic')
-              }
+            const dist = Math.abs(this.player.x - this.secretDoor.x)
+            const close = dist < 80 && Math.abs(this.player.floorY - this.secretDoor.y) < 80
+            if (close && !this.secretDoorPromptShown) {
+              this.secretDoorPromptShown = true
+              setShowDoorPrompt(true)
+            } else if (!close && this.secretDoorPromptShown) {
+              this.secretDoorPromptShown = false
+              setShowDoorPrompt(false)
             }
-            this.secretDoorKeyWasDown = kickDown
           }
 
           this.tickBlood()
@@ -1576,6 +1603,10 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
               if (e.charType !== 'tyler' && Math.random() < 0.14) {
                 this.dropWeapon(e.x, e.floorY)
               }
+              // Heal drop in endless mode — 3% chance
+              if (this.endlessMode && e.charType !== 'tyler' && Math.random() < 0.03) {
+                this.dropHealItem(e.x, e.floorY)
+              }
             } else {
               this.cameras.main.shake(70, 0.003)
             }
@@ -1594,6 +1625,12 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
               this.spawnFloatText(p.x - this.cameraX, p.floorY - 80, label, '#888888', false)
             }
           }
+        }
+
+        // Drop a heal item at world position
+        dropHealItem(x: number, y: number) {
+          const gfx = this.add.graphics().setDepth(5)
+          this.healItems.push({ gfx, x, y })
         }
 
         // Drop a random weapon at world position
@@ -1890,6 +1927,9 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           for (const w of this.droppedWeapons) w.gfx.destroy()
           this.droppedWeapons = []
 
+          for (const h of this.healItems) h.gfx.destroy()
+          this.healItems = []
+
           // Max 4 enemies at once; difficulty increases via hp/dmg mults
           const count = Math.min(4, 1 + Math.floor(this.endlessWave * 0.5))
           const comps = this.getWaveComp(count)
@@ -1964,12 +2004,12 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
 
           const hitRange = e.charType === 'tyler' ? 100 : e.charType === 'toughguy' ? 95 : e.charType === 'bob' ? 92 : 85
 
-          if (dist < hitRange && Math.abs(dy) < 52) {
+          if (dist < hitRange && Math.abs(dy) < 52 && this.player.jumpH < 20) {
             const useKick = (e.charType === 'tyler' || e.charType === 'toughguy') && Math.random() < 0.3
             e.state = useKick ? 'kick' : 'punch'
             e.stateTimer = useKick ? 22 : 18
             // Difficulty-adjusted attack cooldown
-            const diffSlowdown = this.diff === 'facile' ? 2.2 : this.diff === 'normal' ? 1.4 : 1.0
+            const diffSlowdown = this.diff === 'facile' ? 2.2 : this.diff === 'normal' ? 1.9 : 1.3
             e.atkCD = Math.round(Math.max(40, (95 - this.wave * 5)) * diffSlowdown)
 
             if (p.hp > 0 && p.hurtInv === 0) {
@@ -2162,13 +2202,6 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             if (sx > -60 && sx < GW + 60) {
               this.secretDoor.gfx.setPosition(sx, this.secretDoor.y)
               drawSecretDoor(this.secretDoor.gfx, this.frame)
-              // Show hint label if player is close
-              if (Math.abs(this.player.x - this.secretDoor.x) < 80) {
-                this.overlayGfx.fillStyle(0xffcc00, 0.85)
-                this.overlayGfx.fillRect(sx - 48, this.secretDoor.y - 62, 96, 14)
-                this.overlayGfx.fillStyle(0x000000, 0.9)
-                this.overlayGfx.fillRect(sx - 47, this.secretDoor.y - 61, 94, 12)
-              }
             } else {
               this.secretDoor.gfx.clear()
             }
@@ -2182,6 +2215,20 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             w.gfx.setPosition(sx, w.y - 8 + bob)
             if (w.type === 'gun') drawGunPickup(w.gfx, this.frame)
             else drawWeaponGround(w.gfx, w.type)
+          }
+
+          // Render heal items (green cross, floating)
+          for (const h of this.healItems) {
+            const sx = h.x - cam
+            if (sx < -60 || sx > GW + 60) { h.gfx.clear(); continue }
+            const bob = Math.sin(this.frame * 0.08) * 2
+            h.gfx.clear()
+            h.gfx.setPosition(sx, h.y - 14 + bob)
+            h.gfx.fillStyle(0x00cc55, 0.9)
+            h.gfx.fillRect(-3, -7, 6, 14)
+            h.gfx.fillRect(-7, -3, 14, 6)
+            h.gfx.fillStyle(0x00ff66, 0.15)
+            h.gfx.fillCircle(0, 0, 11)
           }
 
           const p = this.player
@@ -2206,8 +2253,8 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
 
           for (const e of this.enemies) {
             const sx = e.x - cam
-            // Corps de Bob reste visible pendant toute la durée du tribute
-            const keepDead = e.charType === 'bob' && this.bobTributeActive
+            // Corps de Bob reste visible en permanence (pas de disparition)
+            const keepDead = e.charType === 'bob'
             if (e.deadTimer > 55 && !keepDead) { e.gfx.clear(); continue }
             if (sx < -90 || sx > GW + 90) { e.gfx.clear(); continue }   // off-screen cull
             const showE = e.hurtInv === 0 || Math.floor(e.hurtInv / 3) % 2 === 0
@@ -3068,6 +3115,31 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             fontFamily: 'Impact', fontSize: '18px', letterSpacing: '4px',
             padding: '10px 40px', cursor: 'pointer',
           }}>VALIDER</button>
+        </div>
+      )}
+
+      {/* Secret door prompt */}
+      {showDoorPrompt && (
+        <div style={{
+          position: 'absolute', bottom: '70px', left: '50%', transform: 'translateX(-50%)',
+          background: 'rgba(0,0,0,0.90)', border: '1px solid #554433',
+          padding: '14px 28px', borderRadius: '6px', zIndex: 300, textAlign: 'center',
+        }}>
+          <div style={{ color: '#ffcc00', fontFamily: 'Impact', fontSize: '20px', letterSpacing: '4px', marginBottom: '12px' }}>
+            OUVRIR LA PORTE ?
+          </div>
+          <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
+            <button onClick={() => confirmDoorRef.current?.()} style={{
+              background: '#cc1111', border: 'none', color: '#fff',
+              fontFamily: 'Impact', fontSize: '16px', letterSpacing: '3px',
+              padding: '8px 28px', cursor: 'pointer', borderRadius: '3px',
+            }}>OUI</button>
+            <button onClick={() => cancelDoorRef.current?.()} style={{
+              background: 'transparent', border: '1px solid #554433', color: '#886644',
+              fontFamily: 'monospace', fontSize: '14px', letterSpacing: '3px',
+              padding: '8px 24px', cursor: 'pointer',
+            }}>NON</button>
+          </div>
         </div>
       )}
 
