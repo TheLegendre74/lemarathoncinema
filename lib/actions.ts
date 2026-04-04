@@ -866,12 +866,19 @@ export async function adminSetFilmCategory(filmId: number, category: 'normal' | 
   const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
   if (!profile?.is_admin) return { error: 'Non autorisé.' }
 
-  const update =
-    category === 'normal'  ? { flagged_18plus: false, flagged_18strange: false, flagged_18_pending: false } :
-    category === '18plus'  ? { flagged_18plus: true,  flagged_18strange: false, flagged_18_pending: false } :
-                             { flagged_18plus: true,  flagged_18strange: true,  flagged_18_pending: false }
+  // D'abord mettre à jour flagged_18plus et flagged_18_pending (colonnes qui existent depuis l'origine)
+  const base18 = category === 'normal' ? false : true
+  const { error: baseErr } = await adminClient.from('films')
+    .update({ flagged_18plus: base18, flagged_18_pending: false })
+    .eq('id', filmId)
+  if (baseErr) return { error: baseErr.message }
 
-  await adminClient.from('films').update(update).eq('id', filmId)
+  // Ensuite tenter de mettre à jour flagged_18strange séparément (colonne ajoutée plus tard)
+  // Si la colonne n'existe pas encore en DB, on ignore l'erreur mais la feature est dégradée
+  await adminClient.from('films')
+    .update({ flagged_18strange: category === 'strange' } as any)
+    .eq('id', filmId)
+
   revalidatePath('/films')
   revalidatePath('/admin')
   return { success: true }
@@ -1188,10 +1195,10 @@ export async function adminScanAgeRestrictions(fromId: number = 0) {
     return { error: `Clé TMDB invalide ou expirée : ${testData.status_message ?? testData.status_code}` }
   }
 
-  // Inclure flagged_18plus et flagged_18strange pour respecter les décisions admin
+  // Ne sélectionner que les colonnes existantes depuis l'origine (pas flagged_18strange)
   const { data: films } = await supabase
     .from('films')
-    .select('id, titre, annee, tmdb_id, flagged_18plus, flagged_18strange')
+    .select('id, titre, annee, tmdb_id, flagged_18plus, flagged_18_pending')
     .gt('id', fromId)
     .order('id')
     .limit(40)
