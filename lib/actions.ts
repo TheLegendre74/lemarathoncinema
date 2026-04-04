@@ -1188,10 +1188,10 @@ export async function adminScanAgeRestrictions(fromId: number = 0) {
     return { error: `Clé TMDB invalide ou expirée : ${testData.status_message ?? testData.status_code}` }
   }
 
-  // Inclure flagged_18plus pour ne pas re-pendre les films déjà confirmés manuellement
+  // Inclure flagged_18plus et flagged_18strange pour respecter les décisions admin
   const { data: films } = await supabase
     .from('films')
-    .select('id, titre, annee, tmdb_id, flagged_18plus')
+    .select('id, titre, annee, tmdb_id, flagged_18plus, flagged_18strange')
     .gt('id', fromId)
     .order('id')
     .limit(40)
@@ -1249,20 +1249,26 @@ export async function adminScanAgeRestrictions(fromId: number = 0) {
       if (flagged18 && !film.flagged_18plus) {
         // TMDB détecte 18+ et pas encore confirmé → mettre en attente de validation manuelle
         const { error: updErr } = await adminClient.from('films')
-          .update({ flagged_16plus: false, flagged_18_pending: true })
+          .update({ flagged_18_pending: true })
           .eq('id', film.id)
         const status = updErr ? `db_error: ${updErr.message}` : 'pending'
         details.push({ id: film.id, titre: film.titre, tmdbId, flagged18: true, flagged16: false, certs, status })
         if (!updErr) pendingCount++
       } else if (flagged18 && film.flagged_18plus) {
-        // Déjà confirmé manuellement → ne pas toucher
+        // Déjà confirmé par l'admin → ne JAMAIS toucher
         details.push({ id: film.id, titre: film.titre, tmdbId, flagged18: true, flagged16: false, certs, status: 'already_confirmed' })
       } else {
-        // Pas 18+ selon TMDB → nettoyer
-        await adminClient.from('films')
-          .update({ flagged_18plus: false, flagged_18_pending: false, flagged_16plus: flagged16 })
-          .eq('id', film.id)
-        details.push({ id: film.id, titre: film.titre, tmdbId, flagged18: false, flagged16, certs, status: flagged16 ? 'cleared_16plus' : 'cleared' })
+        // TMDB dit pas 18+ → on nettoie seulement flagged_18_pending
+        // JAMAIS toucher flagged_18plus ni flagged_18strange : seul l'admin peut les modifier
+        if (film.flagged_18plus) {
+          // L'admin a explicitement confirmé ce film comme 18+ → on respecte sa décision
+          details.push({ id: film.id, titre: film.titre, tmdbId, flagged18: false, flagged16, certs, status: 'admin_override' })
+        } else {
+          await adminClient.from('films')
+            .update({ flagged_18_pending: false, flagged_16plus: flagged16 })
+            .eq('id', film.id)
+          details.push({ id: film.id, titre: film.titre, tmdbId, flagged18: false, flagged16, certs, status: flagged16 ? 'cleared_16plus' : 'cleared' })
+        }
       }
       count++
     } catch (err) {
