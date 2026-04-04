@@ -785,6 +785,7 @@ export async function adminCleanDuels() {
 }
 
 // Marquer / démarquer un film comme 18+ — ne supprime JAMAIS le film
+// Clear aussi flagged_18_pending (décision prise, plus en attente)
 export async function adminSet18Flag(filmId: number, is18: boolean) {
   const supabase = await createClient()
   const adminClient = createAdminClient()
@@ -794,7 +795,7 @@ export async function adminSet18Flag(filmId: number, is18: boolean) {
   const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
   if (!profile?.is_admin) return { error: 'Non autorisé.' }
 
-  await adminClient.from('films').update({ flagged_18plus: is18 }).eq('id', filmId)
+  await adminClient.from('films').update({ flagged_18plus: is18, flagged_18_pending: false }).eq('id', filmId)
   revalidatePath('/films')
   return { success: true }
 }
@@ -1083,17 +1084,19 @@ export async function adminScanAgeRestrictions(fromId: number = 0) {
   const key = process.env.TMDB_API_KEY
   if (!key) return { error: 'Clé TMDB_API_KEY manquante.' }
 
+  // Inclure flagged_18plus pour ne pas re-pendre les films déjà confirmés manuellement
   const { data: films } = await supabase
     .from('films')
-    .select('id, titre, annee, tmdb_id')
+    .select('id, titre, annee, tmdb_id, flagged_18plus')
     .gt('id', fromId)
     .order('id')
     .limit(40)
 
-  if (!films?.length) return { success: true, count: 0, nextId: null }
+  if (!films?.length) return { success: true, count: 0, pendingCount: 0, nextId: null }
 
   const adminClient = createAdminClient()
   let count = 0
+  let pendingCount = 0
 
   for (const film of films) {
     try {
@@ -1106,7 +1109,12 @@ export async function adminScanAgeRestrictions(fromId: number = 0) {
           await adminClient.from('films').update({ tmdb_id: tmdbId }).eq('id', film.id)
         }
       }
-      if (!tmdbId) continue
+
+      if (!tmdbId) {
+        // Pas de TMDB : on ne peut pas déterminer → laisser tel quel
+        count++
+        continue
+      }
 
       const relRes = await fetch(
         `https://api.themoviedb.org/3/movie/${tmdbId}/release_dates?api_key=${key}`,
@@ -1115,9 +1123,19 @@ export async function adminScanAgeRestrictions(fromId: number = 0) {
       const relData = await relRes.json()
       const { flagged18, flagged16 } = parseTMDBCertifications(relData.results ?? [])
 
-      await adminClient.from('films')
-        .update({ flagged_18plus: flagged18, flagged_16plus: flagged16 })
-        .eq('id', film.id)
+      if (flagged18 && !film.flagged_18plus) {
+        // CNC détecte 18+ et pas encore confirmé → mettre en attente de validation
+        await adminClient.from('films')
+          .update({ flagged_16plus: false, flagged_18_pending: true })
+          .eq('id', film.id)
+        pendingCount++
+      } else if (!flagged18) {
+        // CNC dit clairement pas 18+ → nettoyer automatiquement (sauf si confirmé manuellement)
+        await adminClient.from('films')
+          .update({ flagged_18plus: false, flagged_18_pending: false, flagged_16plus: flagged16 })
+          .eq('id', film.id)
+      }
+      // Si flagged18 && film.flagged_18plus → déjà confirmé, ne pas re-pendre
       count++
     } catch { /* skip */ }
   }
@@ -1125,7 +1143,7 @@ export async function adminScanAgeRestrictions(fromId: number = 0) {
   const nextId = films.length === 40 ? films[films.length - 1].id : null
   revalidatePath('/films')
   revalidatePath('/admin')
-  return { success: true, count, nextId }
+  return { success: true, count, pendingCount, nextId }
 }
 
 export async function adminForceRefreshAllPosters(fromId: number = 0) {

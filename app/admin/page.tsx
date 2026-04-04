@@ -24,6 +24,7 @@ export default async function AdminPage() {
     { data: weekFilm },
     { data: allWatched },
     { data: flaggedFilms },
+    { data: pendingFilms18 },
     { data: reports },
     { data: siteConfigs },
     { data: news },
@@ -36,6 +37,7 @@ export default async function AdminPage() {
     supabase.from('week_films').select('*, films(titre)').eq('active', true).single(),
     supabase.from('watched').select('film_id'),
     supabase.from('films').select('*').eq('flagged_18plus', true).order('created_at', { ascending: false }),
+    supabase.from('films').select('*').eq('flagged_18_pending', true).order('titre'),
     supabase.from('reports').select('*, film:films(titre), reporter:profiles!reports_user_id_fkey(pseudo)').eq('resolved', false).order('created_at', { ascending: false }),
     supabase.from('site_config').select('key, value'),
     (supabase as any).from('news').select('*, profiles(pseudo)').order('pinned', { ascending: false }).order('created_at', { ascending: false }),
@@ -60,6 +62,7 @@ export default async function AdminPage() {
       totalUsers={totalUsers}
       watchCountMap={watchCountMap}
       flaggedFilms={flaggedFilms ?? []}
+      pendingFilms18={pendingFilms18 ?? []}
       reports={reports ?? []}
       siteConfig={configMap}
       serverConfig={cfg}
