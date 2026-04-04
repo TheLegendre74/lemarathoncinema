@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminBatchFlaggedDecisions, adminSet18Flag, adminApproveAllPending, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, adminFetchFrenchPosters, adminScanAgeRestrictions, adminTestFilmCertification, adminDiagnostic, updateFilm, adminResolveReport, adminSetConfig, adminVerifyPosters, adminSetAdmin, adminAddNews, adminDeleteNews, adminAddRecommendation, adminDeleteRecommendation, deleteForumTopic, adminEndSeason } from '@/lib/actions'
+import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminBatchFlaggedDecisions, adminSet18Flag, adminApproveAllPending, adminSetFilmCategory, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, adminFetchFrenchPosters, adminScanAgeRestrictions, adminTestFilmCertification, adminDiagnostic, updateFilm, adminResolveReport, adminSetConfig, adminVerifyPosters, adminSetAdmin, adminAddNews, adminDeleteNews, adminAddRecommendation, adminDeleteRecommendation, deleteForumTopic, adminEndSeason } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
 import { CONFIG } from '@/lib/config'
 import type { Film, Profile } from '@/lib/supabase/types'
@@ -327,14 +327,14 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
   const [diagResult, setDiagResult] = useState<any>(null)
   const [diagLoading, setDiagLoading] = useState(false)
   const [flag18Saving, setFlag18Saving] = useState<Record<number, boolean>>({})
-  const [localPending, setLocalPending] = useState<Film[]>(pendingFilms18)
+  const [localPending, setLocalPending] = useState<Film[]>(flaggedFilms)
   const [approveAllLoading, setApproveAllLoading] = useState(false)
   const [testFilmId, setTestFilmId] = useState('')
   const [testResult, setTestResult] = useState<any>(null)
   const [testLoading, setTestLoading] = useState(false)
 
-  // Sync localPending avec les props après router.refresh()
-  useEffect(() => { setLocalPending(pendingFilms18) }, [pendingFilms18])
+  // Sync avec flaggedFilms après router.refresh()
+  useEffect(() => { setLocalPending(flaggedFilms) }, [flaggedFilms])
   const [brokenPosters, setBrokenPosters] = useState<{ id: number; titre: string; poster: string }[]>([])
   const [verifyNextId, setVerifyNextId] = useState<number | null>(0)
   const [verifyRunning, setVerifyRunning] = useState(false)
@@ -801,61 +801,58 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
         </div>
       </Section>
 
-      {/* Section 18+ — Uniquement les films détectés par le scanner en attente de confirmation */}
-      <Section icon="🔞" title={`Vérification 18+ scanner${localPending.length > 0 ? ` — ${localPending.length} film(s) à confirmer` : ' — à jour'}`}>
+      {/* Section 18+ — Films classés 18+ à valider */}
+      <Section icon="🔞" title={`Validation 18+${localPending.length > 0 ? ` — ${localPending.length} film(s)` : ' — aucun film 18+'}`}>
         <div style={{ fontSize: '.78rem', color: 'var(--text2)', marginBottom: '1rem', lineHeight: 1.6 }}>
-          Les films ci-dessous ont été détectés <strong style={{ color: 'var(--red)' }}>18+ par le scanner TMDB</strong>.<br />
-          <strong>Oui</strong> → le film passe en catégorie 18+ (bannière rouge, invisible par défaut).<br />
-          <strong>Non</strong> → le film reste normal.<br />
-          Pour catégoriser manuellement, utilise le bouton <strong>⚙</strong> sur chaque affiche dans la liste des films.
+          Films marqués <strong style={{ color: 'var(--red)' }}>18+</strong> par le scanner ou manuellement.<br />
+          <strong style={{ color: 'var(--green)' }}>✓ Normal</strong> → retire le flag 18+. &nbsp;
+          <strong style={{ color: 'var(--red)' }}>🔞 18+</strong> → confirme. &nbsp;
+          <strong style={{ color: '#d0a0ff' }}>🔞 Étrange</strong> → 18+ contenu étrange.
         </div>
 
         {localPending.length > 0 ? (
-          <>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '.6rem' }}>
-              <button
-                type="button"
-                disabled={approveAllLoading}
-                onClick={approveAllPending}
-                style={{ padding: '.4rem 1rem', borderRadius: 'var(--r)', border: '1px solid rgba(232,90,90,.5)', background: 'rgba(232,90,90,.15)', color: 'var(--red)', fontSize: '.78rem', fontWeight: 700, cursor: approveAllLoading ? 'wait' : 'pointer' }}
-              >
-                {approveAllLoading ? '⏳ En cours…' : `🔞 Valider tous comme 18+ (${localPending.length})`}
-              </button>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 80px', gap: '.5rem', padding: '0 .5rem', marginBottom: '.3rem' }}>
-              <div style={{ fontSize: '.62rem', letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--text3)' }}>Film détecté 18+</div>
-              <div style={{ fontSize: '.62rem', letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--red)', textAlign: 'center' }}>🔞 Oui</div>
-              <div style={{ fontSize: '.62rem', letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--green)', textAlign: 'center' }}>✓ Non</div>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '.3rem' }}>
-              {localPending.map(f => {
-                const saving = !!flag18Saving[f.id]
-                return (
-                  <div key={f.id} style={{
-                    display: 'grid', gridTemplateColumns: '1fr 80px 80px', gap: '.5rem', alignItems: 'center',
-                    background: 'rgba(232,90,90,.07)', border: '1px solid rgba(232,90,90,.22)',
-                    borderRadius: 'var(--r)', padding: '.5rem .8rem', opacity: saving ? 0.6 : 1,
-                  }}>
-                    <span style={{ fontSize: '.82rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {f.titre}
-                      <span style={{ color: 'var(--text3)', fontSize: '.7rem', marginLeft: '.35rem' }}>({f.annee}) · {f.realisateur}</span>
-                    </span>
-                    <button type="button" disabled={saving}
-                      onClick={() => { lockScrollFor150ms(); setFilm18(f, true) }}
-                      style={{ width: '100%', padding: '.38rem 0', borderRadius: 'var(--r)', border: '1px solid rgba(232,90,90,.4)', cursor: saving ? 'default' : 'pointer', fontSize: '.8rem', fontWeight: 700, background: 'transparent', color: 'var(--red)' }}
-                    >{saving ? '…' : 'Oui'}</button>
-                    <button type="button" disabled={saving}
-                      onClick={() => { lockScrollFor150ms(); setFilm18(f, false) }}
-                      style={{ width: '100%', padding: '.38rem 0', borderRadius: 'var(--r)', border: '1px solid rgba(79,217,138,.35)', cursor: saving ? 'default' : 'pointer', fontSize: '.8rem', fontWeight: 700, background: 'transparent', color: 'var(--green)' }}
-                    >{saving ? '…' : 'Non'}</button>
-                  </div>
-                )
-              })}
-            </div>
-          </>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '.3rem' }}>
+            {localPending.map(f => {
+              const saving = !!flag18Saving[f.id]
+              const isStrange = (f as any).flagged_18strange
+              return (
+                <div key={f.id} style={{
+                  display: 'grid', gridTemplateColumns: '1fr 70px 70px 90px', gap: '.4rem', alignItems: 'center',
+                  background: isStrange ? 'rgba(160,0,220,.08)' : 'rgba(232,90,90,.07)',
+                  border: `1px solid ${isStrange ? 'rgba(160,0,220,.3)' : 'rgba(232,90,90,.22)'}`,
+                  borderRadius: 'var(--r)', padding: '.5rem .8rem', opacity: saving ? 0.6 : 1,
+                }}>
+                  <span style={{ fontSize: '.82rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {f.titre}
+                    <span style={{ color: 'var(--text3)', fontSize: '.7rem', marginLeft: '.35rem' }}>({f.annee})</span>
+                    {isStrange && <span style={{ color: '#d0a0ff', fontSize: '.65rem', marginLeft: '.35rem' }}>Étrange</span>}
+                  </span>
+                  <button type="button" disabled={saving}
+                    onClick={() => { lockScrollFor150ms(); setFilm18(f, false) }}
+                    style={{ padding: '.35rem 0', borderRadius: 'var(--r)', border: '1px solid rgba(79,217,138,.35)', cursor: saving ? 'default' : 'pointer', fontSize: '.72rem', fontWeight: 700, background: 'transparent', color: 'var(--green)' }}
+                  >{saving ? '…' : '✓ Normal'}</button>
+                  <button type="button" disabled={saving}
+                    onClick={() => { lockScrollFor150ms(); setFilm18(f, true) }}
+                    style={{ padding: '.35rem 0', borderRadius: 'var(--r)', border: '1px solid rgba(232,90,90,.4)', cursor: saving ? 'default' : 'pointer', fontSize: '.72rem', fontWeight: 700, background: 'transparent', color: 'var(--red)' }}
+                  >{saving ? '…' : '🔞 18+'}</button>
+                  <button type="button" disabled={saving}
+                    onClick={async () => {
+                      lockScrollFor150ms()
+                      setFlag18Saving(prev => ({ ...prev, [f.id]: true }))
+                      await adminSetFilmCategory(f.id, 'strange')
+                      setFlag18Saving(prev => { const n = { ...prev }; delete n[f.id]; return n })
+                      setLocalPending(prev => prev.filter(x => x.id !== f.id))
+                      router.refresh()
+                    }}
+                    style={{ padding: '.35rem 0', borderRadius: 'var(--r)', border: '1px solid rgba(160,0,220,.4)', cursor: saving ? 'default' : 'pointer', fontSize: '.72rem', fontWeight: 700, background: 'transparent', color: '#d0a0ff' }}
+                  >{saving ? '…' : '🔞 Étrange'}</button>
+                </div>
+              )
+            })}
+          </div>
         ) : (
-          <div style={{ fontSize: '.82rem', color: 'var(--green)', display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-            <span>✅</span> Aucun film en attente de confirmation — lance le scanner pour détecter les 18+ automatiquement.
+          <div style={{ fontSize: '.82rem', color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+            <span>✅</span> Aucun film 18+ — lance le scanner pour détecter automatiquement.
           </div>
         )}
 
