@@ -15,17 +15,17 @@ export default function Sidebar({ profile }: SidebarProps) {
   const badge = profile ? getBadge(profile.exp) : null
 
   const nav = [
-    { href: '/',              icon: '🏠', label: 'Accueil' },
-    { href: '/films',         icon: '🎬', label: 'Films' },
-    { href: '/semaine',       icon: '⭐', label: 'Film de la semaine' },
-    { href: '/duels',         icon: '⚔️', label: 'Duels' },
-    { href: '/notes',         icon: '📊', label: 'Classement films' },
-    { href: '/classement',    icon: '🏆', label: 'Classement joueurs' },
-    { href: '/forum',         icon: '💬', label: 'Forum' },
-    { href: '/rattrapage',    icon: '🎓', label: 'Rattrapage cinéma' },
-    { href: '/easter-eggs',   icon: '🥚', label: 'Easter Eggs' },
-    ...(profile ? [{ href: '/profil', icon: '👤', label: 'Mon profil' }] : []),
-    ...(profile?.is_admin ? [{ href: '/admin', icon: '🔧', label: 'Administration' }] : []),
+    { href: '/',              icon: '🏠', label: 'Accueil',            short: 'Accueil'    },
+    { href: '/films',         icon: '🎬', label: 'Films',              short: 'Films'      },
+    { href: '/semaine',       icon: '⭐', label: 'Film de la semaine', short: 'Semaine'    },
+    { href: '/duels',         icon: '⚔️', label: 'Duels',              short: 'Duels'      },
+    { href: '/notes',         icon: '📊', label: 'Classement films',   short: 'Notes'      },
+    { href: '/classement',    icon: '🏆', label: 'Classement joueurs', short: 'Classement' },
+    { href: '/forum',         icon: '💬', label: 'Forum',              short: 'Forum'      },
+    { href: '/rattrapage',    icon: '🎓', label: 'Rattrapage cinéma',  short: 'Rattrapage' },
+    { href: '/easter-eggs',   icon: '🥚', label: 'Easter Eggs',        short: 'Easter'     },
+    ...(profile ? [{ href: '/profil', icon: '👤', label: 'Mon profil',     short: 'Profil' }] : []),
+    ...(profile?.is_admin ? [{ href: '/admin', icon: '🔧', label: 'Administration', short: 'Admin' }] : []),
   ]
 
   async function handleSignOut() {
@@ -35,6 +35,7 @@ export default function Sidebar({ profile }: SidebarProps) {
   }
 
   return (
+    <>
     <nav className="sidebar">
       <div className="sidebar-logo">
         <div className="sidebar-logo-text">Ciné<br/>Marathon</div>
@@ -89,5 +90,27 @@ export default function Sidebar({ profile }: SidebarProps) {
         )}
       </div>
     </nav>
+
+    {/* Bottom nav mobile */}
+    <nav className="bottom-nav">
+      {nav.map(n => (
+        <Link key={n.href} href={n.href} className={`bottom-nav-item ${pathname === n.href ? 'active' : ''}`}>
+          <span className="bottom-nav-icon">{n.icon}</span>
+          <span className="bottom-nav-label">{n.short}</span>
+        </Link>
+      ))}
+      {profile ? (
+        <button className="bottom-nav-item" onClick={handleSignOut}>
+          <span className="bottom-nav-icon">🚪</span>
+          <span className="bottom-nav-label">Quitter</span>
+        </button>
+      ) : (
+        <Link href="/auth" className="bottom-nav-item">
+          <span className="bottom-nav-icon">🔑</span>
+          <span className="bottom-nav-label">Connexion</span>
+        </Link>
+      )}
+    </nav>
+    </>
   )
 }
