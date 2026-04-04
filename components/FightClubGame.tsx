@@ -94,18 +94,10 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
       // AZERTY Q key → keyCode 81 → Phaser 'Q'
       // AZERTY A key → keyCode 65 → Phaser 'A'
       // AZERTY W key → keyCode 87 → Phaser 'W'
-      const KEYS = {
-        left: 'Q',    // AZERTY Q key
-        right: 'D',
-        up: 'Z',      // AZERTY Z key
-        down: 'S',
-        punch: 'A',   // AZERTY A key
-        kick: 'E',
-        throw: 'W',   // AZERTY W key
-        block: 'B',
-        jump: 'SPACE',
-        rage: 'C',
-      }
+      // Load saved key bindings (or defaults)
+      const defaultKeys = { left: 'Q', right: 'D', up: 'Z', down: 'S', punch: 'A', kick: 'E', throw: 'W', block: 'B', jump: 'SPACE', rage: 'C' }
+      const savedKeys = (() => { try { return JSON.parse(localStorage.getItem('fc_keys') ?? 'null') } catch { return null } })()
+      const KEYS = Object.assign({}, defaultKeys, savedKeys ?? {})
       // kd() = identity: Phaser key names ARE the AZERTY labels
       const kd = (k: string) => k
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -852,17 +844,22 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             keyBtns[id] = btn
           }
 
-          // Capture keypress for remapping
+          // Capture keypress for remapping — uses ev.key (layout-aware, works on AZERTY/QWERTY)
           this.input.keyboard!.on('keydown', (ev: any) => {
             if (!waitingFor) return
-            // Convert KeyboardEvent.code to Phaser key string
-            let k: string = ev.code
-            if (k.startsWith('Key'))    k = k.slice(3)
-            else if (k === 'Space')     k = 'SPACE'
-            else if (k.startsWith('Arrow')) k = k.slice(5).toUpperCase()
-            else if (k.startsWith('Digit')) k = k.slice(5)
-            else k = k.toUpperCase()
+            const raw: string = ev.key
+            if (raw === 'Escape') return  // ne pas binder ESC
+            let k: string
+            if (raw === ' ')             k = 'SPACE'
+            else if (raw === 'ArrowLeft')  k = 'LEFT'
+            else if (raw === 'ArrowRight') k = 'RIGHT'
+            else if (raw === 'ArrowUp')    k = 'UP'
+            else if (raw === 'ArrowDown')  k = 'DOWN'
+            else if (raw === 'Enter')      k = 'ENTER'
+            else if (raw.length === 1)     k = raw.toUpperCase()
+            else                           k = raw.toUpperCase()
             KEYS[waitingFor as KeyId] = k
+            try { localStorage.setItem('fc_keys', JSON.stringify(KEYS)) } catch (_) {}
             waitingFor = null; refreshBtns()
           })
 
@@ -923,6 +920,9 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
         secretDoorUsed = false
         secretDoorPromptShown = false
         healItems: { gfx: G; x: number; y: number }[] = []
+        bobTributeDone = false
+        victoryTitle: any = null
+        victoryStats: any = null
 
         bobTributeActive = false
         bobTributeTimer = 0
@@ -1084,7 +1084,9 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             this.heldWeapon = null   // retire le pistolet
             this.weaponGfx.clear()
             this.gunPickupAnim = false; this.gunPickupAnimTimer = 0; this.gunReadyToFire = false
-            if (this.gunReadyText) { try { this.gunReadyText.destroy() } catch (_) {} this.gunReadyText = null }
+            if (this.gunReadyText)  { try { this.gunReadyText.destroy()  } catch (_) {} this.gunReadyText  = null }
+            if (this.victoryTitle)  { try { this.victoryTitle.destroy()  } catch (_) {} this.victoryTitle  = null }
+            if (this.victoryStats)  { try { this.victoryStats.destroy()  } catch (_) {} this.victoryStats  = null }
             // Réinitialiser l'état du joueur
             this.player.state = 'idle'; this.player.stateTimer = 0
             if (this.music && !this.music.isPlaying) try { this.music.play() } catch (_) {}
@@ -1400,13 +1402,14 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           // Wave cleared check
           const allDead = this.enemies.length > 0 && this.enemies.every(e => e.hp <= 0)
           if (allDead && !this.waveCleared && !this.bossCinematic) {
-            // Si Bob était dans la vague et que le tribute n'a pas encore eu lieu → le déclencher
-            if (this.pendingBobTribute && !this.bobTributeActive) {
+            // Tribute Bob — uniquement la première fois
+            if (this.pendingBobTribute && !this.bobTributeActive && !this.bobTributeDone) {
               this.pendingBobTribute = false
+              this.bobTributeDone = true
               this.triggerBobTribute(this.tributeBobX, this.tributeBobY)
-              // Ne pas valider la vague maintenant — le tribute va spawner un nouvel ennemi
               return
             }
+            this.pendingBobTribute = false  // reset même si tribute déjà fait
             this.waveCleared = true
             if (this.isBossFight && !this.endlessMode) {
               // handled by cinematic / triggerVictory inside boss AI
@@ -1922,11 +1925,12 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
         // ── ENDLESS WAVES ────────────────────────────────────
         spawnEndlessWave() {
           this.waveCleared = false
-          for (const e of this.enemies) e.gfx.destroy()
-          this.enemies = []
+          for (const e of this.enemies) {
+            if (!(e.charType === 'bob' && e.hp <= 0)) e.gfx.destroy()
+          }
+          this.enemies = this.enemies.filter(e => e.charType === 'bob' && e.hp <= 0)
           for (const w of this.droppedWeapons) w.gfx.destroy()
           this.droppedWeapons = []
-
           for (const h of this.healItems) h.gfx.destroy()
           this.healItems = []
 
@@ -2056,8 +2060,11 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
         spawnWave() {
           this.wave++
           this.waveCleared = false
-          for (const e of this.enemies) e.gfx.destroy()
-          this.enemies = []
+          // Keep dead Bob's body on the ground; destroy everyone else
+          for (const e of this.enemies) {
+            if (!(e.charType === 'bob' && e.hp <= 0)) e.gfx.destroy()
+          }
+          this.enemies = this.enemies.filter(e => e.charType === 'bob' && e.hp <= 0)
           // Clear leftover weapons from previous wave
           for (const w of this.droppedWeapons) w.gfx.destroy()
           this.droppedWeapons = []
@@ -2792,13 +2799,13 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           this.cameras.main.shake(500, 0.022)
 
           this.time.delayedCall(800, () => {
-            const title = this.add.text(GW / 2, PLAY_H / 2 - 52, 'YOU ARE NOT YOUR JOB.', {
+            this.victoryTitle = this.add.text(GW / 2, PLAY_H / 2 - 52, 'YOU ARE NOT YOUR JOB.', {
               fontFamily: 'Impact', fontSize: '46px', color: '#ffdd00', stroke: '#000000', strokeThickness: 6,
             }).setOrigin(0.5, 0.5).setDepth(750).setAlpha(0)
-            this.tweens.add({ targets: title, alpha: 1, duration: 1000 })
+            this.tweens.add({ targets: this.victoryTitle, alpha: 1, duration: 1000 })
           })
           this.time.delayedCall(1800, () => {
-            this.add.text(GW / 2, PLAY_H / 2 + 8,
+            this.victoryStats = this.add.text(GW / 2, PLAY_H / 2 + 8,
               `Score : ${this.score}  |  Combo max : ${this.maxCombo}×`, {
               fontFamily: 'monospace', fontSize: '13px', color: '#888888',
             }).setOrigin(0.5, 0.5).setDepth(750)
