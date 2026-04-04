@@ -328,13 +328,19 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
   const [diagLoading, setDiagLoading] = useState(false)
   const [flag18Saving, setFlag18Saving] = useState<Record<number, boolean>>({})
   const [localPending, setLocalPending] = useState<Film[]>(flaggedFilms)
+  const [reviewedIds, setReviewedIds] = useState<Set<number>>(new Set())
   const [approveAllLoading, setApproveAllLoading] = useState(false)
   const [testFilmId, setTestFilmId] = useState('')
   const [testResult, setTestResult] = useState<any>(null)
   const [testLoading, setTestLoading] = useState(false)
 
-  // Sync avec flaggedFilms après router.refresh()
-  useEffect(() => { setLocalPending(flaggedFilms) }, [flaggedFilms])
+  // Sync avec flaggedFilms après router.refresh(), en excluant les films déjà traités
+  useEffect(() => {
+    setLocalPending(prev => {
+      const refreshed = flaggedFilms.filter(f => !reviewedIds.has(f.id))
+      return refreshed
+    })
+  }, [flaggedFilms])
   const [brokenPosters, setBrokenPosters] = useState<{ id: number; titre: string; poster: string }[]>([])
   const [verifyNextId, setVerifyNextId] = useState<number | null>(0)
   const [verifyRunning, setVerifyRunning] = useState(false)
@@ -621,8 +627,9 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
     setFlag18Saving(prev => { const n = { ...prev }; delete n[film.id]; return n })
     if ('error' in result) addToast(result.error!, '⚠️')
     else {
+      setReviewedIds(prev => new Set([...prev, film.id]))
       setLocalPending(prev => prev.filter(f => f.id !== film.id))
-      addToast(is18 ? `🔞 "${film.titre}" confirmé 18+` : `✓ "${film.titre}" — pas 18+, film conservé`, '✅')
+      addToast(is18 ? `🔞 "${film.titre}" confirmé 18+` : `✓ "${film.titre}" — repassé Normal`, '✅')
       router.refresh()
     }
   }
@@ -841,6 +848,7 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
                       setFlag18Saving(prev => ({ ...prev, [f.id]: true }))
                       await adminSetFilmCategory(f.id, 'strange')
                       setFlag18Saving(prev => { const n = { ...prev }; delete n[f.id]; return n })
+                      setReviewedIds(prev => new Set([...prev, f.id]))
                       setLocalPending(prev => prev.filter(x => x.id !== f.id))
                       router.refresh()
                     }}
