@@ -1248,11 +1248,12 @@ export async function adminScanAgeRestrictions(fromId: number = 0) {
 
       if (flagged18 && !film.flagged_18plus) {
         // TMDB détecte 18+ et pas encore confirmé → mettre en attente de validation manuelle
-        await adminClient.from('films')
+        const { error: updErr } = await adminClient.from('films')
           .update({ flagged_16plus: false, flagged_18_pending: true })
           .eq('id', film.id)
-        details.push({ id: film.id, titre: film.titre, tmdbId, flagged18: true, flagged16: false, certs, status: 'pending' })
-        pendingCount++
+        const status = updErr ? `db_error: ${updErr.message}` : 'pending'
+        details.push({ id: film.id, titre: film.titre, tmdbId, flagged18: true, flagged16: false, certs, status })
+        if (!updErr) pendingCount++
       } else if (flagged18 && film.flagged_18plus) {
         // Déjà confirmé manuellement → ne pas toucher
         details.push({ id: film.id, titre: film.titre, tmdbId, flagged18: true, flagged16: false, certs, status: 'already_confirmed' })
