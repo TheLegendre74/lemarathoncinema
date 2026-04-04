@@ -925,6 +925,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
         secretDoorPromptShown = false
         healItems: { gfx: G; x: number; y: number }[] = []
         bobTributeDone = false
+        bobCorpses: Array<{ gfx: any; x: number; floorY: number; face: number }> = []
         victoryTitle: any = null
         victoryStats: any = null
 
@@ -1044,6 +1045,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           this.tributeEnemy = null; this.tributeBobX = 0; this.tributeBobY = 0; this.tributeTextObj = null
           this.marlaPauseActive = false; this.marlaPauseTimer = 0; this.marlaText = null
           this.gunPickupAnim = false; this.gunPickupAnimTimer = 0; this.gunReadyToFire = false; this.gunReadyText = null
+          this.bobCorpses = []
 
           // Place secret door at a random world X between zone 1 and second-to-last zone
           const minDoorZone = 1
@@ -1602,12 +1604,14 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
 
             if (e.hp <= 0) {
               e.state = 'dead'; e.deadTimer = 0
-              if (e.charType === 'bob') e.hurtInv = 0  // corps visible immédiatement, pas de clignotement
               this.score += 50 + this.combo * 8
               this.spawnBlood(e.x, e.floorY - PH / 2, 10)
               this.cameras.main.shake(140, 0.007)
-              // Bob mort : mémoriser sa position, attendre que tous les autres meurent
+              // Bob mort : créer un corpse gfx dédié (indépendant du loop enemies)
               if (e.charType === 'bob') {
+                const cg = this.add.graphics().setDepth(9 + e.floorY)
+                this.bobCorpses.push({ gfx: cg, x: e.x, floorY: e.floorY, face: e.face })
+                e.gfx.clear(); e.deadTimer = 9999  // cacher l'enemy gfx immédiatement
                 this.pendingBobTribute = true
                 this.tributeBobX = e.x
                 this.tributeBobY = e.floorY
@@ -1680,7 +1684,14 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
                 e.vx = proj.face * 4
                 this.spawnFloatText(e.x - cam, e.floorY - PH - 10, `-${proj.dmg}`, '#ffcc00', true)
                 this.spawnBlood(e.x, e.floorY - PH / 2, 4)
-                if (e.hp <= 0) { e.state = 'dead'; e.deadTimer = 0; if (e.charType === 'bob') e.hurtInv = 0 }
+                if (e.hp <= 0) {
+                  e.state = 'dead'; e.deadTimer = 0
+                  if (e.charType === 'bob') {
+                    const cg = this.add.graphics().setDepth(9 + e.floorY)
+                    this.bobCorpses.push({ gfx: cg, x: e.x, floorY: e.floorY, face: e.face })
+                    e.gfx.clear(); e.deadTimer = 9999
+                  }
+                }
                 proj.gfx.destroy()
                 this.projectiles = this.projectiles.filter(p => p !== proj)
                 break
@@ -1935,10 +1946,8 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
         // ── ENDLESS WAVES ────────────────────────────────────
         spawnEndlessWave() {
           this.waveCleared = false
-          for (const e of this.enemies) {
-            if (!(e.charType === 'bob' && e.hp <= 0)) e.gfx.destroy()
-          }
-          this.enemies = this.enemies.filter(e => e.charType === 'bob' && e.hp <= 0)
+          for (const e of this.enemies) e.gfx.destroy()
+          this.enemies = []
           for (const w of this.droppedWeapons) w.gfx.destroy()
           this.droppedWeapons = []
           for (const h of this.healItems) h.gfx.destroy()
@@ -2070,11 +2079,8 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
         spawnWave() {
           this.wave++
           this.waveCleared = false
-          // Keep dead Bob's body on the ground; destroy everyone else
-          for (const e of this.enemies) {
-            if (!(e.charType === 'bob' && e.hp <= 0)) e.gfx.destroy()
-          }
-          this.enemies = this.enemies.filter(e => e.charType === 'bob' && e.hp <= 0)
+          for (const e of this.enemies) e.gfx.destroy()
+          this.enemies = []
           // Clear leftover weapons from previous wave
           for (const w of this.droppedWeapons) w.gfx.destroy()
           this.droppedWeapons = []
@@ -2268,12 +2274,20 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             }
           } else { p.gfx.clear(); this.weaponGfx.clear() }
 
+          // Bob corpses — gfx dédié, indépendant du loop enemies, toujours visible
+          for (const c of this.bobCorpses) {
+            const sx = c.x - cam
+            if (sx < -90 || sx > GW + 90) { c.gfx.clear(); continue }
+            const ds = this.depthScale(c.floorY) * 1.72 * 1.28
+            c.gfx.setPosition(sx, c.floorY)
+            c.gfx.setScale(c.face * ds, ds)
+            drawBob(c.gfx, 'dead', 0)
+          }
+
           for (const e of this.enemies) {
             const sx = e.x - cam
-            // Corps de Bob reste visible en permanence (pas de disparition)
-            const keepDead = e.charType === 'bob'
-            if (e.deadTimer > 55 && !keepDead) { e.gfx.clear(); continue }
-            if (sx < -90 || sx > GW + 90) { if (!(e.charType === 'bob' && e.hp <= 0)) e.gfx.clear(); continue }
+            if (e.deadTimer > 55) { e.gfx.clear(); continue }
+            if (sx < -90 || sx > GW + 90) { e.gfx.clear(); continue }
             const showE = e.hurtInv === 0 || Math.floor(e.hurtInv / 3) % 2 === 0
             if (!showE) { e.gfx.clear(); continue }
             const sz = e.charType === 'bob' ? 1.28 : e.charType === 'toughguy' ? 1.18 : e.charType === 'tyler' ? 1.14 : 1.0
