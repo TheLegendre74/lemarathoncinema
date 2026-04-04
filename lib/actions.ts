@@ -97,18 +97,13 @@ async function verifyWithTMDB(titre: string, annee: number): Promise<{
       }
     }
 
-    if (movie.adult) {
-      return { ok: false, error: 'Ce film contient du contenu adulte explicite et ne peut pas être ajouté.' }
-    }
-
-    // Fetch content certifications
+    // Fetch certifications (release_dates déjà disponible, movie.adult déjà connu)
     const relRes = await fetch(
       `https://api.themoviedb.org/3/movie/${movie.id}/release_dates?api_key=${key}`,
       { cache: 'no-store' }
     )
     const relData = await relRes.json()
-
-    const { flagged18, flagged16 } = parseTMDBCertifications(relData.results ?? [])
+    const { flagged18, flagged16 } = parseTMDBCertifications(relData.results ?? [], movie.adult === true)
 
     const posterUrl = movie.poster_path
       ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
@@ -121,24 +116,54 @@ async function verifyWithTMDB(titre: string, annee: number): Promise<{
 }
 
 // Détermine les restrictions d'âge à partir des certifications TMDB (toutes régions)
-function parseTMDBCertifications(releaseDates: any[]): { flagged18: boolean; flagged16: boolean } {
-  const getCert = (iso: string) =>
-    releaseDates.find((r: any) => r.iso_3166_1 === iso)
-      ?.release_dates?.find((d: any) => d.certification)?.certification ?? ''
+// isAdult = flag TMDB movie.adult (films adultes explicites)
+function parseTMDBCertifications(releaseDates: any[], isAdult = false): { flagged18: boolean; flagged16: boolean } {
+  // Si TMDB marque le film comme "adult" → 18+ immédiat
+  if (isAdult) return { flagged18: true, flagged16: false }
+
+  // getCert : préfère la sortie cinéma (type 3), puis limitée (type 2), puis n'importe laquelle
+  const getCert = (iso: string): string => {
+    const country = releaseDates.find((r: any) => r.iso_3166_1 === iso)
+    if (!country?.release_dates?.length) return ''
+    const withCert = (country.release_dates as any[]).filter(d => d.certification && d.certification !== '')
+    if (!withCert.length) return ''
+    // Priorité : type 3 (ciné) > 2 (ciné limité) > 4 (digital) > 5 (physique) > reste
+    const priority = [3, 2, 4, 5, 1, 6]
+    withCert.sort((a, b) => {
+      const pa = priority.indexOf(a.type)
+      const pb = priority.indexOf(b.type)
+      return (pa === -1 ? 99 : pa) - (pb === -1 ? 99 : pb)
+    })
+    return withCert[0].certification
+  }
 
   const fr = getCert('FR')
   const us = getCert('US')
   const gb = getCert('GB')
   const de = getCert('DE')
+  const au = getCert('AU')
+  const nl = getCert('NL')
 
-  // -18 : FR=18, US=NC-17, GB=18, DE=18
-  if (['18'].includes(fr) || ['NC-17'].includes(us) || ['18'].includes(gb) || ['18'].includes(de)) {
-    return { flagged18: true, flagged16: false }
-  }
-  // -16 : FR=16/12, US=R, GB=15, DE=16/12
-  if (['16', '12'].includes(fr) || ['R'].includes(us) || ['15'].includes(gb) || ['16', '12'].includes(de)) {
-    return { flagged18: false, flagged16: true }
-  }
+  // ─── 18+ ────────────────────────────────────────────────
+  // FR : CNC "18" (interdit -18 ans)
+  if (fr === '18') return { flagged18: true, flagged16: false }
+  // US : NC-17 ou X (ancienne notation avant 1990)
+  if (['NC-17', 'X'].includes(us)) return { flagged18: true, flagged16: false }
+  // GB : BBFC "18" ou "R18" (uniquement en sex shops)
+  if (['18', 'R18'].includes(gb)) return { flagged18: true, flagged16: false }
+  // DE : FSK "18"
+  if (de === '18') return { flagged18: true, flagged16: false }
+  // AU : "X18+" (classif. explicite) ou "RC" (Refused Classification)
+  if (['X18+', 'RC'].includes(au)) return { flagged18: true, flagged16: false }
+  // NL : "18"
+  if (nl === '18') return { flagged18: true, flagged16: false }
+
+  // ─── 16+ ────────────────────────────────────────────────
+  if (['16', '12'].includes(fr)) return { flagged18: false, flagged16: true }
+  if (us === 'R')                return { flagged18: false, flagged16: true }
+  if (gb === '15')               return { flagged18: false, flagged16: true }
+  if (['16', '12'].includes(de)) return { flagged18: false, flagged16: true }
+
   return { flagged18: false, flagged16: false }
 }
 
@@ -1116,12 +1141,14 @@ export async function adminScanAgeRestrictions(fromId: number = 0) {
         continue
       }
 
-      const relRes = await fetch(
-        `https://api.themoviedb.org/3/movie/${tmdbId}/release_dates?api_key=${key}`,
-        { cache: 'no-store' }
-      )
-      const relData = await relRes.json()
-      const { flagged18, flagged16 } = parseTMDBCertifications(relData.results ?? [])
+      // Fetch release_dates ET détails du film (flag adult) en parallèle
+      const [relRes, detailRes] = await Promise.all([
+        fetch(`https://api.themoviedb.org/3/movie/${tmdbId}/release_dates?api_key=${key}`, { cache: 'no-store' }),
+        fetch(`https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${key}`, { cache: 'no-store' }),
+      ])
+      const [relData, detailData] = await Promise.all([relRes.json(), detailRes.json()])
+      const isAdult = detailData.adult === true
+      const { flagged18, flagged16 } = parseTMDBCertifications(relData.results ?? [], isAdult)
 
       if (flagged18 && !film.flagged_18plus) {
         // CNC détecte 18+ et pas encore confirmé → mettre en attente de validation
