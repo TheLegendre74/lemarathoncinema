@@ -1323,7 +1323,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
               }
             }
 
-            // Frame 130: "Il s'appelait Robert Paulson !" — texte grand, centré (3 sec)
+            // Frame 130: "Il s'appelait Robert Paulson !" — texte grand, centré (5 sec)
             if (this.bobTributeTimer === 130) {
               if (this.tributeTextObj) { try { this.tributeTextObj.destroy() } catch (_) {} }
               this.tributeTextObj = this.add.text(
@@ -1336,13 +1336,13 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
               this.cameras.main.flash(180, 255, 230, 80, false)
             }
 
-            // Frame 310: supprimer le texte (3 sec après frame 130)
-            if (this.bobTributeTimer === 310) {
+            // Frame 430: supprimer le texte (5 sec après frame 130)
+            if (this.bobTributeTimer === 430) {
               if (this.tributeTextObj) { try { this.tributeTextObj.destroy() } catch (_) {} this.tributeTextObj = null }
             }
 
-            // Frame 360 (6 sec): fin — l'ennemi tribute attaque, joueur libéré
-            if (this.bobTributeTimer >= 360) {
+            // Frame 500: fin — l'ennemi tribute attaque, joueur libéré
+            if (this.bobTributeTimer >= 500) {
               this.bobTributeActive = false; this.bobTributeTimer = 0
               if (this.tributeTextObj) { try { this.tributeTextObj.destroy() } catch (_) {} this.tributeTextObj = null }
               // Libérer tous les ennemis gelés
@@ -2256,7 +2256,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             // Corps de Bob reste visible en permanence (pas de disparition)
             const keepDead = e.charType === 'bob'
             if (e.deadTimer > 55 && !keepDead) { e.gfx.clear(); continue }
-            if (sx < -90 || sx > GW + 90) { e.gfx.clear(); continue }   // off-screen cull
+            if (sx < -90 || sx > GW + 90) { if (!(e.charType === 'bob' && e.hp <= 0)) e.gfx.clear(); continue }
             const showE = e.hurtInv === 0 || Math.floor(e.hurtInv / 3) % 2 === 0
             if (!showE) { e.gfx.clear(); continue }
             const sz = e.charType === 'bob' ? 1.28 : e.charType === 'toughguy' ? 1.18 : e.charType === 'tyler' ? 1.14 : 1.0
