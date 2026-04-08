@@ -24,7 +24,7 @@ export default async function NotesPage() {
       count: scores.length,
     }))
     .filter(x => x.film)
-    .sort((a, b) => b.avg - a.avg)
+    .sort((a, b) => b.avg - a.avg || b.count - a.count)
 
   return (
     <div>
