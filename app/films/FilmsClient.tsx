@@ -5,7 +5,7 @@ import Image from 'next/image'
 import Poster from '@/components/Poster'
 import Forum from '@/components/Forum'
 import { useToast } from '@/components/ToastProvider'
-import { toggleWatched, markWatched, upsertRating, addFilm, updateFilm, reportFilm, discoverEgg, getFilmWatchProviders, adminSetFilmCategory } from '@/lib/actions'
+import { toggleWatched, markWatched, upsertRating, upsertNegativeRating, addFilm, updateFilm, reportFilm, discoverEgg, getFilmWatchProviders, adminSetFilmCategory } from '@/lib/actions'
 import type { TMDBSuggestion } from '@/lib/tmdb'
 import { CONFIG } from '@/lib/config'
 import { useRouter } from 'next/navigation'
@@ -18,8 +18,10 @@ interface Props {
   watchedIds: number[]
   watchedPreMap: Record<number, boolean>
   myRatings: Record<number, number>
+  myNegativeRatings: Record<number, number>
   watchCountMap: Record<number, number>
   ratingMap: Record<number, number[]>
+  negativeRatingMap: Record<number, number[]>
   totalUsers: number
   weekFilmId: number | null
   isMarathonLive: boolean
@@ -54,13 +56,14 @@ function playGodfatherTheme() {
 
 
 // ─── FILM MODAL ──────────────────────────────────────────────────────────────
-function FilmModal({ film, profile, isWatched, watchedPre, myRating, watchPct, ratingScores, isWeekFilm, isMarathonLive, onClose, onRefresh }: {
-  film: Film; profile: Profile | null; isWatched: boolean; watchedPre: boolean | null; myRating: number | undefined
-  watchPct: number; ratingScores: number[]; isWeekFilm: boolean
+function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeRating, watchPct, ratingScores, negativeRatingScores, isWeekFilm, isMarathonLive, onClose, onRefresh }: {
+  film: Film; profile: Profile | null; isWatched: boolean; watchedPre: boolean | null; myRating: number | undefined; myNegativeRating: number | undefined
+  watchPct: number; ratingScores: number[]; negativeRatingScores: number[]; isWeekFilm: boolean
   isMarathonLive: boolean; onClose: () => void; onRefresh: () => void
 }) {
   const [tab, setTab] = useState<'info' | 'streaming' | 'forum'>('info')
   const [hov, setHov] = useState(0)
+  const [negHov, setNegHov] = useState(0)
   const [ratePrompt, setRatePrompt] = useState(false)
   const [promptHov, setPromptHov] = useState(0)
   const [promptRating, setPromptRating] = useState(0)
@@ -166,6 +169,12 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, watchPct, r
     onRefresh()
   }
 
+  async function handleNegativeRate(score: number) {
+    await upsertNegativeRating(film.id, score)
+    addToast(`Note négative ${score}/10 enregistrée`, '🔵')
+    onRefresh()
+  }
+
   async function handleReport() {
     const result = await reportFilm(film.id, reportReason)
     if (result.error) { addToast(result.error, '⚠️'); return }
@@ -244,13 +253,30 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, watchPct, r
             </p>
           )}
 
-          {/* Stars */}
-          <div style={{ marginBottom: '1rem' }}>
-            <div style={{ fontSize: '.7rem', color: 'var(--text3)', marginBottom: '.4rem', letterSpacing: '1px', textTransform: 'uppercase' }}>Ta note</div>
+          {/* Stars positives */}
+          <div style={{ marginBottom: '.6rem' }}>
+            <div style={{ fontSize: '.7rem', color: 'var(--text3)', marginBottom: '.4rem', letterSpacing: '1px', textTransform: 'uppercase' }}>
+              Ta note positive {avgRating(ratingScores) ? <span style={{ color: 'var(--gold)', textTransform: 'none', letterSpacing: 0 }}>· moy. {avgRating(ratingScores)}/10 ({ratingScores.length})</span> : ''}
+            </div>
             <div style={{ display: 'flex', gap: 3 }}>
               {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
                 <span key={n} onMouseEnter={() => setHov(n)} onMouseLeave={() => setHov(0)} onClick={() => handleRate(n)}
                   style={{ fontSize: '1.1rem', cursor: 'pointer', color: (hov || (myRating ?? 0)) >= n ? 'var(--gold)' : 'var(--text3)', transition: 'transform .1s', transform: (hov || (myRating ?? 0)) >= n ? 'scale(1.15)' : 'scale(1)' }}>
+                  ★
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Stars négatives (bleues) */}
+          <div style={{ marginBottom: '1rem' }}>
+            <div style={{ fontSize: '.7rem', color: 'var(--text3)', marginBottom: '.4rem', letterSpacing: '1px', textTransform: 'uppercase' }}>
+              Ta note négative {avgRating(negativeRatingScores) ? <span style={{ color: '#60a5fa', textTransform: 'none', letterSpacing: 0 }}>· moy. {avgRating(negativeRatingScores)}/10 ({negativeRatingScores.length})</span> : ''}
+            </div>
+            <div style={{ display: 'flex', gap: 3 }}>
+              {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
+                <span key={n} onMouseEnter={() => setNegHov(n)} onMouseLeave={() => setNegHov(0)} onClick={() => handleNegativeRate(n)}
+                  style={{ fontSize: '1.1rem', cursor: 'pointer', color: (negHov || (myNegativeRating ?? 0)) >= n ? '#60a5fa' : 'var(--text3)', transition: 'transform .1s', transform: (negHov || (myNegativeRating ?? 0)) >= n ? 'scale(1.15)' : 'scale(1)' }}>
                   ★
                 </span>
               ))}
@@ -786,7 +812,7 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
 
 
 // ─── MAIN FILMS CLIENT ───────────────────────────────────────────────────────
-export default function FilmsClient({ films, profile, watchedIds, watchedPreMap, myRatings, watchCountMap, ratingMap, totalUsers, weekFilmId, isMarathonLive, saisonNumero, age18confirmed }: Props) {
+export default function FilmsClient({ films, profile, watchedIds, watchedPreMap, myRatings, myNegativeRatings, watchCountMap, ratingMap, negativeRatingMap, totalUsers, weekFilmId, isMarathonLive, saisonNumero, age18confirmed }: Props) {
   const router = useRouter()
   const { addToast } = useToast()
   const [search, setSearch] = useState('')
@@ -1061,8 +1087,10 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
           isWatched={watchedSet.has(modal.id)}
           watchedPre={watchedSet.has(modal.id) ? (watchedPreMap[modal.id] ?? null) : null}
           myRating={myRatings[modal.id]}
+          myNegativeRating={myNegativeRatings[modal.id]}
           watchPct={getWatchPct(modal.id)}
           ratingScores={ratingMap[modal.id] ?? []}
+          negativeRatingScores={negativeRatingMap[modal.id] ?? []}
           isWeekFilm={weekFilmId === modal.id}
           isMarathonLive={isMarathonLive}
           onClose={() => setModal(null)}

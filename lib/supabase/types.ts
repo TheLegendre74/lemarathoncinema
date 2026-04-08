@@ -118,6 +118,23 @@ export type Database = {
         }
         Relationships: []
       }
+      negative_ratings: {
+        Row: {
+          user_id: string
+          film_id: number
+          score: number
+          rated_at: string
+        }
+        Insert: {
+          user_id: string
+          film_id: number
+          score: number
+        }
+        Update: {
+          score?: number
+        }
+        Relationships: []
+      }
       duels: {
         Row: {
           id: number

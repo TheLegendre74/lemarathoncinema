@@ -503,6 +503,20 @@ export async function upsertRating(filmId: number, score: number) {
   return { success: true }
 }
 
+export async function upsertNegativeRating(filmId: number, score: number) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  if (!Number.isInteger(score) || score < 1 || score > 10) return { error: 'Score invalide (1-10)' }
+
+  await (supabase as any).from('negative_ratings').upsert(
+    { user_id: user.id, film_id: filmId, score },
+    { onConflict: 'user_id,film_id' }
+  )
+  revalidatePath('/films')
+  return { success: true }
+}
+
 // ── VOTES ────────────────────────────────────────────────────
 
 export async function voteDuel(duelId: number, filmChoice: number) {
@@ -724,7 +738,7 @@ export async function addFilm(formData: FormData) {
           flagged18 = parsed.flagged18
           flagged16 = parsed.flagged16
           posterUrl = movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : null
-          overviewText = movie.overview ? (movie.overview as string).slice(0, 500) : null
+          overviewText = movie.overview ? (movie.overview as string) : null
         }
       } catch { /* ignore — add without TMDB metadata */ }
     }
@@ -1806,7 +1820,7 @@ export async function adminFetchOverviews(): Promise<{ success: boolean; count: 
       if (movie.overview) {
         await adminClient
           .from('films')
-          .update({ overview: (movie.overview as string).slice(0, 500) } as any)
+          .update({ overview: movie.overview as string } as any)
           .eq('id', film.id)
         count++
       }
