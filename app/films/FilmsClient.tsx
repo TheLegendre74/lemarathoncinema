@@ -236,6 +236,13 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, watchPct, r
             {isWeekFilm && <span className="tag" style={{ color: 'var(--gold)', borderColor: 'rgba(232,196,106,.4)', fontWeight: 600 }}>⭐ Film de la semaine · +{CONFIG.EXP_FDLS} EXP</span>}
           </div>
 
+          {/* Synopsis */}
+          {(film as any).overview && (
+            <p style={{ fontSize: '.82rem', color: 'var(--text2)', lineHeight: 1.6, margin: '0 0 1.2rem', fontStyle: 'italic' }}>
+              {(film as any).overview}
+            </p>
+          )}
+
           {/* Stars */}
           <div style={{ marginBottom: '1rem' }}>
             <div style={{ fontSize: '.7rem', color: 'var(--text3)', marginBottom: '.4rem', letterSpacing: '1px', textTransform: 'uppercase' }}>Ta note</div>

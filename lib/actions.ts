@@ -696,6 +696,7 @@ export async function addFilm(formData: FormData) {
   let flagged18 = false
   let flagged16 = false
   let posterUrl: string | null = null
+  let overviewText: string | null = null
 
   if (tmdbId && !isPending) {
     // User selected film from TMDB suggestions — fetch directly by ID (no search ambiguity)
@@ -723,6 +724,7 @@ export async function addFilm(formData: FormData) {
           flagged18 = parsed.flagged18
           flagged16 = parsed.flagged16
           posterUrl = movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : null
+          overviewText = movie.overview ? (movie.overview as string).slice(0, 500) : null
         }
       } catch { /* ignore — add without TMDB metadata */ }
     }
@@ -741,6 +743,7 @@ export async function addFilm(formData: FormData) {
     flagged_16plus: flagged16,
     flagged_18_pending: flagged18,
     pending_admin_approval: isPending,
+    overview: overviewText,
   } as any)
 
   if (error) return { error: error.message }
@@ -1767,4 +1770,49 @@ export async function adminEndSeason(saisonNum: number) {
   revalidatePath('/classement')
   revalidatePath('/admin')
   return { success: true }
+}
+
+// ── ADMIN : remplir les overviews depuis TMDB ─────────────────
+export async function adminFetchOverviews(): Promise<{ success: boolean; count: number; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, count: 0, error: 'Non connecté' }
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { success: false, count: 0, error: 'Non autorisé' }
+
+  const key = process.env.TMDB_API_KEY
+  if (!key) return { success: false, count: 0, error: 'Clé TMDB manquante' }
+
+  const adminClient = createAdminClient()
+
+  // Films avec tmdb_id mais sans overview
+  const { data: films } = await adminClient
+    .from('films')
+    .select('id, titre, tmdb_id')
+    .not('tmdb_id', 'is', null)
+    .is('overview', null)
+    .limit(100)
+
+  if (!films?.length) return { success: true, count: 0 }
+
+  let count = 0
+  for (const film of films) {
+    try {
+      const res = await fetch(
+        `https://api.themoviedb.org/3/movie/${film.tmdb_id}?api_key=${key}&language=fr-FR`,
+        { cache: 'no-store' }
+      )
+      const movie = await res.json()
+      if (movie.overview) {
+        await adminClient
+          .from('films')
+          .update({ overview: (movie.overview as string).slice(0, 500) } as any)
+          .eq('id', film.id)
+        count++
+      }
+    } catch { /* skip */ }
+  }
+
+  revalidatePath('/films')
+  return { success: true, count }
 }
