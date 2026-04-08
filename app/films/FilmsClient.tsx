@@ -5,8 +5,8 @@ import Image from 'next/image'
 import Poster from '@/components/Poster'
 import Forum from '@/components/Forum'
 import { useToast } from '@/components/ToastProvider'
-import { toggleWatched, markWatched, upsertRating, addFilm, updateFilm, reportFilm, discoverEgg, getFilmWatchProviders, searchFilmTMDB, adminSetFilmCategory } from '@/lib/actions'
-import type { TMDBSuggestion } from '@/lib/actions'
+import { toggleWatched, markWatched, upsertRating, addFilm, updateFilm, reportFilm, discoverEgg, getFilmWatchProviders, adminSetFilmCategory } from '@/lib/actions'
+import type { TMDBSuggestion } from '@/lib/tmdb'
 import { CONFIG } from '@/lib/config'
 import { useRouter } from 'next/navigation'
 import JawsScrollOverlay from '@/components/JawsScrollOverlay'
@@ -474,51 +474,87 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
   const [titre, setTitre] = useState('')
   const [annee, setAnnee] = useState('')
   const [realisateur, setRealisateur] = useState('')
-  const [genre, setGenre] = useState('Drame')
+  const [genre, setGenre] = useState('')
   const [sousgenre, setSousgenre] = useState('')
+  const [selectedTmdb, setSelectedTmdb] = useState<TMDBSuggestion | null>(null)
   const [tmdbSuggestions, setTmdbSuggestions] = useState<TMDBSuggestion[]>([])
   const [existingMatches, setExistingMatches] = useState<Film[]>([])
   const [searching, setSearching] = useState(false)
-  const [showSuggestions, setShowSuggestions] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>()
-  const inputRef = useRef<HTMLInputElement>(null)
+  const skipRef = useRef(false)
 
+  // Un seul effet — déclenché par tout changement de titre, réalisateur, année ou genre
   useEffect(() => {
-    const q = titre.trim().toLowerCase()
-    if (q.length < 2) {
-      setExistingMatches([]); setTmdbSuggestions([]); setShowSuggestions(false); return
-    }
-    // Immediate: filter existing films
-    const matches = films.filter(f =>
-      f.titre.toLowerCase().includes(q) ||
-      f.realisateur.toLowerCase().includes(q)
-    ).slice(0, 4)
-    setExistingMatches(matches)
-    setShowSuggestions(true)
+    console.log('[SEARCH] effect fired', { titre, realisateur, annee, genre, skip: skipRef.current })
+    if (skipRef.current) { skipRef.current = false; return }
 
-    // Debounced TMDB search
+    const titreQ = titre.trim()
+    const realQ = realisateur.trim()
+    const anneeQ = annee.trim()
+    const genreQ = genre
+
+    // Filtre immédiat des films déjà dans la liste (pas d'appel réseau)
+    const anneeN = anneeQ.length >= 4 ? parseInt(anneeQ) : null
+    if (titreQ.length >= 2 || realQ.length >= 2) {
+      setExistingMatches(
+        films.filter(f => {
+          const matchT = !titreQ || f.titre.toLowerCase().includes(titreQ.toLowerCase())
+          const matchR = !realQ || f.realisateur.toLowerCase().includes(realQ.toLowerCase())
+          const matchA = !anneeN || Math.abs(f.annee - anneeN) <= 1
+          const matchG = !genreQ || f.genre === genreQ || f.sousgenre === genreQ
+          return matchT && matchR && matchA && matchG
+        }).slice(0, 4)
+      )
+    } else {
+      setExistingMatches([])
+    }
+
+    // Pas assez de données pour chercher sur TMDB
+    if (titreQ.length < 2 && realQ.length < 2) {
+      setTmdbSuggestions([])
+      setSearching(false)
+      clearTimeout(debounceRef.current)
+      return
+    }
+
+    // Appel TMDB débounce 500ms via API route (fetch classique, pas de server action)
     clearTimeout(debounceRef.current)
-    if (q.length >= 3) {
-      setSearching(true)
-      debounceRef.current = setTimeout(async () => {
-        const results = await searchFilmTMDB(titre.trim())
+    setSearching(true)
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const params = new URLSearchParams({ titre: titreQ, realisateur: realQ, annee: anneeQ, genre: genreQ })
+        console.log('[SEARCH] fetching', `/api/search-film?${params}`)
+        const res = await fetch(`/api/search-film?${params}`)
+        console.log('[SEARCH] response status', res.status)
+        const results: TMDBSuggestion[] = res.ok ? await res.json() : []
+        console.log('[SEARCH] results count', results.length)
         setTmdbSuggestions(results)
+      } catch {
+        setTmdbSuggestions([])
+      } finally {
         setSearching(false)
-      }, 420)
-    }
-    return () => clearTimeout(debounceRef.current)
-  }, [titre])
+      }
+    }, 500)
 
-  function applySuggestion(s: TMDBSuggestion) {
+    return () => clearTimeout(debounceRef.current)
+  }, [titre, realisateur, annee, genre])
+
+  function selectTmdb(s: TMDBSuggestion) {
+    skipRef.current = true
+    setSelectedTmdb(s)
     setTitre(s.titre)
     if (s.annee) setAnnee(String(s.annee))
     if (s.realisateur) setRealisateur(s.realisateur)
     if (s.genre && GENRES_LIST.includes(s.genre)) setGenre(s.genre)
-    else if (s.genre) setGenre('Drame')
+    else setGenre('Drame')
     setSousgenre(s.sousgenre && GENRES_LIST.includes(s.sousgenre) ? s.sousgenre : '')
-    setShowSuggestions(false)
     setTmdbSuggestions([])
     setExistingMatches([])
+  }
+
+  function clearSelection() {
+    setSelectedTmdb(null)
+    setTmdbSuggestions([])
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -528,14 +564,23 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
     fd.set('titre', titre.trim())
     fd.set('annee', annee)
     fd.set('realisateur', realisateur.trim())
-    fd.set('genre', genre)
+    fd.set('genre', genre || 'Drame')
+    fd.set('sousgenre', sousgenre)
+    if (selectedTmdb) {
+      fd.set('tmdb_id', String(selectedTmdb.tmdb_id))
+    } else {
+      fd.set('is_pending', 'true')
+    }
     const result = await addFilm(fd)
     if (result.error) { setErr(result.error); setLoading(false); return }
-    const saison = result.saison
-    if (result.flagged18) {
+
+    if (result.isPending) {
+      addToast('Film soumis pour validation admin 📋 — sera visible après approbation', '✅')
+    } else if (result.flagged18) {
       addToast('Film ajouté — détecté 18+ par TMDB, en attente de validation admin 🔞', '⚠️')
     } else {
-      addToast(saison && saison > saisonNumero ? `Film réservé pour la Saison ${saison} 🔴` : 'Film ajouté à la liste ! 🎬', '✅')
+      const s = result.saison
+      addToast(s && s > saisonNumero ? `Film réservé pour la Saison ${s} 🔴` : 'Film ajouté à la liste ! 🎬', '✅')
     }
     onRefresh(); onClose()
   }
@@ -546,29 +591,48 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
     fontFamily: 'var(--font-body)', fontSize: '.85rem', boxSizing: 'border-box',
   }
 
-  const hasSuggestions = showSuggestions && (existingMatches.length > 0 || tmdbSuggestions.length > 0 || searching)
+  const hasInput = titre.trim().length >= 2 || realisateur.trim().length >= 2
+  const hasSuggestions = !selectedTmdb && hasInput && (existingMatches.length > 0 || tmdbSuggestions.length > 0 || searching)
+  const canSubmitPending = !selectedTmdb && titre.trim().length >= 2 && realisateur.trim().length >= 2 && annee.length >= 4
 
   return (
     <div className="modal-wrap" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal" style={{ maxWidth: 500 }}>
+      <div className="modal" style={{ maxWidth: 520 }}>
         <div style={{ padding: '2rem 1.5rem' }}>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.8rem', marginBottom: '1.2rem' }}>Ajouter un film</div>
+
           {isMarathonLive && (
             <div style={{ background: 'rgba(232,90,90,.07)', border: '1px solid rgba(232,90,90,.22)', borderRadius: 'var(--r)', padding: '.85rem', marginBottom: '1rem', fontSize: '.8rem', color: 'var(--red)', lineHeight: 1.6 }}>
               🔴 Le marathon est en cours. Ce film sera réservé pour la <strong>Saison {saisonNumero + 1}</strong>.
             </div>
           )}
+
+          {/* Selected film banner */}
+          {selectedTmdb && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', background: 'rgba(52,211,153,.08)', border: '1px solid rgba(52,211,153,.3)', borderRadius: 'var(--r)', padding: '.7rem .9rem', marginBottom: '1rem' }}>
+              {selectedTmdb.poster
+                ? <img src={selectedTmdb.poster} alt="" style={{ width: 28, height: 42, objectFit: 'cover', borderRadius: 3, flexShrink: 0 }} />
+                : <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>🎬</span>
+              }
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontSize: '.82rem', fontWeight: 700, color: 'rgba(52,211,153,1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  ✅ {selectedTmdb.titre} {selectedTmdb.annee ? `(${selectedTmdb.annee})` : ''}
+                </div>
+                <div style={{ fontSize: '.68rem', color: 'rgba(52,211,153,.7)' }}>{selectedTmdb.realisateur} · Identifié sur TMDB</div>
+              </div>
+              <button type="button" onClick={clearSelection} style={{ background: 'none', border: 'none', color: 'rgba(52,211,153,.6)', cursor: 'pointer', fontSize: '.72rem', flexShrink: 0, padding: '2px 6px' }}>✕ Changer</button>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit}>
 
-            {/* Titre + suggestions */}
+            {/* Titre + suggestions dropdown */}
             <div className="field" style={{ position: 'relative', marginBottom: hasSuggestions ? 0 : undefined }}>
               <label>Titre *</label>
               <input
-                ref={inputRef}
                 style={inputStyle}
                 value={titre}
-                onChange={e => setTitre(e.target.value)}
-                onFocus={() => titre.trim().length >= 2 && setShowSuggestions(true)}
+                onChange={e => { setTitre(e.target.value); if (selectedTmdb) setSelectedTmdb(null) }}
                 placeholder="Ex: The Godfather, Inception…"
                 required
                 autoComplete="off"
@@ -580,13 +644,7 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
 
             {/* Suggestions dropdown */}
             {hasSuggestions && (
-              <div style={{
-                border: '1px solid var(--border2)', borderTop: 'none',
-                borderRadius: '0 0 var(--r) var(--r)',
-                background: 'var(--bg2)', marginBottom: '.9rem',
-                maxHeight: 320, overflowY: 'auto',
-              }}>
-                {/* Existing films in list */}
+              <div style={{ border: '1px solid var(--border2)', borderTop: 'none', borderRadius: '0 0 var(--r) var(--r)', background: 'var(--bg2)', marginBottom: '.9rem', maxHeight: 300, overflowY: 'auto' }}>
                 {existingMatches.length > 0 && (
                   <div>
                     <div style={{ fontSize: '.6rem', letterSpacing: '1.5px', color: 'var(--text3)', textTransform: 'uppercase', padding: '.4rem .75rem .2rem', borderBottom: '1px solid var(--border)' }}>
@@ -605,16 +663,15 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
                   </div>
                 )}
 
-                {/* TMDB suggestions */}
                 {tmdbSuggestions.length > 0 && (
                   <div>
                     <div style={{ fontSize: '.6rem', letterSpacing: '1.5px', color: 'var(--text3)', textTransform: 'uppercase', padding: '.4rem .75rem .2rem', borderBottom: '1px solid var(--border)' }}>
-                      Suggestions TMDB
+                      Suggestions TMDB — cliquez pour sélectionner
                     </div>
                     {tmdbSuggestions.map(s => (
                       <div
                         key={s.tmdb_id}
-                        onClick={() => applySuggestion(s)}
+                        onClick={() => selectTmdb(s)}
                         style={{ display: 'flex', alignItems: 'center', gap: '.7rem', padding: '.5rem .75rem', cursor: 'pointer', borderBottom: '1px solid var(--border)', transition: 'background .15s' }}
                         onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,.06)')}
                         onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
@@ -631,8 +688,7 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
                             )}
                           </div>
                           <div style={{ fontSize: '.68rem', color: 'var(--text3)', marginTop: 1 }}>
-                            {s.annee ?? '?'}{s.realisateur ? ` · ${s.realisateur}` : ''}
-                            {s.genre ? ` · ${s.genre}` : ''}
+                            {s.annee ?? '?'}{s.realisateur ? ` · ${s.realisateur}` : ''}{s.genre ? ` · ${s.genre}` : ''}
                           </div>
                           {s.overview && <div style={{ fontSize: '.65rem', color: 'rgba(255,255,255,.35)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.overview}…</div>}
                         </div>
@@ -642,44 +698,78 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
                 )}
 
                 {searching && !tmdbSuggestions.length && (
-                  <div style={{ padding: '.6rem .75rem', fontSize: '.75rem', color: 'var(--text3)', textAlign: 'center' }}>Recherche en cours…</div>
+                  <div style={{ padding: '.6rem .75rem', fontSize: '.75rem', color: 'var(--text3)', textAlign: 'center' }}>Recherche TMDB en cours…</div>
                 )}
               </div>
             )}
 
+            {/* Réalisateur — triggers search too */}
+            <div className="field">
+              <label>Réalisateur *</label>
+              <input
+                style={inputStyle}
+                value={realisateur}
+                onChange={e => { setRealisateur(e.target.value); if (selectedTmdb) setSelectedTmdb(null) }}
+                placeholder="Ex: Francis Ford Coppola"
+                required
+                autoComplete="off"
+              />
+            </div>
+
             {/* Année + Genre */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.7rem', marginTop: '.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.7rem' }}>
               <div className="field">
                 <label>Année *</label>
-                <input style={inputStyle} type="number" value={annee} onChange={e => setAnnee(e.target.value)} placeholder="1972" min="1888" max="2030" required />
+                <input
+                  style={inputStyle}
+                  type="number"
+                  value={annee}
+                  onChange={e => { setAnnee(e.target.value); if (selectedTmdb) setSelectedTmdb(null) }}
+                  placeholder="1972"
+                  min="1888"
+                  max="2030"
+                  required
+                />
               </div>
               <div className="field">
                 <label>Genre</label>
-                <select style={{ ...inputStyle, cursor: 'pointer' }} value={genre} onChange={e => setGenre(e.target.value)}>
+                <select style={{ ...inputStyle, cursor: 'pointer' }} value={genre} onChange={e => { setGenre(e.target.value); if (selectedTmdb) setSelectedTmdb(null) }}>
+                  <option value="">— tous —</option>
                   {GENRES_LIST.map(g => <option key={g}>{g}</option>)}
                 </select>
               </div>
             </div>
 
-            {/* Réalisateur + Sous-genre */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.7rem' }}>
-              <div className="field">
-                <label>Réalisateur *</label>
-                <input style={inputStyle} value={realisateur} onChange={e => setRealisateur(e.target.value)} placeholder="Ex: Francis Ford Coppola" required />
-              </div>
-              <div className="field">
-                <label>Sous-genre</label>
-                <select style={{ ...inputStyle, cursor: 'pointer' }} value={sousgenre} onChange={e => setSousgenre(e.target.value)}>
-                  <option value="">— aucun —</option>
-                  {GENRES_LIST.map(g => <option key={g}>{g}</option>)}
-                </select>
-              </div>
+            {/* Sous-genre */}
+            <div className="field">
+              <label>Sous-genre</label>
+              <select style={{ ...inputStyle, cursor: 'pointer' }} value={sousgenre} onChange={e => setSousgenre(e.target.value)}>
+                <option value="">— aucun —</option>
+                {GENRES_LIST.map(g => <option key={g}>{g}</option>)}
+              </select>
             </div>
+
+            {/* Status indicator */}
+            {!selectedTmdb && hasInput && !searching && (
+              <div style={{ fontSize: '.72rem', color: 'var(--text3)', background: 'rgba(255,255,255,.04)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.55rem .75rem', marginBottom: '.8rem', lineHeight: 1.5 }}>
+                💡 Sélectionnez un film dans les suggestions TMDB pour l'ajouter directement.<br />
+                {canSubmitPending && <span style={{ color: '#f5a623' }}>Si le film est introuvable, vous pouvez le <strong>soumettre à l'admin</strong> pour validation manuelle.</span>}
+              </div>
+            )}
 
             {err && <div style={{ color: 'var(--red)', fontSize: '.78rem', marginBottom: '.8rem' }}>{err}</div>}
+
             <div style={{ display: 'flex', gap: '.7rem' }}>
               <button type="button" className="btn btn-outline" onClick={onClose} style={{ flex: 1 }}>Annuler</button>
-              <button type="submit" className="btn btn-gold" disabled={loading} style={{ flex: 1 }}>{loading ? '⏳ Vérification…' : 'Ajouter'}</button>
+              {selectedTmdb ? (
+                <button type="submit" className="btn btn-gold" disabled={loading} style={{ flex: 1 }}>
+                  {loading ? '⏳ Ajout…' : '🎬 Ajouter'}
+                </button>
+              ) : (
+                <button type="submit" className="btn btn-outline" disabled={loading || !canSubmitPending} style={{ flex: 1, borderColor: canSubmitPending ? '#f5a623' : undefined, color: canSubmitPending ? '#f5a623' : undefined }}>
+                  {loading ? '⏳ Envoi…' : '📋 Soumettre à l\'admin'}
+                </button>
+              )}
             </div>
           </form>
         </div>

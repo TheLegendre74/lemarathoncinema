@@ -218,42 +218,96 @@ const TMDB_GENRES: Record<number, string> = {
   9648:'Policier', 878:'SF', 53:'Thriller', 10752:'Guerre', 37:'Western',
 }
 
-export async function searchFilmTMDB(query: string): Promise<TMDBSuggestion[]> {
-  if (!query || query.trim().length < 2) return []
+export async function searchFilmTMDB(params: { titre?: string; realisateur?: string; annee?: string; genre?: string }): Promise<TMDBSuggestion[]> {
+  const { titre = '', realisateur = '', annee = '', genre = '' } = params
   const key = process.env.TMDB_API_KEY
   if (!key) return []
 
+  const titreQ = titre.trim()
+  const realQ = realisateur.trim()
+  const anneeN = annee ? parseInt(annee) : null
+
+  if (titreQ.length < 2 && realQ.length < 2) return []
+
   try {
-    const [resFR, resEN] = await Promise.all([
-      fetch(`https://api.themoviedb.org/3/search/movie?api_key=${key}&query=${encodeURIComponent(query)}&language=fr-FR&page=1`, { cache: 'no-store' }),
-      fetch(`https://api.themoviedb.org/3/search/movie?api_key=${key}&query=${encodeURIComponent(query)}&language=en-US&page=1`, { cache: 'no-store' }),
-    ])
-    const [dataFR, dataEN] = await Promise.all([resFR.json(), resEN.json()])
+    const seenIds = new Set<number>()
+    const allMovies: any[] = []
 
-    // Merge: FR results first, add EN results that aren't already in FR (by tmdb_id)
-    const frResults: any[] = dataFR.results ?? []
-    const enResults: any[] = dataEN.results ?? []
-    const frIds = new Set(frResults.map((m: any) => m.id))
-    const merged = [...frResults, ...enResults.filter((m: any) => !frIds.has(m.id))].slice(0, 6)
+    // ── Recherche par titre (FR + EN) ──
+    if (titreQ.length >= 2) {
+      const [resFR, resEN] = await Promise.all([
+        fetch(`https://api.themoviedb.org/3/search/movie?api_key=${key}&query=${encodeURIComponent(titreQ)}&language=fr-FR&page=1`, { cache: 'no-store' }),
+        fetch(`https://api.themoviedb.org/3/search/movie?api_key=${key}&query=${encodeURIComponent(titreQ)}&language=en-US&page=1`, { cache: 'no-store' }),
+      ])
+      const [dataFR, dataEN] = await Promise.all([resFR.json(), resEN.json()])
+      const frResults: any[] = dataFR.results ?? []
+      const enResults: any[] = dataEN.results ?? []
+      const frIds = new Set(frResults.map((m: any) => m.id))
+      ;[...frResults, ...enResults.filter((m: any) => !frIds.has(m.id))].forEach(m => {
+        if (!seenIds.has(m.id)) { seenIds.add(m.id); allMovies.push(m) }
+      })
+    }
 
-    if (!merged.length) return []
+    // ── Recherche par réalisateur (en parallèle si titre présent aussi) ──
+    if (realQ.length >= 2) {
+      const personRes = await fetch(
+        `https://api.themoviedb.org/3/search/person?api_key=${key}&query=${encodeURIComponent(realQ)}&language=fr-FR`,
+        { cache: 'no-store' }
+      )
+      const personData = await personRes.json()
+      const person = (personData.results ?? [])[0]
+      if (person) {
+        const creditsRes = await fetch(
+          `https://api.themoviedb.org/3/person/${person.id}/movie_credits?api_key=${key}&language=fr-FR`,
+          { cache: 'no-store' }
+        )
+        const creditsData = await creditsRes.json()
+        const directed: any[] = (creditsData.crew ?? []).filter((m: any) => m.job === 'Director')
 
-    // Fetch details + credits for each (parallel)
+        // Si titre aussi présent, ne garder que les films dont le titre contient un mot du titre cherché
+        const titleWords = titreQ.length >= 2
+          ? titreQ.toLowerCase().split(/\s+/).filter(w => w.length > 1)
+          : []
+
+        const relevant = titleWords.length > 0
+          ? directed.filter(m => {
+              const t = (m.title ?? m.original_title ?? '').toLowerCase()
+              return titleWords.some(w => t.includes(w))
+            })
+          : directed.sort((a: any, b: any) => (b.vote_count ?? 0) - (a.vote_count ?? 0))
+
+        relevant.forEach((m: any) => {
+          if (!seenIds.has(m.id)) { seenIds.add(m.id); allMovies.push(m) }
+        })
+      }
+    }
+
+    // ── Filtre par année (±2) ──
+    let candidates = allMovies
+    if (anneeN) {
+      candidates = candidates.filter((m: any) => {
+        const yr = parseInt((m.release_date ?? '').slice(0, 4))
+        return !yr || Math.abs(yr - anneeN) <= 2
+      })
+    }
+
+    candidates = candidates.slice(0, 12)
+    if (!candidates.length) return []
+
+    // ── Fetch details + credits pour chaque candidat ──
     const details = await Promise.all(
-      merged.map((m: any) =>
+      candidates.map((m: any) =>
         fetch(`https://api.themoviedb.org/3/movie/${m.id}?api_key=${key}&language=fr-FR&append_to_response=credits`, { cache: 'no-store' })
           .then(r => r.json())
           .catch(() => null)
       )
     )
 
-    return details
+    let suggestions = details
       .filter(Boolean)
       .map((d: any) => {
         const director = d.credits?.crew?.find((c: any) => c.job === 'Director')
-        const genres: string[] = (d.genres ?? []).map((g: any) =>
-          TMDB_GENRES[g.id] ?? g.name
-        )
+        const genres: string[] = (d.genres ?? []).map((g: any) => TMDB_GENRES[g.id] ?? g.name)
         return {
           tmdb_id: d.id,
           titre: d.title ?? d.original_title ?? '',
@@ -267,6 +321,13 @@ export async function searchFilmTMDB(query: string): Promise<TMDBSuggestion[]> {
         } as TMDBSuggestion
       })
       .filter(s => s.titre)
+
+    // Filtre par genre si sélectionné
+    if (genre) {
+      suggestions = suggestions.filter(s => s.genre === genre || s.sousgenre === genre)
+    }
+
+    return suggestions
   } catch {
     return []
   }
@@ -614,7 +675,10 @@ export async function addFilm(formData: FormData) {
   const annee = parseInt(formData.get('annee') as string)
   const realisateur = (formData.get('realisateur') as string).trim()
   const genre = ((formData.get('genre') as string) ?? '').trim().slice(0, 50)
-  const manualPoster = (formData.get('poster') as string)?.trim() || null
+  const sousgenre = ((formData.get('sousgenre') as string) ?? '').trim().slice(0, 50) || null
+  const tmdbIdRaw = formData.get('tmdb_id') as string | null
+  const tmdbId = tmdbIdRaw ? parseInt(tmdbIdRaw) : null
+  const isPending = formData.get('is_pending') === 'true'
 
   if (!titre || !annee || !realisateur || !genre) return { error: 'Champs requis manquants.' }
   if (annee < 1888 || annee > 2030) return { error: 'Année invalide.' }
@@ -626,42 +690,63 @@ export async function addFilm(formData: FormData) {
     .ilike('titre', titre)
     .eq('annee', annee)
     .single()
-
   if (dup) return { error: `⚠️ "${dup.titre}" (${annee}) est déjà dans la liste !` }
 
-  // TMDB verification: existence + adult content check
-  const tmdb = await verifyWithTMDB(titre, annee)
-  if (!tmdb.ok) return { error: tmdb.error }
+  let finalTmdbId: number | null = null
+  let flagged18 = false
+  let flagged16 = false
+  let posterUrl: string | null = null
 
-  // Check duplicate par tmdb_id (même film avec titre légèrement différent)
-  if (tmdb.tmdbId) {
-    const { data: dupTmdb } = await supabase
-      .from('films')
-      .select('id, titre')
-      .eq('tmdb_id', tmdb.tmdbId)
-      .single()
-    if (dupTmdb) return { error: `⚠️ "${dupTmdb.titre}" est déjà dans la liste (même film TMDB) !` }
+  if (tmdbId && !isPending) {
+    // User selected film from TMDB suggestions — fetch directly by ID (no search ambiguity)
+    const key = process.env.TMDB_API_KEY
+    if (key) {
+      try {
+        const [movieRes, relRes] = await Promise.all([
+          fetch(`https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${key}&language=fr-FR`, { cache: 'no-store' }),
+          fetch(`https://api.themoviedb.org/3/movie/${tmdbId}/release_dates?api_key=${key}`, { cache: 'no-store' }),
+        ])
+        const [movie, relData] = await Promise.all([movieRes.json(), relRes.json()])
+
+        if (movie.id) {
+          finalTmdbId = movie.id
+
+          // Check duplicate par tmdb_id
+          const { data: dupTmdb } = await supabase
+            .from('films')
+            .select('id, titre')
+            .eq('tmdb_id', movie.id as number)
+            .single()
+          if (dupTmdb) return { error: `⚠️ "${dupTmdb.titre}" est déjà dans la liste (même film TMDB) !` }
+
+          const parsed = parseTMDBCertifications(relData.results ?? [], movie.adult === true)
+          flagged18 = parsed.flagged18
+          flagged16 = parsed.flagged16
+          posterUrl = movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : null
+        }
+      } catch { /* ignore — add without TMDB metadata */ }
+    }
   }
-
-  // Use manual poster URL if provided, otherwise use TMDB poster
-  const poster = manualPoster || tmdb.posterUrl || null
 
   const saison = isMarathonLive() ? CONFIG.SAISON_NUMERO + 1 : CONFIG.SAISON_NUMERO
 
-  // Si TMDB détecte 18+, on met en attente de validation admin (flagged_18_pending)
-  // jamais directement flagged_18plus=true sans confirmation manuelle
   const { error } = await supabase.from('films').insert({
-    titre, annee, realisateur, genre, poster, saison, added_by: user.id,
-    tmdb_id: tmdb.tmdbId ?? null,
+    titre, annee, realisateur, genre,
+    sousgenre,
+    poster: posterUrl,
+    saison,
+    added_by: user.id,
+    tmdb_id: finalTmdbId,
     flagged_18plus: false,
-    flagged_16plus: tmdb.flagged16 ?? false,
-    flagged_18_pending: tmdb.flagged18 ?? false,
+    flagged_16plus: flagged16,
+    flagged_18_pending: flagged18,
+    pending_admin_approval: isPending,
   } as any)
 
   if (error) return { error: error.message }
   revalidatePath('/films')
   revalidatePath('/admin')
-  return { success: true, saison, flagged18: tmdb.flagged18 ?? false, flagged16: tmdb.flagged16 ?? false }
+  return { success: true, saison, flagged18, flagged16, isPending }
 }
 
 // ── POSTS (forum) ────────────────────────────────────────────
@@ -975,6 +1060,38 @@ export async function adminBatchFlaggedDecisions(decisions: Record<string, 'appr
 
   revalidatePath('/films')
   return { approved: toMark18.length, rejected: toUnflag.length }
+}
+
+// Approuve un film soumis sans correspondance TMDB automatique
+export async function adminApproveFilmRequest(filmId: number) {
+  const supabase = await createClient()
+  const adminClient = createAdminClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Non autorisé.' }
+
+  const { error } = await adminClient.from('films').update({ pending_admin_approval: false } as any).eq('id', filmId)
+  if (error) return { error: error.message }
+  revalidatePath('/films')
+  revalidatePath('/admin')
+  return { success: true }
+}
+
+// Rejette (supprime) un film soumis sans correspondance TMDB automatique
+export async function adminRejectFilmRequest(filmId: number) {
+  const supabase = await createClient()
+  const adminClient = createAdminClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Non autorisé.' }
+
+  const { error } = await adminClient.from('films').delete().eq('id', filmId)
+  if (error) return { error: error.message }
+  revalidatePath('/films')
+  revalidatePath('/admin')
+  return { success: true }
 }
 
 // Valide TOUS les films en attente de vérification 18+ d'un coup

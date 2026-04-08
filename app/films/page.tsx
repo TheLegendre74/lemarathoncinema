@@ -9,7 +9,7 @@ export default async function FilmsPage() {
   const { data: { user } } = await supabase.auth.getUser()
 
   const [{ data: films }, { data: userCount }, { data: weekFilm }] = await Promise.all([
-    supabase.from('films').select('*').order('titre'),
+    supabase.from('films').select('*').eq('pending_admin_approval', false).order('titre'),
     supabase.from('profiles').select('id', { count: 'exact' }),
     supabase.from('week_films').select('film_id').eq('active', true).single(),
   ])

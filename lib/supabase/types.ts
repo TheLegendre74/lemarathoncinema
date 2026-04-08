@@ -48,6 +48,7 @@ export type Database = {
           flagged_16plus: boolean
           flagged_18_pending: boolean
           flagged_18strange: boolean
+          pending_admin_approval: boolean
         }
         Insert: {
           titre: string
@@ -63,6 +64,7 @@ export type Database = {
           flagged_16plus?: boolean
           flagged_18_pending?: boolean
           flagged_18strange?: boolean
+          pending_admin_approval?: boolean
         }
         Update: {
           titre?: string
@@ -77,6 +79,7 @@ export type Database = {
           flagged_16plus?: boolean
           flagged_18_pending?: boolean
           flagged_18strange?: boolean
+          pending_admin_approval?: boolean
         }
         Relationships: []
       }

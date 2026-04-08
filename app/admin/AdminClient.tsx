@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminBatchFlaggedDecisions, adminSet18Flag, adminApproveAllPending, adminSetFilmCategory, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, adminFetchFrenchPosters, adminScanAgeRestrictions, adminTestFilmCertification, adminDiagnostic, updateFilm, adminResolveReport, adminSetConfig, adminVerifyPosters, adminSetAdmin, adminAddNews, adminDeleteNews, adminAddRecommendation, adminDeleteRecommendation, deleteForumTopic, adminEndSeason } from '@/lib/actions'
+import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminBatchFlaggedDecisions, adminSet18Flag, adminApproveAllPending, adminSetFilmCategory, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, adminFetchFrenchPosters, adminScanAgeRestrictions, adminTestFilmCertification, adminDiagnostic, updateFilm, adminResolveReport, adminSetConfig, adminVerifyPosters, adminSetAdmin, adminAddNews, adminDeleteNews, adminAddRecommendation, adminDeleteRecommendation, deleteForumTopic, adminEndSeason, adminApproveFilmRequest, adminRejectFilmRequest } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
 import { CONFIG } from '@/lib/config'
 import type { Film, Profile } from '@/lib/supabase/types'
@@ -300,6 +300,7 @@ interface Props {
   watchCountMap: Record<number, number>
   flaggedFilms: Film[]
   pendingFilms18: Film[]
+  pendingApprovalFilms: any[]
   reports: any[]
   siteConfig: Record<string, string>
   serverConfig: ServerConfig
@@ -308,7 +309,7 @@ interface Props {
   forumTopics: any[]
 }
 
-export default function AdminClient({ profile, films, users, duels, weekFilm, totalUsers, watchCountMap, flaggedFilms, pendingFilms18, reports, siteConfig, serverConfig, news, recommendations, forumTopics }: Props) {
+export default function AdminClient({ profile, films, users, duels, weekFilm, totalUsers, watchCountMap, flaggedFilms, pendingFilms18, pendingApprovalFilms, reports, siteConfig, serverConfig, news, recommendations, forumTopics }: Props) {
   const { addToast } = useToast()
   const router = useRouter()
   const [posterLoading, setPosterLoading] = useState<Record<number, boolean>>({})
@@ -328,6 +329,8 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
   const [diagLoading, setDiagLoading] = useState(false)
   const [flag18Saving, setFlag18Saving] = useState<Record<number, boolean>>({})
   const [localPending, setLocalPending] = useState<Film[]>(flaggedFilms)
+  const [localPendingApproval, setLocalPendingApproval] = useState<any[]>(pendingApprovalFilms)
+  const [approvalLoading, setApprovalLoading] = useState<Record<number, boolean>>({})
   const [reviewedIds, setReviewedIds] = useState<Set<number>>(new Set())
   const [approveAllLoading, setApproveAllLoading] = useState(false)
   const [testFilmId, setTestFilmId] = useState('')
@@ -807,6 +810,56 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
           ))}
         </div>
       </Section>
+
+      {/* Section — Films soumis sans correspondance TMDB (validation manuelle) */}
+      {localPendingApproval.length > 0 && (
+        <Section icon="📋" title={`Demandes d'ajout manuel — ${localPendingApproval.length} film(s) en attente`}>
+          <div style={{ fontSize: '.78rem', color: 'var(--text2)', marginBottom: '1rem', lineHeight: 1.6 }}>
+            Ces films ont été soumis par des membres sans correspondance automatique TMDB. Approuvez ou refusez chaque demande.
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
+            {localPendingApproval.map((f: any) => (
+              <div key={f.id} style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.75rem 1rem', display: 'flex', alignItems: 'center', gap: '.75rem', flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '.85rem', fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {f.titre} <span style={{ color: 'var(--text3)', fontWeight: 400 }}>({f.annee})</span>
+                  </div>
+                  <div style={{ fontSize: '.7rem', color: 'var(--text2)', marginTop: 2 }}>
+                    {f.realisateur} · {f.genre}{f.sousgenre ? ` / ${f.sousgenre}` : ''}
+                    {f.profiles?.pseudo && <span style={{ color: 'var(--text3)', marginLeft: '.5rem' }}>— soumis par <strong>{f.profiles.pseudo}</strong></span>}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '.4rem', flexShrink: 0 }}>
+                  <button
+                    className="btn btn-outline"
+                    style={{ fontSize: '.72rem', padding: '.25rem .6rem', color: 'var(--green)', borderColor: 'var(--green)' }}
+                    disabled={approvalLoading[f.id]}
+                    onClick={async () => {
+                      setApprovalLoading(l => ({ ...l, [f.id]: true }))
+                      const res = await adminApproveFilmRequest(f.id)
+                      setApprovalLoading(l => ({ ...l, [f.id]: false }))
+                      if (res.error) addToast(res.error, '⚠️')
+                      else { setLocalPendingApproval(prev => prev.filter(x => x.id !== f.id)); addToast(`"${f.titre}" approuvé ✅`, '🎬'); router.refresh() }
+                    }}
+                  >✅ Approuver</button>
+                  <button
+                    className="btn btn-outline"
+                    style={{ fontSize: '.72rem', padding: '.25rem .6rem', color: 'var(--red)', borderColor: 'var(--red)' }}
+                    disabled={approvalLoading[f.id]}
+                    onClick={async () => {
+                      setApprovalLoading(l => ({ ...l, [f.id]: true }))
+                      const res = await adminRejectFilmRequest(f.id)
+                      setApprovalLoading(l => ({ ...l, [f.id]: false }))
+                      if (res.error) addToast(res.error, '⚠️')
+                      else { setLocalPendingApproval(prev => prev.filter(x => x.id !== f.id)); addToast(`"${f.titre}" refusé`, '🗑️') }
+                    }}
+                  >✕ Refuser</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
 
       {/* Section 18+ — Films classés 18+ à valider */}
       <Section icon="🔞" title={`Validation 18+${localPending.length > 0 ? ` — ${localPending.length} film(s)` : ' — aucun film 18+'}`}>
