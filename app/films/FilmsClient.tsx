@@ -485,7 +485,6 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
 
   // Un seul effet — déclenché par tout changement de titre, réalisateur, année ou genre
   useEffect(() => {
-    console.log('[SEARCH] effect fired', { titre, realisateur, annee, genre, skip: skipRef.current })
     if (skipRef.current) { skipRef.current = false; return }
 
     const titreQ = titre.trim()
@@ -523,13 +522,12 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
     debounceRef.current = setTimeout(async () => {
       try {
         const params = new URLSearchParams({ titre: titreQ, realisateur: realQ, annee: anneeQ, genre: genreQ })
-        console.log('[SEARCH] fetching', `/api/search-film?${params}`)
         const res = await fetch(`/api/search-film?${params}`)
-        console.log('[SEARCH] response status', res.status)
-        const results: TMDBSuggestion[] = res.ok ? await res.json() : []
-        console.log('[SEARCH] results count', results.length)
-        setTmdbSuggestions(results)
-      } catch {
+        if (!res.ok) { setTmdbSuggestions([]); return }
+        const results: TMDBSuggestion[] = await res.json()
+        setTmdbSuggestions(Array.isArray(results) ? results : [])
+      } catch (e) {
+        console.error('[SEARCH] fetch error:', e)
         setTmdbSuggestions([])
       } finally {
         setSearching(false)
