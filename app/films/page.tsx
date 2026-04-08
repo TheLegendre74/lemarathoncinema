@@ -1,10 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
+import { cookies } from 'next/headers'
 import { CONFIG, isMarathonLive } from '@/lib/config'
 import FilmsClient from './FilmsClient'
 
 export const revalidate = 30
 
 export default async function FilmsPage() {
+  const cookieStore = await cookies()
+  const age18confirmed = cookieStore.get('age18confirmed')?.value === 'true'
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -65,6 +68,7 @@ export default async function FilmsPage() {
       weekFilmId={weekFilmId}
       isMarathonLive={isMarathonLive()}
       saisonNumero={CONFIG.SAISON_NUMERO}
+      age18confirmed={age18confirmed}
     />
   )
 }

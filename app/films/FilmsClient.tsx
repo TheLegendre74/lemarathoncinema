@@ -24,6 +24,7 @@ interface Props {
   weekFilmId: number | null
   isMarathonLive: boolean
   saisonNumero: number
+  age18confirmed: boolean
 }
 
 function avgRating(scores: number[] | undefined) {
@@ -785,7 +786,7 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
 
 
 // ─── MAIN FILMS CLIENT ───────────────────────────────────────────────────────
-export default function FilmsClient({ films, profile, watchedIds, watchedPreMap, myRatings, watchCountMap, ratingMap, totalUsers, weekFilmId, isMarathonLive, saisonNumero }: Props) {
+export default function FilmsClient({ films, profile, watchedIds, watchedPreMap, myRatings, watchCountMap, ratingMap, totalUsers, weekFilmId, isMarathonLive, saisonNumero, age18confirmed }: Props) {
   const router = useRouter()
   const { addToast } = useToast()
   const [search, setSearch] = useState('')
@@ -794,13 +795,8 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
   const [filterReal, setFilterReal] = useState('')
   const [modal, setModal] = useState<Film | null>(null)
   const [addModal, setAddModal] = useState(false)
-  const [showRestricted18, setShowRestricted18] = useState(false)
+  const [showRestricted18, setShowRestricted18] = useState(age18confirmed)
   const [ageWarnModal, setAgeWarnModal] = useState<18 | null>(null)
-
-  // Restaure la confirmation 18+ depuis localStorage au montage
-  useEffect(() => {
-    if (localStorage.getItem('age18confirmed') === 'true') setShowRestricted18(true)
-  }, [])
   const [adminCategoryOpen, setAdminCategoryOpen] = useState<number | null>(null)
   const [categoryOverrides, setCategoryOverrides] = useState<Record<number, 'normal' | '18plus' | 'strange'>>({})
   const watchedSet = useMemo(() => new Set(watchedIds), [watchedIds])
@@ -932,7 +928,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
           }).length
           return count18 > 0 ? (
             <div
-              onClick={() => { if (!showRestricted18) setAgeWarnModal(18); else { setShowRestricted18(false); localStorage.removeItem('age18confirmed') } }}
+              onClick={() => { if (!showRestricted18) setAgeWarnModal(18); else { setShowRestricted18(false); document.cookie = 'age18confirmed=; max-age=0; path=/' } }}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: '.6rem',
                 padding: '.45rem .9rem', borderRadius: 'var(--r)', cursor: 'pointer',
@@ -1119,7 +1115,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                 <button
                   className="btn"
                   style={{ flex: 1, background: 'var(--red)', color: '#fff', border: 'none' }}
-                  onClick={() => { setShowRestricted18(true); localStorage.setItem('age18confirmed', 'true'); setAgeWarnModal(null) }}
+                  onClick={() => { setShowRestricted18(true); document.cookie = 'age18confirmed=true; max-age=31536000; path=/; SameSite=Strict'; setAgeWarnModal(null) }}
                 >
                   J'ai 18 ans — Afficher
                 </button>
