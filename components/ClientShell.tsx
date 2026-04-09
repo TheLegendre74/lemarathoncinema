@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import Sidebar from './Sidebar'
+import TamagotchiWidget from './TamagotchiWidget'
 import type { Profile } from '@/lib/supabase/types'
 
 interface Props {
@@ -23,6 +24,7 @@ export default function ClientShell({ profile, hasRageuxEgg, hasTamagotchiEgg, c
       <main className="main">
         {children}
       </main>
+      {hasTamagotchiEgg && <TamagotchiWidget />}
     </div>
   )
 }

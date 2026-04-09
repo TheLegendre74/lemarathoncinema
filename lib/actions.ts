@@ -1944,8 +1944,8 @@ export async function feedTamagotchi() {
 
   if (pet.last_fed) {
     const diff = Date.now() - new Date(pet.last_fed).getTime()
-    if (diff < 30 * 60 * 1000) {
-      const min = Math.ceil((30 * 60 * 1000 - diff) / 60000)
+    if (diff < 12 * 60 * 60 * 1000) {
+      const min = Math.ceil((12 * 60 * 60 * 1000 - diff) / 60000)
       return { data: null, error: `Encore ${min} min avant de nourrir` }
     }
   }
@@ -1962,7 +1962,7 @@ export async function feedTamagotchi() {
   return { data, error: null }
 }
 
-export async function playWithTamagotchi() {
+export async function playWithTamagotchi(score: number = 5) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { data: null, error: 'Non connecté' }
@@ -1973,8 +1973,8 @@ export async function playWithTamagotchi() {
 
   if (pet.last_played) {
     const diff = Date.now() - new Date(pet.last_played).getTime()
-    if (diff < 20 * 60 * 1000) {
-      const min = Math.ceil((20 * 60 * 1000 - diff) / 60000)
+    if (diff < 12 * 60 * 60 * 1000) {
+      const min = Math.ceil((12 * 60 * 60 * 1000 - diff) / 60000)
       return { data: null, error: `Encore ${min} min avant de jouer` }
     }
   }
@@ -1982,7 +1982,7 @@ export async function playWithTamagotchi() {
   const { pet: synced } = applyTamaDecay(pet)
   const now = new Date().toISOString()
   const updates = {
-    happiness: Math.min(100, synced.happiness + 25),
+    happiness: Math.min(100, synced.happiness + Math.max(10, Math.min(40, Math.round(score * 4)))),
     hunger: synced.hunger, health: synced.health,
     age_hours: synced.age_hours, stage: synced.stage,
     last_played: now, last_sync: now,
@@ -2002,8 +2002,8 @@ export async function healTamagotchi() {
 
   if (pet.last_healed) {
     const diff = Date.now() - new Date(pet.last_healed).getTime()
-    if (diff < 60 * 60 * 1000) {
-      const min = Math.ceil((60 * 60 * 1000 - diff) / 60000)
+    if (diff < 24 * 60 * 60 * 1000) {
+      const min = Math.ceil((24 * 60 * 60 * 1000 - diff) / 60000)
       return { data: null, error: `Encore ${min} min avant de soigner` }
     }
   }
