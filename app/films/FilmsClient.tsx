@@ -197,15 +197,15 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
       <div className="modal">
         {/* Hero / Poster */}
         <div
-          style={{ position: 'relative', height: 280, overflow: 'hidden', cursor: isInception ? 'pointer' : 'default' }}
+          style={{ position: 'relative', aspectRatio: '2/3', maxHeight: 500, overflow: 'hidden', background: 'var(--bg3)', cursor: isInception ? 'pointer' : 'default' }}
           onClick={handlePosterClick}
           title={isInception ? 'Cliquer 5 fois...' : undefined}
         >
           {film.poster
-            ? <Image src={film.poster} alt={film.titre} fill style={{ objectFit: 'cover' }} sizes="740px" />
-            : <div style={{ width: '100%', height: '100%', background: 'var(--bg3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem' }}>🎬</div>
+            ? <Image src={film.poster} alt={film.titre} fill style={{ objectFit: 'contain' }} sizes="500px" />
+            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem' }}>🎬</div>
           }
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 25%, var(--bg2) 100%)' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 60%, var(--bg2) 100%)' }} />
           <button onClick={e => { e.stopPropagation(); onClose() }} style={{ position: 'absolute', top: '1rem', right: '1rem', width: 34, height: 34, borderRadius: '50%', background: 'rgba(8,8,14,.75)', border: '1px solid var(--border2)', color: 'var(--text2)', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
           {isInception && inceptionClicks > 0 && inceptionClicks < 5 && (
             <div style={{ position: 'absolute', bottom: '1rem', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,.7)', color: '#aaa', fontSize: '.65rem', padding: '3px 8px', borderRadius: 99, whiteSpace: 'nowrap' }}>
