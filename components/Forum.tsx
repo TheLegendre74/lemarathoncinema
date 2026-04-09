@@ -423,6 +423,11 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
     if (low.includes('royale with cheese')) { setShowPulp(true); return }
     // The Shining (any forum)
     if (low.includes('redrum')) { setShowShining(true); return }
+    // Rageux (any forum) — merde / nul / nulle / nules / nulles
+    if (/\b(merde|nul|nulle|nules|nulles)\b/.test(low)) {
+      addToast('Tu es un rageux, Harry 😤', '🥚')
+      setTimeout(() => addToast('Easter egg #11 débloqué — Badge "Le Rageux" disponible sur ton profil !', '😤'), 800)
+    }
   }
 
   // Initial fetch on mount (initialPosts is always [] when called from a client component)

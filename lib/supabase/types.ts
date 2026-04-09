@@ -13,6 +13,7 @@ export type Database = {
           created_at: string
           updated_at: string
           avatar_url: string | null
+          active_badge: string | null
         }
         Insert: {
           id: string
@@ -21,6 +22,7 @@ export type Database = {
           is_admin?: boolean
           saison?: number
           avatar_url?: string | null
+          active_badge?: string | null
         }
         Update: {
           pseudo?: string
@@ -28,6 +30,7 @@ export type Database = {
           is_admin?: boolean
           saison?: number
           avatar_url?: string | null
+          active_badge?: string | null
         }
         Relationships: []
       }

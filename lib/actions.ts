@@ -778,10 +778,29 @@ export async function addPost(topic: string, content: string) {
 
   const { data, error } = await supabase.from('posts').insert({ topic: safeTopic, user_id: user.id, content: content.trim().slice(0, 2000) }).select().single()
   if (error) return { error: error.message }
+
+  // Easter egg : insultes dans le forum débloquent le badge rageux
+  if (/\b(merde|nul|nulle|nules|nulles)\b/i.test(content)) {
+    await supabase.from('discovered_eggs').upsert(
+      { user_id: user.id, egg_id: 'rageux' },
+      { onConflict: 'user_id,egg_id', ignoreDuplicates: true }
+    )
+  }
+
   revalidatePath('/films')
   revalidatePath('/duels')
   revalidatePath('/semaine')
   return { success: true, data }
+}
+
+export async function setActiveBadge(badgeId: string | null) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  await supabase.from('profiles').update({ active_badge: badgeId } as any).eq('id', user.id)
+  revalidatePath('/profil')
+  revalidatePath('/classement')
+  return { success: true }
 }
 
 export async function deletePost(postId: string) {

@@ -5,7 +5,7 @@
 // ══════════════════════════════════════════════════════════════
 
 export const CONFIG = {
-  MARATHON_START:  new Date(process.env.NEXT_PUBLIC_MARATHON_START ?? '2026-04-10T00:00:00'),
+  MARATHON_START:  new Date(process.env.NEXT_PUBLIC_MARATHON_START ?? '2026-04-20T00:00:00'),
   SAISON_NUMERO:   parseInt(process.env.NEXT_PUBLIC_SAISON_NUMERO  ?? '1'),
   SAISON_LABEL:    process.env.NEXT_PUBLIC_SAISON_LABEL            ?? 'Saison 1 · 2026',
   SEANCE_JOUR:     process.env.NEXT_PUBLIC_SEANCE_JOUR             ?? 'Mercredi',
@@ -24,6 +24,29 @@ export function isMarathonLive(): boolean {
 }
 
 // ── BADGES ──────────────────────────────────────────────────
+// ── BADGES SPÉCIAUX (easter eggs) ────────────────────────────
+export const SPECIAL_BADGES = [
+  { id: 'rageux', label: 'Le Rageux', icon: '😤', cls: 'badge-rage', desc: 'Easter egg secret — réservé aux vrais rageuxs' },
+] as const
+
+export type SpecialBadge = typeof SPECIAL_BADGES[number]
+
+export function getSpecialBadge(id: string): SpecialBadge | null {
+  return SPECIAL_BADGES.find(b => b.id === id) ?? null
+}
+
+// Retourne le badge à afficher (actif ou par défaut)
+export function getDisplayBadge(exp: number, activeBadge: string | null, unlockedSpecials: string[]): { icon: string; label: string; cls: string } | null {
+  if (activeBadge === 'none') return null
+  if (activeBadge) {
+    const special = getSpecialBadge(activeBadge)
+    if (special && unlockedSpecials.includes(activeBadge)) return special
+    const expBadge = BADGES.find(b => b.id === activeBadge)
+    if (expBadge && exp >= expBadge.req) return expBadge
+  }
+  return getBadge(exp)
+}
+
 export const BADGES = [
   { id: 'padawan',   label: 'Padawan',          icon: '🎞️', req: 5,   cls: 'badge-gold2',  desc: '5 EXP — Le voyage commence' },
   { id: 'apprenti',  label: "L'Apprenti",        icon: '🎬', req: 50,  cls: 'badge-silver', desc: '50 EXP — Tu prends goût au cinéma' },

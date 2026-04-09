@@ -27,6 +27,7 @@ interface Props {
   isMarathonLive: boolean
   saisonNumero: number
   age18confirmed: boolean
+  hasRageuxEgg: boolean
 }
 
 function avgRating(scores: number[] | undefined) {
@@ -56,10 +57,10 @@ function playGodfatherTheme() {
 
 
 // ─── FILM MODAL ──────────────────────────────────────────────────────────────
-function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeRating, watchPct, ratingScores, negativeRatingScores, isWeekFilm, isMarathonLive, onClose, onRefresh }: {
+function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeRating, watchPct, ratingScores, negativeRatingScores, isWeekFilm, isMarathonLive, hasRageuxEgg, onClose, onRefresh }: {
   film: Film; profile: Profile | null; isWatched: boolean; watchedPre: boolean | null; myRating: number | undefined; myNegativeRating: number | undefined
   watchPct: number; ratingScores: number[]; negativeRatingScores: number[]; isWeekFilm: boolean
-  isMarathonLive: boolean; onClose: () => void; onRefresh: () => void
+  isMarathonLive: boolean; hasRageuxEgg: boolean; onClose: () => void; onRefresh: () => void
 }) {
   const [tab, setTab] = useState<'info' | 'streaming' | 'forum'>('info')
   const [hov, setHov] = useState(0)
@@ -268,20 +269,22 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
             </div>
           </div>
 
-          {/* Stars négatives (bleues) */}
-          <div style={{ marginBottom: '1rem' }}>
-            <div style={{ fontSize: '.7rem', color: 'var(--text3)', marginBottom: '.4rem', letterSpacing: '1px', textTransform: 'uppercase' }}>
-              Ta note négative {avgRating(negativeRatingScores) ? <span style={{ color: '#60a5fa', textTransform: 'none', letterSpacing: 0 }}>· moy. {avgRating(negativeRatingScores)}/10 ({negativeRatingScores.length})</span> : ''}
+          {/* Stars négatives (bleues) — visible uniquement pour les rageuxs */}
+          {hasRageuxEgg && (
+            <div style={{ marginBottom: '1rem' }}>
+              <div style={{ fontSize: '.7rem', color: 'var(--text3)', marginBottom: '.4rem', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                Ta note négative {avgRating(negativeRatingScores) ? <span style={{ color: '#60a5fa', textTransform: 'none', letterSpacing: 0 }}>· moy. {avgRating(negativeRatingScores)}/10 ({negativeRatingScores.length})</span> : ''}
+              </div>
+              <div style={{ display: 'flex', gap: 3 }}>
+                {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
+                  <span key={n} onMouseEnter={() => setNegHov(n)} onMouseLeave={() => setNegHov(0)} onClick={() => handleNegativeRate(n)}
+                    style={{ fontSize: '1.1rem', cursor: 'pointer', color: (negHov || (myNegativeRating ?? 0)) >= n ? '#60a5fa' : 'var(--text3)', transition: 'transform .1s', transform: (negHov || (myNegativeRating ?? 0)) >= n ? 'scale(1.15)' : 'scale(1)' }}>
+                    ★
+                  </span>
+                ))}
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: 3 }}>
-              {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
-                <span key={n} onMouseEnter={() => setNegHov(n)} onMouseLeave={() => setNegHov(0)} onClick={() => handleNegativeRate(n)}
-                  style={{ fontSize: '1.1rem', cursor: 'pointer', color: (negHov || (myNegativeRating ?? 0)) >= n ? '#60a5fa' : 'var(--text3)', transition: 'transform .1s', transform: (negHov || (myNegativeRating ?? 0)) >= n ? 'scale(1.15)' : 'scale(1)' }}>
-                  ★
-                </span>
-              ))}
-            </div>
-          </div>
+          )}
 
           {/* Watched buttons */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem', marginBottom: '1rem' }}>
@@ -812,7 +815,7 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
 
 
 // ─── MAIN FILMS CLIENT ───────────────────────────────────────────────────────
-export default function FilmsClient({ films, profile, watchedIds, watchedPreMap, myRatings, myNegativeRatings, watchCountMap, ratingMap, negativeRatingMap, totalUsers, weekFilmId, isMarathonLive, saisonNumero, age18confirmed }: Props) {
+export default function FilmsClient({ films, profile, watchedIds, watchedPreMap, myRatings, myNegativeRatings, watchCountMap, ratingMap, negativeRatingMap, totalUsers, weekFilmId, isMarathonLive, saisonNumero, age18confirmed, hasRageuxEgg }: Props) {
   const router = useRouter()
   const { addToast } = useToast()
   const [search, setSearch] = useState('')
@@ -1093,6 +1096,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
           negativeRatingScores={negativeRatingMap[modal.id] ?? []}
           isWeekFilm={weekFilmId === modal.id}
           isMarathonLive={isMarathonLive}
+          hasRageuxEgg={hasRageuxEgg}
           onClose={() => setModal(null)}
           onRefresh={() => router.refresh()}
         />

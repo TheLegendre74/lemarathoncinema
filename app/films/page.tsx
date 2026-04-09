@@ -21,20 +21,22 @@ export default async function FilmsPage() {
   let watched: any[] = []
   let ratings: any[] = []
   let profile = null
-
   let negativeRatings: any[] = []
+  let hasRageuxEgg = false
 
   if (user) {
-    const [{ data: w }, { data: r }, { data: p }, { data: nr }] = await Promise.all([
+    const [{ data: w }, { data: r }, { data: p }, { data: nr }, { data: eggs }] = await Promise.all([
       supabase.from('watched').select('film_id, pre').eq('user_id', user.id),
       supabase.from('ratings').select('film_id, score').eq('user_id', user.id),
       supabase.from('profiles').select('*').eq('id', user.id).single(),
       (supabase as any).from('negative_ratings').select('film_id, score').eq('user_id', user.id),
+      supabase.from('discovered_eggs').select('egg_id').eq('user_id', user.id),
     ])
     watched = w ?? []
     ratings = r ?? []
     profile = p
     negativeRatings = nr ?? []
+    hasRageuxEgg = (eggs ?? []).some((e: any) => e.egg_id === 'rageux')
   }
 
   // Global watch counts per film
@@ -84,6 +86,7 @@ export default async function FilmsPage() {
       age18confirmed={age18confirmed}
       myNegativeRatings={myNegativeRatings}
       negativeRatingMap={negativeRatingMap}
+      hasRageuxEgg={hasRageuxEgg}
     />
   )
 }

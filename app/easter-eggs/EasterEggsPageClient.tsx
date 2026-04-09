@@ -113,6 +113,13 @@ const EGGS = [
     condition: 'Visiter le site entre minuit et 00h30',
   },
   {
+    id: 'rageux',
+    icon: '😤',
+    name: 'Le Rageux',
+    category: 'Forum',
+    condition: 'Écrire un mot bien senti dans le forum — tu verras…',
+  },
+  {
     id: 'inception',
     icon: '🌀',
     name: 'Tu es encore en train de rêver',

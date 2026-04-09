@@ -1,9 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { getBadge, getAllBadges, levelFromExp, CONFIG } from '@/lib/config'
+import { getBadge, getAllBadges, levelFromExp, SPECIAL_BADGES, getSpecialBadge, CONFIG } from '@/lib/config'
 import ExpBar from '@/components/ExpBar'
 import Image from 'next/image'
 import AvatarUpload from './AvatarUpload'
+import BadgeSelector from './BadgeSelector'
 
 export const revalidate = 30
 
@@ -12,10 +13,11 @@ export default async function ProfilPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth')
 
-  const [{ data: profile }, { data: watched }, { data: votes }] = await Promise.all([
+  const [{ data: profile }, { data: watched }, { data: votes }, { data: eggs }] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
     supabase.from('watched').select('*, films(id, titre, annee, genre, realisateur, poster)').eq('user_id', user.id).order('watched_at', { ascending: false }),
     supabase.from('votes').select('duel_id, voted_at').eq('user_id', user.id),
+    supabase.from('discovered_eggs').select('egg_id').eq('user_id', user.id),
   ])
 
   if (!profile) redirect('/auth')
@@ -25,6 +27,8 @@ export default async function ProfilPage() {
   const level = levelFromExp(profile.exp)
   const badges = getAllBadges(profile.exp)
   const badge = getBadge(profile.exp)
+  const discoveredEggIds = (eggs ?? []).map((e: any) => e.egg_id as string)
+  const unlockedSpecials = SPECIAL_BADGES.filter(b => discoveredEggIds.includes(b.id))
 
   return (
     <div>
@@ -69,8 +73,15 @@ export default async function ProfilPage() {
         <ExpBar exp={profile.exp} />
       </div>
 
-      {/* Badges */}
-      <div className="section-title">Badges</div>
+      {/* Badge selector */}
+      <BadgeSelector
+        expBadges={badges}
+        specialBadges={unlockedSpecials as any}
+        activeBadge={(profile as any).active_badge ?? null}
+      />
+
+      {/* Tous les badges EXP (locked inclus) */}
+      <div className="section-title">Tous les badges</div>
       <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', marginBottom: '2rem' }}>
         {badges.map(b => (
           <div key={b.id} className={`badge-pill ${b.unlocked ? b.cls : 'badge-locked'}`} title={b.desc}>
