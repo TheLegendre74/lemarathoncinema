@@ -197,12 +197,12 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
       <div className="modal">
         {/* Hero / Poster */}
         <div
-          style={{ position: 'relative', aspectRatio: '2/3', maxHeight: 500, overflow: 'hidden', background: 'var(--bg3)', cursor: isInception ? 'pointer' : 'default' }}
+          style={{ position: 'relative', height: 420, overflow: 'hidden', background: 'var(--bg3)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: isInception ? 'pointer' : 'default' }}
           onClick={handlePosterClick}
           title={isInception ? 'Cliquer 5 fois...' : undefined}
         >
           {film.poster
-            ? <Image src={film.poster} alt={film.titre} fill style={{ objectFit: 'contain' }} sizes="500px" />
+            ? <Image src={film.poster} alt={film.titre} fill style={{ objectFit: 'contain', objectPosition: 'center' }} sizes="500px" />
             : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem' }}>🎬</div>
           }
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 60%, var(--bg2) 100%)' }} />
