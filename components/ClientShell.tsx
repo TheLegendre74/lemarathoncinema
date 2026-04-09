@@ -6,10 +6,11 @@ import type { Profile } from '@/lib/supabase/types'
 
 interface Props {
   profile: Profile | null
+  hasRageuxEgg: boolean
   children: React.ReactNode
 }
 
-export default function ClientShell({ profile, children }: Props) {
+export default function ClientShell({ profile, hasRageuxEgg, children }: Props) {
   const pathname = usePathname()
   const isAuthPage = pathname?.startsWith('/auth')
 
@@ -17,7 +18,7 @@ export default function ClientShell({ profile, children }: Props) {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
-      <Sidebar profile={profile} />
+      <Sidebar profile={profile} hasRageuxEgg={hasRageuxEgg} />
       <main className="main">
         {children}
       </main>

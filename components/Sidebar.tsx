@@ -1,16 +1,28 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { signOut } from '@/lib/actions'
 import { levelFromExp, getActiveBadge, CONFIG } from '@/lib/config'
 import type { Profile } from '@/lib/supabase/types'
 
-interface SidebarProps { profile: Profile | null }
+interface SidebarProps { profile: Profile | null; hasRageuxEgg?: boolean }
 
-export default function Sidebar({ profile }: SidebarProps) {
+export default function Sidebar({ profile, hasRageuxEgg = false }: SidebarProps) {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const router = useRouter()
+
+  function isActive(href: string) {
+    if (href.includes('?')) {
+      const [p, q] = href.split('?')
+      const key = q.split('=')[0], val = q.split('=')[1]
+      return pathname === p && searchParams.get(key) === val
+    }
+    // /notes sans ?tab=pires → actif seulement si pas sur pires
+    if (href === '/notes') return pathname === '/notes' && searchParams.get('tab') !== 'pires'
+    return pathname === href
+  }
   const level = profile ? levelFromExp(profile.exp) : null
   const badge = profile ? getActiveBadge(profile.exp, (profile as any).active_badge) : null
 
@@ -20,6 +32,7 @@ export default function Sidebar({ profile }: SidebarProps) {
     { href: '/semaine',       icon: '⭐', label: 'Film de la semaine', short: 'Semaine'    },
     { href: '/duels',         icon: '⚔️', label: 'Duels',              short: 'Duels'      },
     { href: '/notes',         icon: '📊', label: 'Classement films',   short: 'Notes'      },
+    ...(hasRageuxEgg ? [{ href: '/notes?tab=pires', icon: '💀', label: 'Pires Films', short: 'Pires' }] : []),
     { href: '/classement',    icon: '🏆', label: 'Classement joueurs', short: 'Classement' },
     { href: '/forum',         icon: '💬', label: 'Forum',              short: 'Forum'      },
     { href: '/rattrapage',    icon: '🎓', label: 'Rattrapage cinéma',  short: 'Rattrapage' },
@@ -44,7 +57,7 @@ export default function Sidebar({ profile }: SidebarProps) {
 
       <div style={{ padding: '.8rem 0' }}>
         {nav.map(n => (
-          <Link key={n.href} href={n.href} className={`nav-item ${pathname === n.href ? 'active' : ''}`}>
+          <Link key={n.href} href={n.href} className={`nav-item ${isActive(n.href) ? 'active' : ''}`}>
             <span style={{ fontSize: '.95rem', width: 18, textAlign: 'center', flexShrink: 0 }}>{n.icon}</span>
             {n.label}
           </Link>
@@ -94,7 +107,7 @@ export default function Sidebar({ profile }: SidebarProps) {
     {/* Bottom nav mobile */}
     <nav className="bottom-nav">
       {nav.map(n => (
-        <Link key={n.href} href={n.href} className={`bottom-nav-item ${pathname === n.href ? 'active' : ''}`}>
+        <Link key={n.href} href={n.href} className={`bottom-nav-item ${isActive(n.href) ? 'active' : ''}`}>
           <span className="bottom-nav-icon">{n.icon}</span>
           <span className="bottom-nav-label">{n.short}</span>
         </Link>

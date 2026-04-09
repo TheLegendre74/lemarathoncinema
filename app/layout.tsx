@@ -20,13 +20,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const cfg = await getServerConfig()
 
   let profile = null
+  let hasRageuxEgg = false
   if (user) {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single()
-    profile = data
+    const [{ data: profileData }, { data: eggs }] = await Promise.all([
+      supabase.from('profiles').select('*').eq('id', user.id).single(),
+      supabase.from('discovered_eggs').select('egg_id').eq('user_id', user.id),
+    ])
+    profile = profileData
+    hasRageuxEgg = (eggs ?? []).some((e: any) => e.egg_id === 'rageux')
   }
 
   const eeConfig = {
@@ -56,7 +57,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <ToastProvider>
           <EasterEggs config={eeConfig} />
-          <ClientShell profile={profile}>
+          <ClientShell profile={profile} hasRageuxEgg={hasRageuxEgg}>
             {children}
           </ClientShell>
         </ToastProvider>
