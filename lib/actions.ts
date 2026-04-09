@@ -1886,7 +1886,7 @@ function applyTamaDecay(pet: any): { pet: any; evolved: boolean; evolvedTo: stri
   if (hoursElapsed < 0.05) return { pet, evolved: false, evolvedTo: null }
 
   let { hunger, happiness, health, age_hours, stage } = pet
-  hunger    = Math.min(100, Math.round(hunger    + hoursElapsed * 3))
+  hunger    = Math.min(100, Math.round(hunger    + hoursElapsed * 2))
   happiness = Math.max(0,   Math.round(happiness - hoursElapsed * 1))
   age_hours = Math.round(age_hours + hoursElapsed)
 
@@ -1944,16 +1944,15 @@ export async function feedTamagotchi(score: number = 5) {
 
   if (pet.last_fed) {
     const diff = Date.now() - new Date(pet.last_fed).getTime()
-    if (diff < 24 * 60 * 60 * 1000) {
-      const h = Math.floor((24 * 60 * 60 * 1000 - diff) / 3_600_000)
-      const m = Math.ceil(((24 * 60 * 60 * 1000 - diff) % 3_600_000) / 60000)
-      return { data: null, error: `Encore ${h > 0 ? h + 'h' : ''}${m}min avant de nourrir` }
+    if (diff < 2 * 60 * 60 * 1000) {
+      const m = Math.ceil((2 * 60 * 60 * 1000 - diff) / 60000)
+      return { data: null, error: `Encore ${m}min avant de nourrir` }
     }
   }
 
   const { pet: synced } = applyTamaDecay(pet)
   const now = new Date().toISOString()
-  const hungerReduction = Math.min(60, Math.max(20, 10 + Math.round(score * 3)))
+  const hungerReduction = Math.min(30, Math.max(10, 5 + Math.round(score * 2)))
   const updates = {
     hunger: Math.max(0, synced.hunger - hungerReduction),
     happiness: synced.happiness, health: synced.health,
@@ -2044,63 +2043,68 @@ export async function nameTamagotchi(name: string) {
 
 // ── ADMIN TAMAGOTCHI COMMANDS ─────────────────────────────────────────────────
 
-async function getAdminAndPet() {
+async function getOrCreateAdminPet() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Non connecté', supabase: null, user: null, pet: null }
+  if (!user) return { error: 'Non connecté' as string, supabase, user: null as null, pet: null as null }
+
   const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
-  if (!profile?.is_admin) return { error: 'Accès refusé', supabase: null, user: null, pet: null }
-  const { data: pet } = await (supabase as any).from('tamagotchi').select('*').eq('user_id', user.id).single()
-  if (!pet) return { error: 'Pas de tamagotchi', supabase: null, user: null, pet: null }
-  return { error: null, supabase, user, pet }
+  if (!profile?.is_admin) return { error: 'Accès refusé' as string, supabase, user: null as null, pet: null as null }
+
+  let { data: pet } = await (supabase as any).from('tamagotchi').select('*').eq('user_id', user.id).single()
+  if (!pet) {
+    // Crée automatiquement le tamagotchi pour l'admin si absent
+    const { data: newPet } = await (supabase as any).from('tamagotchi').insert({ user_id: user.id }).select().single()
+    pet = newPet
+  }
+  if (!pet) return { error: 'Impossible de créer le tamagotchi' as string, supabase, user: null as null, pet: null as null }
+
+  return { error: null as null, supabase, user, pet }
 }
 
 export async function adminEvolveAlien() {
-  const { error, supabase, user, pet } = await getAdminAndPet()
-  if (error || !supabase || !user || !pet) return { data: null, error }
+  const { error, supabase, user, pet } = await getOrCreateAdminPet()
+  if (error || !user || !pet) return { data: null, error }
 
   const NEXT: Record<string, string> = {
     egg: 'facehugger', facehugger: 'chestburster',
     chestburster: 'xenomorph', xenomorph: 'egg', dead: 'egg',
   }
-  const nextStage = NEXT[pet.stage] ?? 'facehugger'
   const AGE_FOR: Record<string, number> = {
     facehugger: 13, chestburster: 73, xenomorph: 169, egg: 0,
   }
+  const nextStage = NEXT[pet.stage] ?? 'facehugger'
   const now = new Date().toISOString()
-  const { data } = await (supabase as any).from('tamagotchi').update({
+  const { data, error: dbErr } = await (supabase as any).from('tamagotchi').update({
     stage: nextStage, age_hours: AGE_FOR[nextStage] ?? 0,
-    hunger: 20, happiness: 80, health: 100,
-    last_sync: now,
+    hunger: 20, happiness: 80, health: 100, last_sync: now,
   }).eq('user_id', user.id).select().single()
-  return { data, error: null }
+  return { data, error: dbErr ? 'Erreur DB' : null }
 }
 
 export async function adminAgeAlien() {
-  const { error, supabase, user, pet } = await getAdminAndPet()
-  if (error || !supabase || !user || !pet) return { data: null, error }
+  const { error, supabase, user, pet } = await getOrCreateAdminPet()
+  if (error || !user || !pet) return { data: null, error }
 
-  // Add 25h — enough to cross the next evolution threshold
   const now = new Date().toISOString()
-  const { data } = await (supabase as any).from('tamagotchi').update({
-    age_hours: pet.age_hours + 25,
-    hunger: Math.min(100, pet.hunger + 30),
-    happiness: Math.max(0, pet.happiness - 20),
-    last_fed: null, last_played: null,
-    last_sync: now,
+  const { data, error: dbErr } = await (supabase as any).from('tamagotchi').update({
+    age_hours: (pet.age_hours ?? 0) + 25,
+    hunger: Math.min(100, (pet.hunger ?? 0) + 30),
+    happiness: Math.max(0, (pet.happiness ?? 80) - 20),
+    last_fed: null, last_played: null, last_sync: now,
   }).eq('user_id', user.id).select().single()
-  return { data, error: null }
+  return { data, error: dbErr ? 'Erreur DB' : null }
 }
 
 export async function adminKillAlien() {
-  const { error, supabase, user, pet } = await getAdminAndPet()
-  if (error || !supabase || !user || !pet) return { data: null, error }
+  const { error, supabase, user, pet } = await getOrCreateAdminPet()
+  if (error || !user || !pet) return { data: null, error }
 
   const now = new Date().toISOString()
-  const { data } = await (supabase as any).from('tamagotchi').update({
+  const { data, error: dbErr } = await (supabase as any).from('tamagotchi').update({
     stage: 'dead', health: 0, last_sync: now,
   }).eq('user_id', user.id).select().single()
-  return { data, error: null }
+  return { data, error: dbErr ? 'Erreur DB' : null }
 }
 
 export async function caresserTamagotchi() {

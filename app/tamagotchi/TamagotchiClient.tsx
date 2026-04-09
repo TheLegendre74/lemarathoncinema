@@ -122,7 +122,7 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
   useEffect(() => { const id = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(id) }, [])
   useEffect(() => { if (isNew) addToast('Ton facehugger est né ! Prends-en soin. 🤍', 'success') }, []) // eslint-disable-line
 
-  const FEED_CD = 24 * 3_600_000
+  const FEED_CD = 2 * 3_600_000
   const HEAL_CD = 24 * 3_600_000
 
   const feedCd = pet?.last_fed    ? Math.max(0, FEED_CD - (now - new Date(pet.last_fed).getTime()))    : 0
@@ -358,7 +358,7 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
 
           {/* Info */}
           <div style={{ padding: '.75rem 1rem', borderRadius: 'var(--r)', background: 'rgba(255,255,255,.02)', border: '1px solid var(--border2)', fontSize: '.72rem', color: 'var(--text3)', lineHeight: 1.7 }}>
-            💡 Nourris-le toutes les ~24h via le mini-jeu. Tu peux jouer avec lui et le caresser à volonté. S&apos;il est trop affamé ou malheureux, sa santé diminue.
+            💡 Nourris-le toutes les 2h via le mini-jeu (faim +2/h). Tu peux jouer et caresser à volonté. S&apos;il est trop affamé ou malheureux, sa santé diminue jusqu&apos;à la mort.
           </div>
         </>
       )}
