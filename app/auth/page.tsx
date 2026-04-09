@@ -188,6 +188,24 @@ export default function AuthPage() {
         >
           {loading ? 'Chargement…' : forgotMode ? 'Envoyer le lien' : tab === 'login' ? 'Se connecter' : 'Rejoindre le marathon'}
         </button>
+
+        <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+          <div style={{ fontSize: '.65rem', color: 'var(--text3)', marginBottom: '.6rem', letterSpacing: 1, textTransform: 'uppercase' }}>
+            ou
+          </div>
+          <a href="/" style={{
+            display: 'block', width: '100%', padding: '.6rem',
+            background: 'none', border: '1px solid var(--border)',
+            borderRadius: 'var(--r)', cursor: 'pointer',
+            color: 'var(--text2)', fontSize: '.85rem', textAlign: 'center',
+            textDecoration: 'none',
+          }}>
+            👁 Continuer en mode invité
+          </a>
+          <div style={{ fontSize: '.68rem', color: 'var(--text3)', marginTop: '.4rem', lineHeight: 1.5 }}>
+            Consultation uniquement — sans voter ni commenter
+          </div>
+        </div>
       </div>
     </div>
   )
