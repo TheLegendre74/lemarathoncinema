@@ -1091,10 +1091,12 @@ export async function adminBatchFlaggedDecisions(decisions: Record<string, 'appr
     .map(([id]) => parseInt(id, 10))
     .filter(n => !Number.isNaN(n))
 
-  if (toMark18.length)  await adminClient.from('films').update({ flagged_18plus: true  }).in('id', toMark18)
-  if (toUnflag.length)  await adminClient.from('films').update({ flagged_18plus: false }).in('id', toUnflag)
+  const allIds = [...toMark18, ...toUnflag]
+  if (toMark18.length)  await adminClient.from('films').update({ flagged_18plus: true,  flagged_18_pending: false } as any).in('id', toMark18)
+  if (toUnflag.length)  await adminClient.from('films').update({ flagged_18plus: false, flagged_18_pending: false } as any).in('id', toUnflag)
 
   revalidatePath('/films')
+  revalidatePath('/admin')
   return { approved: toMark18.length, rejected: toUnflag.length }
 }
 
@@ -1499,9 +1501,9 @@ export async function adminScanAgeRestrictions(fromId: number = 0) {
 
       if (flagged18) {
         if (!film.flagged_18plus) {
-          // Nouveau 18+ détecté → on le marque directement (pas de colonne pending requise)
+          // Nouveau 18+ détecté → flagged_18_pending = true pour que l'admin valide
           const { error: updErr } = await adminClient.from('films')
-            .update({ flagged_18plus: true })
+            .update({ flagged_18plus: true, flagged_18_pending: true } as any)
             .eq('id', film.id)
           const status = updErr ? `db_error: ${updErr.message}` : 'newly_set'
           details.push({ id: film.id, titre: film.titre, tmdbId, flagged18: true, flagged16: false, certs, status })
