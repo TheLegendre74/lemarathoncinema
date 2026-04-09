@@ -779,10 +779,17 @@ export async function addPost(topic: string, content: string) {
   const { data, error } = await supabase.from('posts').insert({ topic: safeTopic, user_id: user.id, content: content.trim().slice(0, 2000) }).select().single()
   if (error) return { error: error.message }
 
-  // Easter egg : insultes dans le forum débloquent le badge rageux
+  // Easter eggs forum\n  // rageux : insultes
   if (/\b(merde|nul|nulle|nules|nulles)\b/i.test(content)) {
     await supabase.from('discovered_eggs').upsert(
       { user_id: user.id, egg_id: 'rageux' },
+      { onConflict: 'user_id,egg_id', ignoreDuplicates: true }
+    )
+  }
+  // alien : débloque le tamagotchi facehugger
+  if (/alien/i.test(content)) {
+    await supabase.from('discovered_eggs').upsert(
+      { user_id: user.id, egg_id: 'tamagotchi' },
       { onConflict: 'user_id,egg_id', ignoreDuplicates: true }
     )
   }
@@ -1867,4 +1874,176 @@ export async function adminFetchOverviews(): Promise<{ success: boolean; count: 
 
   revalidatePath('/films')
   return { success: true, count }
+}
+
+// ── TAMAGOTCHI ALIEN ──────────────────────────────────────────
+
+function applyTamaDecay(pet: any): { pet: any; evolved: boolean; evolvedTo: string | null } {
+  const now = Date.now()
+  const lastSync = new Date(pet.last_sync).getTime()
+  const hoursElapsed = Math.min((now - lastSync) / 3_600_000, 120)
+
+  if (hoursElapsed < 0.05) return { pet, evolved: false, evolvedTo: null }
+
+  let { hunger, happiness, health, age_hours, stage } = pet
+  hunger    = Math.min(100, Math.round(hunger    + hoursElapsed * 5))
+  happiness = Math.max(0,   Math.round(happiness - hoursElapsed * 4))
+  age_hours = Math.round(age_hours + hoursElapsed)
+
+  if (hunger > 70)    health = Math.max(0, Math.round(health - hoursElapsed * 3))
+  if (happiness < 30) health = Math.max(0, Math.round(health - hoursElapsed * 2))
+
+  const prevStage = stage
+  if (stage === 'egg'          && age_hours >= 12  )                       stage = 'facehugger'
+  if (stage === 'facehugger'   && age_hours >= 72  && health > 30)         stage = 'chestburster'
+  if (stage === 'chestburster' && age_hours >= 168 && health > 30)         stage = 'xenomorph'
+  if (health <= 0 && stage !== 'dead') { health = 0; stage = 'dead' }
+
+  const evolved = stage !== prevStage && stage !== 'dead'
+  return {
+    pet: { ...pet, hunger, happiness, health, age_hours, stage, last_sync: new Date().toISOString() },
+    evolved,
+    evolvedTo: evolved ? stage : null,
+  }
+}
+
+export async function initOrGetTamagotchi() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { data: null, error: 'Non connecté', isNew: false, evolved: false, evolvedTo: null }
+
+  const { data: existing } = await (supabase as any)
+    .from('tamagotchi').select('*').eq('user_id', user.id).single()
+
+  if (!existing) {
+    const { data: newPet, error } = await (supabase as any)
+      .from('tamagotchi').insert({ user_id: user.id }).select().single()
+    return { data: newPet, error: error ? 'Erreur création' : null, isNew: true, evolved: false, evolvedTo: null }
+  }
+
+  const { pet: updated, evolved, evolvedTo } = applyTamaDecay(existing)
+
+  if (updated.last_sync !== existing.last_sync) {
+    await (supabase as any).from('tamagotchi').update({
+      hunger: updated.hunger, happiness: updated.happiness, health: updated.health,
+      age_hours: updated.age_hours, stage: updated.stage, last_sync: updated.last_sync,
+    }).eq('user_id', user.id)
+  }
+
+  return { data: updated, error: null, isNew: false, evolved, evolvedTo }
+}
+
+export async function feedTamagotchi() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { data: null, error: 'Non connecté' }
+
+  const { data: pet } = await (supabase as any).from('tamagotchi').select('*').eq('user_id', user.id).single()
+  if (!pet) return { data: null, error: 'Pas de tamagotchi' }
+  if (pet.stage === 'dead') return { data: null, error: 'Ton alien est mort...' }
+
+  if (pet.last_fed) {
+    const diff = Date.now() - new Date(pet.last_fed).getTime()
+    if (diff < 30 * 60 * 1000) {
+      const min = Math.ceil((30 * 60 * 1000 - diff) / 60000)
+      return { data: null, error: `Encore ${min} min avant de nourrir` }
+    }
+  }
+
+  const { pet: synced } = applyTamaDecay(pet)
+  const now = new Date().toISOString()
+  const updates = {
+    hunger: Math.max(0, synced.hunger - 35),
+    happiness: synced.happiness, health: synced.health,
+    age_hours: synced.age_hours, stage: synced.stage,
+    last_fed: now, last_sync: now,
+  }
+  const { data } = await (supabase as any).from('tamagotchi').update(updates).eq('user_id', user.id).select().single()
+  return { data, error: null }
+}
+
+export async function playWithTamagotchi() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { data: null, error: 'Non connecté' }
+
+  const { data: pet } = await (supabase as any).from('tamagotchi').select('*').eq('user_id', user.id).single()
+  if (!pet) return { data: null, error: 'Pas de tamagotchi' }
+  if (pet.stage === 'dead') return { data: null, error: 'Ton alien est mort...' }
+
+  if (pet.last_played) {
+    const diff = Date.now() - new Date(pet.last_played).getTime()
+    if (diff < 20 * 60 * 1000) {
+      const min = Math.ceil((20 * 60 * 1000 - diff) / 60000)
+      return { data: null, error: `Encore ${min} min avant de jouer` }
+    }
+  }
+
+  const { pet: synced } = applyTamaDecay(pet)
+  const now = new Date().toISOString()
+  const updates = {
+    happiness: Math.min(100, synced.happiness + 25),
+    hunger: synced.hunger, health: synced.health,
+    age_hours: synced.age_hours, stage: synced.stage,
+    last_played: now, last_sync: now,
+  }
+  const { data } = await (supabase as any).from('tamagotchi').update(updates).eq('user_id', user.id).select().single()
+  return { data, error: null }
+}
+
+export async function healTamagotchi() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { data: null, error: 'Non connecté' }
+
+  const { data: pet } = await (supabase as any).from('tamagotchi').select('*').eq('user_id', user.id).single()
+  if (!pet) return { data: null, error: 'Pas de tamagotchi' }
+  if (pet.stage === 'dead') return { data: null, error: 'Ton alien est mort...' }
+
+  if (pet.last_healed) {
+    const diff = Date.now() - new Date(pet.last_healed).getTime()
+    if (diff < 60 * 60 * 1000) {
+      const min = Math.ceil((60 * 60 * 1000 - diff) / 60000)
+      return { data: null, error: `Encore ${min} min avant de soigner` }
+    }
+  }
+
+  const { pet: synced } = applyTamaDecay(pet)
+  const now = new Date().toISOString()
+  const updates = {
+    health: Math.min(100, synced.health + 30),
+    hunger: synced.hunger, happiness: synced.happiness,
+    age_hours: synced.age_hours, stage: synced.stage,
+    last_healed: now, last_sync: now,
+  }
+  const { data } = await (supabase as any).from('tamagotchi').update(updates).eq('user_id', user.id).select().single()
+  return { data, error: null }
+}
+
+export async function reviveTamagotchi() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { data: null, error: 'Non connecté' }
+
+  const { data: pet } = await (supabase as any).from('tamagotchi').select('*').eq('user_id', user.id).single()
+  if (!pet) return { data: null, error: 'Pas de tamagotchi' }
+  if (pet.stage !== 'dead') return { data: null, error: 'Ton alien est encore en vie !' }
+
+  const now = new Date().toISOString()
+  const { data } = await (supabase as any).from('tamagotchi').update({
+    stage: 'egg', hunger: 20, happiness: 80, health: 100,
+    age_hours: 0, last_fed: null, last_played: null, last_healed: null,
+    last_sync: now, deaths: pet.deaths + 1,
+  }).eq('user_id', user.id).select().single()
+  return { data, error: null }
+}
+
+export async function nameTamagotchi(name: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  const safe = name.trim().slice(0, 20)
+  if (!safe) return { error: 'Nom invalide' }
+  await (supabase as any).from('tamagotchi').update({ name: safe }).eq('user_id', user.id)
+  return { error: null }
 }

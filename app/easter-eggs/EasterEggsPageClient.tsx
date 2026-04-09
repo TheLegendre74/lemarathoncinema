@@ -92,11 +92,11 @@ const EGGS = [
     condition: 'Taper "predator" — le viseur laser 3-points traque l\'alien, 5 tirs brûlent des trous dans la page, l\'alien s\'échappe',
   },
   {
-    id: 'alien',
-    icon: '👾',
-    name: 'Alien — Nostromo',
-    category: 'Clavier',
-    condition: 'Taper "alien" — à bord du Nostromo, l\'alien élimine l\'équipage. Ripley tombe, un chestburster lui sort du ventre.',
+    id: 'tamagotchi',
+    icon: '🤍',
+    name: 'Le Facehugger',
+    category: 'Forum',
+    condition: 'Écrire "alien" dans le forum — un facehugger s\'attache à toi. Ton tamagotchi alien t\'attend sur /tamagotchi.',
   },
   {
     id: 'tars',

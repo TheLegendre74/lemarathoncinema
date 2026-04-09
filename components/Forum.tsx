@@ -43,6 +43,34 @@ function RageuxOverlay({ onClose }: { onClose: () => void }) {
   )
 }
 
+
+function TamagotchiOverlay({ onClose }: { onClose: () => void }) {
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,10,5,.93)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+      <div style={{ textAlign: 'center', padding: '0 2rem', maxWidth: 600, animation: 'ee-rule-in .35s ease' }}>
+        <div style={{ fontFamily: 'monospace', fontSize: 'clamp(.6rem,1.8vw,.85rem)', color: '#22d3ee', textShadow: '0 0 12px #22d3ee88', lineHeight: 1.45, marginBottom: '1.5rem', display: 'inline-block', textAlign: 'left' }}>
+          <div style={{whiteSpace:'pre'}}>{'   __/~~~~~__  '}</div>
+          <div style={{whiteSpace:'pre'}}>{'  /  0     0    '}</div>
+          <div style={{whiteSpace:'pre'}}>{' | /~~~~~~~~~ |'}</div>
+          <div style={{whiteSpace:'pre'}}>{'|(  ~~~~~~~~~  )|'}</div>
+          <div style={{whiteSpace:'pre'}}>{'     -----   /  '}</div>
+          <div style={{whiteSpace:'pre'}}>{'  /|  ~~~~~  |  '}</div>
+          <div style={{whiteSpace:'pre'}}>{'/ |_________|  '}</div>
+        </div>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.4rem,5vw,2.8rem)', color: '#22d3ee', textShadow: '0 0 40px #22d3ee88', lineHeight: 1.2, marginBottom: '.8rem' }}>
+          Un facehugger s'est attaché à toi...
+        </div>
+        <div style={{ fontSize: 'clamp(.8rem,2vw,1rem)', color: 'rgba(255,255,255,.5)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '1.5rem' }}>
+          Easter egg débloqué
+        </div>
+        <a href='/tamagotchi' onClick={e => e.stopPropagation()} style={{ display: 'inline-block', background: 'rgba(34,211,238,.1)', border: '1px solid rgba(34,211,238,.4)', borderRadius: 99, padding: '.5rem 1.4rem', fontSize: '.85rem', color: '#22d3ee', textDecoration: 'none' }}>
+          🤍 Voir mon alien
+        </a>
+        <div style={{ color: 'rgba(255,255,255,.2)', fontSize: '.7rem', marginTop: '1.5rem' }}>— Cliquer pour fermer —</div>
+      </div>
+    </div>
+  )
+}
 function FightClubRule({ rule, onClose }: { rule: 1 | 2 | 3; onClose: () => void }) {
   const { title, text } = FC_RULES[rule]
   return (
@@ -422,6 +450,7 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
   const [showPulp, setShowPulp] = useState(false)
   const [showShining, setShowShining] = useState(false)
   const [showRageux, setShowRageux] = useState(false)
+  const [showTamagotchi, setShowTamagotchi] = useState(false)
 
   const isFightClubForum = filmTitle?.toLowerCase().includes('fight club') ?? false
   const is2001Forum = (filmTitle?.toLowerCase().includes('2001') || filmTitle?.toLowerCase().includes('odyssée')) ?? false
@@ -451,6 +480,8 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
     if (/\b(merde|nul|nulle|nules|nulles)\b/.test(low)) {
       setShowRageux(true)
     }
+    // Alien Tamagotchi
+    if (low.includes('alien')) { setShowTamagotchi(true) }
   }
 
   // Initial fetch on mount (initialPosts is always [] when called from a client component)
@@ -643,6 +674,7 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
       {showPulp         && <PulpFictionTerminal onClose={() => setShowPulp(false)} />}
       {showShining      && <ShiningEffect onClose={() => setShowShining(false)}  />}
       {showRageux       && <RageuxOverlay onClose={() => setShowRageux(false)}   />}
+      {showTamagotchi   && <TamagotchiOverlay onClose={() => setShowTamagotchi(false)} />}
     </div>
   )
 }

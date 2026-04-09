@@ -6,9 +6,9 @@ import { signOut } from '@/lib/actions'
 import { levelFromExp, getActiveBadge, CONFIG } from '@/lib/config'
 import type { Profile } from '@/lib/supabase/types'
 
-interface SidebarProps { profile: Profile | null; hasRageuxEgg?: boolean }
+interface SidebarProps { profile: Profile | null; hasRageuxEgg?: boolean; hasTamagotchiEgg?: boolean }
 
-export default function Sidebar({ profile, hasRageuxEgg = false }: SidebarProps) {
+export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEgg = false }: SidebarProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -33,6 +33,7 @@ export default function Sidebar({ profile, hasRageuxEgg = false }: SidebarProps)
     { href: '/duels',         icon: '⚔️', label: 'Duels',              short: 'Duels'      },
     { href: '/notes',         icon: '📊', label: 'Classement films',   short: 'Notes'      },
     ...(hasRageuxEgg ? [{ href: '/notes?tab=pires', icon: '💀', label: 'Pires Films', short: 'Pires' }] : []),
+    ...(hasTamagotchiEgg ? [{ href: '/tamagotchi', icon: '🤍', label: 'Mon Alien', short: 'Alien' }] : []),
     { href: '/classement',    icon: '🏆', label: 'Classement joueurs', short: 'Classement' },
     { href: '/forum',         icon: '💬', label: 'Forum',              short: 'Forum'      },
     { href: '/rattrapage',    icon: '🎓', label: 'Rattrapage cinéma',  short: 'Rattrapage' },

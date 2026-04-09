@@ -7,7 +7,6 @@ const FightClubGame = dynamic(() => import('./FightClubGame'), { ssr: false })
 import { KennyDeath, SouthParkBus, RandyMarsh } from './SouthParkEggs'
 import KillBillGame from './KillBillGame'
 import AVPEgg from './AVPEgg'
-import AlienEgg from './AlienEgg'
 
 // ─── ANIMATIONS (partagées avec Forum et FilmsClient) ───────────────────────
 const EE_STYLES = `
@@ -879,7 +878,6 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
   const [showKillBill,   setShowKillBill]   = useState(false)
   const [showAVP,        setShowAVP]        = useState(false)
   const predSoundRef = useRef<HTMLAudioElement | null>(null)
-  const [showAlien,      setShowAlien]      = useState(false)
   const [showTipiak,     setShowTipiak]     = useState(false)
   const keyBuf = useRef<string[]>([])
   const tarsShown = useRef(false)
@@ -1001,12 +999,6 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
         keyBuf.current = []
         return
       }
-      // "alien" → Nostromo (alien tue l'équipage, facehugger sur Ripley)
-      if (buf.slice(-5).join('').toLowerCase() === 'alien') {
-        setShowAlien(true)
-        keyBuf.current = []
-        return
-      }
       // "tipiak" → secret — streaming alternatif (liens gérés par admin)
       if (buf.slice(-6).join('').toLowerCase() === 'tipiak') {
         setShowTipiak(true)
@@ -1061,7 +1053,6 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
       {showRandy      && <RandyMarsh      onDone={() => setShowRandy(false)}     quote={ee.randyQuote} />}
       {showKillBill   && <KillBillGame    onDone={() => setShowKillBill(false)}  endText={ee.killBillEnd} />}
       {showAVP        && <AVPEgg          onDone={() => { predSoundRef.current?.pause(); predSoundRef.current = null; setShowAVP(false) }} predSound={predSoundRef} />}
-      {showAlien      && <AlienEgg       onDone={() => setShowAlien(false)} />}
       {showTipiak     && <TipiakOverlay  onDone={() => setShowTipiak(false)} />}
     </>
   )
