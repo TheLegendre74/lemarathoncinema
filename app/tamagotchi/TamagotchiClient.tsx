@@ -6,6 +6,7 @@ import { feedTamagotchi, playWithTamagotchi, healTamagotchi, reviveTamagotchi, n
 import { useToast } from '@/components/ToastProvider'
 import { useWidgetEnabled } from '@/components/TamagotchiWidget'
 import { TAMA_FRAMES, STAGE_COLORS, getTamaFrameKey } from '@/lib/tamaFrames'
+import { getOwnedAccessories, type Accessory } from '@/lib/tamaAccessories'
 import MiniGame from './MiniGame'
 import GameSelector from './GameSelector'
 
@@ -108,12 +109,15 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
   const [nameInput, setNameInput]       = useState(initialPet?.name ?? 'Xeno')
   const [showFeedGame, setShowFeedGame] = useState(false)
   const [showPlayGame, setShowPlayGame] = useState(false)
+  const [accessories,  setAccessories]  = useState<Accessory[]>([])
   const [showHearts, setShowHearts]     = useState(false)
   const [caresseAnim, setCaresseAnim]   = useState(false)
   const [widgetEnabled, setWidgetEnabled] = useWidgetEnabled()
   const { addToast }                    = useToast()
   const router                          = useRouter()
 
+  // Load accessories on mount and after each game session
+  useEffect(() => { setAccessories(getOwnedAccessories()) }, [showPlayGame])
   useEffect(() => { const id = setInterval(() => setTick(t => 1 - t), 800); return () => clearInterval(id) }, [])
   useEffect(() => { const id = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(id) }, [])
   useEffect(() => { if (isNew) addToast('Ton facehugger est né ! Prends-en soin. 🤍', 'success') }, []) // eslint-disable-line
@@ -317,6 +321,22 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
                   {healCd > 0 && <span style={{ fontSize: '.65rem', color: 'var(--text3)' }}>{fmtCooldown(healCd)}</span>}
                 </button>
               )}
+            </div>
+          )}
+
+          {/* Accessories shelf */}
+          {accessories.length > 0 && (
+            <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.8rem 1rem', marginBottom: '1.2rem' }}>
+              <div style={{ fontSize: '.7rem', color: 'var(--text3)', fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', marginBottom: '.6rem' }}>
+                🏠 Salle des trophées
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.4rem' }}>
+                {accessories.map(a => (
+                  <span key={a.id} title={a.name} style={{ fontSize: '1.5rem', cursor: 'default', filter: `drop-shadow(0 0 4px ${screenColor}44)` }}>
+                    {a.emoji}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
 
