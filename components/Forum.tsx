@@ -20,6 +20,28 @@ const FC_RULES: Record<number, { title: string; text: string }> = {
   3: { title: 'Règle n°3', text: 'Quelqu\'un crie stop, quelqu\'un s\'écroule ou n\'en peut plus — le combat est terminé.' },
 }
 
+function RageuxOverlay({ onClose }: { onClose: () => void }) {
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(8,0,0,.92)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+      <div style={{ textAlign: 'center', padding: '0 2rem', maxWidth: 600, animation: 'ee-rule-in .35s ease' }}>
+        <div style={{ fontSize: 'clamp(3.5rem,12vw,7rem)', lineHeight: 1, marginBottom: '1rem', filter: 'drop-shadow(0 0 30px rgba(239,68,68,.8))' }}>
+          😤
+        </div>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.8rem,6vw,3.2rem)', color: '#ef4444', textShadow: '0 0 50px rgba(239,68,68,.7)', lineHeight: 1.2, marginBottom: '1rem' }}>
+          Tu es un rageux, Harry.
+        </div>
+        <div style={{ fontSize: 'clamp(.8rem,2vw,1rem)', color: 'rgba(255,255,255,.5)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '2rem' }}>
+          Easter egg #11 débloqué
+        </div>
+        <div style={{ display: 'inline-block', background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.4)', borderRadius: 99, padding: '.4rem 1.2rem', fontSize: '.8rem', color: '#ef4444' }}>
+          Badge "Le Rageux" disponible sur ton profil
+        </div>
+        <div style={{ color: 'rgba(255,255,255,.2)', fontSize: '.7rem', marginTop: '2rem' }}>— Cliquer pour fermer —</div>
+      </div>
+    </div>
+  )
+}
+
 function FightClubRule({ rule, onClose }: { rule: 1 | 2 | 3; onClose: () => void }) {
   const { title, text } = FC_RULES[rule]
   return (
@@ -398,6 +420,7 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
   const [showForrest, setShowForrest] = useState(false)
   const [showPulp, setShowPulp] = useState(false)
   const [showShining, setShowShining] = useState(false)
+  const [showRageux, setShowRageux] = useState(false)
 
   const isFightClubForum = filmTitle?.toLowerCase().includes('fight club') ?? false
   const is2001Forum = (filmTitle?.toLowerCase().includes('2001') || filmTitle?.toLowerCase().includes('odyssée')) ?? false
@@ -425,8 +448,7 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
     if (low.includes('redrum')) { setShowShining(true); return }
     // Rageux (any forum) — merde / nul / nulle / nules / nulles
     if (/\b(merde|nul|nulle|nules|nulles)\b/.test(low)) {
-      addToast('Tu es un rageux, Harry 😤', '🥚')
-      setTimeout(() => addToast('Easter egg #11 débloqué — Badge "Le Rageux" disponible sur ton profil !', '😤'), 800)
+      setShowRageux(true)
     }
   }
 
@@ -618,6 +640,7 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
       {showForrest      && <ForrestOverlay onClose={() => setShowForrest(false)} />}
       {showPulp         && <PulpFictionTerminal onClose={() => setShowPulp(false)} />}
       {showShining      && <ShiningEffect onClose={() => setShowShining(false)}  />}
+      {showRageux       && <RageuxOverlay onClose={() => setShowRageux(false)}   />}
     </div>
   )
 }
