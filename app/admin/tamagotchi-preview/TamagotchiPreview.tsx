@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { feedTamagotchi, healTamagotchi, reviveTamagotchi } from '@/lib/actions'
+import { feedTamagotchi, healTamagotchi, reviveTamagotchi, adminEvolveAlien, adminAgeAlien, adminKillAlien } from '@/lib/actions'
 import MiniGame from '@/app/tamagotchi/MiniGame'
 import GameSelector from '@/app/tamagotchi/GameSelector'
 import { useToast } from '@/components/ToastProvider'
@@ -99,6 +99,36 @@ export default function TamagotchiPreview() {
 
         {/* ─── Actions panel ─── */}
         <div>
+          {/* ── Commandes Admin ── */}
+          <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'rgba(239,68,68,.05)', border: '1px solid rgba(239,68,68,.2)', borderRadius: 'var(--r)' }}>
+            <div style={{ fontSize: '.72rem', color: '#ef4444', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: '.75rem' }}>
+              ⚡ Commandes admin (TON alien)
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
+              <button className="btn btn-outline" style={{ borderColor: '#a78bfa44', color: '#a78bfa' }}
+                onClick={async () => {
+                  const r = await adminEvolveAlien()
+                  addToast(r.error ?? `🔄 Évolué → ${r.data?.stage ?? '?'}`, r.error ? 'error' : 'success')
+                }}>
+                🔄 Éclore / Évoluer au stade suivant
+              </button>
+              <button className="btn btn-outline" style={{ borderColor: '#f9731644', color: '#f97316' }}
+                onClick={async () => {
+                  const r = await adminAgeAlien()
+                  addToast(r.error ?? `⏩ +25h — âge : ${r.data?.age_hours ?? '?'}h`, r.error ? 'error' : 'success')
+                }}>
+                ⏩ Vieillir (+25h, réinitialise cooldowns)
+              </button>
+              <button className="btn btn-outline" style={{ borderColor: '#ef444444', color: '#ef4444' }}
+                onClick={async () => {
+                  const r = await adminKillAlien()
+                  addToast(r.error ?? '💀 Alien tué.', r.error ? 'error' : 'success')
+                }}>
+                💀 Tuer l&apos;alien
+              </button>
+            </div>
+          </div>
+
           <div style={{ fontSize: '.75rem', color: 'var(--text3)', marginBottom: '.75rem', fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase' }}>Actions (sans cooldown UI)</div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '.6rem', marginBottom: '1.5rem' }}>

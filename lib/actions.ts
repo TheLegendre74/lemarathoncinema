@@ -2042,6 +2042,67 @@ export async function nameTamagotchi(name: string) {
   return { error: null }
 }
 
+// ── ADMIN TAMAGOTCHI COMMANDS ─────────────────────────────────────────────────
+
+async function getAdminAndPet() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté', supabase: null, user: null, pet: null }
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Accès refusé', supabase: null, user: null, pet: null }
+  const { data: pet } = await (supabase as any).from('tamagotchi').select('*').eq('user_id', user.id).single()
+  if (!pet) return { error: 'Pas de tamagotchi', supabase: null, user: null, pet: null }
+  return { error: null, supabase, user, pet }
+}
+
+export async function adminEvolveAlien() {
+  const { error, supabase, user, pet } = await getAdminAndPet()
+  if (error || !supabase || !user || !pet) return { data: null, error }
+
+  const NEXT: Record<string, string> = {
+    egg: 'facehugger', facehugger: 'chestburster',
+    chestburster: 'xenomorph', xenomorph: 'egg', dead: 'egg',
+  }
+  const nextStage = NEXT[pet.stage] ?? 'facehugger'
+  const AGE_FOR: Record<string, number> = {
+    facehugger: 13, chestburster: 73, xenomorph: 169, egg: 0,
+  }
+  const now = new Date().toISOString()
+  const { data } = await (supabase as any).from('tamagotchi').update({
+    stage: nextStage, age_hours: AGE_FOR[nextStage] ?? 0,
+    hunger: 20, happiness: 80, health: 100,
+    last_sync: now,
+  }).eq('user_id', user.id).select().single()
+  return { data, error: null }
+}
+
+export async function adminAgeAlien() {
+  const { error, supabase, user, pet } = await getAdminAndPet()
+  if (error || !supabase || !user || !pet) return { data: null, error }
+
+  // Add 25h — enough to cross the next evolution threshold
+  const now = new Date().toISOString()
+  const { data } = await (supabase as any).from('tamagotchi').update({
+    age_hours: pet.age_hours + 25,
+    hunger: Math.min(100, pet.hunger + 30),
+    happiness: Math.max(0, pet.happiness - 20),
+    last_fed: null, last_played: null,
+    last_sync: now,
+  }).eq('user_id', user.id).select().single()
+  return { data, error: null }
+}
+
+export async function adminKillAlien() {
+  const { error, supabase, user, pet } = await getAdminAndPet()
+  if (error || !supabase || !user || !pet) return { data: null, error }
+
+  const now = new Date().toISOString()
+  const { data } = await (supabase as any).from('tamagotchi').update({
+    stage: 'dead', health: 0, last_sync: now,
+  }).eq('user_id', user.id).select().single()
+  return { data, error: null }
+}
+
 export async function caresserTamagotchi() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
