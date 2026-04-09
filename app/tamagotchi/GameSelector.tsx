@@ -84,9 +84,8 @@ function TimingGame({ onFinish, onClose }: { onFinish: (s: number) => void; onCl
   const greenWidth = isInfinite ? Math.max(T_GREEN_MIN, T_GREEN_BASE - infRound * 1.5) : T_GREEN_BASE
   const GREEN_MIN  = 50 - greenWidth / 2
   const GREEN_MAX  = 50 + greenWidth / 2
-  const speed      = isInfinite
-    ? 55 + T_BASE * 5 + infRound * 10
-    : 55 + totalRound * 5
+  // Base : vitesse fixe. Infini : accélère à chaque round.
+  const speed      = isInfinite ? 60 + infRound * 10 : 60
 
   useEffect(() => {
     if (phase !== 'playing' || feedback) return
