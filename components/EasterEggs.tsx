@@ -839,6 +839,28 @@ export interface EasterEggsConfig {
   killBillEnd?: string
 }
 
+function TamagotchiKeyOverlay({ onClose }: { onClose: () => void }) {
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,10,5,.93)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+      <div style={{ textAlign: 'center', padding: '0 2rem', maxWidth: 560, animation: 'ee-rule-in .35s ease' }}>
+        <div style={{ fontFamily: 'monospace', fontSize: 'clamp(.6rem,1.8vw,.85rem)', color: '#22d3ee', textShadow: '0 0 12px #22d3ee88', lineHeight: 1.45, marginBottom: '1.5rem', display: 'inline-block', textAlign: 'left' }}>
+          {['   __/~~~~~__   ','  /  0     0    ',' | /~~~~~~~~~ |','|(  ~~~~~~~~~  )|','     -----   /  ','  /|  ~~~~~  | ','/ |_________|  '].map((l,i) => <div key={i} style={{whiteSpace:'pre'}}>{l}</div>)}
+        </div>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.4rem,5vw,2.8rem)', color: '#22d3ee', textShadow: '0 0 40px #22d3ee88', lineHeight: 1.2, marginBottom: '.8rem' }}>
+          Un facehugger s&apos;est attaché à toi...
+        </div>
+        <div style={{ fontSize: 'clamp(.8rem,2vw,1rem)', color: 'rgba(255,255,255,.5)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '1.5rem' }}>
+          Easter egg débloqué
+        </div>
+        <a href='/tamagotchi' onClick={e => e.stopPropagation()} style={{ display: 'inline-block', background: 'rgba(34,211,238,.1)', border: '1px solid rgba(34,211,238,.4)', borderRadius: 99, padding: '.5rem 1.4rem', fontSize: '.85rem', color: '#22d3ee', textDecoration: 'none' }}>
+          🤍 Voir mon alien
+        </a>
+        <div style={{ color: 'rgba(255,255,255,.2)', fontSize: '.7rem', marginTop: '1.5rem' }}>— Cliquer pour fermer —</div>
+      </div>
+    </div>
+  )
+}
+
 export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig }) {
   const ee = {
     matrixLine1:     config.matrixLine1     ?? 'Wake up, Neo...',
@@ -879,6 +901,7 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
   const [showAVP,        setShowAVP]        = useState(false)
   const predSoundRef = useRef<HTMLAudioElement | null>(null)
   const [showTipiak,     setShowTipiak]     = useState(false)
+  const [showTamagotchi, setShowTamagotchi] = useState(false)
   const keyBuf = useRef<string[]>([])
   const tarsShown = useRef(false)
   const noctambuleShown = useRef(false)
@@ -987,6 +1010,13 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
         keyBuf.current = []
         return
       }
+      // "alien" → tamagotchi facehugger
+      if (buf.slice(-5).join('').toLowerCase() === 'alien') {
+        discoverEgg('tamagotchi')
+        setShowTamagotchi(true)
+        keyBuf.current = []
+        return
+      }
       // "predator" → Alien vs Predator (alien 4 pattes, predator tire)
       if (buf.slice(-8).join('').toLowerCase() === 'predator') {
         // Audio lancé directement dans le handler de touche (contexte user gesture)
@@ -1054,6 +1084,7 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
       {showKillBill   && <KillBillGame    onDone={() => setShowKillBill(false)}  endText={ee.killBillEnd} />}
       {showAVP        && <AVPEgg          onDone={() => { predSoundRef.current?.pause(); predSoundRef.current = null; setShowAVP(false) }} predSound={predSoundRef} />}
       {showTipiak     && <TipiakOverlay  onDone={() => setShowTipiak(false)} />}
+      {showTamagotchi && <TamagotchiKeyOverlay onClose={() => setShowTamagotchi(false)} />}
     </>
   )
 }
