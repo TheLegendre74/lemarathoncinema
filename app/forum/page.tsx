@@ -13,7 +13,7 @@ export default async function ForumPage() {
 
   const { data: topics } = await (supabase as any)
     .from('forum_topics')
-    .select('*, profiles(pseudo)')
+    .select('*')
     .order('pinned', { ascending: false })
     .order('created_at', { ascending: false })
 
