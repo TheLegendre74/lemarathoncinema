@@ -2,92 +2,19 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { feedTamagotchi, playWithTamagotchi, healTamagotchi, reviveTamagotchi, nameTamagotchi } from '@/lib/actions'
+import { feedTamagotchi, playWithTamagotchi, healTamagotchi, reviveTamagotchi, nameTamagotchi, caresserTamagotchi } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
 import { useWidgetEnabled } from '@/components/TamagotchiWidget'
+import { TAMA_FRAMES, STAGE_COLORS, getTamaFrameKey } from '@/lib/tamaFrames'
 import MiniGame from './MiniGame'
+import GameSelector from './GameSelector'
 
-// ── ASCII ART ────────────────────────────────────────────────────────────────
-const FRAMES: Record<string, string[][]> = {
-  egg: [
-    ['      _______    ','     /       \\   ','    | . ~~~ . |  ','    | ~~~~~~~ |  ','     \\_______/   ','     _|_____|_   '],
-    ['      _______    ','     /       \\   ','    | ~ ~~~ ~ |  ','    | ~~~~~~~ |  ','     \\_______/   ','     _|_____|_   '],
-  ],
-  facehugger_happy: [
-    ['   __/~~~~~\\__   ','  /  0     0  \\  ',' | /~~~~~~~~~\\ | ','|(  ~~~~~~~~~  )|','  \\   -----   /  ','  /|  ~~~~~  |\\ ','/ |_________|  \\'],
-    ['   __/~~~~~\\__   ','  /  0     0  \\  ',' | /~~~~~~~~~\\ | ','|(  ~~~~~~~~~  )|','  \\   -----   /  ','  \\|  ~~~~~  |/ ','  |_________|   '],
-  ],
-  facehugger_neutral: [
-    ['   __/~~~~~\\__   ','  /  -     -  \\  ',' | /~~~~~~~~~\\ | ','|(  ~~~~~~~~~  )|','  \\   -----   /  ','  /|  ~~~~~  |\\ ','/ |_________|  \\'],
-    ['   __/~~~~~\\__   ','  /  -     -  \\  ',' | /~~~~~~~~~\\ | ','|(  ~~~~~~~~~  )|','  \\   -----   /  ','  \\|  ~~~~~  |/ ','  |_________|   '],
-  ],
-  facehugger_sad: [
-    ['   __/~~~~~\\__   ','  /  x     x  \\  ',' | /~~~~~~~~~\\ | ','|(  _________  )|','  \\   -----   /  ','  /|  ~~~~~  |\\ ','/ |_________|  \\'],
-    ['   __/~~~~~\\__   ','  /  x     x  \\  ',' | /~~~~~~~~~\\ | ','|(  _________  )|','  \\   -----   /  ','  \\|  ~~~~~  |/ ','  |_________|   '],
-  ],
-  facehugger_dying: [
-    ['   __/~~~~~\\__   ','  /  X     X  \\  ',' | /~~~~~~~~~\\ | ','|(  _________  )|','  \\             / ','   \\. . . . ./ ','    |_________|  '],
-    ['   __/~~~~~\\__   ','  /  X     X  \\  ',' |  ~~~~~~~~~~~  |','| ( _________)|  ','  \\             / ','   \\._______./  ','    |_________|  '],
-  ],
-  chestburster_happy: [
-    ['    /\\_____/\\    ','   ( ^     ^ )   ','   | ~~~~~~~ |   ','   |  |||||  |   ','    \\_______/    '],
-    ['    /\\_____/\\    ','   ( ^     ^ )   ','   |~~~~~~~~~|   ','   |  |||||  |   ','    \\_______/    '],
-  ],
-  chestburster_neutral: [
-    ['    /\\_____/\\    ','   ( -     - )   ','   | ~~~~~~~ |   ','   |  |||||  |   ','    \\_______/    '],
-    ['    /\\_____/\\    ','   ( -     - )   ','   |~~~~~~~~~|   ','   |  |||||  |   ','    \\_______/    '],
-  ],
-  chestburster_sad: [
-    ['    /\\_____/\\    ','   ( u     u )   ','   | _______ |   ','   |  |||||  |   ','    \\_______/    '],
-    ['    /\\_____/\\    ','   ( u     u )   ','   |_________|   ','   |  |||||  |   ','    \\_______/    '],
-  ],
-  chestburster_dying: [
-    ['    /\\_____/\\    ','   ( X     X )   ','   | _______ |   ','   |         |   ','    \\_______/    '],
-    ['    /\\_____/\\    ','   ( X     X )   ','   |_________|   ','   |         |   ','    \\_______/    '],
-  ],
-  xenomorph_happy: [
-    ['    __________   ','   / ________ \\  ','  | | o    o | | ','  | |  ~~~~  | | ','   \\|  |||||  |/ ','    \\  _____  /  ','     |_______|   '],
-    ['    __________   ','   / ________ \\  ','  | | o    o | | ','  | | ~~~~~~ | | ','   \\|  |||||  |/ ','    \\  _____  /  ','     |_______|   '],
-  ],
-  xenomorph_neutral: [
-    ['    __________   ','   / ________ \\  ','  | | -    - | | ','  | |  ----  | | ','   \\|  |||||  |/ ','    \\  _____  /  ','     |_______|   '],
-    ['    __________   ','   / ________ \\  ','  | | -    - | | ','  | |  ----  | | ','   \\|  |||||  |/ ','    \\  -----  /  ','     |_______|   '],
-  ],
-  xenomorph_sad: [
-    ['    __________   ','   / ________ \\  ','  | | x    x | | ','  | |  ____  | | ','   \\|  |||||  |/ ','    \\         /  ','     |_______|   '],
-    ['    __________   ','   / ________ \\  ','  | | x    x | | ','  | | ______ | | ','   \\|  |||||  |/ ','    \\         /  ','     |_______|   '],
-  ],
-  xenomorph_dying: [
-    ['    __________   ','   / ________ \\  ','  | | X    X | | ','  | |  ____  | | ','   \\|         |/ ','    \\         /  ','     |_______|   '],
-    ['    __________   ','   / ________ \\  ','  | | X    X | | ','  | | ______ | | ','   \\|         |/ ','    \\         /  ','     |_______|   '],
-  ],
-  dead: [
-    ['    __________   ','   /  R.I.P.  \\  ','  |   X     X  | ','  |    \\   /   | ','  |     \\ /    | ','   \\     X    /  ','    \\_________/  '],
-    ['    __________   ','   /  R.I.P.  \\  ','  |   X     X  | ','  |    \\   /   | ','  |     X      | ','   \\           / ','    \\_________/  '],
-  ],
-}
-
-const STAGE_INFO: Record<string, { label: string; desc: string; color: string }> = {
-  egg:          { label: 'Œuf',        desc: "Un œuf mystérieux vibrant légèrement... quelque chose se prépare à l'intérieur.",               color: '#a78bfa' },
-  facehugger:   { label: 'Facehugger', desc: 'Il cherche un hôte. Ses doigts griffent doucement l\'air.',                                      color: '#22d3ee' },
-  chestburster: { label: 'Chestburster', desc: 'Il a trouvé son chemin... depuis l\'intérieur. Bienvenue dans le monde, petit monstre.',        color: '#f97316' },
-  xenomorph:    { label: 'Xénomorphe', desc: 'Parfait. Redoutable. La création parfaite de la nature. Il te reconnaît.',                       color: '#22d3ee' },
-  dead:         { label: 'Décédé',     desc: "Dans l'espace, personne ne peut entendre ton alien pleurer.",                                     color: '#6b7280' },
-}
-
-function getMood(pet: any): 'happy' | 'neutral' | 'sad' | 'dying' {
-  if (pet.stage === 'dead') return 'dying'
-  if (pet.health < 15) return 'dying'
-  if (pet.hunger > 70 || pet.happiness < 30 || pet.health < 30) return 'sad'
-  if (pet.hunger < 40 && pet.happiness > 60 && pet.health > 70) return 'happy'
-  return 'neutral'
-}
-
-function getFrameKey(pet: any): string {
-  if (pet.stage === 'dead') return 'dead'
-  const mood = getMood(pet)
-  const key  = `${pet.stage}_${mood}`
-  return FRAMES[key] ? key : `${pet.stage}_neutral`
+const STAGE_INFO: Record<string, { label: string; desc: string }> = {
+  egg:          { label: 'Œuf',          desc: "Un œuf mystérieux vibrant légèrement… quelque chose se prépare à l'intérieur." },
+  facehugger:   { label: 'Facehugger',   desc: "Il cherche un hôte. Ses doigts griffent doucement l'air." },
+  chestburster: { label: 'Chestburster', desc: "Il a trouvé son chemin… depuis l'intérieur. Bienvenue dans le monde, petit monstre." },
+  xenomorph:    { label: 'Xénomorphe',   desc: 'Parfait. Redoutable. La création parfaite de la nature. Il te reconnaît.' },
+  dead:         { label: 'Décédé',       desc: "Dans l'espace, personne ne peut entendre ton alien pleurer." },
 }
 
 function fmtCooldown(ms: number): string {
@@ -120,16 +47,17 @@ function StatBar({ label, value, color, icon }: { label: string; value: number; 
 
 function EvolveOverlay({ stage, onClose }: { stage: string; onClose: () => void }) {
   const info = STAGE_INFO[stage]
+  const color = STAGE_COLORS[stage] ?? '#22d3ee'
   const msgs: Record<string, string> = {
-    facehugger:   "L'œuf s'ouvre lentement... et quelque chose en sort.",
+    facehugger:   "L'œuf s'ouvre lentement… et quelque chose en sort.",
     chestburster: '💥 AAAGH ! Il sort de sa cage thoracique !',
     xenomorph:    'Il est adulte. Et il te regarde.',
   }
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 9000, background: 'rgba(0,10,5,.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
       <div style={{ textAlign: 'center', padding: '0 2rem', maxWidth: 560, animation: 'ee-rule-in .35s ease' }}>
-        <div style={{ fontSize: 'clamp(3rem,10vw,6rem)', lineHeight: 1, marginBottom: '1rem', filter: `drop-shadow(0 0 30px ${info?.color ?? '#22d3ee'})` }}>🤍</div>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.4rem,5vw,2.5rem)', color: info?.color ?? '#22d3ee', textShadow: `0 0 40px ${info?.color}88`, lineHeight: 1.2, marginBottom: '.8rem' }}>
+        <div style={{ fontSize: 'clamp(3rem,10vw,6rem)', lineHeight: 1, marginBottom: '1rem', filter: `drop-shadow(0 0 30px ${color})` }}>🤍</div>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.4rem,5vw,2.5rem)', color, textShadow: `0 0 40px ${color}88`, lineHeight: 1.2, marginBottom: '.8rem' }}>
           {info?.label ?? stage}
         </div>
         <div style={{ fontSize: 'clamp(.9rem,2.5vw,1.1rem)', color: 'rgba(255,255,255,.8)', lineHeight: 1.7, marginBottom: '1.5rem' }}>
@@ -137,6 +65,27 @@ function EvolveOverlay({ stage, onClose }: { stage: string; onClose: () => void 
         </div>
         <div style={{ fontSize: '.75rem', color: 'rgba(255,255,255,.4)' }}>Cliquer pour continuer</div>
       </div>
+    </div>
+  )
+}
+
+// Floating hearts animation for caresser
+function FloatingHearts({ visible }: { visible: boolean }) {
+  if (!visible) return null
+  const hearts = ['❤️', '💜', '💙', '🤍', '❤️', '💚']
+  return (
+    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+      {hearts.map((h, i) => (
+        <div key={i} style={{
+          position: 'absolute',
+          left: `${20 + (i % 5) * 15}%`,
+          bottom: `${40 + Math.random() * 20}%`,
+          fontSize: `${.8 + (i % 3) * .3}rem`,
+          animation: `tama-heart-float ${0.8 + i * 0.15}s ease-out forwards`,
+          animationDelay: `${i * 0.1}s`,
+          opacity: 0,
+        }}>{h}</div>
+      ))}
     </div>
   )
 }
@@ -157,7 +106,10 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
   const [evolveStage, setEvolveStage]   = useState<string | null>(evolved && evolvedTo ? evolvedTo : null)
   const [naming, setNaming]             = useState(false)
   const [nameInput, setNameInput]       = useState(initialPet?.name ?? 'Xeno')
-  const [showGame, setShowGame]         = useState(false)
+  const [showFeedGame, setShowFeedGame] = useState(false)
+  const [showPlayGame, setShowPlayGame] = useState(false)
+  const [showHearts, setShowHearts]     = useState(false)
+  const [caresseAnim, setCaresseAnim]   = useState(false)
   const [widgetEnabled, setWidgetEnabled] = useWidgetEnabled()
   const { addToast }                    = useToast()
   const router                          = useRouter()
@@ -166,21 +118,26 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
   useEffect(() => { const id = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(id) }, [])
   useEffect(() => { if (isNew) addToast('Ton facehugger est né ! Prends-en soin. 🤍', 'success') }, []) // eslint-disable-line
 
-  const FEED_CD  = 12 * 3_600_000
-  const PLAY_CD  = 12 * 3_600_000
-  const HEAL_CD  = 24 * 3_600_000
+  const FEED_CD = 24 * 3_600_000
+  const HEAL_CD = 24 * 3_600_000
 
   const feedCd = pet?.last_fed    ? Math.max(0, FEED_CD - (now - new Date(pet.last_fed).getTime()))    : 0
-  const playCd = pet?.last_played ? Math.max(0, PLAY_CD - (now - new Date(pet.last_played).getTime())) : 0
   const healCd = pet?.last_healed ? Math.max(0, HEAL_CD - (now - new Date(pet.last_healed).getTime())) : 0
 
-  const mood      = pet ? getMood(pet) : 'neutral'
-  const frameKey  = pet ? getFrameKey(pet) : 'egg'
-  const frames    = FRAMES[frameKey] ?? FRAMES['egg']
-  const frame     = frames[tick % frames.length]
-  const stageInfo = STAGE_INFO[pet?.stage ?? 'egg']
-  const isDead    = pet?.stage === 'dead'
-  const screenColor = isDead ? '#4b5563' : stageInfo?.color ?? '#22d3ee'
+  const frameKey    = pet ? getTamaFrameKey(pet) : 'egg'
+  const frames      = TAMA_FRAMES[frameKey] ?? TAMA_FRAMES['egg']
+  const frame       = frames[tick % frames.length]
+  const stageInfo   = STAGE_INFO[pet?.stage ?? 'egg']
+  const isDead      = pet?.stage === 'dead'
+  const screenColor = isDead ? '#4b5563' : (STAGE_COLORS[pet?.stage] ?? '#22d3ee')
+
+  const moodLabel = (() => {
+    if (!pet || isDead) return null
+    if (pet.health < 15 || (pet.hunger > 70 && pet.happiness < 30)) return '😰 En danger !'
+    if (pet.hunger > 70 || pet.happiness < 30 || pet.health < 30)   return '😔 Malheureux'
+    if (pet.hunger < 40 && pet.happiness > 60 && pet.health > 70)   return '😊 Content'
+    return '😐 Neutre'
+  })()
 
   const doAction = useCallback(async (
     action: () => Promise<{ data: any; error: string | null }>,
@@ -194,13 +151,28 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
       const prev = pet?.stage
       setPet(res.data)
       if (res.data.stage !== prev && res.data.stage !== 'dead') setEvolveStage(res.data.stage)
-      else if (res.data.stage === 'dead' && prev !== 'dead') addToast('💀 Ton alien est mort...', 'error')
+      else if (res.data.stage === 'dead' && prev !== 'dead') addToast('💀 Ton alien est mort…', 'error')
     }
   }, [pet, addToast])
 
-  async function handleGameFinish(score: number) {
-    setShowGame(false)
+  async function handleFeedFinish(score: number) {
+    setShowFeedGame(false)
+    await doAction(() => feedTamagotchi(score), 'feed')
+  }
+
+  async function handlePlayFinish(score: number) {
+    setShowPlayGame(false)
     await doAction(() => playWithTamagotchi(score), 'play')
+  }
+
+  async function handleCaresse() {
+    setCaresseAnim(true)
+    setTimeout(() => {
+      setShowHearts(true)
+      setTimeout(() => setShowHearts(false), 1500)
+      setTimeout(() => setCaresseAnim(false), 1200)
+    }, 600)
+    await doAction(caresserTamagotchi, 'caresse')
   }
 
   async function handleName() {
@@ -212,6 +184,8 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
   }
 
   if (!pet) return <div className="empty">Erreur chargement.</div>
+
+  const showingGame = showFeedGame || showPlayGame
 
   return (
     <div style={{ maxWidth: 420, margin: '0 auto', paddingBottom: '3rem' }}>
@@ -225,9 +199,11 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
         </div>
       </div>
 
-      {/* Mini-game ou écran principal */}
-      {showGame ? (
-        <MiniGame stage={pet.stage} onFinish={handleGameFinish} onClose={() => setShowGame(false)} />
+      {/* Mini-game or main screen */}
+      {showFeedGame ? (
+        <MiniGame stage={pet.stage} feedMode onFinish={handleFeedFinish} onClose={() => setShowFeedGame(false)} />
+      ) : showPlayGame ? (
+        <GameSelector stage={pet.stage} onFinish={handlePlayFinish} onClose={() => setShowPlayGame(false)} />
       ) : (
         <>
           {/* Screen */}
@@ -235,6 +211,7 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
             background: 'var(--bg2)', border: `2px solid ${screenColor}44`, borderRadius: 'var(--rl)',
             boxShadow: `0 0 30px ${screenColor}22, inset 0 0 20px rgba(0,0,0,.3)`,
             padding: '1.5rem', marginBottom: '1.5rem', textAlign: 'center',
+            position: 'relative', overflow: 'hidden',
           }}>
             {/* Name */}
             <div style={{ marginBottom: '.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.5rem' }}>
@@ -257,9 +234,22 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
               )}
             </div>
 
-            {/* ASCII */}
-            <div style={{ fontFamily: "'Courier New', monospace", fontSize: 'clamp(.65rem,2vw,.8rem)', lineHeight: 1.45, color: isDead ? '#6b7280' : screenColor, textShadow: isDead ? 'none' : `0 0 8px ${screenColor}66`, margin: '0 auto', display: 'inline-block', textAlign: 'left' }}>
-              {frame.map((line, i) => <div key={i} style={{ whiteSpace: 'pre' }}>{line}</div>)}
+            {/* ASCII + caresse overlay */}
+            <div style={{ position: 'relative', display: 'inline-block' }}>
+              <div style={{ fontFamily: "'Courier New', monospace", fontSize: 'clamp(.65rem,2vw,.8rem)', lineHeight: 1.45, color: isDead ? '#6b7280' : screenColor, textShadow: isDead ? 'none' : `0 0 8px ${screenColor}66`, display: 'inline-block', textAlign: 'left' }}>
+                {frame.map((line, i) => <div key={i} style={{ whiteSpace: 'pre' }}>{line}</div>)}
+              </div>
+              {/* Floating hearts */}
+              <FloatingHearts visible={showHearts} />
+              {/* Hand animation */}
+              {caresseAnim && (
+                <div style={{
+                  position: 'absolute', right: '-10px', top: '30%',
+                  fontSize: '1.6rem', animation: 'tama-hand-pet .6s ease-in-out',
+                }}>
+                  🤚
+                </div>
+              )}
             </div>
 
             {/* Stage + mood */}
@@ -269,10 +259,8 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
               </div>
               <div style={{ fontSize: '.78rem', color: 'var(--text2)', lineHeight: 1.5, padding: '0 .5rem' }}>{stageInfo?.desc}</div>
             </div>
-            {!isDead && (
-              <div style={{ marginTop: '.5rem', fontSize: '.75rem', color: 'var(--text3)' }}>
-                {mood === 'happy' && '😊 Content'}{mood === 'neutral' && '😐 Neutre'}{mood === 'sad' && '😔 Malheureux'}{mood === 'dying' && '😰 En danger !'}
-              </div>
+            {moodLabel && (
+              <div style={{ marginTop: '.5rem', fontSize: '.75rem', color: 'var(--text3)' }}>{moodLabel}</div>
             )}
           </div>
 
@@ -298,20 +286,29 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.6rem', marginBottom: '1.2rem' }}>
-              <button className="btn btn-outline" disabled={loading === 'feed' || feedCd > 0} onClick={() => doAction(feedTamagotchi, 'feed')}
+              {/* Nourrir */}
+              <button className="btn btn-outline" disabled={loading === 'feed' || feedCd > 0} onClick={() => feedCd <= 0 && setShowFeedGame(true)}
                 style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.2rem', padding: '.7rem' }}>
                 <span style={{ fontSize: '1.4rem' }}>🥩</span>
                 <span style={{ fontSize: '.75rem' }}>Nourrir</span>
                 {feedCd > 0 && <span style={{ fontSize: '.65rem', color: 'var(--text3)' }}>{fmtCooldown(feedCd)}</span>}
               </button>
 
-              <button className="btn btn-outline" disabled={playCd > 0} onClick={() => { if (playCd <= 0) setShowGame(true) }}
+              {/* Jouer */}
+              <button className="btn btn-outline" disabled={loading === 'play'} onClick={() => setShowPlayGame(true)}
                 style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.2rem', padding: '.7rem' }}>
                 <span style={{ fontSize: '1.4rem' }}>🎮</span>
                 <span style={{ fontSize: '.75rem' }}>Jouer</span>
-                {playCd > 0 && <span style={{ fontSize: '.65rem', color: 'var(--text3)' }}>{fmtCooldown(playCd)}</span>}
               </button>
 
+              {/* Caresser */}
+              <button className="btn btn-outline" disabled={loading === 'caresse'} onClick={handleCaresse}
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.2rem', padding: '.7rem' }}>
+                <span style={{ fontSize: '1.4rem' }}>🤚</span>
+                <span style={{ fontSize: '.75rem' }}>Caresser</span>
+              </button>
+
+              {/* Soigner */}
               {pet.health < 80 && (
                 <button className="btn btn-outline" disabled={loading === 'heal' || healCd > 0} onClick={() => doAction(healTamagotchi, 'heal')}
                   style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.2rem', padding: '.7rem' }}>
@@ -341,10 +338,28 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
 
           {/* Info */}
           <div style={{ padding: '.75rem 1rem', borderRadius: 'var(--r)', background: 'rgba(255,255,255,.02)', border: '1px solid var(--border2)', fontSize: '.72rem', color: 'var(--text3)', lineHeight: 1.7 }}>
-            💡 Nourris-le toutes les ~12h, joue avec lui toutes les ~12h. S&apos;il est trop affamé ou malheureux, sa santé diminue.
+            💡 Nourris-le toutes les ~24h via le mini-jeu. Tu peux jouer avec lui et le caresser à volonté. S&apos;il est trop affamé ou malheureux, sa santé diminue.
           </div>
         </>
       )}
+
+      <style>{`
+        @keyframes tama-heart-float {
+          0%   { opacity: 0; transform: translateY(0) scale(.6); }
+          20%  { opacity: 1; transform: translateY(-10px) scale(1); }
+          100% { opacity: 0; transform: translateY(-60px) scale(.8); }
+        }
+        @keyframes tama-hand-pet {
+          0%   { transform: translateX(40px) rotate(-20deg); opacity: 0; }
+          30%  { transform: translateX(0px) rotate(10deg); opacity: 1; }
+          60%  { transform: translateX(-8px) rotate(-5deg); opacity: 1; }
+          100% { transform: translateX(40px) rotate(-20deg); opacity: 0; }
+        }
+        @keyframes tama-pop-in {
+          0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+          100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+      `}</style>
     </div>
   )
 }

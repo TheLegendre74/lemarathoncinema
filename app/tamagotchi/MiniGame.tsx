@@ -14,6 +14,7 @@ interface Props {
   stage: string
   onFinish: (score: number) => void
   onClose: () => void
+  feedMode?: boolean
 }
 
 const GAME_DURATION = 20
@@ -24,7 +25,7 @@ const ALIEN_ICON: Record<string, string> = {
   xenomorph:    '👾',
 }
 
-export default function MiniGame({ stage, onFinish, onClose }: Props) {
+export default function MiniGame({ stage, onFinish, onClose, feedMode = false }: Props) {
   const [phase, setPhase]     = useState<'countdown' | 'playing' | 'done'>('countdown')
   const [countdown, setCountdown] = useState(3)
   const [timeLeft, setTimeLeft]   = useState(GAME_DURATION)
@@ -144,7 +145,10 @@ export default function MiniGame({ stage, onFinish, onClose }: Props) {
             {msg}
           </div>
           <button className="btn btn-gold" onClick={() => onFinish(s)} style={{ width: '100%' }}>
-            Continuer +{Math.max(10, Math.min(40, Math.round(s * 4)))} humeur
+            {feedMode
+              ? `Nourrir +${Math.min(60, Math.max(20, 10 + Math.round(s * 3)))} satiété`
+              : `Continuer +${Math.max(10, Math.min(40, Math.round(s * 4)))} humeur`
+            }
           </button>
         </div>
       </div>
