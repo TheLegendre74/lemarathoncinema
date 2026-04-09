@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { addForumPost, deleteForumPost } from '@/lib/actions'
+import { addForumPost, deleteForumPost, deleteForumTopic, updateForumTopic } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
+import { getActiveBadge } from '@/lib/config'
 import type { Profile } from '@/lib/supabase/types'
 
 interface Props {
@@ -16,8 +18,19 @@ export default function ForumTopicClient({ topic, posts: initialPosts, profile }
   const [posts, setPosts] = useState(initialPosts)
   const [content, setContent] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // Edit topic state
+  const [editing, setEditing] = useState(false)
+  const [editTitle, setEditTitle] = useState(topic.title)
+  const [editDesc, setEditDesc] = useState(topic.description ?? '')
+  const [editLoading, setEditLoading] = useState(false)
+
   const { addToast } = useToast()
   const bottomRef = useRef<HTMLDivElement>(null)
+  const router = useRouter()
+
+  const isCreator = profile?.id === topic.created_by
+  const isAdmin = profile?.is_admin
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -29,12 +42,11 @@ export default function ForumTopicClient({ topic, posts: initialPosts, profile }
     const text = content.trim()
     setLoading(true)
 
-    // Optimistic update
     const tempId = `opt-${Date.now()}`
     setPosts(prev => [...prev, {
       id: tempId, topic_id: topic.id, user_id: profile.id,
       content: text, created_at: new Date().toISOString(),
-      profiles: { pseudo: profile.pseudo, avatar_url: (profile as any).avatar_url ?? null },
+      profiles: { pseudo: profile.pseudo, avatar_url: (profile as any).avatar_url ?? null, exp: profile.exp, active_badge: (profile as any).active_badge ?? null },
     }])
     setContent('')
 
@@ -45,28 +57,100 @@ export default function ForumTopicClient({ topic, posts: initialPosts, profile }
       setPosts(prev => prev.filter(p => p.id !== tempId))
     } else if (res.data) {
       setPosts(prev => prev.map(p => p.id === tempId
-        ? { ...res.data, profiles: { pseudo: profile.pseudo, avatar_url: (profile as any).avatar_url ?? null } }
+        ? { ...res.data, profiles: { pseudo: profile.pseudo, avatar_url: (profile as any).avatar_url ?? null, exp: profile.exp, active_badge: (profile as any).active_badge ?? null } }
         : p
       ))
     }
   }
 
-  async function handleDelete(postId: string) {
+  async function handleDeletePost(postId: string) {
     setPosts(prev => prev.filter(p => p.id !== postId))
     const res = await deleteForumPost(postId)
-    if (res.error) {
-      addToast(res.error, 'error')
-      // Could restore but keeping it simple
-    }
+    if (res.error) addToast(res.error, 'error')
+  }
+
+  async function handleDeleteTopic() {
+    if (!confirm('Supprimer ce topic ? Tous les messages seront perdus.')) return
+    const res = await deleteForumTopic(topic.id)
+    if (res.error) { addToast(res.error, 'error'); return }
+    router.push('/forum')
+  }
+
+  async function handleEditSave() {
+    if (!editTitle.trim()) return
+    setEditLoading(true)
+    const res = await updateForumTopic(topic.id, editTitle, editDesc)
+    setEditLoading(false)
+    if (res.error) { addToast(res.error, 'error'); return }
+    setEditing(false)
+    addToast('Topic mis à jour', 'success')
+    router.refresh()
   }
 
   return (
     <div>
+      {/* Header */}
       <div style={{ marginBottom: '1.5rem' }}>
         <Link href="/forum" style={{ fontSize: '.78rem', color: 'var(--text3)', textDecoration: 'none' }}>← Forum</Link>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', lineHeight: 1, marginTop: '.5rem' }}>{topic.title}</div>
-        {topic.description && <div style={{ color: 'var(--text2)', fontSize: '.83rem', marginTop: '.35rem' }}>{topic.description}</div>}
-        <div style={{ fontSize: '.73rem', color: 'var(--text3)', marginTop: '.3rem' }}>{posts.length} message{posts.length !== 1 ? 's' : ''}</div>
+
+        {editing ? (
+          <div style={{ marginTop: '.5rem', display: 'flex', flexDirection: 'column', gap: '.6rem' }}>
+            <input
+              value={editTitle}
+              onChange={e => setEditTitle(e.target.value)}
+              maxLength={100}
+              style={{
+                background: 'var(--bg2)', border: '1px solid var(--border2)',
+                borderRadius: 'var(--r)', padding: '.55rem .9rem',
+                color: 'var(--text)', fontFamily: 'var(--font-display)', fontSize: '1.5rem',
+              }}
+            />
+            <textarea
+              value={editDesc}
+              onChange={e => setEditDesc(e.target.value)}
+              maxLength={300}
+              placeholder="Description (optionnelle)…"
+              rows={2}
+              style={{
+                background: 'var(--bg2)', border: '1px solid var(--border2)',
+                borderRadius: 'var(--r)', padding: '.55rem .9rem',
+                color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.85rem', resize: 'vertical',
+              }}
+            />
+            <div style={{ display: 'flex', gap: '.5rem' }}>
+              <button className="btn btn-gold" onClick={handleEditSave} disabled={editLoading || !editTitle.trim()}>
+                {editLoading ? '⏳' : 'Sauvegarder'}
+              </button>
+              <button className="btn btn-outline" onClick={() => { setEditing(false); setEditTitle(topic.title); setEditDesc(topic.description ?? '') }}>
+                Annuler
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', marginTop: '.5rem' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', lineHeight: 1 }}>{topic.title}</div>
+              {topic.description && <div style={{ color: 'var(--text2)', fontSize: '.83rem', marginTop: '.35rem' }}>{topic.description}</div>}
+              <div style={{ fontSize: '.73rem', color: 'var(--text3)', marginTop: '.3rem' }}>{posts.length} message{posts.length !== 1 ? 's' : ''}</div>
+            </div>
+            {(isCreator || isAdmin) && (
+              <div style={{ display: 'flex', gap: '.4rem', flexShrink: 0, marginTop: '.3rem' }}>
+                <button
+                  onClick={() => setEditing(true)}
+                  className="btn btn-outline"
+                  style={{ fontSize: '.75rem', padding: '.35rem .7rem' }}
+                  title="Modifier le topic"
+                >✏️ Modifier</button>
+                <button
+                  onClick={handleDeleteTopic}
+                  className="btn btn-outline"
+                  style={{ fontSize: '.75rem', padding: '.35rem .7rem', borderColor: 'rgba(232,90,90,.4)', color: 'var(--red)' }}
+                  title="Supprimer le topic"
+                >🗑️ Supprimer</button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Posts */}
@@ -79,7 +163,8 @@ export default function ForumTopicClient({ topic, posts: initialPosts, profile }
         )}
         {posts.map((p: any) => {
           const isMe = profile?.id === p.user_id
-          const isAdmin = profile?.is_admin
+          const canDelete = isMe || isAdmin
+          const badge = getActiveBadge(p.profiles?.exp ?? 0, p.profiles?.active_badge ?? null)
           return (
             <div key={p.id} style={{
               background: isMe ? 'rgba(232,196,106,.04)' : 'var(--bg2)',
@@ -100,14 +185,15 @@ export default function ForumTopicClient({ topic, posts: initialPosts, profile }
                 </div>
                 <div style={{ flex: 1 }}>
                   <span style={{ fontSize: '.83rem', fontWeight: 500 }}>{p.profiles?.pseudo ?? 'Inconnu'}</span>
+                  {badge && <span style={{ marginLeft: '.4rem', fontSize: '.75rem' }}>{badge.icon}</span>}
                   {isMe && <span style={{ fontSize: '.63rem', color: 'var(--gold)', marginLeft: '.4rem' }}>(toi)</span>}
                 </div>
                 <span style={{ fontSize: '.68rem', color: 'var(--text3)' }}>
                   {new Date(p.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                 </span>
-                {(isMe || isAdmin) && (
+                {canDelete && (
                   <button
-                    onClick={() => handleDelete(p.id)}
+                    onClick={() => handleDeletePost(p.id)}
                     style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: '.75rem', padding: '2px 6px' }}
                     title="Supprimer"
                   >✕</button>

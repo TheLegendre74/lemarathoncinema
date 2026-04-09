@@ -1682,11 +1682,28 @@ export async function deleteForumTopic(topicId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non connecté' }
+  const { data: topic } = await (supabase as any).from('forum_topics').select('created_by, is_social').eq('id', topicId).single()
+  if (!topic) return { error: 'Topic introuvable' }
+  if (topic.is_social) return { error: 'Le Salon ne peut pas être supprimé' }
   const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
-  if (!profile?.is_admin) return { error: 'Réservé aux admins' }
-  const { data: topic } = await (supabase as any).from('forum_topics').select('is_social').eq('id', topicId).single()
-  if (topic?.is_social) return { error: 'Le Salon ne peut pas être supprimé' }
+  if (topic.created_by !== user.id && !profile?.is_admin) return { error: 'Permission refusée' }
   await (supabase as any).from('forum_topics').delete().eq('id', topicId)
+  revalidatePath('/forum')
+  return { error: null }
+}
+
+export async function updateForumTopic(topicId: string, title: string, description: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  const { data: topic } = await (supabase as any).from('forum_topics').select('created_by').eq('id', topicId).single()
+  if (!topic) return { error: 'Topic introuvable' }
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (topic.created_by !== user.id && !profile?.is_admin) return { error: 'Permission refusée' }
+  const sanitized = title.slice(0, 100).trim()
+  if (!sanitized) return { error: 'Titre requis' }
+  await (supabase as any).from('forum_topics').update({ title: sanitized, description: description.slice(0, 300) }).eq('id', topicId)
+  revalidatePath(`/forum/${topicId}`)
   revalidatePath('/forum')
   return { error: null }
 }
