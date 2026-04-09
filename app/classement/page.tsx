@@ -32,11 +32,17 @@ export default async function ClassementPage() {
     )
   }
 
-  const [{ data: ranked }, { data: marathonRanked }, { data: archives }] = await Promise.all([
+  const [{ data: ranked }, { data: marathonRanked }, { data: archives }, { data: activeBadges }] = await Promise.all([
     (supabase as any).rpc('leaderboard', { limit_n: 100 }),
     (supabase as any).rpc('marathon_leaderboard', { limit_n: 100 }),
     (supabase as any).from('season_archives').select('*').order('saison', { ascending: false }).order('rank_global'),
+    supabase.from('profiles').select('id, active_badge'),
   ])
+
+  const activeBadgeMap: Record<string, string | null> = {}
+  ;(activeBadges ?? []).forEach((p: any) => { activeBadgeMap[p.id] = p.active_badge })
+  const rankedWithBadge = (ranked ?? []).map((u: any) => ({ ...u, active_badge: activeBadgeMap[u.id] ?? null }))
+  const marathonWithBadge = (marathonRanked ?? []).map((u: any) => ({ ...u, active_badge: activeBadgeMap[u.id] ?? null }))
 
   // Regrouper les archives par saison
   const archivesBySaison: Record<number, any[]> = {}
@@ -48,8 +54,8 @@ export default async function ClassementPage() {
   return (
     <ClassementClient
       userId={user?.id ?? null}
-      ranked={ranked ?? []}
-      marathonRanked={marathonRanked ?? []}
+      ranked={rankedWithBadge}
+      marathonRanked={marathonWithBadge}
       archivesBySaison={archivesBySaison}
     />
   )

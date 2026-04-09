@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { addPost, deletePost, editPost } from '@/lib/actions'
 import { useToast } from './ToastProvider'
+import { getActiveBadge } from '@/lib/config'
 import type { Post, Profile } from '@/lib/supabase/types'
 
 interface ForumProps {
@@ -457,7 +458,7 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
     const supabase = createClient()
     supabase
       .from('posts')
-      .select('id, topic, user_id, content, created_at, profiles(pseudo)')
+      .select('id, topic, user_id, content, created_at, profiles(pseudo, exp, active_badge)')
       .eq('topic', topic)
       .order('created_at', { ascending: true })
       .then(({ data }) => {
@@ -473,7 +474,7 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts', filter: `topic=eq.${topic}` },
         async (payload) => {
           // Fetch profile then deduplicate smartly
-          const { data: prof } = await supabase.from('profiles').select('pseudo').eq('id', payload.new.user_id).single()
+          const { data: prof } = await supabase.from('profiles').select('pseudo, exp, active_badge').eq('id', payload.new.user_id).single()
           setPosts(prev => {
             // Already present (real id match)
             if (prev.some(p => p.id === payload.new.id)) return prev
@@ -567,6 +568,7 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
               <div className="forum-post-head">
                 <div className="forum-ava">{p.profiles?.pseudo?.slice(0, 2).toUpperCase()}</div>
                 <span style={{ fontSize: '.8rem', fontWeight: 500 }}>{p.profiles?.pseudo}</span>
+                {(() => { const b = getActiveBadge((p.profiles as any)?.exp ?? 0, (p.profiles as any)?.active_badge); return b ? <span className={`badge-pill ${b.cls}`} style={{ fontSize: '.55rem', padding: '1px 6px', flexShrink: 0 }}>{b.icon} {b.label}</span> : null })()}
                 <span style={{ fontSize: '.67rem', color: 'var(--text3)', marginLeft: 'auto' }}>
                   {new Date(p.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                 </span>

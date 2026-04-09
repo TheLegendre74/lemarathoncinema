@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { signOut } from '@/lib/actions'
-import { levelFromExp, getBadge, CONFIG } from '@/lib/config'
+import { levelFromExp, getActiveBadge, CONFIG } from '@/lib/config'
 import type { Profile } from '@/lib/supabase/types'
 
 interface SidebarProps { profile: Profile | null }
@@ -12,7 +12,7 @@ export default function Sidebar({ profile }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const level = profile ? levelFromExp(profile.exp) : null
-  const badge = profile ? getBadge(profile.exp) : null
+  const badge = profile ? getActiveBadge(profile.exp, (profile as any).active_badge) : null
 
   const nav = [
     { href: '/',              icon: '🏠', label: 'Accueil',            short: 'Accueil'    },

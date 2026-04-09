@@ -62,6 +62,18 @@ export function getBadge(exp: number): Badge | null {
   return [...BADGES].reverse().find(b => exp >= b.req) ?? null
 }
 
+// Badge à afficher selon active_badge stocké (on fait confiance à la valeur)
+export function getActiveBadge(exp: number, activeBadge: string | null | undefined): { icon: string; label: string; cls: string } | null {
+  if (activeBadge === 'none') return null
+  if (activeBadge) {
+    const special = SPECIAL_BADGES.find(b => b.id === activeBadge)
+    if (special) return special
+    const expBadge = BADGES.find(b => b.id === activeBadge)
+    if (expBadge && exp >= expBadge.req) return expBadge
+  }
+  return getBadge(exp)
+}
+
 export function getAllBadges(exp: number) {
   return BADGES.map(b => ({ ...b, unlocked: exp >= b.req }))
 }

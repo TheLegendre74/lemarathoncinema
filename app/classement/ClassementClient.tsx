@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { getBadge } from '@/lib/config'
+import { getActiveBadge } from '@/lib/config'
 
 interface RankedUser {
   id: string
@@ -10,6 +10,7 @@ interface RankedUser {
   saison_exp?: number
   is_admin: boolean
   avatar_url: string | null
+  active_badge?: string | null
   watch_count?: number
   vote_count?: number
   marathon_films?: number
@@ -53,7 +54,7 @@ function Avatar({ user, isMe, size = 34 }: { user: { pseudo: string; avatar_url?
 }
 
 function PlayerRow({ u, i, userId, showMarathon }: { u: RankedUser; i: number; userId: string | null; showMarathon: boolean }) {
-  const badge = getBadge(u.exp)
+  const badge = getActiveBadge(u.exp, u.active_badge)
   const isMe = userId === u.id
   const rankDisplay = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`
   const rankColor = i === 0 ? '#ffd700' : i === 1 ? '#c0c0c0' : i === 2 ? '#cd7f32' : 'var(--text3)'

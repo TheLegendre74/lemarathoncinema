@@ -2,15 +2,16 @@ import { createClient } from '@/lib/supabase/server'
 import Image from 'next/image'
 import type { Film } from '@/lib/supabase/types'
 
-export const revalidate = 60
+export const revalidate = 0
 
 export default async function NotesPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const [{ data: films }, { data: allRatings }, { data: eggs }] = await Promise.all([
+  const [{ data: films }, { data: allRatings }, { data: allNegRatings }, { data: eggs }] = await Promise.all([
     supabase.from('films').select('*').eq('saison', 1).order('titre'),
     supabase.from('ratings').select('film_id, score'),
+    (supabase as any).from('negative_ratings').select('film_id, score'),
     user ? supabase.from('discovered_eggs').select('egg_id').eq('user_id', user.id) : Promise.resolve({ data: [] }),
   ])
   const hasRageuxEgg = (eggs ?? []).some((e: any) => e.egg_id === 'rageux')
@@ -20,6 +21,12 @@ export default async function NotesPage() {
   allRatings?.forEach((r: { film_id: number; score: number }) => {
     if (!ratingMap[r.film_id]) ratingMap[r.film_id] = []
     ratingMap[r.film_id].push(r.score)
+  })
+
+  const negRatingMap: Record<number, number[]> = {}
+  ;(allNegRatings ?? []).forEach((r: { film_id: number; score: number }) => {
+    if (!negRatingMap[r.film_id]) negRatingMap[r.film_id] = []
+    negRatingMap[r.film_id].push(r.score)
   })
 
   const ranked = Object.entries(ratingMap)
@@ -32,7 +39,15 @@ export default async function NotesPage() {
     .sort((a, b) => b.avg - a.avg || b.count - a.count)
 
   const worst = hasRageuxEgg
-    ? [...ranked].sort((a, b) => a.avg - b.avg || b.count - a.count).slice(0, 10)
+    ? Object.entries(negRatingMap)
+        .map(([filmId, scores]) => ({
+          film: filmMap[parseInt(filmId)],
+          avg: scores.reduce((a, b) => a + b, 0) / scores.length,
+          count: scores.length,
+        }))
+        .filter(x => x.film)
+        .sort((a, b) => b.avg - a.avg || b.count - a.count)
+        .slice(0, 10)
     : []
 
   return (
