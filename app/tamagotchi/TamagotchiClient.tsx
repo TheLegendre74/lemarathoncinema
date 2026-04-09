@@ -7,6 +7,7 @@ import { useToast } from '@/components/ToastProvider'
 import { useWidgetEnabled } from '@/components/TamagotchiWidget'
 import { TAMA_FRAMES, STAGE_COLORS, getTamaFrameKey } from '@/lib/tamaFrames'
 import { getOwnedAccessories, type Accessory } from '@/lib/tamaAccessories'
+import { adminEvolveAlien, adminAgeAlien, adminKillAlien } from '@/lib/actions'
 import MiniGame from './MiniGame'
 import GameSelector from './GameSelector'
 
@@ -97,9 +98,10 @@ interface Props {
   evolved: boolean
   evolvedTo: string | null
   isNew: boolean
+  isAdmin?: boolean
 }
 
-export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew }: Props) {
+export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew, isAdmin = false }: Props) {
   const [pet, setPet]                   = useState(initialPet)
   const [tick, setTick]                 = useState(0)
   const [now, setNow]                   = useState(Date.now())
@@ -355,6 +357,50 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
               </div>
             </label>
           </div>
+
+          {/* Admin panel */}
+          {isAdmin && (
+            <div style={{ padding: '.75rem 1rem', borderRadius: 'var(--r)', background: 'rgba(239,68,68,.05)', border: '1px solid rgba(239,68,68,.25)', marginBottom: '1.2rem' }}>
+              <div style={{ fontSize: '.68rem', color: '#ef4444', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: '.6rem' }}>
+                ⚡ Admin
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '.4rem' }}>
+                <button className="btn btn-outline" style={{ fontSize: '.72rem', padding: '.45rem .4rem', borderColor: '#a78bfa44', color: '#a78bfa' }}
+                  disabled={loading === 'adm_evolve'}
+                  onClick={async () => {
+                    setLoading('adm_evolve')
+                    const r = await adminEvolveAlien()
+                    setLoading(null)
+                    if (r.error) { addToast(r.error, 'error'); return }
+                    if (r.data) { setPet(r.data); addToast(`🔄 → ${r.data.stage}`, 'success') }
+                  }}>
+                  🔄 Évoluer
+                </button>
+                <button className="btn btn-outline" style={{ fontSize: '.72rem', padding: '.45rem .4rem', borderColor: '#f9731644', color: '#f97316' }}
+                  disabled={loading === 'adm_age'}
+                  onClick={async () => {
+                    setLoading('adm_age')
+                    const r = await adminAgeAlien()
+                    setLoading(null)
+                    if (r.error) { addToast(r.error, 'error'); return }
+                    if (r.data) { setPet(r.data); addToast(`⏩ +25h (${r.data.age_hours}h)`, 'success') }
+                  }}>
+                  ⏩ Vieillir
+                </button>
+                <button className="btn btn-outline" style={{ fontSize: '.72rem', padding: '.45rem .4rem', borderColor: '#ef444444', color: '#ef4444' }}
+                  disabled={loading === 'adm_kill'}
+                  onClick={async () => {
+                    setLoading('adm_kill')
+                    const r = await adminKillAlien()
+                    setLoading(null)
+                    if (r.error) { addToast(r.error, 'error'); return }
+                    if (r.data) { setPet(r.data); addToast('💀 Tué.', 'success') }
+                  }}>
+                  💀 Tuer
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Info */}
           <div style={{ padding: '.75rem 1rem', borderRadius: 'var(--r)', background: 'rgba(255,255,255,.02)', border: '1px solid var(--border2)', fontSize: '.72rem', color: 'var(--text3)', lineHeight: 1.7 }}>
