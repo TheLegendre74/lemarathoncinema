@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import ForumTopicModal from './ForumTopicModal'
 import type { Profile } from '@/lib/supabase/types'
@@ -14,47 +14,17 @@ interface Props {
 }
 
 const CHATANGO_URL = 'https://lemarathoncinema.chatango.com'
+// URL iframe Chatango : format //st.chatango.com/project/{w}/{h}/{handle}/
+const CHATANGO_IFRAME = '//st.chatango.com/project/100/100/lemarathoncinema/'
 
 function ChatangoEmbed() {
-  const ref = useRef<HTMLDivElement>(null)
-  // Défaut false : le div desktop est rendu dès le premier cycle → script peut s'injecter
   const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
     setIsMobile(window.innerWidth < 768)
   }, [])
 
-  // Injecte le script Chatango sur desktop
-  useEffect(() => {
-    if (isMobile) return
-    const container = ref.current
-    if (!container) return
-    // Nettoie si déjà injecté (StrictMode / re-mount)
-    const existing = document.getElementById('chatango-emb-script')
-    if (existing) existing.remove()
-    container.innerHTML = ''
-    const s = document.createElement('script')
-    s.id = 'chatango-emb-script'
-    s.setAttribute('data-cfasync', 'false')
-    s.async = true
-    // La style width/height sur le script lui-même est lue par emb.js pour dimensionner l'embed
-    s.setAttribute('style', 'width:100%;height:500px')
-    // textContent = config JSON lue par emb.js après chargement async via getElementById
-    s.textContent = JSON.stringify({
-      handle: 'lemarathoncinema',
-      arch: 'js',
-      styles: {
-        a: 'ff9900', b: 100, c: '000000', d: '000000',
-        k: 'ff9900', l: 'ff9900', m: 'ff9900',
-        p: '13.14', q: 'ff9900', r: 100, cnrs: '0.35', fwtickm: 1,
-      },
-    })
-    s.src = '//st.chatango.com/js/gz/emb.js'
-    container.appendChild(s)
-  }, [isMobile])
-
-  // Sur mobile : l'embed génère une URL interne qui retourne 404
-  // → bouton d'accès direct au chat Chatango mobile
+  // Mobile : bouton vers l'URL directe
   if (isMobile) {
     return (
       <div style={{
@@ -91,12 +61,14 @@ function ChatangoEmbed() {
     )
   }
 
-  // Desktop : conteneur où le script Chatango sera injecté
+  // Desktop : iframe directe (pas de script dynamique)
   return (
-    <div
-      ref={ref}
-      style={{ width: '100%', position: 'relative' }}
-      className="chatango-frame"
+    /* eslint-disable-next-line react/iframe-missing-sandbox */
+    <iframe
+      src={CHATANGO_IFRAME}
+      style={{ width: '100%', height: 500, border: 'none', display: 'block' }}
+      allowTransparency={true}
+      title="Le Salon — Chat en direct"
     />
   )
 }
