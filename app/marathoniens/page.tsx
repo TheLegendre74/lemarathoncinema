@@ -34,7 +34,7 @@ export default async function MarathoniensPage() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))', gap: '1rem' }}>
         {(profiles ?? []).map((p: any, i: number) => {
           const level = levelFromExp(p.exp)
           const badge = getActiveBadge(p.exp, p.active_badge)

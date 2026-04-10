@@ -50,7 +50,10 @@ function Avatar({ profile, size = 32 }: { profile: Profile | null; size?: number
   )
 }
 
-export default function MessagesSection({ myId, conversations: initialConvs, initialWithId, initialMessages, initialOtherProfile, blockedIds: initialBlockedIds }: Props) {
+export default function MessagesSection({
+  myId, conversations: initialConvs, initialWithId,
+  initialMessages, initialOtherProfile, blockedIds: initialBlockedIds,
+}: Props) {
   const router = useRouter()
   const [convs, setConvs] = useState<Conversation[]>(initialConvs)
   const [activeId, setActiveId] = useState<string | null>(initialWithId ?? null)
@@ -60,18 +63,28 @@ export default function MessagesSection({ myId, conversations: initialConvs, ini
   const [pending, startTransition] = useTransition()
   const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set(initialBlockedIds))
   const [confirmBlock, setConfirmBlock] = useState(false)
+  // Mobile: 'list' = show conversation list, 'thread' = show open conversation
+  const [mobileView, setMobileView] = useState<'list' | 'thread'>(initialWithId ? 'thread' : 'list')
+  const [isMobile, setIsMobile] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
-  // Scroll to bottom when messages change
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
+  // Scroll to bottom when messages change or thread opens
+  useEffect(() => {
+    if (activeId) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, activeId])
 
   // Mark as read when opening a conversation
   useEffect(() => {
     if (!activeId) return
     markMessagesAsRead(activeId).then(() => {
-      // Update unread count locally
       setConvs(prev => prev.map(c => c.otherId === activeId ? { ...c, unread: 0 } : c))
     })
   }, [activeId])
@@ -80,8 +93,15 @@ export default function MessagesSection({ myId, conversations: initialConvs, ini
     setActiveId(otherId)
     setOtherProfile(profile)
     setConfirmBlock(false)
-    // Navigate with ?with= to load messages server-side on next render
+    setMobileView('thread')
     router.push(`/profil?with=${otherId}`, { scroll: false })
+  }
+
+  function goBackToList() {
+    setActiveId(null)
+    setMessages([])
+    setMobileView('list')
+    router.push('/profil', { scroll: false })
   }
 
   function handleSend() {
@@ -90,11 +110,7 @@ export default function MessagesSection({ myId, conversations: initialConvs, ini
     setDraft('')
     startTransition(async () => {
       const res = await sendMessage(activeId, content)
-      if (res?.error) {
-        alert(res.error)
-        return
-      }
-      // Optimistically add message
+      if (res?.error) { alert(res.error); return }
       const newMsg: Message = {
         id: Date.now().toString(),
         sender_id: myId,
@@ -104,12 +120,9 @@ export default function MessagesSection({ myId, conversations: initialConvs, ini
         created_at: new Date().toISOString(),
       }
       setMessages(prev => [...prev, newMsg])
-      // Update conversation list
       setConvs(prev => {
         const existing = prev.find(c => c.otherId === activeId)
-        if (existing) {
-          return [{ ...existing, lastMessage: newMsg }, ...prev.filter(c => c.otherId !== activeId)]
-        }
+        if (existing) return [{ ...existing, lastMessage: newMsg }, ...prev.filter(c => c.otherId !== activeId)]
         return [{ otherId: activeId, lastMessage: newMsg, unread: 0, profile: otherProfile }, ...prev]
       })
     })
@@ -128,9 +141,7 @@ export default function MessagesSection({ myId, conversations: initialConvs, ini
       await blockUser(activeId)
       setBlockedIds(prev => new Set([...prev, activeId]))
       setConfirmBlock(false)
-      setActiveId(null)
-      setMessages([])
-      router.push('/profil', { scroll: false })
+      goBackToList()
     })
   }
 
@@ -143,141 +154,190 @@ export default function MessagesSection({ myId, conversations: initialConvs, ini
 
   const isBlocked = activeId ? blockedIds.has(activeId) : false
 
+  // ── CONVERSATION LIST ───────────────────────────────────────
+  const ConvList = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '.3rem' }}>
+      {convs.length === 0 ? (
+        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '2rem', textAlign: 'center', color: 'var(--text3)', fontSize: '.83rem' }}>
+          Aucun message. Va sur la page <strong>Marathoniens</strong> pour envoyer un message à quelqu'un !
+        </div>
+      ) : (
+        convs.map(c => (
+          <button
+            key={c.otherId}
+            onClick={() => openConversation(c.otherId, c.profile)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '.75rem',
+              background: activeId === c.otherId ? 'rgba(232,196,106,.08)' : 'var(--bg2)',
+              border: `1px solid ${activeId === c.otherId ? 'rgba(232,196,106,.35)' : 'var(--border)'}`,
+              borderRadius: 'var(--r)', padding: '.75rem 1rem', cursor: 'pointer', textAlign: 'left', width: '100%',
+            }}
+          >
+            <Avatar profile={c.profile} size={36} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '.88rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {c.profile?.pseudo ?? '?'}
+              </div>
+              <div style={{ fontSize: '.72rem', color: 'var(--text3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '.15rem' }}>
+                {c.lastMessage.content}
+              </div>
+            </div>
+            {c.unread > 0 && (
+              <span style={{ background: 'var(--red, #e55)', color: '#fff', borderRadius: 99, fontSize: '.6rem', fontWeight: 700, padding: '2px 7px', flexShrink: 0 }}>
+                {c.unread}
+              </span>
+            )}
+            <span style={{ color: 'var(--text3)', fontSize: '1rem', flexShrink: 0 }}>›</span>
+          </button>
+        ))
+      )}
+    </div>
+  )
+
+  // ── THREAD VIEW ─────────────────────────────────────────────
+  const ThreadView = activeId ? (
+    <div style={{
+      background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)',
+      display: 'flex', flexDirection: 'column',
+      // On mobile: fill remaining screen space; on desktop: fixed height
+      height: isMobile ? 'calc(100dvh - 13rem)' : 420,
+      minHeight: 320,
+    }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem', padding: '.75rem 1rem', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+        {/* Back button (mobile only) */}
+        {isMobile && (
+          <button
+            onClick={goBackToList}
+            style={{ background: 'none', border: 'none', color: 'var(--text2)', fontSize: '1.3rem', cursor: 'pointer', padding: '0 .25rem', lineHeight: 1, flexShrink: 0 }}
+          >
+            ‹
+          </button>
+        )}
+        <Avatar profile={otherProfile} size={30} />
+        <span style={{ fontWeight: 600, fontSize: '.9rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {otherProfile?.pseudo ?? '?'}
+        </span>
+        {/* Block button */}
+        {!confirmBlock ? (
+          <button
+            onClick={() => setConfirmBlock(true)}
+            style={{ fontSize: '.62rem', color: 'var(--text3)', background: 'none', border: '1px solid var(--border)', borderRadius: 99, padding: '3px 9px', cursor: 'pointer', flexShrink: 0 }}
+          >
+            {isBlocked ? '✓ Bloqué' : 'Bloquer'}
+          </button>
+        ) : (
+          <div style={{ display: 'flex', gap: '.35rem', alignItems: 'center', flexShrink: 0 }}>
+            <span style={{ fontSize: '.62rem', color: 'var(--text3)' }}>Bloquer ?</span>
+            <button onClick={handleBlock} style={{ fontSize: '.62rem', padding: '3px 8px', background: 'none', border: '1px solid var(--red, #e55)', borderRadius: 99, color: 'var(--red, #e55)', cursor: 'pointer' }}>Oui</button>
+            <button onClick={() => setConfirmBlock(false)} style={{ fontSize: '.62rem', padding: '3px 8px', background: 'none', border: '1px solid var(--border)', borderRadius: 99, color: 'var(--text3)', cursor: 'pointer' }}>Non</button>
+          </div>
+        )}
+      </div>
+
+      {/* Messages scroll area */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '.75rem 1rem', display: 'flex', flexDirection: 'column', gap: '.5rem', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+        {messages.length === 0 && (
+          <div style={{ textAlign: 'center', color: 'var(--text3)', fontSize: '.78rem', marginTop: '2rem' }}>
+            Début de la conversation
+          </div>
+        )}
+        {messages.map(m => {
+          const isMe = m.sender_id === myId
+          return (
+            <div key={m.id} style={{ display: 'flex', flexDirection: isMe ? 'row-reverse' : 'row', gap: '.4rem', alignItems: 'flex-end' }}>
+              <div style={{
+                maxWidth: '78%',
+                background: isMe ? 'rgba(232,196,106,.13)' : 'var(--bg3)',
+                border: `1px solid ${isMe ? 'rgba(232,196,106,.28)' : 'var(--border)'}`,
+                borderRadius: isMe ? '14px 14px 3px 14px' : '14px 14px 14px 3px',
+                padding: '.5rem .8rem', fontSize: '.85rem', lineHeight: 1.5,
+                wordBreak: 'break-word',
+              }}>
+                {m.content}
+                <div style={{ fontSize: '.58rem', color: 'var(--text3)', marginTop: '.2rem', textAlign: isMe ? 'right' : 'left', display: 'flex', alignItems: 'center', justifyContent: isMe ? 'flex-end' : 'flex-start', gap: '.3rem' }}>
+                  <span>{new Date(m.created_at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+                  {isMe && (
+                    <button
+                      onClick={() => handleDelete(m.id)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: '.62rem', padding: 0, lineHeight: 1 }}
+                    >🗑</button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )
+        })}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input bar */}
+      {isBlocked ? (
+        <div style={{ padding: '.75rem 1rem', borderTop: '1px solid var(--border)', textAlign: 'center', fontSize: '.78rem', color: 'var(--text3)', flexShrink: 0 }}>
+          Tu as bloqué cet utilisateur.
+          <button onClick={() => handleUnblock(activeId)} style={{ marginLeft: '.5rem', background: 'none', border: 'none', color: 'var(--gold)', cursor: 'pointer', fontSize: '.78rem' }}>Débloquer</button>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', gap: '.5rem', padding: '.6rem .75rem', borderTop: '1px solid var(--border)', flexShrink: 0, alignItems: 'center' }}>
+          <input
+            ref={inputRef}
+            value={draft}
+            onChange={e => setDraft(e.target.value.slice(0, 1000))}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
+            placeholder="Écris un message..."
+            style={{
+              flex: 1, background: 'var(--bg3)', border: '1px solid var(--border2)',
+              borderRadius: 99, padding: '.55rem 1rem',
+              color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.85rem',
+              outline: 'none', minWidth: 0,
+            }}
+          />
+          <button
+            onClick={handleSend}
+            disabled={pending || !draft.trim()}
+            style={{
+              width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
+              background: draft.trim() ? 'var(--gold)' : 'var(--bg3)',
+              border: 'none', cursor: draft.trim() ? 'pointer' : 'default',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '1.1rem', transition: 'background .15s',
+            }}
+          >
+            ↑
+          </button>
+        </div>
+      )}
+    </div>
+  ) : null
+
+  // ── EMPTY STATE ─────────────────────────────────────────────
+  const EmptyThread = (
+    <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '3rem 2rem', textAlign: 'center', color: 'var(--text3)', fontSize: '.83rem' }}>
+      Sélectionne une conversation
+    </div>
+  )
+
   return (
     <div style={{ marginBottom: '2rem' }}>
       <div className="section-title">Messages privés</div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: convs.length ? '220px 1fr' : '1fr', gap: '1rem', minHeight: 300 }}>
-
-        {/* Liste des conversations */}
-        {convs.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '.3rem' }}>
-            {convs.map(c => (
-              <button
-                key={c.otherId}
-                onClick={() => openConversation(c.otherId, c.profile)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '.6rem',
-                  background: activeId === c.otherId ? 'rgba(232,196,106,.08)' : 'var(--bg2)',
-                  border: `1px solid ${activeId === c.otherId ? 'rgba(232,196,106,.35)' : 'var(--border)'}`,
-                  borderRadius: 'var(--r)', padding: '.6rem .8rem', cursor: 'pointer', textAlign: 'left', width: '100%',
-                }}
-              >
-                <Avatar profile={c.profile} size={30} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '.82rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {c.profile?.pseudo ?? '?'}
-                  </div>
-                  <div style={{ fontSize: '.68rem', color: 'var(--text3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {c.lastMessage.content}
-                  </div>
-                </div>
-                {c.unread > 0 && (
-                  <span style={{ background: 'var(--red, #e55)', color: '#fff', borderRadius: 99, fontSize: '.55rem', fontWeight: 700, padding: '1px 6px', flexShrink: 0 }}>
-                    {c.unread}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Zone de conversation */}
+      {/* ── MOBILE: single-view navigation ── */}
+      {isMobile ? (
         <div>
-          {!activeId ? (
-            <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '2rem', textAlign: 'center', color: 'var(--text3)', fontSize: '.83rem' }}>
-              {convs.length === 0
-                ? 'Aucun message. Va sur la page Marathoniens pour envoyer un message à quelqu\'un !'
-                : 'Sélectionne une conversation'
-              }
-            </div>
-          ) : (
-            <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', display: 'flex', flexDirection: 'column', height: 420 }}>
-              {/* Header conversation */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '.7rem', padding: '.8rem 1rem', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-                <Avatar profile={otherProfile} size={32} />
-                <span style={{ fontWeight: 500, fontSize: '.9rem', flex: 1 }}>{otherProfile?.pseudo ?? '?'}</span>
-                {!confirmBlock ? (
-                  <button
-                    onClick={() => setConfirmBlock(true)}
-                    style={{ fontSize: '.65rem', color: 'var(--text3)', background: 'none', border: '1px solid var(--border)', borderRadius: 99, padding: '2px 8px', cursor: 'pointer' }}
-                  >
-                    {isBlocked ? '✓ Bloqué' : 'Bloquer'}
-                  </button>
-                ) : (
-                  <div style={{ display: 'flex', gap: '.4rem', alignItems: 'center' }}>
-                    <span style={{ fontSize: '.65rem', color: 'var(--text3)' }}>Bloquer {otherProfile?.pseudo} ?</span>
-                    <button onClick={handleBlock} className="btn btn-outline" style={{ fontSize: '.65rem', padding: '2px 8px', color: 'var(--red, #e55)', borderColor: 'var(--red, #e55)' }}>Oui</button>
-                    <button onClick={() => setConfirmBlock(false)} className="btn btn-outline" style={{ fontSize: '.65rem', padding: '2px 8px' }}>Non</button>
-                  </div>
-                )}
-              </div>
-
-              {/* Messages */}
-              <div style={{ flex: 1, overflowY: 'auto', padding: '.8rem 1rem', display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
-                {messages.length === 0 && (
-                  <div style={{ textAlign: 'center', color: 'var(--text3)', fontSize: '.78rem', marginTop: '2rem' }}>
-                    Début de la conversation
-                  </div>
-                )}
-                {messages.map(m => {
-                  const isMe = m.sender_id === myId
-                  return (
-                    <div key={m.id} style={{ display: 'flex', flexDirection: isMe ? 'row-reverse' : 'row', gap: '.5rem', alignItems: 'flex-end' }}>
-                      <div style={{
-                        maxWidth: '70%', background: isMe ? 'rgba(232,196,106,.12)' : 'var(--bg3)',
-                        border: `1px solid ${isMe ? 'rgba(232,196,106,.25)' : 'var(--border)'}`,
-                        borderRadius: isMe ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
-                        padding: '.5rem .75rem', fontSize: '.83rem', lineHeight: 1.5,
-                      }}>
-                        {m.content}
-                        <div style={{ fontSize: '.6rem', color: 'var(--text3)', marginTop: '.2rem', textAlign: isMe ? 'right' : 'left' }}>
-                          {new Date(m.created_at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                          {isMe && (
-                            <button
-                              onClick={() => handleDelete(m.id)}
-                              style={{ marginLeft: '.4rem', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: '.6rem', padding: 0 }}
-                            >
-                              🗑
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-                <div ref={bottomRef} />
-              </div>
-
-              {/* Input */}
-              {isBlocked ? (
-                <div style={{ padding: '.75rem 1rem', borderTop: '1px solid var(--border)', textAlign: 'center', fontSize: '.78rem', color: 'var(--text3)' }}>
-                  Tu as bloqué cet utilisateur.
-                  <button onClick={() => handleUnblock(activeId)} style={{ marginLeft: '.5rem', background: 'none', border: 'none', color: 'var(--gold)', cursor: 'pointer', fontSize: '.78rem' }}>Débloquer</button>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', gap: '.5rem', padding: '.6rem .8rem', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
-                  <input
-                    value={draft}
-                    onChange={e => setDraft(e.target.value.slice(0, 1000))}
-                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
-                    placeholder="Écris un message..."
-                    style={{ flex: 1, background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.5rem .8rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.85rem', outline: 'none' }}
-                  />
-                  <button
-                    onClick={handleSend}
-                    disabled={pending || !draft.trim()}
-                    className="btn btn-gold"
-                    style={{ fontSize: '.8rem', padding: '.5rem .9rem', flexShrink: 0 }}
-                  >
-                    Envoyer
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+          {mobileView === 'list' || !activeId ? ConvList : ThreadView}
         </div>
-      </div>
+      ) : (
+        /* ── DESKTOP: 2-column layout ── */
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: convs.length ? '240px 1fr' : '1fr',
+          gap: '1rem',
+          alignItems: 'start',
+        }}>
+          {convs.length > 0 && ConvList}
+          {activeId ? ThreadView : EmptyThread}
+        </div>
+      )}
     </div>
   )
 }
