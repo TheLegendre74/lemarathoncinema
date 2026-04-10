@@ -844,7 +844,9 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
   const [categoryOverrides, setCategoryOverrides] = useState<Record<number, 'normal' | '18plus' | 'strange'>>({})
   const [rattrapageOpen, setRattrapageOpen] = useState<number | null>(null)
   const [rattrapageMap, setRattrapageMap] = useState<Record<number, string>>(initialRattrapageMap ?? {})
-  const watchedSet = useMemo(() => new Set(watchedIds), [watchedIds])
+  const [localWatchedIds, setLocalWatchedIds] = useState<number[]>(watchedIds)
+  useEffect(() => { setLocalWatchedIds(watchedIds) }, [watchedIds])
+  const watchedSet = useMemo(() => new Set(localWatchedIds), [localWatchedIds])
 
   // ── Shark easter egg ───────────────────────────────────────
   const [sharkVisible, setSharkVisible] = useState(false)
@@ -920,6 +922,16 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
     }
     const label = niveau === 'debutant' ? '🎬 Débutant' : niveau === 'intermediaire' ? '🎭 Intermédiaire' : niveau === 'confirme' ? '🏆 Confirmé' : 'retiré du rattrapage'
     addToast(`"${film.titre}" → Rattrapage ${label}`, '📚')
+  }
+
+  async function handleQuickToggle(e: React.MouseEvent, filmId: number, filmTitre: string) {
+    e.stopPropagation()
+    if (!profile) return
+    const wasWatched = watchedSet.has(filmId)
+    setLocalWatchedIds(prev => wasWatched ? prev.filter(id => id !== filmId) : [...prev, filmId])
+    await toggleWatched(filmId, filmTitre)
+    addToast(wasWatched ? `"${filmTitre}" retiré` : `+${CONFIG.EXP_FILM} EXP — "${filmTitre}" vu !`, '🎬')
+    router.refresh()
   }
 
   function pickRandom() {
@@ -1138,6 +1150,27 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                   {film.sousgenre && <span className="chip" style={{ marginLeft: 3, opacity: .7 }}>{film.sousgenre}</span>}
                 </div>
                 {rat && <div style={{ fontSize: '.7rem', color: 'var(--gold)', marginTop: '.25rem' }}>⭐ {rat}/10</div>}
+                {profile && (
+                  <button
+                    onClick={e => handleQuickToggle(e, film.id, film.titre)}
+                    style={{
+                      marginTop: '.45rem',
+                      width: '100%',
+                      background: isWatched ? 'rgba(79,217,138,.12)' : 'rgba(255,255,255,.04)',
+                      border: `1px solid ${isWatched ? 'rgba(79,217,138,.35)' : 'rgba(255,255,255,.1)'}`,
+                      borderRadius: 6,
+                      padding: '.28rem .4rem',
+                      fontSize: '.68rem',
+                      color: isWatched ? 'var(--green)' : 'var(--text2)',
+                      cursor: 'pointer',
+                      fontWeight: isWatched ? 600 : 400,
+                      transition: 'background .15s, border-color .15s',
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    {isWatched ? '✓ Vu' : '+ J\'ai vu'}
+                  </button>
+                )}
               </div>
             </div>
           )
