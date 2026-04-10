@@ -44,6 +44,8 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
   const [showEndlessChoice,setShowEndlessChoice] = useState(false)
   const [showDoorPrompt,   setShowDoorPrompt]   = useState(false)
   const [mobileCtrlsOn,    setMobileCtrlsOn]    = useState(false)
+  const [gameReady,        setGameReady]        = useState(false)
+  const [isMobile,         setIsMobile]         = useState(false)
   const [lbData,           setLbData]           = useState<LBEntry[]>([])
   const [existingLB,       setExistingLB]       = useState<LBEntry[]>([])
   const [nameVal,          setNameVal]          = useState('')
@@ -56,6 +58,10 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
     const upd = () => setUiScale(Math.min(window.innerWidth / GW, window.innerHeight / GH, 1.6))
     upd(); window.addEventListener('resize', upd)
     return () => window.removeEventListener('resize', upd)
+  }, [])
+
+  useEffect(() => {
+    setIsMobile('ontouchstart' in window || navigator.maxTouchPoints > 0)
   }, [])
 
   async function confirmName() {
@@ -707,6 +713,30 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           makeBtn(this, GW / 2, 249, 220, 'OPTIONS', () => this.scene.start('Options'),    0x885522)
           makeBtn(this, GW / 2, 306, 220, 'RETOUR',  () => onDone(),                        0x2a2a3a)
 
+          // ── Mobile D-pad menu navigation ──────────────────────
+          let menuSel = 0
+          const menuActions = [
+            () => this.scene.start('Difficulty'),
+            () => this.scene.start('Options'),
+            () => onDone(),
+          ]
+          const menuYs = [192, 249, 306]
+          const menuCursor = this.add.graphics()
+          const drawMenuCursor = (idx: number) => {
+            menuCursor.clear()
+            menuCursor.lineStyle(2, 0xcc1111, 0.9)
+            menuCursor.strokeRect(GW / 2 - 116, menuYs[idx] - 24, 232, 48)
+          }
+          drawMenuCursor(0)
+          const onMenuNav = (e: Event) => {
+            const dir = (e as CustomEvent).detail
+            if (dir === 'up')        { menuSel = (menuSel - 1 + 3) % 3; drawMenuCursor(menuSel) }
+            else if (dir === 'down') { menuSel = (menuSel + 1) % 3;     drawMenuCursor(menuSel) }
+            else if (dir === 'confirm') menuActions[menuSel]()
+          }
+          window.addEventListener('fc:menu-nav', onMenuNav)
+          this.events.on('shutdown', () => window.removeEventListener('fc:menu-nav', onMenuNav))
+
           this.add.text(GW / 2, GH - 12,
             'UN PROJET MAYHEM  ·  THE FIRST RULE: YOU DO NOT TALK ABOUT FIGHT CLUB', {
             fontFamily: 'monospace', fontSize: '8px', color: 'rgba(90,60,50,0.55)', letterSpacing: 2
@@ -771,6 +801,36 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           })
 
           makeBtn(this, 72, GH - 28, 110, '← RETOUR', () => this.scene.start('Menu'), 0x2a2a3a)
+
+          // ── Mobile D-pad difficulty navigation ───────────────
+          const diffKeys2: Diff[] = ['facile', 'normal', 'jack']
+          const diffXs = [150, 400, 650]
+          let diffSel = 1  // démarre sur NORMAL
+          const diffCursor = this.add.graphics()
+          const drawDiffCursor = (idx: number) => {
+            diffCursor.clear()
+            diffCursor.lineStyle(2, 0xcc1111, 0.9)
+            if (idx < 3) {
+              diffCursor.strokeRect(diffXs[idx] - 126, 112, 252, 256)
+            } else {
+              // Back button
+              diffCursor.strokeRect(17, GH - 44, 110, 32)
+            }
+          }
+          drawDiffCursor(1)
+          const onDiffNav = (e: Event) => {
+            const dir = (e as CustomEvent).detail
+            if (dir === 'left' || dir === 'up')   diffSel = (diffSel - 1 + 4) % 4
+            else if (dir === 'right' || dir === 'down') diffSel = (diffSel + 1) % 4
+            else if (dir === 'confirm') {
+              if (diffSel < 3) this.scene.start('Game', { diff: diffKeys2[diffSel] })
+              else this.scene.start('Menu')
+              return
+            }
+            drawDiffCursor(diffSel)
+          }
+          window.addEventListener('fc:menu-nav', onDiffNav)
+          this.events.on('shutdown', () => window.removeEventListener('fc:menu-nav', onDiffNav))
         }
       }
 
@@ -3128,9 +3188,10 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
         banner: false,
         render: { pixelArt: false, antialias: true },
       })
+      setGameReady(true)
     })()
 
-    return () => { phaserGame?.destroy(true); phaserGame = null }
+    return () => { phaserGame?.destroy(true); phaserGame = null; setGameReady(false) }
   }, [onDone])
 
   const lbDiff = (gameResult.current?.diff ?? 'normal') as Diff
@@ -3283,6 +3344,41 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
               fontFamily: 'monospace', fontSize: '14px', letterSpacing: '3px',
               padding: '14px 30px', cursor: 'pointer',
             }}>QUITTER</button>
+          </div>
+        </div>
+      )}
+
+      {/* Menu D-pad — mobile only, visible during menu screens */}
+      {isMobile && gameReady && !mobileCtrlsOn && !showName && !showLB && !showEndlessChoice && !showDoorPrompt && (
+        <div style={{
+          position: 'absolute', bottom: 16, left: 0, right: 0,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end',
+          padding: '0 16px', pointerEvents: 'none', zIndex: 160,
+        }}>
+          {/* D-pad gauche : haut/bas/gauche/droite */}
+          <div style={{ position: 'relative', width: 118, height: 118, pointerEvents: 'auto', flexShrink: 0 }}>
+            {/* haut */}
+            <button onPointerDown={e => { e.preventDefault(); window.dispatchEvent(new CustomEvent('fc:menu-nav', { detail: 'up' })) }}
+              style={{ ...dpadBtn, top: 0, left: '50%', transform: 'translateX(-50%)' }}>▲</button>
+            {/* bas */}
+            <button onPointerDown={e => { e.preventDefault(); window.dispatchEvent(new CustomEvent('fc:menu-nav', { detail: 'down' })) }}
+              style={{ ...dpadBtn, bottom: 0, left: '50%', transform: 'translateX(-50%)' }}>▼</button>
+            {/* gauche */}
+            <button onPointerDown={e => { e.preventDefault(); window.dispatchEvent(new CustomEvent('fc:menu-nav', { detail: 'left' })) }}
+              style={{ ...dpadBtn, top: '50%', left: 0, transform: 'translateY(-50%)' }}>◀</button>
+            {/* droite */}
+            <button onPointerDown={e => { e.preventDefault(); window.dispatchEvent(new CustomEvent('fc:menu-nav', { detail: 'right' })) }}
+              style={{ ...dpadBtn, top: '50%', right: 0, transform: 'translateY(-50%)' }}>▶</button>
+            {/* centre */}
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 28, height: 28, background: 'rgba(255,255,255,0.06)', borderRadius: '50%' }} />
+          </div>
+          {/* Bouton confirmer */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, pointerEvents: 'auto', flexShrink: 0, marginBottom: 8 }}>
+            <button
+              onPointerDown={e => { e.preventDefault(); window.dispatchEvent(new CustomEvent('fc:menu-nav', { detail: 'confirm' })) }}
+              style={{ width: 56, height: 56, background: 'rgba(204,17,17,0.25)', border: '2px solid rgba(204,17,17,0.7)', borderRadius: '50%', color: '#fff', fontSize: '1rem', fontFamily: 'Impact', letterSpacing: 1, cursor: 'pointer', userSelect: 'none', touchAction: 'none', backdropFilter: 'blur(2px)' }}
+            >OK</button>
+            <span style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.45)', letterSpacing: 2, textTransform: 'uppercase' }}>Confirmer</span>
           </div>
         </div>
       )}

@@ -928,7 +928,7 @@ export default function EasterEggs({ config = {}, isGuest = false }: { config?: 
   const mobileInputRef = useRef<HTMLInputElement>(null)
 
   function checkMobileInput(text: string) {
-    const t = text.toLowerCase()
+    const t = text.toLowerCase().trimEnd()
     let triggered = true
     if      (t.endsWith('konami') || t.endsWith('joker')) { setShowJoker(true); discoverEgg('joker') }
     else if (t.endsWith('red pill'))  { setShowMatrix(true); discoverEgg('matrix') }
