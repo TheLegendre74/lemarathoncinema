@@ -2139,6 +2139,37 @@ export async function toggleMarathonNotification(notify: boolean) {
   revalidatePath('/')
 }
 
+// ── RATTRAPAGE ADMIN ──────────────────────────────────────────
+
+export async function setFilmRattrapage(filmId: number, niveau: string | null) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Non autorisé' }
+
+  // Supprimer l'entrée existante pour ce film
+  await (supabase as any).from('recommendation_films').delete().eq('film_id', filmId)
+
+  if (niveau) {
+    const { data: film } = await supabase.from('films').select('*').eq('id', filmId).single()
+    if (!film) return { error: 'Film introuvable' }
+    await (supabase as any).from('recommendation_films').insert({
+      film_id: filmId,
+      niveau,
+      titre: film.titre,
+      annee: film.annee,
+      realisateur: film.realisateur,
+      poster: film.poster ?? null,
+      tmdb_id: film.tmdb_id ?? null,
+      position: 0,
+    })
+  }
+
+  revalidatePath('/rattrapage')
+  return { ok: true }
+}
+
 // ── FIGHT CLUB LEADERBOARD ─────────────────────────────────────
 
 export async function saveFightClubScore(pseudo: string, score: number, difficulty: string) {

@@ -70,6 +70,18 @@ export default async function FilmsPage() {
   const myNegativeRatings = Object.fromEntries(negativeRatings.map((r: { film_id: number; score: number }) => [r.film_id, r.score]))
   const weekFilmId = (weekFilm as { film_id: number } | null)?.film_id ?? null
 
+  // Rattrapage map pour admin (film_id → niveau)
+  let rattrapageMap: Record<number, string> = {}
+  if (profile?.is_admin) {
+    const { data: rattrapageData } = await (supabase as any)
+      .from('recommendation_films')
+      .select('film_id, niveau')
+      .not('film_id', 'is', null)
+    ;(rattrapageData ?? []).forEach((r: any) => {
+      if (r.film_id) rattrapageMap[r.film_id] = r.niveau
+    })
+  }
+
   return (
     <FilmsClient
       films={films ?? []}
@@ -87,6 +99,7 @@ export default async function FilmsPage() {
       myNegativeRatings={myNegativeRatings}
       negativeRatingMap={negativeRatingMap}
       hasRageuxEgg={hasRageuxEgg}
+      rattrapageMap={rattrapageMap}
     />
   )
 }

@@ -5,7 +5,7 @@ import Image from 'next/image'
 import Poster from '@/components/Poster'
 import Forum from '@/components/Forum'
 import { useToast } from '@/components/ToastProvider'
-import { toggleWatched, markWatched, upsertRating, upsertNegativeRating, addFilm, updateFilm, reportFilm, discoverEgg, getFilmWatchProviders, adminSetFilmCategory } from '@/lib/actions'
+import { toggleWatched, markWatched, upsertRating, upsertNegativeRating, addFilm, updateFilm, reportFilm, discoverEgg, getFilmWatchProviders, adminSetFilmCategory, setFilmRattrapage } from '@/lib/actions'
 import type { TMDBSuggestion } from '@/lib/tmdb'
 import { CONFIG } from '@/lib/config'
 import { useRouter } from 'next/navigation'
@@ -28,6 +28,7 @@ interface Props {
   saisonNumero: number
   age18confirmed: boolean
   hasRageuxEgg: boolean
+  rattrapageMap: Record<number, string>
 }
 
 function avgRating(scores: number[] | undefined) {
@@ -828,7 +829,7 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
 
 
 // ─── MAIN FILMS CLIENT ───────────────────────────────────────────────────────
-export default function FilmsClient({ films, profile, watchedIds, watchedPreMap, myRatings, myNegativeRatings, watchCountMap, ratingMap, negativeRatingMap, totalUsers, weekFilmId, isMarathonLive, saisonNumero, age18confirmed, hasRageuxEgg }: Props) {
+export default function FilmsClient({ films, profile, watchedIds, watchedPreMap, myRatings, myNegativeRatings, watchCountMap, ratingMap, negativeRatingMap, totalUsers, weekFilmId, isMarathonLive, saisonNumero, age18confirmed, hasRageuxEgg, rattrapageMap: initialRattrapageMap }: Props) {
   const router = useRouter()
   const { addToast } = useToast()
   const [search, setSearch] = useState('')
@@ -841,6 +842,8 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
   const [ageWarnModal, setAgeWarnModal] = useState<18 | null>(null)
   const [adminCategoryOpen, setAdminCategoryOpen] = useState<number | null>(null)
   const [categoryOverrides, setCategoryOverrides] = useState<Record<number, 'normal' | '18plus' | 'strange'>>({})
+  const [rattrapageOpen, setRattrapageOpen] = useState<number | null>(null)
+  const [rattrapageMap, setRattrapageMap] = useState<Record<number, string>>(initialRattrapageMap ?? {})
   const watchedSet = useMemo(() => new Set(watchedIds), [watchedIds])
 
   // ── Shark easter egg ───────────────────────────────────────
@@ -899,6 +902,24 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
     const label = category === 'normal' ? '✓ Normal' : category === 'strange' ? '🔞 18+ Étrange' : '🔞 18+'
     addToast(`"${film.titre}" → ${label}`, '⚙')
     router.refresh()
+  }
+
+  async function handleSetRattrapage(film: Film, niveau: string | null) {
+    setRattrapageOpen(null)
+    // Optimistic update
+    setRattrapageMap(prev => {
+      const n = { ...prev }
+      if (niveau) n[film.id] = niveau
+      else delete n[film.id]
+      return n
+    })
+    const result = await setFilmRattrapage(film.id, niveau)
+    if (result && 'error' in result) {
+      addToast(result.error!, '⚠️')
+      return
+    }
+    const label = niveau === 'debutant' ? '🎬 Débutant' : niveau === 'intermediaire' ? '🎭 Intermédiaire' : niveau === 'confirme' ? '🏆 Confirmé' : 'retiré du rattrapage'
+    addToast(`"${film.titre}" → Rattrapage ${label}`, '📚')
   }
 
   function pickRandom() {
@@ -1021,7 +1042,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
           return (
             <div key={film.id}
               className={`film-card ${isWatched ? 'watched' : ''} ${maj ? 'majority' : ''} ${s2 ? 's2' : ''}`}
-              onClick={() => { if (menuOpen) { setAdminCategoryOpen(null); return } setModal(film) }}
+              onClick={() => { if (menuOpen) { setAdminCategoryOpen(null); return } if (rattrapageOpen === film.id) { setRattrapageOpen(null); return } setModal(film) }}
               style={cardGlow}
             >
               <div style={{ width: '100%', aspectRatio: '2/3', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1056,6 +1077,37 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                     style={{ position: 'absolute', top: 5, left: 5, background: 'rgba(0,0,0,.7)', border: '1px solid rgba(255,255,255,.25)', borderRadius: 4, padding: '2px 5px', fontSize: '.55rem', color: '#ccc', cursor: 'pointer', zIndex: 10, lineHeight: 1.4 }}
                     title="Catégorie admin"
                   >⚙</button>
+                )}
+
+                {/* Bouton admin rattrapage (coin haut droit) */}
+                {isAdmin && (
+                  <button
+                    onClick={e => { e.stopPropagation(); setRattrapageOpen(rattrapageOpen === film.id ? null : film.id); setAdminCategoryOpen(null) }}
+                    style={{ position: 'absolute', top: 5, right: 5, background: rattrapageMap[film.id] ? 'rgba(232,196,106,.3)' : 'rgba(0,0,0,.7)', border: `1px solid ${rattrapageMap[film.id] ? 'rgba(232,196,106,.6)' : 'rgba(255,255,255,.25)'}`, borderRadius: 4, padding: '2px 5px', fontSize: '.55rem', color: rattrapageMap[film.id] ? 'var(--gold)' : '#ccc', cursor: 'pointer', zIndex: 10, lineHeight: 1.4 }}
+                    title="Rattrapage"
+                  >📚</button>
+                )}
+
+                {/* Menu admin rattrapage */}
+                {isAdmin && rattrapageOpen === film.id && (
+                  <div
+                    onClick={e => e.stopPropagation()}
+                    style={{ position: 'absolute', top: 24, right: 5, zIndex: 20, background: 'rgba(10,10,20,.97)', border: '1px solid rgba(255,255,255,.2)', borderRadius: 6, padding: '.3rem', display: 'flex', flexDirection: 'column', gap: '.2rem', minWidth: 130 }}
+                  >
+                    {([
+                      { key: 'debutant',     label: '🎬 Débutant',     color: 'var(--green)' },
+                      { key: 'intermediaire',label: '🎭 Intermédiaire', color: 'var(--gold)'  },
+                      { key: 'confirme',     label: '🏆 Confirmé',      color: 'var(--purple)'},
+                      { key: null,           label: '✕ Retirer',        color: '#888'         },
+                    ] as const).map(opt => {
+                      const active = rattrapageMap[film.id] === opt.key
+                      return (
+                        <button key={String(opt.key)} onClick={() => handleSetRattrapage(film, opt.key)}
+                          style={{ background: active ? 'rgba(255,255,255,.08)' : 'transparent', border: active ? '1px solid rgba(255,255,255,.15)' : '1px solid transparent', borderRadius: 4, padding: '.25rem .4rem', fontSize: '.65rem', color: opt.color, cursor: 'pointer', textAlign: 'left', fontWeight: active ? 700 : 400 }}
+                        >{opt.label}</button>
+                      )
+                    })}
+                  </div>
                 )}
 
                 {/* Menu admin catégorie */}
