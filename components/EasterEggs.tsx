@@ -856,7 +856,7 @@ function TamagotchiKeyOverlay({ onClose, isGuest }: { onClose: () => void; isGue
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,10,5,.93)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
       <div style={{ textAlign: 'center', padding: '0 2rem', maxWidth: 560, animation: 'ee-rule-in .35s ease' }}>
         <div style={{ fontFamily: 'monospace', fontSize: 'clamp(.6rem,1.8vw,.85rem)', color: '#22d3ee', textShadow: '0 0 12px #22d3ee88', lineHeight: 1.45, marginBottom: '1.5rem', display: 'inline-block', textAlign: 'left' }}>
-          {['   __/~~~~~__   ','  /  0     0    ',' | /~~~~~~~~~ |','|(  ~~~~~~~~~  )|','     -----   /  ','  /|  ~~~~~  | ','/ |_________|  '].map((l,i) => <div key={i} style={{whiteSpace:'pre'}}>{l}</div>)}
+          {['  \\ \\   _____   / /   ','   \\ \\  |     |  / /  ','  -\\  \\ | --- | /  /- ','  -/  / | --- | \\  \\- ','   / /  |_____|  \\ \\  ','  / /   (o)  (o)  \\ \\ ','        \\   |||   /    ','         \\  |||  /     ','          \\ ||| /      ','           \\|||/       ','            |||        ','            |||        ','             |         '].map((l,i) => <div key={i} style={{whiteSpace:'pre'}}>{l}</div>)}
         </div>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.4rem,5vw,2.8rem)', color: '#22d3ee', textShadow: '0 0 40px #22d3ee88', lineHeight: 1.2, marginBottom: '.8rem' }}>
           Un facehugger s&apos;est attaché à toi...
