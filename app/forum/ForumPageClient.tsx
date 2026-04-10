@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import ForumTopicModal from './ForumTopicModal'
 import type { Profile } from '@/lib/supabase/types'
@@ -13,14 +13,22 @@ interface Props {
   totalTopics: number
 }
 
+const CHATANGO_URL = 'https://lemarathoncinema.chatango.com'
+
 function ChatangoEmbed() {
   const ref = useRef<HTMLDivElement>(null)
+  const [isMobile, setIsMobile] = useState<boolean | null>(null)
 
   useEffect(() => {
-    if (!ref.current) return
-    // Nettoie toute instance précédente
-    ref.current.innerHTML = ''
+    setIsMobile(window.innerWidth < 768)
+  }, [])
 
+  // Injecte le script Chatango sur desktop
+  useEffect(() => {
+    if (isMobile !== false) return
+    const container = ref.current
+    if (!container) return
+    container.innerHTML = ''
     const s = document.createElement('script')
     s.setAttribute('data-cfasync', 'false')
     s.async = true
@@ -34,32 +42,57 @@ function ChatangoEmbed() {
       },
     })
     s.src = '//st.chatango.com/js/gz/emb.js'
-    ref.current.appendChild(s)
-  }, [])
+    container.appendChild(s)
+  }, [isMobile])
 
+  // Avant détection : rien (évite le flash)
+  if (isMobile === null) return null
+
+  // Sur mobile : l'embed génère une URL interne qui retourne 404
+  // → bouton d'accès direct au chat Chatango mobile
+  if (isMobile) {
+    return (
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        gap: '1rem', padding: '2rem 1.5rem', minHeight: 200,
+      }}>
+        <div style={{ fontSize: '2.5rem' }}>💬</div>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', marginBottom: '.35rem' }}>
+            Le Salon — Chat en direct
+          </div>
+          <div style={{ fontSize: '.75rem', color: 'var(--text3)', marginBottom: '1.2rem' }}>
+            L'embed n'est pas disponible sur mobile,<br/>ouvre le chat directement :
+          </div>
+          <a
+            href={CHATANGO_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '.5rem',
+              background: 'rgba(130,80,220,.15)',
+              border: '1px solid rgba(130,80,220,.4)',
+              borderRadius: 'var(--r)',
+              padding: '.75rem 1.5rem',
+              color: '#c084fc',
+              textDecoration: 'none',
+              fontSize: '.88rem', fontWeight: 500,
+            }}
+          >
+            💬 Rejoindre le chat ↗
+          </a>
+        </div>
+      </div>
+    )
+  }
+
+  // Desktop : conteneur où le script Chatango sera injecté
   return (
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
-      {/* Embed Chatango */}
-      <div
-        ref={ref}
-        style={{ width: '100%', position: 'relative' }}
-        className="chatango-frame"
-      />
-      {/* Fallback lien mobile */}
-      <a
-        href="https://chatango.com/group/lemarathoncinema"
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{
-          display: 'block', textAlign: 'center', padding: '.6rem',
-          fontSize: '.73rem', color: 'var(--text3)',
-          borderTop: '1px solid rgba(130,80,220,.15)',
-          textDecoration: 'none',
-        }}
-      >
-        ↗ Ouvrir le chat dans un nouvel onglet
-      </a>
-    </div>
+    <div
+      ref={ref}
+      style={{ width: '100%', position: 'relative' }}
+      className="chatango-frame"
+    />
   )
 }
 
