@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import {
   sendMessage, deleteMessage, blockUser, unblockUser,
-  markMessagesAsRead,
+  markMessagesAsRead, getConversationMessages,
 } from '@/lib/actions'
 
 interface Profile {
@@ -87,6 +87,20 @@ export default function MessagesSection({
     markMessagesAsRead(activeId).then(() => {
       setConvs(prev => prev.map(c => c.otherId === activeId ? { ...c, unread: 0 } : c))
     })
+  }, [activeId])
+
+  // Polling : rafraîchit les messages toutes les 5s pour afficher les messages reçus
+  useEffect(() => {
+    if (!activeId) return
+    const interval = setInterval(async () => {
+      const fresh = await getConversationMessages(activeId)
+      setMessages(prev => {
+        // Pas de re-render inutile si rien de nouveau
+        if (fresh.length === prev.length) return prev
+        return fresh
+      })
+    }, 5000)
+    return () => clearInterval(interval)
   }, [activeId])
 
   function openConversation(otherId: string, profile: Profile | null) {
