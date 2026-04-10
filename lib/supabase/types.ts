@@ -14,6 +14,7 @@ export type Database = {
           updated_at: string
           avatar_url: string | null
           active_badge: string | null
+          marathon_blocked_until: string | null
         }
         Insert: {
           id: string

@@ -396,6 +396,128 @@ export async function signOut() {
 // ── WATCHED ─────────────────────────────────────────────────
 
 // Explicit pre/marathon mark (used by the two separate buttons)
+const MARATHON_SOFT_LIMIT = 3
+const MARATHON_HARD_LIMIT = 8
+
+export async function getMarathonDailyStatus() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { count: 0, blocked: false, pendingRequest: false, approvedToday: false }
+
+  const today = new Date().toISOString().slice(0, 10)
+
+  const [
+    { count: watchedToday },
+    { data: profile },
+    { data: requests },
+  ] = await Promise.all([
+    (supabase as any)
+      .from('watched')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('pre', false)
+      .gte('created_at', today + 'T00:00:00.000Z')
+      .lt('created_at', today + 'T23:59:59.999Z'),
+    supabase.from('profiles').select('marathon_blocked_until').eq('id', user.id).single(),
+    (supabase as any)
+      .from('marathon_watch_requests')
+      .select('status')
+      .eq('user_id', user.id)
+      .eq('day', today),
+  ])
+
+  const blocked = profile?.marathon_blocked_until
+    ? new Date(profile.marathon_blocked_until) > new Date()
+    : false
+  const pendingRequest = (requests ?? []).some((r: any) => r.status === 'pending')
+  const approvedToday = (requests ?? []).some((r: any) => r.status === 'approved')
+
+  return {
+    count: watchedToday ?? 0,
+    blocked,
+    pendingRequest,
+    approvedToday,
+    limit: approvedToday ? MARATHON_HARD_LIMIT : MARATHON_SOFT_LIMIT,
+  }
+}
+
+export async function submitMarathonWatchRequest(message: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+
+  const today = new Date().toISOString().slice(0, 10)
+
+  // Check if request already exists
+  const { data: existing } = await (supabase as any)
+    .from('marathon_watch_requests')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('day', today)
+    .single()
+  if (existing) return { error: 'Tu as déjà soumis une demande aujourd\'hui.' }
+
+  // Insert request
+  await (supabase as any).from('marathon_watch_requests').insert({
+    user_id: user.id,
+    message: message.trim().slice(0, 500) || null,
+    day: today,
+  })
+
+  // Block user for 24h
+  const blockedUntil = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+  await supabase.from('profiles')
+    .update({ marathon_blocked_until: blockedUntil } as any)
+    .eq('id', user.id)
+
+  revalidatePath('/films')
+  return { success: true }
+}
+
+export async function adminGetMarathonRequests() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: me } = await supabase.from('profiles').select('is_admin').eq('id', user?.id ?? '').single()
+  if (!me?.is_admin) return []
+
+  const { data } = await (supabase as any)
+    .from('marathon_watch_requests')
+    .select('id, user_id, message, day, status, created_at, profiles!user_id(pseudo, avatar_url)')
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false })
+
+  return data ?? []
+}
+
+export async function adminReviewMarathonRequest(requestId: string, action: 'approve' | 'reject') {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: me } = await supabase.from('profiles').select('is_admin').eq('id', user?.id ?? '').single()
+  if (!me?.is_admin) return { error: 'Non autorisé' }
+
+  const { data: req } = await (supabase as any)
+    .from('marathon_watch_requests')
+    .select('user_id')
+    .eq('id', requestId)
+    .single()
+  if (!req) return { error: 'Requête introuvable' }
+
+  await (supabase as any)
+    .from('marathon_watch_requests')
+    .update({ status: action === 'approve' ? 'approved' : 'rejected', reviewed_by: user!.id, reviewed_at: new Date().toISOString() })
+    .eq('id', requestId)
+
+  if (action === 'approve') {
+    // Débloquer l'utilisateur
+    await supabase.from('profiles')
+      .update({ marathon_blocked_until: null } as any)
+      .eq('id', req.user_id)
+  }
+
+  revalidatePath('/admin')
+  return { success: true }
+}
+
 export async function markWatched(filmId: number, pre: boolean) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -403,6 +525,19 @@ export async function markWatched(filmId: number, pre: boolean) {
 
   // Block marathon mark if marathon not live
   if (!pre && !isMarathonLive()) return { error: 'Le marathon n\'a pas encore commencé.' }
+
+  // Vérification limite quotidienne marathon
+  if (!pre) {
+    const status = await getMarathonDailyStatus()
+    if (status.blocked) return { error: 'BLOCKED', blockedUntil: status.blocked }
+    // Ne bloquer que si on AJOUTE (pas si on enlève)
+    const { data: existing } = await supabase.from('watched').select('pre').eq('user_id', user.id).eq('film_id', filmId).single()
+    const isAdding = !existing
+    if (isAdding && status.count >= status.limit!) {
+      if (status.pendingRequest) return { error: 'PENDING_REQUEST' }
+      return { error: 'LIMIT_REACHED', count: status.count }
+    }
+  }
 
   const { data: existing } = await supabase
     .from('watched')
@@ -450,6 +585,16 @@ export async function toggleWatched(filmId: number, filmTitre: string) {
     .eq('user_id', user.id)
     .eq('film_id', filmId)
     .single()
+
+  // Vérification limite quotidienne lors d'un ajout marathon
+  if (!existing && isMarathonLive()) {
+    const status = await getMarathonDailyStatus()
+    if (status.blocked) return { error: 'BLOCKED' }
+    if (status.count >= status.limit!) {
+      if (status.pendingRequest) return { error: 'PENDING_REQUEST' }
+      return { error: 'LIMIT_REACHED', count: status.count }
+    }
+  }
 
   if (existing) {
     // Remove

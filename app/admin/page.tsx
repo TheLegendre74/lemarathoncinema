@@ -2,6 +2,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import AdminClient from './AdminClient'
 import { getServerConfig } from '@/lib/serverConfig'
+import { adminGetMarathonRequests } from '@/lib/actions'
 import type { Profile } from '@/lib/supabase/types'
 
 export const revalidate = 0
@@ -49,6 +50,8 @@ export default async function AdminPage() {
     (adminDb as any).from('forum_topics').select('*').order('pinned', { ascending: false }).order('created_at', { ascending: false }),
   ])
 
+  const marathonRequests = await adminGetMarathonRequests()
+
   const totalUsers = users?.length ?? 1
   const watchCountMap: Record<number, number> = {}
   allWatched?.forEach((w: { film_id: number }) => { watchCountMap[w.film_id] = (watchCountMap[w.film_id] ?? 0) + 1 })
@@ -74,6 +77,7 @@ export default async function AdminPage() {
       news={news ?? []}
       recommendations={recommendations ?? []}
       forumTopics={forumTopics ?? []}
+      marathonRequests={marathonRequests}
     />
   )
 }

@@ -5,7 +5,7 @@ import Image from 'next/image'
 import Poster from '@/components/Poster'
 import Forum from '@/components/Forum'
 import { useToast } from '@/components/ToastProvider'
-import { toggleWatched, markWatched, upsertRating, upsertNegativeRating, addFilm, updateFilm, reportFilm, discoverEgg, getFilmWatchProviders, adminSetFilmCategory, setFilmRattrapage } from '@/lib/actions'
+import { toggleWatched, markWatched, upsertRating, upsertNegativeRating, addFilm, updateFilm, reportFilm, discoverEgg, getFilmWatchProviders, adminSetFilmCategory, setFilmRattrapage, submitMarathonWatchRequest } from '@/lib/actions'
 import type { TMDBSuggestion } from '@/lib/tmdb'
 import { CONFIG } from '@/lib/config'
 import { useRouter } from 'next/navigation'
@@ -73,6 +73,11 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
   const [genreVal, setGenreVal] = useState(film.genre)
   const [reporting, setReporting] = useState(false)
   const [reportReason, setReportReason] = useState('')
+  // Limite quotidienne marathon
+  const [marathonLimitState, setMarathonLimitState] = useState<null | 'limit_reached' | 'pending' | 'blocked'>(null)
+  const [requestMsg, setRequestMsg] = useState('')
+  const [requestSending, setRequestSending] = useState(false)
+  const [requestSent, setRequestSent] = useState(false)
   const { addToast } = useToast()
   const router = useRouter()
 
@@ -147,6 +152,9 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
 
   async function handleMarkMarathon() {
     const res = await markWatched(film.id, false)
+    if (res?.error === 'LIMIT_REACHED') { setMarathonLimitState('limit_reached'); return }
+    if (res?.error === 'PENDING_REQUEST') { setMarathonLimitState('pending'); return }
+    if (res?.error === 'BLOCKED') { setMarathonLimitState('blocked'); return }
     if (res?.error) { addToast(res.error, '⚠️'); return }
     if (res?.action === 'added') {
       addToast(`+${CONFIG.EXP_FILM} EXP — "${film.titre}" vu pendant le marathon !`, '🎬')
@@ -155,6 +163,15 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
       addToast(`"${film.titre}" retiré`, '🎬')
     }
     onRefresh()
+  }
+
+  async function handleSubmitRequest() {
+    setRequestSending(true)
+    const res = await submitMarathonWatchRequest(requestMsg)
+    setRequestSending(false)
+    if (res?.error) { addToast(res.error, '⚠️'); return }
+    setRequestSent(true)
+    setMarathonLimitState('pending')
   }
 
   async function handlePromptRate(score: number) {
@@ -302,23 +319,68 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
 
               {/* Watched buttons */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem', marginBottom: '1rem' }}>
+                {/* Pré-marathon : grisé si le marathon est en cours */}
                 <button
                   className={`btn ${isWatched && watchedPre === true ? 'btn-green' : 'btn-outline'} btn-full`}
-                  onClick={handleMarkPre}
+                  onClick={!isMarathonLive ? handleMarkPre : undefined}
+                  disabled={isMarathonLive}
+                  style={isMarathonLive ? { opacity: 0.35, cursor: 'not-allowed' } : undefined}
+                  title={isMarathonLive ? 'Le marathon est en cours — utilise le bouton ci-dessous' : undefined}
                 >
                   {isWatched && watchedPre === true ? '✓ Vu avant le marathon — Retirer' : '🎬 J\'ai vu ce film (pré-marathon)'}
                 </button>
-                <button
-                  className={`btn ${isWatched && watchedPre === false ? 'btn-green' : 'btn-outline'} btn-full`}
-                  onClick={isMarathonLive ? handleMarkMarathon : undefined}
-                  disabled={!isMarathonLive}
-                  title={!isMarathonLive ? 'Le marathon n\'a pas encore commencé' : undefined}
-                  style={!isMarathonLive ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}
-                >
-                  {isWatched && watchedPre === false
-                    ? '✓ Vu pendant le marathon — Retirer'
-                    : `🏆 J'ai vu ce film pendant le marathon (+${CONFIG.EXP_FILM} EXP)`}
-                </button>
+
+                {/* Marathon : actif uniquement pendant le marathon */}
+                {isMarathonLive && marathonLimitState === 'limit_reached' ? (
+                  /* Formulaire de demande */
+                  <div style={{ background: 'rgba(232,196,106,.06)', border: '1px solid rgba(232,196,106,.25)', borderRadius: 'var(--r)', padding: '1rem' }}>
+                    <div style={{ fontSize: '.8rem', color: 'var(--gold)', fontWeight: 600, marginBottom: '.4rem' }}>⚠️ Limite de 3 films/jour atteinte</div>
+                    <div style={{ fontSize: '.75rem', color: 'var(--text2)', marginBottom: '.7rem', lineHeight: 1.5 }}>
+                      Tu as atteint la limite quotidienne pendant le marathon. Tu peux envoyer une demande à l'admin avec un message explicatif (optionnel).
+                    </div>
+                    {requestSent ? (
+                      <div style={{ fontSize: '.78rem', color: 'var(--green)', textAlign: 'center', padding: '.5rem' }}>✓ Demande envoyée ! L'admin examinera ta requête.</div>
+                    ) : (
+                      <>
+                        <textarea
+                          value={requestMsg}
+                          onChange={e => setRequestMsg(e.target.value.slice(0, 300))}
+                          placeholder="Message pour l'admin (optionnel, 300 caractères max)..."
+                          rows={3}
+                          style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.5rem .75rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.78rem', resize: 'vertical', outline: 'none', marginBottom: '.5rem', boxSizing: 'border-box' }}
+                        />
+                        <button
+                          onClick={handleSubmitRequest}
+                          disabled={requestSending}
+                          className="btn btn-gold btn-full"
+                          style={{ fontSize: '.8rem' }}
+                        >
+                          {requestSending ? 'Envoi...' : '📨 Envoyer la demande à l\'admin'}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                ) : isMarathonLive && marathonLimitState === 'pending' ? (
+                  <div style={{ background: 'rgba(255,160,60,.07)', border: '1px solid rgba(255,160,60,.3)', borderRadius: 'var(--r)', padding: '.75rem 1rem', fontSize: '.78rem', color: 'var(--orange)', textAlign: 'center' }}>
+                    ⏳ Demande en attente d'examen par l'admin
+                  </div>
+                ) : isMarathonLive && marathonLimitState === 'blocked' ? (
+                  <div style={{ background: 'rgba(232,90,90,.07)', border: '1px solid rgba(232,90,90,.3)', borderRadius: 'var(--r)', padding: '.75rem 1rem', fontSize: '.78rem', color: 'var(--red)', textAlign: 'center' }}>
+                    🔒 Ajout bloqué temporairement (24h)
+                  </div>
+                ) : (
+                  <button
+                    className={`btn ${isWatched && watchedPre === false ? 'btn-green' : 'btn-outline'} btn-full`}
+                    onClick={isMarathonLive ? handleMarkMarathon : undefined}
+                    disabled={!isMarathonLive}
+                    title={!isMarathonLive ? 'Le marathon n\'a pas encore commencé' : undefined}
+                    style={!isMarathonLive ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}
+                  >
+                    {isWatched && watchedPre === false
+                      ? '✓ Vu pendant le marathon — Retirer'
+                      : `🏆 J'ai vu ce film pendant le marathon (+${CONFIG.EXP_FILM} EXP)`}
+                  </button>
+                )}
               </div>
             </>
           )}
@@ -928,8 +990,25 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
     e.stopPropagation()
     if (!profile) return
     const wasWatched = watchedSet.has(filmId)
-    setLocalWatchedIds(prev => wasWatched ? prev.filter(id => id !== filmId) : [...prev, filmId])
-    await toggleWatched(filmId, filmTitre)
+    // Optimistic update uniquement si on enlève ou si pas en limite
+    if (wasWatched) setLocalWatchedIds(prev => prev.filter(id => id !== filmId))
+    else setLocalWatchedIds(prev => [...prev, filmId])
+    const res = await toggleWatched(filmId, filmTitre)
+    if (res?.error === 'LIMIT_REACHED') {
+      setLocalWatchedIds(prev => prev.filter(id => id !== filmId)) // revert
+      setModal(films.find(f => f.id === filmId) ?? null) // ouvrir le modal avec le form de demande
+      return
+    }
+    if (res?.error === 'PENDING_REQUEST' || res?.error === 'BLOCKED') {
+      setLocalWatchedIds(prev => prev.filter(id => id !== filmId)) // revert
+      addToast(res.error === 'BLOCKED' ? '🔒 Ajout bloqué (24h)' : '⏳ Demande en attente d\'examen admin', '⚠️')
+      return
+    }
+    if (res?.error) {
+      setLocalWatchedIds(prev => wasWatched ? [...prev, filmId] : prev.filter(id => id !== filmId)) // revert
+      addToast(res.error, '⚠️')
+      return
+    }
     addToast(wasWatched ? `"${filmTitre}" retiré` : `+${CONFIG.EXP_FILM} EXP — "${filmTitre}" vu !`, '🎬')
     router.refresh()
   }

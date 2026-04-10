@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminBatchFlaggedDecisions, adminSet18Flag, adminApproveAllPending, adminSetFilmCategory, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, adminFetchFrenchPosters, adminScanAgeRestrictions, adminTestFilmCertification, adminDiagnostic, updateFilm, adminResolveReport, adminSetConfig, adminVerifyPosters, adminSetAdmin, adminAddNews, adminDeleteNews, adminAddRecommendation, adminDeleteRecommendation, deleteForumTopic, adminEndSeason, adminApproveFilmRequest, adminRejectFilmRequest, adminFetchOverviews } from '@/lib/actions'
+import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminBatchFlaggedDecisions, adminSet18Flag, adminApproveAllPending, adminSetFilmCategory, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, adminFetchFrenchPosters, adminScanAgeRestrictions, adminTestFilmCertification, adminDiagnostic, updateFilm, adminResolveReport, adminSetConfig, adminVerifyPosters, adminSetAdmin, adminAddNews, adminDeleteNews, adminAddRecommendation, adminDeleteRecommendation, deleteForumTopic, adminEndSeason, adminApproveFilmRequest, adminRejectFilmRequest, adminFetchOverviews, adminReviewMarathonRequest } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
 import { CONFIG } from '@/lib/config'
 import type { Film, Profile } from '@/lib/supabase/types'
@@ -307,9 +307,10 @@ interface Props {
   news: any[]
   recommendations: any[]
   forumTopics: any[]
+  marathonRequests: any[]
 }
 
-export default function AdminClient({ profile, films, users, duels, weekFilm, totalUsers, watchCountMap, flaggedFilms, pendingFilms18, pendingApprovalFilms, reports, siteConfig, serverConfig, news, recommendations, forumTopics }: Props) {
+export default function AdminClient({ profile, films, users, duels, weekFilm, totalUsers, watchCountMap, flaggedFilms, pendingFilms18, pendingApprovalFilms, reports, siteConfig, serverConfig, news, recommendations, forumTopics, marathonRequests: initialMarathonRequests }: Props) {
   const { addToast } = useToast()
   const router = useRouter()
   const [posterLoading, setPosterLoading] = useState<Record<number, boolean>>({})
@@ -336,6 +337,8 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
   const [testFilmId, setTestFilmId] = useState('')
   const [testResult, setTestResult] = useState<any>(null)
   const [testLoading, setTestLoading] = useState(false)
+  const [marathonRequests, setMarathonRequests] = useState<any[]>(initialMarathonRequests)
+  const [marathonReviewLoading, setMarathonReviewLoading] = useState<Record<string, boolean>>({})
 
   // Sync avec flaggedFilms après router.refresh(), en excluant les films déjà traités
   useEffect(() => {
@@ -666,6 +669,70 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
             <div style={{ fontSize: '.76rem', color: 'var(--text2)', marginTop: '.2rem' }}>
               Le scan automatique les a identifiés. Confirme ou refuse dans la section ci-dessous.
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Demandes de dépassement de limite marathon */}
+      {marathonRequests.length > 0 && (
+        <div style={{ background: 'rgba(232,196,106,.08)', border: '2px solid rgba(232,196,106,.5)', borderRadius: 'var(--rl)', padding: '1rem 1.3rem', marginBottom: '1.2rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '.7rem', marginBottom: '.8rem' }}>
+            <span style={{ fontSize: '1.3rem' }}>🎬</span>
+            <div style={{ fontWeight: 700, color: 'var(--gold)', fontSize: '.9rem' }}>
+              {marathonRequests.length} demande{marathonRequests.length > 1 ? 's' : ''} de dépassement de limite marathon
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
+            {marathonRequests.map((r: any) => (
+              <div key={r.id} style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.75rem 1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem', marginBottom: r.message ? '.4rem' : 0, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '.82rem', fontWeight: 600, color: 'var(--gold)' }}>
+                    {r.profiles?.pseudo ?? r.user_id}
+                  </span>
+                  <span style={{ fontSize: '.68rem', color: 'var(--text3)' }}>
+                    {new Date(r.created_at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                  <span style={{ fontSize: '.65rem', background: 'rgba(232,196,106,.12)', color: 'var(--gold)', border: '1px solid rgba(232,196,106,.3)', borderRadius: 99, padding: '1px 7px', marginLeft: 'auto' }}>
+                    Jour : {r.day}
+                  </span>
+                </div>
+                {r.message && (
+                  <div style={{ fontSize: '.78rem', color: 'var(--text2)', fontStyle: 'italic', borderLeft: '2px solid rgba(232,196,106,.3)', paddingLeft: '.6rem', marginBottom: '.6rem', lineHeight: 1.5 }}>
+                    "{r.message}"
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: '.5rem' }}>
+                  <button
+                    className="btn btn-green"
+                    style={{ fontSize: '.72rem', padding: '.25rem .7rem' }}
+                    disabled={marathonReviewLoading[r.id]}
+                    onClick={async () => {
+                      setMarathonReviewLoading(prev => ({ ...prev, [r.id]: true }))
+                      const res = await adminReviewMarathonRequest(r.id, 'approve')
+                      if (res?.error) { addToast(res.error, '⚠️'); setMarathonReviewLoading(prev => ({ ...prev, [r.id]: false })); return }
+                      setMarathonRequests(prev => prev.filter(x => x.id !== r.id))
+                      addToast(`Demande approuvée — ${r.profiles?.pseudo} peut ajouter jusqu'à 8 films`, '✅')
+                    }}
+                  >
+                    ✓ Approuver (max 8/jour)
+                  </button>
+                  <button
+                    className="btn btn-outline"
+                    style={{ fontSize: '.72rem', padding: '.25rem .7rem', color: 'var(--red)', borderColor: 'var(--red)' }}
+                    disabled={marathonReviewLoading[r.id]}
+                    onClick={async () => {
+                      setMarathonReviewLoading(prev => ({ ...prev, [r.id]: true }))
+                      const res = await adminReviewMarathonRequest(r.id, 'reject')
+                      if (res?.error) { addToast(res.error, '⚠️'); setMarathonReviewLoading(prev => ({ ...prev, [r.id]: false })); return }
+                      setMarathonRequests(prev => prev.filter(x => x.id !== r.id))
+                      addToast(`Demande refusée — ${r.profiles?.pseudo} reste bloqué 24h`, '🔒')
+                    }}
+                  >
+                    ✗ Refuser (bloquer 24h)
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
