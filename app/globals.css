@@ -355,6 +355,14 @@ html, body {
   .chatango-frame { height: 500px; }
 }
 
+/* ── Chatango show/hide mobile ── */
+.chatango-desktop { display: block; }
+.chatango-mobile  { display: none !important; }
+@media (max-width: 768px) {
+  .chatango-desktop { display: none !important; }
+  .chatango-mobile  { display: flex !important; }
+}
+
 /* ── Discord FAB ── */
 .discord-fab {
   position: fixed;

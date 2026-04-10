@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import Link from 'next/link'
 import ForumTopicModal from './ForumTopicModal'
 import type { Profile } from '@/lib/supabase/types'
@@ -15,41 +15,39 @@ interface Props {
 
 const CHATANGO_URL = 'https://lemarathoncinema.chatango.com'
 
-// srcDoc : le script Chatango tourne dans son propre document HTML
-// → document.currentScript fonctionne correctement (script inline, pas dynamique)
-const CHATANGO_CONFIG = JSON.stringify({
-  handle: 'lemarathoncinema',
-  arch: 'js',
-  styles: {
-    a: 'ff9900', b: 100, c: '000000', d: '000000',
-    k: 'ff9900', l: 'ff9900', m: 'ff9900',
-    p: '13.14', q: 'ff9900', r: 100, cnrs: '0.35', fwtickm: 1,
-  },
-})
-
-const CHATANGO_SRCDOC = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:transparent}</style>
-</head>
-<body>
-<script id="cid_lemarathoncinema" data-cfasync="false" src="//st.chatango.com/js/gz/emb.js" style="width:100%;height:100%">${CHATANGO_CONFIG}<\/script>
-</body>
-</html>`
-
 function ChatangoEmbed() {
-  const [isMobile, setIsMobile] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    setIsMobile(window.innerWidth < 768)
+    if (!containerRef.current) return
+    const old = document.getElementById('cid0020000436064045184')
+    if (old) old.remove()
+    const script = document.createElement('script')
+    script.id = 'cid0020000436064045184'
+    script.setAttribute('data-cfasync', 'false')
+    script.async = true
+    script.src = '//st.chatango.com/js/gz/emb.js'
+    script.style.cssText = 'width:100%;height:100%;'
+    script.textContent = JSON.stringify({
+      handle: 'lemarathoncinema',
+      arch: 'js',
+      styles: {
+        a: 'ff9900', b: 100, c: '000000', d: '000000',
+        k: 'ff9900', l: 'ff9900', m: 'ff9900',
+        p: '13.14', q: 'ff9900', r: 100, cnrs: '0.35', fwtickm: 1,
+      },
+    })
+    containerRef.current.appendChild(script)
   }, [])
 
-  // Mobile : bouton vers l'URL directe
-  if (isMobile) {
-    return (
-      <div style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+  return (
+    <>
+      {/* Desktop : embed Chatango (masqué sur mobile via CSS) */}
+      <div ref={containerRef} className="chatango-desktop" style={{ width: '100%', height: 500 }} />
+      {/* Mobile : bouton direct (masqué sur desktop via CSS) */}
+      <div className="chatango-mobile" style={{
+        display: 'none',
+        flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         gap: '1rem', padding: '2rem 1.5rem', minHeight: 200,
       }}>
         <div style={{ fontSize: '2.5rem' }}>💬</div>
@@ -60,35 +58,17 @@ function ChatangoEmbed() {
           <div style={{ fontSize: '.75rem', color: 'var(--text3)', marginBottom: '1.2rem' }}>
             L'embed n'est pas disponible sur mobile,<br/>ouvre le chat directement :
           </div>
-          <a
-            href={CHATANGO_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: '.5rem',
-              background: 'rgba(232,196,106,.15)',
-              border: '1px solid rgba(232,196,106,.4)',
-              borderRadius: 'var(--r)',
-              padding: '.75rem 1.5rem',
-              color: 'var(--gold)',
-              textDecoration: 'none',
-              fontSize: '.88rem', fontWeight: 500,
-            }}
-          >
+          <a href={CHATANGO_URL} target="_blank" rel="noopener noreferrer" style={{
+            display: 'inline-flex', alignItems: 'center', gap: '.5rem',
+            background: 'rgba(232,196,106,.15)', border: '1px solid rgba(232,196,106,.4)',
+            borderRadius: 'var(--r)', padding: '.75rem 1.5rem',
+            color: 'var(--gold)', textDecoration: 'none', fontSize: '.88rem', fontWeight: 500,
+          }}>
             💬 Rejoindre le chat ↗
           </a>
         </div>
       </div>
-    )
-  }
-
-  // Desktop : iframe avec son propre document HTML contenant le script Chatango
-  return (
-    <iframe
-      srcDoc={CHATANGO_SRCDOC}
-      style={{ width: '100%', height: 500, border: 'none', display: 'block' }}
-      title="Le Salon — Chat en direct"
-    />
+    </>
   )
 }
 
@@ -110,7 +90,7 @@ export default function ForumPageClient({
 
       {/* ─── LE SALON (Chatango embed) ─── */}
       <div style={{
-        background: 'linear-gradient(135deg, rgba(100,60,200,.08), rgba(60,120,200,.06))',
+        background: 'linear-gradient(135deg, rgba(232,196,106,.07), rgba(232,160,60,.04))',
         border: '1px solid rgba(232,196,106,.35)',
         borderRadius: 'var(--rl)',
         marginBottom: '2rem',
