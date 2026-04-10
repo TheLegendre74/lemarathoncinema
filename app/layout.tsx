@@ -73,6 +73,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <ClientShell profile={profile} hasRageuxEgg={hasRageuxEgg} hasTamagotchiEgg={hasTamagotchiEgg} unreadMessages={unreadMessages}>
             {children}
           </ClientShell>
+          <a
+            href="https://discord.gg/nrGkqKgrtj"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Rejoindre le Discord"
+            className="discord-fab"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/discord.png" alt="Discord" width={26} height={26} style={{ objectFit: 'contain' }} />
+          </a>
         </ToastProvider>
       </body>
     </html>

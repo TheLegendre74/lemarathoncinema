@@ -354,3 +354,31 @@ html, body {
 @media (min-width: 769px) {
   .chatango-frame { height: 500px; }
 }
+
+/* ── Discord FAB ── */
+.discord-fab {
+  position: fixed;
+  bottom: 5.5rem;
+  left: 1rem;
+  z-index: 200;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #5865F2;
+  box-shadow: 0 2px 12px rgba(88,101,242,.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition: transform .15s, box-shadow .15s;
+}
+.discord-fab:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 18px rgba(88,101,242,.7);
+}
+@media (min-width: 769px) {
+  .discord-fab {
+    bottom: 1.5rem;
+    left: calc(230px + 1.2rem);
+  }
+}
