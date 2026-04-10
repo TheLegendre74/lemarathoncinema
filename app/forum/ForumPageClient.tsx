@@ -24,16 +24,23 @@ function ChatangoEmbed() {
     setIsMobile(window.innerWidth < 768)
   }, [])
 
-  // Injecte le script Chatango sur desktop (au montage, avant la détection mobile)
+  // Injecte le script Chatango sur desktop
   useEffect(() => {
     if (isMobile) return
     const container = ref.current
     if (!container) return
+    // Nettoie si déjà injecté (StrictMode / re-mount)
+    const existing = document.getElementById('chatango-emb-script')
+    if (existing) existing.remove()
     container.innerHTML = ''
     const s = document.createElement('script')
+    s.id = 'chatango-emb-script'
     s.setAttribute('data-cfasync', 'false')
     s.async = true
-    s.innerHTML = JSON.stringify({
+    // La style width/height sur le script lui-même est lue par emb.js pour dimensionner l'embed
+    s.setAttribute('style', 'width:100%;height:500px')
+    // textContent = config JSON lue par emb.js après chargement async via getElementById
+    s.textContent = JSON.stringify({
       handle: 'lemarathoncinema',
       arch: 'js',
       styles: {
