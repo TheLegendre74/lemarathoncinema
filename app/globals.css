@@ -348,10 +348,9 @@ html, body {
   .stat-v { font-size: 1.5rem; }
 
   /* Chat Chatango */
-  .chatango-frame { height: 380px; }
+  .chatango-frame { height: 360px; }
 }
 
-/* Desktop height for chatango */
 @media (min-width: 769px) {
-  .chatango-frame { height: 520px; }
+  .chatango-frame { height: 500px; }
 }

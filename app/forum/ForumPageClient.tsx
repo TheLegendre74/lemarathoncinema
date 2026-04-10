@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import Link from 'next/link'
 import ForumTopicModal from './ForumTopicModal'
 import type { Profile } from '@/lib/supabase/types'
@@ -13,15 +14,52 @@ interface Props {
 }
 
 function ChatangoEmbed() {
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!ref.current) return
+    // Nettoie toute instance précédente
+    ref.current.innerHTML = ''
+
+    const s = document.createElement('script')
+    s.setAttribute('data-cfasync', 'false')
+    s.async = true
+    s.innerHTML = JSON.stringify({
+      handle: 'lemarathoncinema',
+      arch: 'js',
+      styles: {
+        a: 'ff9900', b: 100, c: '000000', d: '000000',
+        k: 'ff9900', l: 'ff9900', m: 'ff9900',
+        p: '13.14', q: 'ff9900', r: 100, cnrs: '0.35', fwtickm: 1,
+      },
+    })
+    s.src = '//st.chatango.com/js/gz/emb.js'
+    ref.current.appendChild(s)
+  }, [])
+
   return (
-    <iframe
-      src="https://www.chatango.com/group?id=lemarathoncinema&style=005"
-      title="Chat en direct"
-      style={{ width: '100%', border: 'none', display: 'block' }}
-      className="chatango-frame"
-      allow="autoplay"
-      scrolling="yes"
-    />
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
+      {/* Embed Chatango */}
+      <div
+        ref={ref}
+        style={{ width: '100%', position: 'relative' }}
+        className="chatango-frame"
+      />
+      {/* Fallback lien mobile */}
+      <a
+        href="https://chatango.com/group/lemarathoncinema"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          display: 'block', textAlign: 'center', padding: '.6rem',
+          fontSize: '.73rem', color: 'var(--text3)',
+          borderTop: '1px solid rgba(130,80,220,.15)',
+          textDecoration: 'none',
+        }}
+      >
+        ↗ Ouvrir le chat dans un nouvel onglet
+      </a>
+    </div>
   )
 }
 
