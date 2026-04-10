@@ -19,6 +19,12 @@ export type ServerConfig = typeof CONFIG & {
   KILLBILL_END: string
 }
 
+function safeDate(str: string | undefined, fallback: Date): Date {
+  if (!str) return fallback
+  const d = new Date(str)
+  return isNaN(d.getTime()) ? fallback : d
+}
+
 export const getServerConfig = cache(async (): Promise<ServerConfig> => {
   const defaults: ServerConfig = {
     ...CONFIG,
@@ -55,7 +61,7 @@ export const getServerConfig = cache(async (): Promise<ServerConfig> => {
 
     return {
       ...defaults,
-      MARATHON_START:    db.marathon_start    ? new Date(db.marathon_start) : defaults.MARATHON_START,
+      MARATHON_START:    safeDate(db.marathon_start, defaults.MARATHON_START),
       SAISON_NUMERO:     db.saison_numero     ? parseInt(db.saison_numero)  : defaults.SAISON_NUMERO,
       SAISON_LABEL:      db.saison_label      ?? defaults.SAISON_LABEL,
       SEANCE_JOUR:       db.seance_jour       ?? defaults.SEANCE_JOUR,
