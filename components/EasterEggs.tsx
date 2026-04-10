@@ -27,6 +27,18 @@ const EE_STYLES = `
   @keyframes ee-dream-msg { from { opacity:0; transform:rotate(-45deg) scale(.7); } to { opacity:1; transform:rotate(-45deg) scale(1); } }
   @keyframes ee-rule-in { 0% { opacity:0; transform:scale(1.3); } 100% { opacity:1; transform:scale(1); } }
   @keyframes ee-matrix-text { 0% { opacity:0; } 15% { opacity:1; } 80% { opacity:1; } 100% { opacity:0; } }
+  .ee-mobile-btn { display:none; }
+  @media (max-width: 768px) {
+    .ee-mobile-btn {
+      display: flex; align-items: center; justify-content: center;
+      position: fixed; bottom: 72px; right: 14px;
+      width: 42px; height: 42px; border-radius: 50%;
+      background: var(--bg2); border: 1px solid var(--border2);
+      font-size: 1.1rem; cursor: pointer; z-index: 900;
+      box-shadow: 0 2px 12px rgba(0,0,0,.4);
+      color: var(--text2);
+    }
+  }
   @keyframes ee-hal-eye { 0%,100% { transform:scale(1); } 50% { transform:scale(1.08); } }
   @keyframes ee-hal-in { from { opacity:0; } to { opacity:1; } }
   @keyframes ee-hal-out { from { opacity:1; } to { opacity:0; } }
@@ -911,6 +923,41 @@ export default function EasterEggs({ config = {}, isGuest = false }: { config?: 
   const keyBuf = useRef<string[]>([])
   const tarsShown = useRef(false)
   const noctambuleShown = useRef(false)
+  const [showMobileInput, setShowMobileInput] = useState(false)
+  const [mobileVal, setMobileVal] = useState('')
+  const mobileInputRef = useRef<HTMLInputElement>(null)
+
+  function checkMobileInput(text: string) {
+    const t = text.toLowerCase()
+    let triggered = true
+    if      (t.endsWith('konami') || t.endsWith('joker')) { setShowJoker(true); discoverEgg('joker') }
+    else if (t.endsWith('red pill'))  { setShowMatrix(true); discoverEgg('matrix') }
+    else if (t.endsWith('42'))        { setShowMarvin(true); discoverEgg('marvin') }
+    else if (t.endsWith('hal'))       { setShowHal(true); discoverEgg('hal') }
+    else if (t.endsWith('nolan'))     { setShowNolan(true); discoverEgg('nolan') }
+    else if (t.endsWith('bond'))      { setShowBond(true); discoverEgg('bond') }
+    else if (t.endsWith('n4'))        { discoverEgg('fightclub'); setShowFightClub(true) }
+    else if (t.endsWith('fight club')) {
+      fightClubCount.current++
+      if (fightClubCount.current <= 3) {
+        setFightClubRule(fightClubCount.current as 1|2|3)
+        if (fightClubCount.current === 1) discoverEgg('fightclub')
+      } else { fightClubCount.current = 0; setFightClubRule(4) }
+    }
+    else if (t.endsWith('kill kenny')) { setShowKenny(true) }
+    else if (t.endsWith('south park')) { setShowSouthPark(true) }
+    else if (t.endsWith('randy'))      { setShowRandy(true) }
+    else if (t.endsWith('kill bill'))  { setShowKillBill(true) }
+    else if (t.endsWith('alien'))      { discoverEgg('tamagotchi'); setShowTamagotchi(true) }
+    else if (t.endsWith('predator'))   {
+      const snd = new Audio('/sons/predator-sound.m4a')
+      snd.volume = 0.85; snd.loop = true; snd.play().catch(() => {})
+      predSoundRef.current = snd; discoverEgg('predator'); setShowAVP(true)
+    }
+    else if (t.endsWith('tipiak'))     { setShowTipiak(true) }
+    else { triggered = false }
+    if (triggered) { setMobileVal(''); setShowMobileInput(false) }
+  }
 
   // URL hash trigger — #fightclub ouvre le jeu directement (pour test)
   useEffect(() => {
@@ -1091,6 +1138,43 @@ export default function EasterEggs({ config = {}, isGuest = false }: { config?: 
       {showAVP        && <AVPEgg          onDone={() => { predSoundRef.current?.pause(); predSoundRef.current = null; setShowAVP(false) }} predSound={predSoundRef} />}
       {showTipiak     && <TipiakOverlay  onDone={() => setShowTipiak(false)} />}
       {showTamagotchi && <TamagotchiKeyOverlay onClose={() => setShowTamagotchi(false)} isGuest={isGuest} />}
+
+      {/* Bouton flottant mobile — accès barre easter egg */}
+      <button
+        className="ee-mobile-btn"
+        onClick={() => { setShowMobileInput(true); setTimeout(() => mobileInputRef.current?.focus(), 50) }}
+        aria-label="Easter eggs"
+      >
+        ✨
+      </button>
+
+      {/* Overlay input mobile */}
+      {showMobileInput && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.7)', zIndex: 8000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '0 1rem 2rem' }}
+          onClick={e => { if (e.target === e.currentTarget) { setShowMobileInput(false); setMobileVal('') } }}
+        >
+          <div style={{ width: '100%', maxWidth: 480, background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--rxl)', padding: '1.2rem', animation: 'drawerUp .25s ease' }}>
+            <div style={{ fontSize: '.65rem', letterSpacing: '3px', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: '.8rem', textAlign: 'center' }}>
+              ✨ Easter Eggs
+            </div>
+            <input
+              ref={mobileInputRef}
+              value={mobileVal}
+              onChange={e => {
+                const v = e.target.value
+                setMobileVal(v)
+                checkMobileInput(v)
+              }}
+              placeholder="Tape un code secret..."
+              style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.7rem 1rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '1rem', outline: 'none', boxSizing: 'border-box' }}
+            />
+            <div style={{ fontSize: '.68rem', color: 'var(--text3)', marginTop: '.6rem', textAlign: 'center' }}>
+              Fermer en appuyant en dehors
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
