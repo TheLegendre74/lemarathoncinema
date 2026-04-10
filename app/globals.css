@@ -228,18 +228,19 @@ html, body {
 }
 .bottom-nav-item {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 3px; padding: .6rem .4rem;
+  gap: 2px; padding: .5rem .2rem;
   color: var(--text3); text-decoration: none;
-  font-size: .62rem; letter-spacing: .2px;
+  font-size: .58rem; letter-spacing: .1px;
   flex: 1;
   min-height: 56px;
   transition: color .15s; cursor: pointer;
   background: none; border: none; font-family: var(--font-body);
+  min-width: 0;
 }
 .bottom-nav-item.active { color: var(--gold); }
 .bottom-nav-item:active { opacity: .7; }
-.bottom-nav-icon  { font-size: 1.3rem; line-height: 1; }
-.bottom-nav-label { white-space: nowrap; }
+.bottom-nav-icon  { font-size: 1.2rem; line-height: 1; }
+.bottom-nav-label { white-space: nowrap; overflow: hidden; max-width: 100%; text-overflow: clip; }
 
 /* ── MOBILE OVERLAY + DRAWER ── */
 .mobile-overlay {
@@ -345,4 +346,12 @@ html, body {
 
   /* Stats */
   .stat-v { font-size: 1.5rem; }
+
+  /* Chat Chatango */
+  .chatango-frame { height: 380px; }
+}
+
+/* Desktop height for chatango */
+@media (min-width: 769px) {
+  .chatango-frame { height: 520px; }
 }

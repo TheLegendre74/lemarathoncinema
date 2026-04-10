@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
 import Link from 'next/link'
 import ForumTopicModal from './ForumTopicModal'
 import type { Profile } from '@/lib/supabase/types'
@@ -14,36 +13,14 @@ interface Props {
 }
 
 function ChatangoEmbed() {
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!containerRef.current) return
-    // Remove any previous instance
-    const old = document.getElementById('cid0020000436064045184')
-    if (old) old.remove()
-
-    const script = document.createElement('script')
-    script.id = 'cid0020000436064045184'
-    script.setAttribute('data-cfasync', 'false')
-    script.async = true
-    script.src = '//st.chatango.com/js/gz/emb.js'
-    script.style.cssText = 'width:100%;height:100%;'
-    script.textContent = JSON.stringify({
-      handle: 'lemarathoncinema',
-      arch: 'js',
-      styles: {
-        a: 'ff9900', b: 100, c: '000000', d: '000000',
-        k: 'ff9900', l: 'ff9900', m: 'ff9900',
-        p: '13.14', q: 'ff9900', r: 100, cnrs: '0.35', fwtickm: 1,
-      },
-    })
-    containerRef.current.appendChild(script)
-  }, [])
-
   return (
-    <div
-      ref={containerRef}
-      style={{ width: '100%', height: 500 }}
+    <iframe
+      src="https://www.chatango.com/group?id=lemarathoncinema&style=005"
+      title="Chat en direct"
+      style={{ width: '100%', border: 'none', display: 'block' }}
+      className="chatango-frame"
+      allow="autoplay"
+      scrolling="yes"
     />
   )
 }

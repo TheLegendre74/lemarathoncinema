@@ -45,8 +45,8 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
     ...(profile?.is_admin ? [{ href: '/admin',          icon: '🔧', label: 'Administration',   short: 'Admin'      }] : []),
   ]
 
-  // 4 onglets toujours visibles + bouton Menu
-  const primaryHrefs = ['/', '/films', '/duels', '/notes']
+  // 5 onglets toujours visibles + bouton Menu
+  const primaryHrefs = ['/', '/films', '/marathoniens', '/forum', '/notes']
   const primaryNav   = allNav.filter(n => primaryHrefs.includes(n.href))
   const menuNav      = allNav.filter(n => !primaryHrefs.includes(n.href))
 
