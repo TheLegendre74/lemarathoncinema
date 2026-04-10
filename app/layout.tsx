@@ -12,6 +12,7 @@ import ClientShell from '@/components/ClientShell'
 import { ToastProvider } from '@/components/ToastProvider'
 import EasterEggs from '@/components/EasterEggs'
 import { getServerConfig } from '@/lib/serverConfig'
+import { getUnreadMessageCount } from '@/lib/actions'
 
 export async function generateMetadata(): Promise<Metadata> {
   const cfg = await getServerConfig()
@@ -29,14 +30,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   let profile = null
   let hasRageuxEgg = false
   let hasTamagotchiEgg = false
+  let unreadMessages = 0
   if (user) {
-    const [{ data: profileData }, { data: eggs }] = await Promise.all([
+    const [{ data: profileData }, { data: eggs }, unread] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', user.id).single(),
       supabase.from('discovered_eggs').select('egg_id').eq('user_id', user.id),
+      getUnreadMessageCount(),
     ])
     profile = profileData
     hasRageuxEgg = (eggs ?? []).some((e: any) => e.egg_id === 'rageux')
     hasTamagotchiEgg = (eggs ?? []).some((e: any) => e.egg_id === 'tamagotchi')
+    unreadMessages = unread
   }
 
   const eeConfig = {
@@ -66,7 +70,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <ToastProvider>
           <EasterEggs config={eeConfig} isGuest={!user} />
-          <ClientShell profile={profile} hasRageuxEgg={hasRageuxEgg} hasTamagotchiEgg={hasTamagotchiEgg}>
+          <ClientShell profile={profile} hasRageuxEgg={hasRageuxEgg} hasTamagotchiEgg={hasTamagotchiEgg} unreadMessages={unreadMessages}>
             {children}
           </ClientShell>
         </ToastProvider>

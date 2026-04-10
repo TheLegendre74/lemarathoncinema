@@ -2202,3 +2202,181 @@ export async function getFightClubLeaderboard(difficulty: string): Promise<{ pse
     .limit(10)
   return (data ?? []) as unknown as { pseudo: string; score: number }[]
 }
+
+// ── MESSAGES PRIVÉS ───────────────────────────────────────────
+
+export async function sendMessage(recipientId: string, content: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  if (user.id === recipientId) return { error: 'Tu ne peux pas t\'envoyer un message.' }
+
+  const safe = content.trim().slice(0, 1000)
+  if (!safe) return { error: 'Message vide.' }
+
+  // Vérifie si l'expéditeur est bloqué par le destinataire
+  const { data: blocked } = await (supabase as any)
+    .from('blocked_users')
+    .select('blocked_id')
+    .eq('blocker_id', recipientId)
+    .eq('blocked_id', user.id)
+    .maybeSingle()
+  if (blocked) return { error: 'Impossible d\'envoyer ce message.' }
+
+  const { error } = await (supabase as any)
+    .from('private_messages')
+    .insert({ sender_id: user.id, recipient_id: recipientId, content: safe })
+  if (error) return { error: error.message }
+
+  revalidatePath('/profil')
+  return { success: true }
+}
+
+export async function getMyConversations() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
+  // Récupère les derniers messages de chaque conversation
+  const { data: messages } = await (supabase as any)
+    .from('private_messages')
+    .select('id, sender_id, recipient_id, content, read_at, created_at')
+    .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
+    .order('created_at', { ascending: false })
+    .limit(200)
+
+  if (!messages?.length) return []
+
+  // Groupe par interlocuteur
+  const convMap: Record<string, any> = {}
+  for (const msg of messages) {
+    const otherId = msg.sender_id === user.id ? msg.recipient_id : msg.sender_id
+    const deletedForMe = msg.sender_id === user.id ? msg.deleted_by_sender : msg.deleted_by_recipient
+    if (deletedForMe) continue
+    if (!convMap[otherId]) {
+      convMap[otherId] = { otherId, lastMessage: msg, unread: 0 }
+    }
+    if (msg.recipient_id === user.id && !msg.read_at) {
+      convMap[otherId].unread++
+    }
+  }
+
+  // Récupère les profils des interlocuteurs
+  const otherIds = Object.keys(convMap)
+  if (!otherIds.length) return []
+
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, pseudo, avatar_url')
+    .in('id', otherIds)
+
+  const profileMap: Record<string, any> = {}
+  for (const p of (profiles ?? [])) profileMap[p.id] = p
+
+  return Object.values(convMap)
+    .map((c: any) => ({ ...c, profile: profileMap[c.otherId] ?? null }))
+    .sort((a: any, b: any) => new Date(b.lastMessage.created_at).getTime() - new Date(a.lastMessage.created_at).getTime())
+}
+
+export async function getConversationMessages(withUserId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const { data: messages } = await (supabase as any)
+    .from('private_messages')
+    .select('id, sender_id, recipient_id, content, read_at, created_at, deleted_by_sender, deleted_by_recipient')
+    .or(
+      `and(sender_id.eq.${user.id},recipient_id.eq.${withUserId}),and(sender_id.eq.${withUserId},recipient_id.eq.${user.id})`
+    )
+    .order('created_at', { ascending: true })
+    .limit(100)
+
+  // Filtre les messages supprimés pour l'utilisateur courant
+  return (messages ?? []).filter((m: any) => {
+    if (m.sender_id === user.id) return !m.deleted_by_sender
+    return !m.deleted_by_recipient
+  })
+}
+
+export async function markMessagesAsRead(fromUserId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  await (supabase as any)
+    .from('private_messages')
+    .update({ read_at: new Date().toISOString() })
+    .eq('sender_id', fromUserId)
+    .eq('recipient_id', user.id)
+    .is('read_at', null)
+
+  revalidatePath('/profil')
+}
+
+export async function deleteMessage(messageId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+
+  const { data: msg } = await (supabase as any)
+    .from('private_messages')
+    .select('sender_id, recipient_id')
+    .eq('id', messageId)
+    .single()
+
+  if (!msg) return { error: 'Message introuvable.' }
+  if (msg.sender_id !== user.id && msg.recipient_id !== user.id) return { error: 'Non autorisé.' }
+
+  if (msg.sender_id === user.id) {
+    await (supabase as any).from('private_messages').update({ deleted_by_sender: true }).eq('id', messageId)
+  } else {
+    await (supabase as any).from('private_messages').update({ deleted_by_recipient: true }).eq('id', messageId)
+  }
+
+  revalidatePath('/profil')
+  return { success: true }
+}
+
+export async function blockUser(targetId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+
+  await (supabase as any)
+    .from('blocked_users')
+    .upsert({ blocker_id: user.id, blocked_id: targetId }, { onConflict: 'blocker_id,blocked_id', ignoreDuplicates: true })
+
+  revalidatePath('/profil')
+  return { success: true }
+}
+
+export async function unblockUser(targetId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+
+  await (supabase as any)
+    .from('blocked_users')
+    .delete()
+    .eq('blocker_id', user.id)
+    .eq('blocked_id', targetId)
+
+  revalidatePath('/profil')
+  return { success: true }
+}
+
+export async function getUnreadMessageCount(): Promise<number> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return 0
+
+  const { count } = await (supabase as any)
+    .from('private_messages')
+    .select('id', { count: 'exact', head: true })
+    .eq('recipient_id', user.id)
+    .is('read_at', null)
+    .eq('deleted_by_recipient', false)
+
+  return count ?? 0
+}

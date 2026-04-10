@@ -6,13 +6,16 @@ import Image from 'next/image'
 import AvatarUpload from './AvatarUpload'
 import BadgeSelector from './BadgeSelector'
 import BioEditor from '@/components/BioEditor'
+import MessagesSection from '@/components/MessagesSection'
+import { getMyConversations, getConversationMessages } from '@/lib/actions'
 
-export const revalidate = 30
+export const revalidate = 0
 
-export default async function ProfilPage() {
+export default async function ProfilPage({ searchParams }: { searchParams: Promise<{ with?: string }> }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth')
+  const { with: withUserId } = await searchParams
 
   const [{ data: profile }, { data: watched }, { data: votes }, { data: eggs }] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
@@ -22,6 +25,31 @@ export default async function ProfilPage() {
   ])
 
   if (!profile) redirect('/auth')
+
+  // Messages
+  const [conversations, threadMessages] = await Promise.all([
+    getMyConversations(),
+    withUserId ? getConversationMessages(withUserId) : Promise.resolve([]),
+  ])
+
+  // Interlocuteur initial
+  let initialOtherProfile: { id: string; pseudo: string; avatar_url: string | null } | null = null
+  if (withUserId) {
+    const conv = conversations.find((c: any) => c.otherId === withUserId)
+    if (conv?.profile) {
+      initialOtherProfile = conv.profile
+    } else {
+      const { data: op } = await supabase.from('profiles').select('id, pseudo, avatar_url').eq('id', withUserId).single()
+      initialOtherProfile = op ?? null
+    }
+  }
+
+  // Utilisateurs bloqués par moi
+  const { data: blockedData } = await (supabase as any)
+    .from('blocked_users')
+    .select('blocked_id')
+    .eq('blocker_id', user.id)
+  const blockedIds: string[] = (blockedData ?? []).map((b: any) => b.blocked_id)
 
   const { data: rankData } = await supabase.from('profiles').select('id').gte('exp', profile.exp)
   const rank = rankData?.length ?? 1
@@ -95,6 +123,16 @@ export default async function ProfilPage() {
           </div>
         ))}
       </div>
+
+      {/* Messages privés */}
+      <MessagesSection
+        myId={user.id}
+        conversations={conversations as any}
+        initialWithId={withUserId ?? null}
+        initialMessages={threadMessages as any}
+        initialOtherProfile={initialOtherProfile as any}
+        blockedIds={blockedIds}
+      />
 
       {/* Films vus */}
       <div className="section-title">Films vus ({watched?.length ?? 0})</div>

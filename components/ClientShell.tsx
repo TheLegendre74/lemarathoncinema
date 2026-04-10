@@ -9,10 +9,11 @@ interface Props {
   profile: Profile | null
   hasRageuxEgg: boolean
   hasTamagotchiEgg: boolean
+  unreadMessages?: number
   children: React.ReactNode
 }
 
-export default function ClientShell({ profile, hasRageuxEgg, hasTamagotchiEgg, children }: Props) {
+export default function ClientShell({ profile, hasRageuxEgg, hasTamagotchiEgg, unreadMessages = 0, children }: Props) {
   const pathname = usePathname()
   const isAuthPage = pathname?.startsWith('/auth')
 
@@ -20,7 +21,7 @@ export default function ClientShell({ profile, hasRageuxEgg, hasTamagotchiEgg, c
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
-      <Sidebar profile={profile} hasRageuxEgg={hasRageuxEgg} hasTamagotchiEgg={hasTamagotchiEgg} />
+      <Sidebar profile={profile} hasRageuxEgg={hasRageuxEgg} hasTamagotchiEgg={hasTamagotchiEgg} unreadMessages={unreadMessages} />
       <main className="main">
         {children}
         <footer style={{ marginTop: '4rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)', display: 'flex', gap: '1.2rem', flexWrap: 'wrap', fontSize: '.72rem', color: 'var(--text3)' }}>

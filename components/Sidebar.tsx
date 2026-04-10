@@ -7,9 +7,9 @@ import { signOut } from '@/lib/actions'
 import { levelFromExp, getActiveBadge, CONFIG } from '@/lib/config'
 import type { Profile } from '@/lib/supabase/types'
 
-interface SidebarProps { profile: Profile | null; hasRageuxEgg?: boolean; hasTamagotchiEgg?: boolean }
+interface SidebarProps { profile: Profile | null; hasRageuxEgg?: boolean; hasTamagotchiEgg?: boolean; unreadMessages?: number }
 
-export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEgg = false }: SidebarProps) {
+export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEgg = false, unreadMessages = 0 }: SidebarProps) {
   const pathname    = usePathname()
   const searchParams = useSearchParams()
   const router      = useRouter()
@@ -71,6 +71,11 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
           <Link key={n.href} href={n.href} className={`nav-item ${isActive(n.href) ? 'active' : ''}`}>
             <span style={{ fontSize: '.95rem', width: 18, textAlign: 'center', flexShrink: 0 }}>{n.icon}</span>
             {n.label}
+            {n.href === '/profil' && unreadMessages > 0 && (
+              <span style={{ marginLeft: 'auto', background: 'var(--red, #e55)', color: '#fff', borderRadius: 99, fontSize: '.6rem', fontWeight: 700, padding: '1px 6px', minWidth: 18, textAlign: 'center' }}>
+                {unreadMessages > 99 ? '99+' : unreadMessages}
+              </span>
+            )}
           </Link>
         ))}
       </div>
@@ -178,9 +183,15 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
                 href={n.href}
                 className={`mobile-drawer-item ${isActive(n.href) ? 'active' : ''}`}
                 onClick={() => setMenuOpen(false)}
+                style={{ position: 'relative' }}
               >
                 <span className="mobile-drawer-item-icon">{n.icon}</span>
                 <span className="mobile-drawer-item-label">{n.short}</span>
+                {n.href === '/profil' && unreadMessages > 0 && (
+                  <span style={{ position: 'absolute', top: 4, right: 4, background: 'var(--red, #e55)', color: '#fff', borderRadius: 99, fontSize: '.55rem', fontWeight: 700, padding: '1px 5px', minWidth: 16, textAlign: 'center' }}>
+                    {unreadMessages > 99 ? '99+' : unreadMessages}
+                  </span>
+                )}
               </Link>
             ))}
           </div>

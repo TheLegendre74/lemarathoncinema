@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getBadge, levelFromExp, getActiveBadge, CONFIG } from '@/lib/config'
 import Image from 'next/image'
+import Link from 'next/link'
 
 export const revalidate = 60
 
@@ -78,7 +79,7 @@ export default async function MarathoniensPage() {
               )}
 
               {/* Progression */}
-              <div>
+              <div style={{ marginBottom: '.7rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.68rem', color: 'var(--text3)', marginBottom: '.3rem' }}>
                   <span>Progression marathon</span>
                   <span style={{ color: pct >= 100 ? 'var(--gold)' : 'var(--text2)' }}>{watched}/{totalFilms} · {pct}%</span>
@@ -87,6 +88,16 @@ export default async function MarathoniensPage() {
                   <div style={{ height: '100%', width: `${pct}%`, background: pct >= 100 ? 'var(--gold)' : 'var(--green)', borderRadius: 99, transition: 'width .3s' }} />
                 </div>
               </div>
+
+              {/* Message button (only if logged in and not own card) */}
+              {user && !isMe && (
+                <Link
+                  href={`/profil?with=${p.id}`}
+                  style={{ display: 'block', textAlign: 'center', fontSize: '.72rem', padding: '.35rem', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r)', color: 'var(--text2)', textDecoration: 'none' }}
+                >
+                  ✉️ Message
+                </Link>
+              )}
             </div>
           )
         })}
