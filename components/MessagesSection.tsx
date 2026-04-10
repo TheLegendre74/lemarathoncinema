@@ -67,6 +67,7 @@ export default function MessagesSection({
   const [mobileView, setMobileView] = useState<'list' | 'thread'>(initialWithId ? 'thread' : 'list')
   const [isMobile, setIsMobile] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -78,7 +79,9 @@ export default function MessagesSection({
 
   // Scroll to bottom when messages change or thread opens
   useEffect(() => {
-    if (activeId) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (activeId && scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    }
   }, [messages, activeId])
 
   // Mark as read when opening a conversation
@@ -250,7 +253,7 @@ export default function MessagesSection({
       </div>
 
       {/* Messages scroll area */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '.75rem 1rem', display: 'flex', flexDirection: 'column', gap: '.5rem', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+      <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '.75rem 1rem', display: 'flex', flexDirection: 'column', gap: '.5rem', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
         {messages.length === 0 && (
           <div style={{ textAlign: 'center', color: 'var(--text3)', fontSize: '.78rem', marginTop: '2rem' }}>
             Début de la conversation
