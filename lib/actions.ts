@@ -2129,6 +2129,17 @@ export async function caresserTamagotchi() {
 }
 
 
+// ── PROFIL BIO ────────────────────────────────────────────────
+
+export async function updateBio(bio: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  await supabase.from('profiles').update({ bio: bio.slice(0, 200) } as any).eq('id', user.id)
+  revalidatePath('/profil')
+  revalidatePath('/marathoniens')
+}
+
 // ── MARATHON NOTIFICATIONS ─────────────────────────────────────
 
 export async function toggleMarathonNotification(notify: boolean) {

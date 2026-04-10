@@ -5,6 +5,7 @@ import ExpBar from '@/components/ExpBar'
 import Image from 'next/image'
 import AvatarUpload from './AvatarUpload'
 import BadgeSelector from './BadgeSelector'
+import BioEditor from '@/components/BioEditor'
 
 export const revalidate = 30
 
@@ -72,6 +73,9 @@ export default async function ProfilPage() {
 
         <ExpBar exp={profile.exp} />
       </div>
+
+      {/* Bio */}
+      <BioEditor initial={(profile as any).bio ?? null} />
 
       {/* Badge selector */}
       <BadgeSelector
