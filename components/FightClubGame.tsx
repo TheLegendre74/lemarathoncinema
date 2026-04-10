@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
-import { discoverEgg } from '@/lib/actions'
+import { discoverEgg, saveFightClubScore, getFightClubLeaderboard } from '@/lib/actions'
 
 const GW = 800, GH = 450
 const FY1 = 255
@@ -44,6 +44,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
   const [showEndlessChoice,setShowEndlessChoice] = useState(false)
   const [showDoorPrompt,   setShowDoorPrompt]   = useState(false)
   const [lbData,           setLbData]           = useState<LBEntry[]>([])
+  const [existingLB,       setExistingLB]       = useState<LBEntry[]>([])
   const [nameVal,          setNameVal]          = useState('')
   const gameResult = useRef<{ score: number; diff: string } | null>(null)
   const startEndlessRef = useRef<(() => void) | null>(null)
@@ -56,12 +57,27 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
     return () => window.removeEventListener('resize', upd)
   }, [])
 
-  function confirmName() {
+  async function confirmName() {
     const res = gameResult.current; if (!res) return
     const nm = nameVal.trim().toUpperCase().slice(0, 12) || 'ANONYME'
-    const entries = addToLB(res.diff, nm, res.score)
+    // Sauvegarde localStorage (backup offline) + Supabase (global)
+    addToLB(res.diff, nm, res.score)
+    await saveFightClubScore(nm, res.score, res.diff)
+    // Recharge le leaderboard depuis le serveur
+    const serverData = await getFightClubLeaderboard(res.diff)
+    const entries: LBEntry[] = serverData.length
+      ? serverData.map(e => ({ name: e.pseudo, score: e.score }))
+      : getLB(res.diff)
     setLbData(entries); setNameVal(''); setShowName(false); setShowLB(true)
   }
+
+  // Précharge le LB existant dès l'affichage de l'écran de saisie du nom
+  useEffect(() => {
+    if (!showName || !gameResult.current) return
+    getFightClubLeaderboard(gameResult.current.diff).then(data => {
+      setExistingLB(data.map(e => ({ name: e.pseudo, score: e.score })))
+    })
+  }, [showName])
 
   useEffect(() => {
     discoverEgg('fightclub')
@@ -3146,6 +3162,32 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             fontFamily: 'Impact', fontSize: '18px', letterSpacing: '4px',
             padding: '10px 40px', cursor: 'pointer',
           }}>VALIDER</button>
+
+          {/* Leaderboard existant visible pendant la saisie */}
+          {existingLB.length > 0 && (
+            <div style={{ marginTop: '28px', width: '280px' }}>
+              <div style={{ color: '#444', fontFamily: 'monospace', fontSize: '10px', letterSpacing: '3px', marginBottom: '8px', textAlign: 'center' }}>
+                — TOP SCORES —
+              </div>
+              <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+                <tbody>
+                  {existingLB.map((e, i) => (
+                    <tr key={i} style={{ color: i === 0 ? '#ffdd00' : '#555' }}>
+                      <td style={{ fontFamily: 'monospace', fontSize: '12px', padding: '2px 8px', textAlign: 'right', opacity: .6 }}>
+                        #{i + 1}
+                      </td>
+                      <td style={{ fontFamily: 'monospace', fontSize: '12px', padding: '2px 8px', letterSpacing: '2px' }}>
+                        {e.name}
+                      </td>
+                      <td style={{ fontFamily: 'monospace', fontSize: '12px', padding: '2px 8px', color: '#ffdd00', opacity: i === 0 ? 1 : .7 }}>
+                        {String(e.score).padStart(7, '0')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 

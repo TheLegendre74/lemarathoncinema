@@ -1,4 +1,11 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
+
+export const viewport: Viewport = {
+  viewportFit: 'cover',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+}
 import './globals.css'
 import { createClient } from '@/lib/supabase/server'
 import ClientShell from '@/components/ClientShell'
@@ -58,7 +65,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="fr">
       <body>
         <ToastProvider>
-          <EasterEggs config={eeConfig} />
+          <EasterEggs config={eeConfig} isGuest={!user} />
           <ClientShell profile={profile} hasRageuxEgg={hasRageuxEgg} hasTamagotchiEgg={hasTamagotchiEgg}>
             {children}
           </ClientShell>

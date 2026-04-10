@@ -71,6 +71,7 @@ export default function AuthPage() {
     if (tab === 'login') {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) { setErr('Email ou mot de passe incorrect.'); setLoading(false); return }
+      document.cookie = 'guest_mode=; path=/; max-age=0'
       setTimeout(() => { window.location.href = '/' }, 500)
     } else {
       if (pseudo.length < 2) { setErr('Pseudo trop court (min 2 caractères).'); setLoading(false); return }
@@ -86,6 +87,7 @@ export default function AuthPage() {
         options: { data: { pseudo } }
       })
       if (error) { setErr(error.message); setLoading(false); return }
+      document.cookie = 'guest_mode=; path=/; max-age=0'
       setTimeout(() => { window.location.href = '/' }, 500)
     }
   }
@@ -193,17 +195,22 @@ export default function AuthPage() {
           <div style={{ fontSize: '.65rem', color: 'var(--text3)', marginBottom: '.6rem', letterSpacing: 1, textTransform: 'uppercase' }}>
             ou
           </div>
-          <a href="/" style={{
-            display: 'block', width: '100%', padding: '.6rem',
-            background: 'none', border: '1px solid var(--border)',
-            borderRadius: 'var(--r)', cursor: 'pointer',
-            color: 'var(--text2)', fontSize: '.85rem', textAlign: 'center',
-            textDecoration: 'none',
-          }}>
+          <button
+            onClick={() => {
+              document.cookie = 'guest_mode=1; path=/; max-age=31536000; SameSite=Lax'
+              window.location.href = '/'
+            }}
+            style={{
+              display: 'block', width: '100%', padding: '.6rem',
+              background: 'none', border: '1px solid var(--border)',
+              borderRadius: 'var(--r)', cursor: 'pointer',
+              color: 'var(--text2)', fontSize: '.85rem', textAlign: 'center',
+              fontFamily: 'var(--font-body)',
+            }}>
             👁 Continuer en mode invité
-          </a>
+          </button>
           <div style={{ fontSize: '.68rem', color: 'var(--text3)', marginTop: '.4rem', lineHeight: 1.5 }}>
-            Consultation uniquement — sans voter ni commenter
+            Consultation uniquement — sans voter ni noter
           </div>
         </div>
       </div>

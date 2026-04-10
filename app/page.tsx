@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Countdown from '@/components/Countdown'
 import ExpBar from '@/components/ExpBar'
 import Poster from '@/components/Poster'
+import MarathonNotifyToggle from '@/components/MarathonNotifyToggle'
 import { getBadge, levelFromExp, CONFIG } from '@/lib/config'
 import { getServerConfig } from '@/lib/serverConfig'
 import Link from 'next/link'
@@ -128,6 +129,9 @@ export default async function HomePage() {
 
       <Countdown marathonStart={cfg.MARATHON_START.toISOString()} />
 
+      {/* Notification marathon (visible uniquement avant le lancement) */}
+      {!live && <MarathonNotifyToggle initial={(profile as any).notify_marathon ?? false} />}
+
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '.8rem', marginBottom: '1.5rem' }}>
         {[
@@ -156,7 +160,7 @@ export default async function HomePage() {
       </div>
 
       {/* Week film + active duel */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+      <div className="home-quick-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
         {wf && (
           <Link href="/semaine" style={{ textDecoration: 'none' }}>
             <div className="card" style={{ cursor: 'pointer', height: '100%' }}>

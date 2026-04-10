@@ -839,7 +839,7 @@ export interface EasterEggsConfig {
   killBillEnd?: string
 }
 
-function TamagotchiKeyOverlay({ onClose }: { onClose: () => void }) {
+function TamagotchiKeyOverlay({ onClose, isGuest }: { onClose: () => void; isGuest: boolean }) {
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,10,5,.93)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
       <div style={{ textAlign: 'center', padding: '0 2rem', maxWidth: 560, animation: 'ee-rule-in .35s ease' }}>
@@ -852,16 +852,22 @@ function TamagotchiKeyOverlay({ onClose }: { onClose: () => void }) {
         <div style={{ fontSize: 'clamp(.8rem,2vw,1rem)', color: 'rgba(255,255,255,.5)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '1.5rem' }}>
           Easter egg débloqué
         </div>
-        <a href='/tamagotchi' onClick={e => e.stopPropagation()} style={{ display: 'inline-block', background: 'rgba(34,211,238,.1)', border: '1px solid rgba(34,211,238,.4)', borderRadius: 99, padding: '.5rem 1.4rem', fontSize: '.85rem', color: '#22d3ee', textDecoration: 'none' }}>
-          🤍 Voir mon alien
-        </a>
+        {isGuest ? (
+          <a href='/auth' onClick={e => e.stopPropagation()} style={{ display: 'inline-block', background: 'rgba(34,211,238,.1)', border: '1px solid rgba(34,211,238,.4)', borderRadius: 99, padding: '.5rem 1.4rem', fontSize: '.85rem', color: '#22d3ee', textDecoration: 'none' }}>
+            🔒 Connecte-toi pour adopter l&apos;alien
+          </a>
+        ) : (
+          <a href='/tamagotchi' onClick={e => e.stopPropagation()} style={{ display: 'inline-block', background: 'rgba(34,211,238,.1)', border: '1px solid rgba(34,211,238,.4)', borderRadius: 99, padding: '.5rem 1.4rem', fontSize: '.85rem', color: '#22d3ee', textDecoration: 'none' }}>
+            🤍 Voir mon alien
+          </a>
+        )}
         <div style={{ color: 'rgba(255,255,255,.2)', fontSize: '.7rem', marginTop: '1.5rem' }}>— Cliquer pour fermer —</div>
       </div>
     </div>
   )
 }
 
-export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig }) {
+export default function EasterEggs({ config = {}, isGuest = false }: { config?: EasterEggsConfig; isGuest?: boolean }) {
   const ee = {
     matrixLine1:     config.matrixLine1     ?? 'Wake up, Neo...',
     matrixLine2:     config.matrixLine2     ?? 'The Matrix has you.',
@@ -1084,7 +1090,7 @@ export default function EasterEggs({ config = {} }: { config?: EasterEggsConfig 
       {showKillBill   && <KillBillGame    onDone={() => setShowKillBill(false)}  endText={ee.killBillEnd} />}
       {showAVP        && <AVPEgg          onDone={() => { predSoundRef.current?.pause(); predSoundRef.current = null; setShowAVP(false) }} predSound={predSoundRef} />}
       {showTipiak     && <TipiakOverlay  onDone={() => setShowTipiak(false)} />}
-      {showTamagotchi && <TamagotchiKeyOverlay onClose={() => setShowTamagotchi(false)} />}
+      {showTamagotchi && <TamagotchiKeyOverlay onClose={() => setShowTamagotchi(false)} isGuest={isGuest} />}
     </>
   )
 }

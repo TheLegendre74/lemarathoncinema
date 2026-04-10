@@ -23,6 +23,12 @@ export default function ClientShell({ profile, hasRageuxEgg, hasTamagotchiEgg, c
       <Sidebar profile={profile} hasRageuxEgg={hasRageuxEgg} hasTamagotchiEgg={hasTamagotchiEgg} />
       <main className="main">
         {children}
+        <footer style={{ marginTop: '4rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)', display: 'flex', gap: '1.2rem', flexWrap: 'wrap', fontSize: '.72rem', color: 'var(--text3)' }}>
+          <span>© 2026 The Legendre</span>
+          <a href="/mentions-legales" style={{ color: 'var(--text3)', textDecoration: 'none' }}>Mentions légales</a>
+          <a href="/confidentialite" style={{ color: 'var(--text3)', textDecoration: 'none' }}>Politique de confidentialité</a>
+          <a href="mailto:LeMarathonCinema@gmail.com" style={{ color: 'var(--text3)', textDecoration: 'none' }}>Contact</a>
+        </footer>
       </main>
       {hasTamagotchiEgg && <TamagotchiWidget />}
     </div>

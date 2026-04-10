@@ -254,60 +254,73 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
             </p>
           )}
 
-          {/* Stars positives */}
-          <div style={{ marginBottom: '.6rem' }}>
-            <div style={{ fontSize: '.7rem', color: 'var(--text3)', marginBottom: '.4rem', letterSpacing: '1px', textTransform: 'uppercase' }}>
-              Ta note positive {avgRating(ratingScores) ? <span style={{ color: 'var(--gold)', textTransform: 'none', letterSpacing: 0 }}>· moy. {avgRating(ratingScores)}/10 ({ratingScores.length})</span> : ''}
+          {/* Stars + watched : invité → message de connexion */}
+          {!profile ? (
+            <div style={{ background: 'rgba(232,196,106,.06)', border: '1px solid rgba(232,196,106,.2)', borderRadius: 'var(--r)', padding: '1rem', marginBottom: '1rem', textAlign: 'center' }}>
+              <div style={{ fontSize: '1.3rem', marginBottom: '.4rem' }}>🔒</div>
+              <div style={{ fontSize: '.83rem', color: 'var(--text2)', marginBottom: '.6rem' }}>
+                Connecte-toi pour noter ce film et marquer comme vu
+              </div>
+              <a href="/auth" style={{ display: 'inline-block', background: 'var(--gold)', color: '#0a0a0f', fontWeight: 600, fontSize: '.8rem', padding: '.45rem 1.1rem', borderRadius: 'var(--r)', textDecoration: 'none' }}>
+                Se connecter / S'inscrire
+              </a>
             </div>
-            <div style={{ display: 'flex', gap: 3 }}>
-              {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
-                <span key={n} onMouseEnter={() => setHov(n)} onMouseLeave={() => setHov(0)} onClick={() => handleRate(n)}
-                  style={{ fontSize: '1.1rem', cursor: 'pointer', color: (hov || (myRating ?? 0)) >= n ? 'var(--gold)' : 'var(--text3)', transition: 'transform .1s', transform: (hov || (myRating ?? 0)) >= n ? 'scale(1.15)' : 'scale(1)' }}>
-                  ★
-                </span>
-              ))}
-            </div>
-          </div>
+          ) : (
+            <>
+              {/* Stars positives */}
+              <div style={{ marginBottom: '.6rem' }}>
+                <div style={{ fontSize: '.7rem', color: 'var(--text3)', marginBottom: '.4rem', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                  Ta note positive {avgRating(ratingScores) ? <span style={{ color: 'var(--gold)', textTransform: 'none', letterSpacing: 0 }}>· moy. {avgRating(ratingScores)}/10 ({ratingScores.length})</span> : ''}
+                </div>
+                <div style={{ display: 'flex', gap: 3 }}>
+                  {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
+                    <span key={n} onMouseEnter={() => setHov(n)} onMouseLeave={() => setHov(0)} onClick={() => handleRate(n)}
+                      style={{ fontSize: '1.1rem', cursor: 'pointer', color: (hov || (myRating ?? 0)) >= n ? 'var(--gold)' : 'var(--text3)', transition: 'transform .1s', transform: (hov || (myRating ?? 0)) >= n ? 'scale(1.15)' : 'scale(1)' }}>
+                      ★
+                    </span>
+                  ))}
+                </div>
+              </div>
 
-          {/* Stars négatives (bleues) — visible uniquement pour les rageuxs */}
-          {hasRageuxEgg && (
-            <div style={{ marginBottom: '1rem' }}>
-              <div style={{ fontSize: '.7rem', color: 'var(--text3)', marginBottom: '.4rem', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                Ta note négative {avgRating(negativeRatingScores) ? <span style={{ color: '#60a5fa', textTransform: 'none', letterSpacing: 0 }}>· moy. {avgRating(negativeRatingScores)}/10 ({negativeRatingScores.length})</span> : ''}
+              {/* Stars négatives (bleues) — visible uniquement pour les rageuxs */}
+              {hasRageuxEgg && (
+                <div style={{ marginBottom: '1rem' }}>
+                  <div style={{ fontSize: '.7rem', color: 'var(--text3)', marginBottom: '.4rem', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                    Ta note négative {avgRating(negativeRatingScores) ? <span style={{ color: '#60a5fa', textTransform: 'none', letterSpacing: 0 }}>· moy. {avgRating(negativeRatingScores)}/10 ({negativeRatingScores.length})</span> : ''}
+                  </div>
+                  <div style={{ display: 'flex', gap: 3 }}>
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
+                      <span key={n} onMouseEnter={() => setNegHov(n)} onMouseLeave={() => setNegHov(0)} onClick={() => handleNegativeRate(n)}
+                        style={{ fontSize: '1.1rem', cursor: 'pointer', color: (negHov || (myNegativeRating ?? 0)) >= n ? '#60a5fa' : 'var(--text3)', transition: 'transform .1s', transform: (negHov || (myNegativeRating ?? 0)) >= n ? 'scale(1.15)' : 'scale(1)' }}>
+                        ★
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Watched buttons */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem', marginBottom: '1rem' }}>
+                <button
+                  className={`btn ${isWatched && watchedPre === true ? 'btn-green' : 'btn-outline'} btn-full`}
+                  onClick={handleMarkPre}
+                >
+                  {isWatched && watchedPre === true ? '✓ Vu avant le marathon — Retirer' : '🎬 J\'ai vu ce film (pré-marathon)'}
+                </button>
+                <button
+                  className={`btn ${isWatched && watchedPre === false ? 'btn-green' : 'btn-outline'} btn-full`}
+                  onClick={isMarathonLive ? handleMarkMarathon : undefined}
+                  disabled={!isMarathonLive}
+                  title={!isMarathonLive ? 'Le marathon n\'a pas encore commencé' : undefined}
+                  style={!isMarathonLive ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}
+                >
+                  {isWatched && watchedPre === false
+                    ? '✓ Vu pendant le marathon — Retirer'
+                    : `🏆 J'ai vu ce film pendant le marathon (+${CONFIG.EXP_FILM} EXP)`}
+                </button>
               </div>
-              <div style={{ display: 'flex', gap: 3 }}>
-                {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
-                  <span key={n} onMouseEnter={() => setNegHov(n)} onMouseLeave={() => setNegHov(0)} onClick={() => handleNegativeRate(n)}
-                    style={{ fontSize: '1.1rem', cursor: 'pointer', color: (negHov || (myNegativeRating ?? 0)) >= n ? '#60a5fa' : 'var(--text3)', transition: 'transform .1s', transform: (negHov || (myNegativeRating ?? 0)) >= n ? 'scale(1.15)' : 'scale(1)' }}>
-                    ★
-                  </span>
-                ))}
-              </div>
-            </div>
+            </>
           )}
-
-          {/* Watched buttons */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem', marginBottom: '1rem' }}>
-            {/* Pré-marathon button — always active */}
-            <button
-              className={`btn ${isWatched && watchedPre === true ? 'btn-green' : 'btn-outline'} btn-full`}
-              onClick={handleMarkPre}
-            >
-              {isWatched && watchedPre === true ? '✓ Vu avant le marathon — Retirer' : '🎬 J\'ai vu ce film (pré-marathon)'}
-            </button>
-            {/* Marathon button — disabled until marathon is live */}
-            <button
-              className={`btn ${isWatched && watchedPre === false ? 'btn-green' : 'btn-outline'} btn-full`}
-              onClick={isMarathonLive ? handleMarkMarathon : undefined}
-              disabled={!isMarathonLive}
-              title={!isMarathonLive ? 'Le marathon n\'a pas encore commencé' : undefined}
-              style={!isMarathonLive ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}
-            >
-              {isWatched && watchedPre === false
-                ? '✓ Vu pendant le marathon — Retirer'
-                : `🏆 J'ai vu ce film pendant le marathon (+${CONFIG.EXP_FILM} EXP)`}
-            </button>
-          </div>
 
           {/* Tabs */}
           <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: '1.2rem', overflowX: 'auto' }}>

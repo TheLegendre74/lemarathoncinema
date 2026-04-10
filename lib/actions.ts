@@ -2127,3 +2127,36 @@ export async function caresserTamagotchi() {
   const { data } = await (supabase as any).from('tamagotchi').update(updates).eq('user_id', user.id).select().single()
   return { data, error: null }
 }
+
+
+// ── MARATHON NOTIFICATIONS ─────────────────────────────────────
+
+export async function toggleMarathonNotification(notify: boolean) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  await (supabase as any).from('profiles').update({ notify_marathon: notify }).eq('id', user.id)
+  revalidatePath('/')
+}
+
+// ── FIGHT CLUB LEADERBOARD ─────────────────────────────────────
+
+export async function saveFightClubScore(pseudo: string, score: number, difficulty: string) {
+  const supabase = await createClient()
+  await supabase.from('fightclub_scores' as any).insert({
+    pseudo: pseudo.slice(0, 12).toUpperCase(),
+    score:  Math.max(0, Math.round(score)),
+    difficulty,
+  })
+}
+
+export async function getFightClubLeaderboard(difficulty: string): Promise<{ pseudo: string; score: number }[]> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('fightclub_scores' as any)
+    .select('pseudo, score')
+    .eq('difficulty', difficulty)
+    .order('score', { ascending: false })
+    .limit(10)
+  return (data ?? []) as unknown as { pseudo: string; score: number }[]
+}
