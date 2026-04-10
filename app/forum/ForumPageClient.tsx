@@ -15,8 +15,6 @@ interface Props {
 
 const CHATANGO_URL = 'https://lemarathoncinema.chatango.com'
 // URL iframe Chatango : format //st.chatango.com/project/{w}/{h}/{handle}/
-const CHATANGO_IFRAME = '//st.chatango.com/project/100/100/lemarathoncinema/'
-
 function ChatangoEmbed() {
   const [isMobile, setIsMobile] = useState(false)
 
@@ -61,11 +59,11 @@ function ChatangoEmbed() {
     )
   }
 
-  // Desktop : iframe directe (pas de script dynamique)
+  // Desktop : iframe sur l'URL directe Chatango
   return (
     /* eslint-disable-next-line react/iframe-missing-sandbox */
     <iframe
-      src={CHATANGO_IFRAME}
+      src={CHATANGO_URL}
       style={{ width: '100%', height: 500, border: 'none', display: 'block' }}
       allowTransparency={true}
       title="Le Salon — Chat en direct"
