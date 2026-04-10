@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { discoverEgg, saveFightClubScore, getFightClubLeaderboard } from '@/lib/actions'
 
 const GW = 800, GH = 450
@@ -43,6 +43,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
   const [showLB,           setShowLB]           = useState(false)
   const [showEndlessChoice,setShowEndlessChoice] = useState(false)
   const [showDoorPrompt,   setShowDoorPrompt]   = useState(false)
+  const [mobileCtrlsOn,    setMobileCtrlsOn]    = useState(false)
   const [lbData,           setLbData]           = useState<LBEntry[]>([])
   const [existingLB,       setExistingLB]       = useState<LBEntry[]>([])
   const [nameVal,          setNameVal]          = useState('')
@@ -1130,11 +1131,28 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             prevKeys[e.code] = true
           }
           const onKeyUp = (e: KeyboardEvent) => { this.gameKeys[e.code] = false; prevKeys[e.code] = false }
+          // Mobile virtual controls — one-shot actions dispatched via custom event
+          const onMobileAction = (e: Event) => {
+            const action = (e as CustomEvent).detail?.action
+            if (!action || this.gameOver || this.victory || this.bossCinematic || this.gunPickupAnim) return
+            if (action === 'punch') this.playerAttack('punch')
+            else if (action === 'kick') this.playerAttack('kick')
+            else if (action === 'jump') this.playerJump()
+            else if (action === 'throw') this.throwWeapon()
+          }
           window.addEventListener('keydown', onKeyDown)
           window.addEventListener('keyup', onKeyUp)
+          window.addEventListener('fc:action', onMobileAction)
+          // Init mobile keys store
+          ;(window as any).__fcMobileKeys = {}
+          // Signal React to show mobile controls
+          setMobileCtrlsOn(true)
           this.events.on('shutdown', () => {
             window.removeEventListener('keydown', onKeyDown)
             window.removeEventListener('keyup', onKeyUp)
+            window.removeEventListener('fc:action', onMobileAction)
+            ;(window as any).__fcMobileKeys = {}
+            setMobileCtrlsOn(false)
           })
 
           this.createHUD()
@@ -1499,7 +1517,8 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
         handleInput() {
           const p = this.player
           if (p.hp <= 0 || this.bossCinematic) return
-          const bDown    = this.gameKeys[KEYS.block]
+          const mob = (window as any).__fcMobileKeys ?? {}
+          const bDown    = this.gameKeys[KEYS.block] || !!mob['block']
           const canBlock = !['punch', 'kick', 'hurt', 'jump', 'dead'].includes(p.state) || p.isBlocking
 
           if (bDown && canBlock) {
@@ -1514,10 +1533,10 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           }
 
           const canMove = !['punch', 'kick'].includes(p.state)
-          const left  = this.gameKeys[KEYS.left]  || this.gameKeys['ArrowLeft']
-          const right = this.gameKeys[KEYS.right] || this.gameKeys['ArrowRight']
-          const up    = this.gameKeys[KEYS.up]    || this.gameKeys['ArrowUp']
-          const down  = this.gameKeys[KEYS.down]  || this.gameKeys['ArrowDown']
+          const left  = this.gameKeys[KEYS.left]  || this.gameKeys['ArrowLeft']  || !!mob['left']
+          const right = this.gameKeys[KEYS.right] || this.gameKeys['ArrowRight'] || !!mob['right']
+          const up    = this.gameKeys[KEYS.up]    || this.gameKeys['ArrowUp']    || !!mob['up']
+          const down  = this.gameKeys[KEYS.down]  || this.gameKeys['ArrowDown']  || !!mob['down']
           const moving = left || right || up || down
 
           if (canMove) {
@@ -3116,6 +3135,22 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
 
   const lbDiff = (gameResult.current?.diff ?? 'normal') as Diff
 
+  const dpadBtn: React.CSSProperties = {
+    position: 'absolute', width: 38, height: 38,
+    background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.22)',
+    borderRadius: 8, color: 'rgba(255,255,255,0.7)', fontSize: '1rem',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    cursor: 'pointer', userSelect: 'none', touchAction: 'none',
+    backdropFilter: 'blur(2px)',
+  }
+  const actionBtn: React.CSSProperties = {
+    width: 72, height: 44,
+    border: '1px solid', borderRadius: 10,
+    fontSize: '0.65rem', fontFamily: 'Impact, serif', letterSpacing: '1px',
+    cursor: 'pointer', userSelect: 'none', touchAction: 'none',
+    backdropFilter: 'blur(2px)',
+  }
+
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 10000, background: '#000',
@@ -3248,6 +3283,82 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
               fontFamily: 'monospace', fontSize: '14px', letterSpacing: '3px',
               padding: '14px 30px', cursor: 'pointer',
             }}>QUITTER</button>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile virtual controls */}
+      {mobileCtrlsOn && !showName && !showLB && !showEndlessChoice && !showDoorPrompt && (
+        <div
+          className="fc-mobile-controls"
+          style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end',
+            padding: '0 12px 10px',
+            pointerEvents: 'none',
+            zIndex: 150,
+          }}
+        >
+          {/* D-pad gauche */}
+          <div style={{ position: 'relative', width: 120, height: 120, pointerEvents: 'auto', flexShrink: 0 }}>
+            {/* Haut */}
+            <button
+              onPointerDown={e => { e.preventDefault(); (window as any).__fcMobileKeys = { ...(window as any).__fcMobileKeys, up: true } }}
+              onPointerUp={e => { e.preventDefault(); (window as any).__fcMobileKeys = { ...(window as any).__fcMobileKeys, up: false } }}
+              onPointerLeave={e => { e.preventDefault(); (window as any).__fcMobileKeys = { ...(window as any).__fcMobileKeys, up: false } }}
+              style={{ ...dpadBtn, top: 0, left: '50%', transform: 'translateX(-50%)' }}
+            >▲</button>
+            {/* Bas */}
+            <button
+              onPointerDown={e => { e.preventDefault(); (window as any).__fcMobileKeys = { ...(window as any).__fcMobileKeys, down: true } }}
+              onPointerUp={e => { e.preventDefault(); (window as any).__fcMobileKeys = { ...(window as any).__fcMobileKeys, down: false } }}
+              onPointerLeave={e => { e.preventDefault(); (window as any).__fcMobileKeys = { ...(window as any).__fcMobileKeys, down: false } }}
+              style={{ ...dpadBtn, bottom: 0, left: '50%', transform: 'translateX(-50%)' }}
+            >▼</button>
+            {/* Gauche */}
+            <button
+              onPointerDown={e => { e.preventDefault(); (window as any).__fcMobileKeys = { ...(window as any).__fcMobileKeys, left: true } }}
+              onPointerUp={e => { e.preventDefault(); (window as any).__fcMobileKeys = { ...(window as any).__fcMobileKeys, left: false } }}
+              onPointerLeave={e => { e.preventDefault(); (window as any).__fcMobileKeys = { ...(window as any).__fcMobileKeys, left: false } }}
+              style={{ ...dpadBtn, top: '50%', left: 0, transform: 'translateY(-50%)' }}
+            >◀</button>
+            {/* Droite */}
+            <button
+              onPointerDown={e => { e.preventDefault(); (window as any).__fcMobileKeys = { ...(window as any).__fcMobileKeys, right: true } }}
+              onPointerUp={e => { e.preventDefault(); (window as any).__fcMobileKeys = { ...(window as any).__fcMobileKeys, right: false } }}
+              onPointerLeave={e => { e.preventDefault(); (window as any).__fcMobileKeys = { ...(window as any).__fcMobileKeys, right: false } }}
+              style={{ ...dpadBtn, top: '50%', right: 0, transform: 'translateY(-50%)' }}
+            >▶</button>
+            {/* Centre */}
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 28, height: 28, background: 'rgba(255,255,255,0.06)', borderRadius: '50%' }} />
+          </div>
+
+          {/* Boutons action droite */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end', pointerEvents: 'auto', flexShrink: 0 }}>
+            {/* Ligne haute : SAUT + BLOQUER */}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onPointerDown={e => { e.preventDefault(); window.dispatchEvent(new CustomEvent('fc:action', { detail: { action: 'jump' } })) }}
+                style={{ ...actionBtn, background: 'rgba(80,180,255,0.22)', borderColor: 'rgba(80,180,255,0.55)', color: '#88ccff' }}
+              >SAUT</button>
+              <button
+                onPointerDown={e => { e.preventDefault(); (window as any).__fcMobileKeys = { ...(window as any).__fcMobileKeys, block: true } }}
+                onPointerUp={e => { e.preventDefault(); (window as any).__fcMobileKeys = { ...(window as any).__fcMobileKeys, block: false } }}
+                onPointerLeave={e => { e.preventDefault(); (window as any).__fcMobileKeys = { ...(window as any).__fcMobileKeys, block: false } }}
+                style={{ ...actionBtn, background: 'rgba(180,120,255,0.22)', borderColor: 'rgba(180,120,255,0.55)', color: '#cc99ff' }}
+              >BLOQUER</button>
+            </div>
+            {/* Ligne basse : COUP DE POING + COUP DE PIED */}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onPointerDown={e => { e.preventDefault(); window.dispatchEvent(new CustomEvent('fc:action', { detail: { action: 'punch' } })) }}
+                style={{ ...actionBtn, background: 'rgba(255,80,80,0.22)', borderColor: 'rgba(255,80,80,0.55)', color: '#ff8888', fontSize: '0.62rem' }}
+              >POING</button>
+              <button
+                onPointerDown={e => { e.preventDefault(); window.dispatchEvent(new CustomEvent('fc:action', { detail: { action: 'kick' } })) }}
+                style={{ ...actionBtn, background: 'rgba(255,160,40,0.22)', borderColor: 'rgba(255,160,40,0.55)', color: '#ffbb66', fontSize: '0.62rem' }}
+              >PIED</button>
+            </div>
           </div>
         </div>
       )}
