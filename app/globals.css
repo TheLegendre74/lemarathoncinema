@@ -359,7 +359,7 @@ html, body {
 .discord-fab {
   position: fixed;
   bottom: 5.5rem;
-  left: 1rem;
+  right: 1rem;
   z-index: 200;
   width: 44px;
   height: 44px;
@@ -379,6 +379,6 @@ html, body {
 @media (min-width: 769px) {
   .discord-fab {
     bottom: 1.5rem;
-    left: calc(230px + 1.2rem);
+    right: 1.5rem;
   }
 }
