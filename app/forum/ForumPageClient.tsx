@@ -17,15 +17,16 @@ const CHATANGO_URL = 'https://lemarathoncinema.chatango.com'
 
 function ChatangoEmbed() {
   const ref = useRef<HTMLDivElement>(null)
-  const [isMobile, setIsMobile] = useState<boolean | null>(null)
+  // Défaut false : le div desktop est rendu dès le premier cycle → script peut s'injecter
+  const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
     setIsMobile(window.innerWidth < 768)
   }, [])
 
-  // Injecte le script Chatango sur desktop
+  // Injecte le script Chatango sur desktop (au montage, avant la détection mobile)
   useEffect(() => {
-    if (isMobile !== false) return
+    if (isMobile) return
     const container = ref.current
     if (!container) return
     container.innerHTML = ''
@@ -44,9 +45,6 @@ function ChatangoEmbed() {
     s.src = '//st.chatango.com/js/gz/emb.js'
     container.appendChild(s)
   }, [isMobile])
-
-  // Avant détection : rien (évite le flash)
-  if (isMobile === null) return null
 
   // Sur mobile : l'embed génère une URL interne qui retourne 404
   // → bouton d'accès direct au chat Chatango mobile
