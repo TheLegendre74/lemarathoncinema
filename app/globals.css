@@ -355,6 +355,14 @@ html, body {
   .chatango-frame { height: 500px; }
 }
 
+/* ── Bottom nav remonté au 3/4 de l'écran sur mobile dans le forum ── */
+@media (max-width: 768px) {
+  .forum-page .bottom-nav {
+    bottom: auto;
+    top: 75vh;
+  }
+}
+
 /* ── Chatango show/hide mobile ── */
 .chatango-desktop { display: block; }
 .chatango-mobile  { display: none !important; }
