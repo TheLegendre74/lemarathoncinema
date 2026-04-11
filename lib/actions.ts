@@ -2117,7 +2117,7 @@ export async function initOrGetTamagotchi() {
   return { data: updated, error: null, isNew: false, evolved, evolvedTo }
 }
 
-export async function feedTamagotchi(score: number = 5) {
+export async function feedTamagotchi(score: number = 5, perfect: boolean = false) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { data: null, error: 'Non connecté' }
@@ -2139,7 +2139,8 @@ export async function feedTamagotchi(score: number = 5) {
   const { pet: synced } = applyTamaDecay(pet)
   const now = new Date().toISOString()
   const today = now.slice(0, 10)
-  const hungerReduction = Math.min(30, Math.max(10, 5 + Math.round(score * 2)))
+  const hungerReduction = score * 2  // +2 nourriture par humain attrapé
+  const xpGain = 15 + (perfect ? 10 : 0)  // +10 EXP bonus si aucune faute
   const updates = {
     hunger: Math.max(0, synced.hunger - hungerReduction),
     happiness: synced.happiness, health: synced.health,
@@ -2147,7 +2148,7 @@ export async function feedTamagotchi(score: number = 5) {
     energy: synced.energy, is_sleeping: synced.is_sleeping, is_sick: synced.is_sick,
     last_fed: now, last_sync: now,
     poop_count: Math.min(5, (pet.poop_count ?? 0) + (Math.random() < 0.6 ? 1 : 0)),
-    xp: Math.min(9999, (pet.xp ?? 0) + 15),
+    xp: Math.min(9999, (pet.xp ?? 0) + xpGain),
     ...computeStreak(pet, today),
   }
   const { data } = await (supabase as any).from('tamagotchi').update(updates).eq('user_id', user.id).select().single()

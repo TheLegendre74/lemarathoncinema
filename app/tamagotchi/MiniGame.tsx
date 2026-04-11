@@ -12,7 +12,7 @@ interface Prey {
 
 interface Props {
   stage: string
-  onFinish: (score: number) => void
+  onFinish: (score: number, missed: number) => void
   onClose: () => void
   feedMode?: boolean
 }
@@ -144,9 +144,14 @@ export default function MiniGame({ stage, onFinish, onClose, feedMode = false }:
           <div style={{ fontSize: '.88rem', color: 'var(--text2)', lineHeight: 1.5, marginBottom: '1.2rem' }}>
             {msg}
           </div>
-          <button className="btn btn-gold" onClick={() => onFinish(s)} style={{ width: '100%' }}>
+          {feedMode && missed === 0 && s > 0 && (
+            <div style={{ color: '#fbbf24', fontFamily: 'var(--font-display)', fontSize: '1rem', marginBottom: '.4rem' }}>
+              🌟 PARFAIT ! +10 EXP bonus
+            </div>
+          )}
+          <button className="btn btn-gold" onClick={() => onFinish(s, missed)} style={{ width: '100%' }}>
             {feedMode
-              ? `Nourrir +${Math.min(30, Math.max(10, 5 + Math.round(s * 2)))} satiété`
+              ? `Nourrir +${s * 2} satiété${missed === 0 && s > 0 ? ' · 🌟 +10 EXP' : ''}`
               : `Continuer +${Math.max(10, Math.min(40, Math.round(s * 4)))} humeur`
             }
           </button>

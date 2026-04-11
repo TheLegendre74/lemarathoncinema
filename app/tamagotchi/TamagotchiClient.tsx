@@ -369,13 +369,13 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
     }
   }, [pet, addToast])
 
-  async function handleFeedFinish(score: number) {
+  async function handleFeedFinish(score: number, missed: number) {
     setShowFeedGame(false)
     setAlienAnim('eat')
     setShowFoodAnim(true)
     if (animTimerRef.current) clearTimeout(animTimerRef.current)
     animTimerRef.current = setTimeout(() => { setShowFoodAnim(false); setAlienAnim('idle') }, 2200)
-    await doAction(() => feedTamagotchi(score), 'feed')
+    await doAction(() => feedTamagotchi(score, missed === 0), 'feed')
   }
 
   async function handlePlayFinish(score: number) {
