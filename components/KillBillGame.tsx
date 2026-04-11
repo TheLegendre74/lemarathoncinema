@@ -158,13 +158,15 @@ export default function KillBillGame({ onDone, endText }: { onDone: () => void; 
             this.tweens.add({ targets: this.tIntroPrompt, alpha: { from: 0.3, to: 1 }, duration: 700, yoyo: true, repeat: -1 })
           })
 
-          // ── Keyboard input
-          this.input.keyboard!.on('keydown', (e: KeyboardEvent) => {
-            const k = e.key.toUpperCase()
-            if (this.phase === 'intro' && (e.key === ' ' || e.key === 'Enter')) this.beginChallenge()
-            else if (this.phase === 'gameover' && e.key === ' ') this.doRestart()
-            else if (this.phase === 'challenge') this.onKey(k)
-          })
+          // ── Keyboard input (desktop only — mobile uses React buttons)
+          if (!isMobile) {
+            this.input.keyboard!.on('keydown', (e: KeyboardEvent) => {
+              const k = e.key.toUpperCase()
+              if (this.phase === 'intro' && (e.key === ' ' || e.key === 'Enter')) this.beginChallenge()
+              else if (this.phase === 'gameover' && e.key === ' ') this.doRestart()
+              else if (this.phase === 'challenge') this.onKey(k)
+            })
+          }
           this.input.on('pointerdown', () => {
             if (this.phase === 'intro') this.beginChallenge()
             else if (this.phase === 'gameover') this.doRestart()
@@ -511,6 +513,8 @@ export default function KillBillGame({ onDone, endText }: { onDone: () => void; 
         scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: GW, height: GH },
         audio: { disableWebAudio: true },
         banner: false,
+        // Sur mobile : désactiver le plugin keyboard (évite l'ouverture du clavier natif)
+        input: { keyboard: !isMobile, activePointers: 3 },
       }
 
       game = new Phaser.Game(cfg)
