@@ -3,418 +3,575 @@
 import { useEffect, useRef, useState } from 'react'
 import { discoverEgg } from '@/lib/actions'
 
-const GW = 900, GH = 500
+const GW = 960, GH = 540
+const KEYS = ['Q','W','E','R','A','S','D','F','Z','X','C','V']
+const TOTAL_GROUPS = 5
+const KEYS_PER_GROUP = 10
+const KEY_MS = 1500
+const MAX_LIVES = 3
+
+function genSeq(): string[][] {
+  return Array.from({ length: TOTAL_GROUPS }, () =>
+    Array.from({ length: KEYS_PER_GROUP }, () => KEYS[~~(Math.random() * KEYS.length)])
+  )
+}
 
 export default function KillBillGame({ onDone, endText }: { onDone: () => void; endText?: string }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const rafRef    = useRef(0)
-  const [scale, setScale]   = useState(1)
-  const [beaten, setBeaten] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const gameRef      = useRef<any>(null)
+  const handleKeyRef = useRef<((k: string) => void) | null>(null)
+  const [beaten, setBeaten]             = useState(false)
+  const [showCtrl, setShowCtrl]         = useState(false)
+  const [currentKey, setCurrentKey]     = useState('')
+  const [isMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
 
   useEffect(() => {
-    function upd() { setScale(Math.min(window.innerWidth / GW, window.innerHeight / GH, 1.5)) }
-    upd()
-    window.addEventListener('resize', upd)
-    return () => window.removeEventListener('resize', upd)
-  }, [])
+    if (!containerRef.current) return
+    let game: any
+    let mounted = true
 
-  useEffect(() => {
-    discoverEgg('killbill')
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')!
+    import('phaser').then((Phaser) => {
+      if (!mounted || !containerRef.current) return
 
-    // ── State ─────────────────────────────────────────────
-    let mouseX = GW / 2, mouseY = GH / 2
-    let frame = 0
+      // ─────────────────────────────────────────────────────────────
+      class KBScene extends Phaser.Scene {
+        // State machine
+        phase: 'intro'|'challenge'|'between'|'ending'|'gameover' = 'intro'
+        seq: string[][] = genSeq()
+        gIdx = 0   // group 0-4
+        kIdx = 0   // key 0-9
+        lives = MAX_LIVES
+        keyMs = KEY_MS
 
-    // Bill: he stands center-ish
-    const bill = {
-      x: GW * 0.55, y: GH * 0.75,  // feet position
-      hp: 100, maxHp: 100,
-      phase: 0 as 0|1|2|3,   // 0=alive 1=staggering 2=decapitated 3=done
-      headY: 0,               // head flies off
-      headVY: -12,
-      headVX: 4,
-      bleedTimer: 0,
-      fallAngle: 0,
-    }
+        // Character positions/state
+        billX = 690; billY = 420
+        billFall = 0; billFalling = false
+        brideX = 200; brideY = 420
+        brideStrike = 0
 
-    // Katana (mouse-controlled)
-    const katana = { x: 100, y: GH / 2, angle: 0, trail: [] as { x: number; y: number }[] }
-    let swinging = false
-    let swingTimer = 0
-    let hitRegistered = false
+        // Particles
+        parts: {x:number;y:number;vx:number;vy:number;life:number;ml:number;col:number}[] = []
 
-    // Sparks
-    const sparks: { x: number; y: number; vx: number; vy: number; life: number; col: string }[] = []
+        // Graphics
+        gBg!: Phaser.GameObjects.Graphics
+        gBride!: Phaser.GameObjects.Graphics
+        gBill!: Phaser.GameObjects.Graphics
+        gBar!: Phaser.GameObjects.Graphics
+        gBlood!: Phaser.GameObjects.Graphics
+        gParts!: Phaser.GameObjects.Graphics
+        gCircles: Phaser.GameObjects.Graphics[] = []
+        lCircles: Phaser.GameObjects.Text[] = []
 
-    // Blood drops
-    const blood: { x: number; y: number; vy: number; life: number }[] = []
+        // Texts
+        tIntroTitle!: Phaser.GameObjects.Text
+        tIntroSub!: Phaser.GameObjects.Text
+        tIntroPrompt!: Phaser.GameObjects.Text
+        tHudGrp!: Phaser.GameObjects.Text
+        tHudLives!: Phaser.GameObjects.Text
+        tFeedback!: Phaser.GameObjects.Text
+        tBetween!: Phaser.GameObjects.Text
+        tEnding!: Phaser.GameObjects.Text
+        tKiddo!: Phaser.GameObjects.Text
+        tGameOverMsg!: Phaser.GameObjects.Text
+        tRetry!: Phaser.GameObjects.Text
 
-    // ── Drawing helpers ───────────────────────────────────
+        constructor() { super({ key: 'KB' }) }
 
-    function drawBill(decap = false, fallAngle = 0, headX = 0, headY = 0) {
-      ctx.save()
-      ctx.translate(bill.x, bill.y)
-      ctx.rotate(fallAngle)
+        // ── CREATE ────────────────────────────────────────────────
+        create() {
+          // Graphics layers (depth order)
+          this.gBg    = this.add.graphics().setDepth(0)
+          this.gBlood = this.add.graphics().setDepth(2)
+          this.gBride = this.add.graphics().setDepth(3)
+          this.gBill  = this.add.graphics().setDepth(3)
+          this.gParts = this.add.graphics().setDepth(6)
+          this.gBar   = this.add.graphics().setDepth(8)
 
-      // Shadow
-      ctx.fillStyle = 'rgba(0,0,0,0.25)'
-      ctx.beginPath()
-      ctx.ellipse(0, 4, 40 * Math.cos(fallAngle), 8, 0, 0, Math.PI * 2)
-      ctx.fill()
+          for (let i = 0; i < KEYS_PER_GROUP; i++) {
+            this.gCircles.push(this.add.graphics().setDepth(8))
+            this.lCircles.push(
+              this.add.text(0, 0, '', { fontFamily: 'monospace', fontSize: '15px', color: '#ffffff', fontStyle: 'bold' })
+                .setOrigin(0.5).setDepth(9).setAlpha(0)
+            )
+          }
 
-      // Legs
-      ctx.fillStyle = '#1a1a1a'
-      ctx.fillRect(-16, -80, 14, 80)
-      ctx.fillRect(2, -80, 14, 80)
+          // Letterbox bands
+          const lb = this.add.graphics().setDepth(10)
+          lb.fillStyle(0xf5c518).fillRect(0, 0, GW, 50).fillRect(0, GH - 50, GW, 50)
+          this.add.text(GW / 2, 25, 'KILL BILL — La Technique des Cinq Points', {
+            fontFamily: 'serif', fontSize: '18px', color: '#000000', fontStyle: 'bold',
+          }).setOrigin(0.5).setDepth(11)
 
-      // Suit jacket (black)
-      ctx.fillStyle = '#111'
-      ctx.fillRect(-22, -160, 44, 82)
+          // ── Intro texts
+          this.tIntroTitle = this.add.text(GW / 2, GH / 2 - 55,
+            'La Technique des Cinq Points\nde la Paume qui fait Exploser le Cœur', {
+            fontFamily: 'serif', fontSize: '25px', color: '#f5c518',
+            align: 'center', wordWrap: { width: 820 },
+          }).setOrigin(0.5).setDepth(5).setAlpha(0)
 
-      // White shirt/tie
-      ctx.fillStyle = '#ddd'
-      ctx.fillRect(-6, -158, 12, 72)
-      ctx.fillStyle = '#cc0000'
-      ctx.fillRect(-3, -158, 6, 50)
+          this.tIntroSub = this.add.text(GW / 2, GH / 2 + 40,
+            '"Tu veux vraiment faire ça ?"  — Bill', {
+            fontFamily: 'serif', fontSize: '16px', color: '#e8e8e8', fontStyle: 'italic',
+          }).setOrigin(0.5).setDepth(5).setAlpha(0)
 
-      // Arms
-      ctx.fillStyle = '#111'
-      ctx.fillRect(-34, -158, 14, 60)
-      ctx.fillRect(20, -158, 14, 60)
+          this.tIntroPrompt = this.add.text(GW / 2, GH - 80,
+            '[ ESPACE ou clic pour commencer ]', {
+            fontFamily: 'monospace', fontSize: '13px', color: '#888888',
+          }).setOrigin(0.5).setDepth(5).setAlpha(0)
 
-      // Hands
-      ctx.fillStyle = '#f2d5a8'
-      ctx.fillRect(-36, -100, 14, 12)
-      ctx.fillRect(22, -100, 14, 12)
+          // ── HUD
+          this.tHudGrp   = this.add.text(20, 58, '', { fontFamily: 'monospace', fontSize: '14px', color: '#f5c518' }).setDepth(9).setAlpha(0)
+          this.tHudLives = this.add.text(GW - 20, 58, '', { fontFamily: 'monospace', fontSize: '18px', color: '#cc0000' }).setOrigin(1, 0).setDepth(9).setAlpha(0)
 
-      // Sword (he holds one)
-      ctx.strokeStyle = '#bbb'
-      ctx.lineWidth = 3
-      ctx.beginPath()
-      ctx.moveTo(22, -100)
-      ctx.lineTo(80, -200)
-      ctx.stroke()
-      ctx.fillStyle = '#888'
-      ctx.fillRect(60, -180, 24, 4)
+          // ── Feedback / between / ending / gameover texts
+          this.tFeedback = this.add.text(GW / 2, GH / 2 - 30, '', {
+            fontFamily: 'monospace', fontSize: '38px', color: '#22c55e', fontStyle: 'bold',
+          }).setOrigin(0.5).setDepth(20).setAlpha(0)
 
-      // Neck stump (after decap)
-      if (decap && bill.phase >= 2) {
-        ctx.fillStyle = '#cc0000'
-        ctx.fillRect(-8, -165, 16, 12)
-        // Blood gush
-        for (let i = 0; i < 3; i++) {
-          ctx.fillStyle = '#cc0000'
-          ctx.fillRect(-5 + i * 5, -170 - i * 10, 4, 14 + i * 6)
+          this.tBetween = this.add.text(GW / 2, GH / 2 - 80, '', {
+            fontFamily: 'serif', fontSize: '40px', color: '#f5c518', fontStyle: 'bold',
+          }).setOrigin(0.5).setDepth(20).setAlpha(0)
+
+          this.tEnding = this.add.text(GW / 2, GH / 2 - 80, 'Technique complète.', {
+            fontFamily: 'serif', fontSize: '30px', color: '#e8e8e8',
+          }).setOrigin(0.5).setDepth(20).setAlpha(0)
+
+          this.tKiddo = this.add.text(GW / 2, GH / 2 + 60, '...Kiddo.', {
+            fontFamily: 'serif', fontSize: '28px', color: '#f5c518', fontStyle: 'italic',
+          }).setOrigin(0.5).setDepth(20).setAlpha(0)
+
+          this.tGameOverMsg = this.add.text(GW / 2, GH / 2 - 55,
+            '"Pai Mei ne t\'a pas assez bien entraîné."', {
+            fontFamily: 'serif', fontSize: '20px', color: '#e8e8e8', fontStyle: 'italic',
+            align: 'center', wordWrap: { width: 700 },
+          }).setOrigin(0.5).setDepth(20).setAlpha(0)
+
+          this.tRetry = this.add.text(GW / 2, GH / 2 + 30, '[ ESPACE ou clic pour réessayer ]', {
+            fontFamily: 'monospace', fontSize: '14px', color: '#f5c518',
+          }).setOrigin(0.5).setDepth(20).setAlpha(0)
+
+          // ── Intro animation
+          this.tweens.add({ targets: this.tIntroTitle,  alpha: 1, duration: 800, delay: 400 })
+          this.tweens.add({ targets: this.tIntroSub,    alpha: 1, duration: 800, delay: 1300 })
+          this.tweens.add({ targets: this.tIntroPrompt, alpha: 1, duration: 600, delay: 2100 })
+          this.time.delayedCall(2700, () => {
+            this.tweens.add({ targets: this.tIntroPrompt, alpha: { from: 0.3, to: 1 }, duration: 700, yoyo: true, repeat: -1 })
+          })
+
+          // ── Keyboard input
+          this.input.keyboard!.on('keydown', (e: KeyboardEvent) => {
+            const k = e.key.toUpperCase()
+            if (this.phase === 'intro' && (e.key === ' ' || e.key === 'Enter')) this.beginChallenge()
+            else if (this.phase === 'gameover' && e.key === ' ') this.doRestart()
+            else if (this.phase === 'challenge') this.onKey(k)
+          })
+          this.input.on('pointerdown', () => {
+            if (this.phase === 'intro') this.beginChallenge()
+            else if (this.phase === 'gameover') this.doRestart()
+          })
+
+          // Expose to React for mobile buttons
+          handleKeyRef.current = (k: string) => this.onKey(k)
         }
-      } else if (!decap) {
-        // Head + hair
-        ctx.fillStyle = '#f2d5a8'
-        ctx.beginPath()
-        ctx.ellipse(0, -176, 22, 24, 0, 0, Math.PI * 2)
-        ctx.fill()
-        // Hair (white/gray)
-        ctx.fillStyle = '#cccccc'
-        ctx.fillRect(-21, -200, 42, 16)
-        ctx.fillRect(-22, -192, 6, 14)
-        // Eyes (menacing)
-        ctx.fillStyle = '#222'
-        ctx.fillRect(-9, -180, 6, 6)
-        ctx.fillRect(3, -180, 6, 6)
-        // Mouth (sinister grin)
-        ctx.strokeStyle = '#884444'
-        ctx.lineWidth = 2
-        ctx.beginPath()
-        ctx.arc(0, -166, 8, 0, Math.PI)
-        ctx.stroke()
-      }
 
-      ctx.restore()
+        // ── DRAW HELPERS ─────────────────────────────────────────
 
-      // Detached flying head
-      if (decap && bill.phase >= 2) {
-        ctx.save()
-        ctx.translate(headX, headY)
-        ctx.rotate(frame * 0.15)
-        ctx.fillStyle = '#f2d5a8'
-        ctx.beginPath()
-        ctx.ellipse(0, 0, 22, 24, 0, 0, Math.PI * 2)
-        ctx.fill()
-        ctx.fillStyle = '#cccccc'
-        ctx.fillRect(-21, -24, 42, 16)
-        ctx.fillStyle = '#cc0000'
-        ctx.fillRect(-8, 22, 16, 8)
-        // Shocked eyes
-        ctx.fillStyle = '#fff'
-        ctx.fillRect(-9, -8, 8, 8)
-        ctx.fillRect(1, -8, 8, 8)
-        ctx.fillStyle = '#333'
-        ctx.fillRect(-7, -6, 4, 6)
-        ctx.fillRect(3, -6, 4, 6)
-        // O mouth
-        ctx.fillStyle = '#444'
-        ctx.beginPath()
-        ctx.arc(0, 6, 5, 0, Math.PI * 2)
-        ctx.fill()
-        ctx.restore()
-      }
-    }
-
-    function drawKatana(kx: number, ky: number, angle: number) {
-      ctx.save()
-      ctx.translate(kx, ky)
-      ctx.rotate(angle)
-
-      // Trail
-      ctx.strokeStyle = 'rgba(255,255,255,0.15)'
-      ctx.lineWidth = 2
-      for (let i = 0; i < katana.trail.length - 1; i++) {
-        const a = katana.trail[i], b = katana.trail[i + 1]
-        ctx.globalAlpha = i / katana.trail.length * 0.4
-        ctx.strokeStyle = `rgba(220,220,255,${i / katana.trail.length * 0.5})`
-        ctx.lineWidth = (i / katana.trail.length) * 4
-        ctx.beginPath()
-        ctx.moveTo(a.x - kx, a.y - ky)
-        ctx.lineTo(b.x - kx, b.y - ky)
-        ctx.stroke()
-      }
-      ctx.globalAlpha = 1
-
-      // Handle
-      ctx.fillStyle = '#4a2800'
-      ctx.fillRect(-8, 30, 16, 44)
-      // Guard
-      ctx.fillStyle = '#aa8800'
-      ctx.fillRect(-12, 24, 24, 8)
-      // Blade
-      const bladeGrad = ctx.createLinearGradient(-4, -120, 4, -120)
-      bladeGrad.addColorStop(0, '#e8e8f0')
-      bladeGrad.addColorStop(0.5, '#ffffff')
-      bladeGrad.addColorStop(1, '#b0b0c0')
-      ctx.fillStyle = bladeGrad
-      ctx.beginPath()
-      ctx.moveTo(-5, 24)
-      ctx.lineTo(5, 24)
-      ctx.lineTo(1, -120)
-      ctx.lineTo(-1, -120)
-      ctx.closePath()
-      ctx.fill()
-      // Blood on blade if hit
-      if (bill.phase >= 1) {
-        ctx.fillStyle = 'rgba(180,0,0,0.6)'
-        ctx.beginPath()
-        ctx.moveTo(-4, -40)
-        ctx.lineTo(4, -40)
-        ctx.lineTo(2, -100)
-        ctx.lineTo(-2, -100)
-        ctx.closePath()
-        ctx.fill()
-      }
-
-      ctx.restore()
-    }
-
-    // ── Main loop ──────────────────────────────────────────
-    function loop() {
-      frame++
-      ctx.clearRect(0, 0, GW, GH)
-
-      // Background — dojo / Japanese aesthetic
-      const bg = ctx.createLinearGradient(0, 0, 0, GH)
-      bg.addColorStop(0, '#1a0505')
-      bg.addColorStop(1, '#0d0202')
-      ctx.fillStyle = bg
-      ctx.fillRect(0, 0, GW, GH)
-
-      // Floor
-      const floor = ctx.createLinearGradient(0, GH * 0.7, 0, GH)
-      floor.addColorStop(0, '#2a1a0a')
-      floor.addColorStop(1, '#1a0f05')
-      ctx.fillStyle = floor
-      ctx.fillRect(0, GH * 0.75, GW, GH * 0.25)
-      ctx.strokeStyle = 'rgba(255,255,255,0.05)'
-      ctx.lineWidth = 1
-      for (let x = 0; x < GW; x += 60) {
-        ctx.beginPath(); ctx.moveTo(x, GH * 0.75); ctx.lineTo(x, GH); ctx.stroke()
-      }
-
-      // "KILL BILL" title
-      ctx.save()
-      ctx.textAlign = 'center'
-      ctx.font = 'bold 52px serif'
-      ctx.fillStyle = '#cc0000'
-      ctx.shadowColor = '#ff0000'
-      ctx.shadowBlur = 20
-      ctx.fillText('KILL BILL', GW / 2, 72)
-      ctx.shadowBlur = 0
-      ctx.fillStyle = 'rgba(255,255,255,0.55)'
-      ctx.font = '13px monospace'
-      ctx.fillText(bill.phase === 0 ? 'Tranche-lui la tête avec le katana !' : bill.phase === 3 ? '' : '...', GW / 2, 100)
-      ctx.restore()
-
-      // Bill logic
-      if (bill.phase === 0) {
-        // Bill slowly walks toward player
-        bill.x -= 0.4
-        if (bill.x < GW * 0.3) bill.x = GW * 0.55  // reset
-      }
-      if (bill.phase === 1) {
-        bill.bleedTimer++
-        if (bill.bleedTimer > 40) { bill.phase = 2 }
-        // Blood drips
-        if (frame % 3 === 0) blood.push({ x: bill.x, y: bill.y - 160, vy: 1, life: 60 })
-      }
-      if (bill.phase === 2) {
-        bill.fallAngle += 0.05
-        bill.headY += bill.headVY
-        bill.headVY += 0.5
-        const headX = bill.x + bill.headVX * (bill.bleedTimer - 40)
-        const headY = bill.y - 160 + bill.headY
-        if (bill.fallAngle > Math.PI / 2) {
-          bill.phase = 3
-          setTimeout(() => setBeaten(true), 500)
+        drawBg() {
+          this.gBg.clear()
+          this.gBg.fillStyle(0x0d0202).fillRect(0, 0, GW, GH)
+          this.gBg.fillStyle(0x1a0f05).fillRect(0, GH * 0.73, GW, GH * 0.27)
+          this.gBg.lineStyle(1, 0xffffff, 0.03)
+          for (let x = 0; x < GW; x += 80) this.gBg.lineBetween(x, GH * 0.73, x, GH)
         }
-        // More blood when decapitated
-        if (frame % 2 === 0) {
-          for (let i = 0; i < 2; i++) {
-            blood.push({ x: bill.x + (Math.random() - 0.5) * 14, y: bill.y - 162, vy: -2 + Math.random() * -4, life: 50 })
-            sparks.push({ x: bill.x, y: bill.y - 160, vx: (Math.random() - 0.5) * 5, vy: -3 - Math.random() * 3, life: 20, col: '#cc0000' })
+
+        drawBride() {
+          const g = this.gBride
+          g.clear()
+          const x = this.brideX, y = this.brideY
+          const ext = this.brideStrike * 40
+          g.fillStyle(0x000000, 0.25).fillEllipse(x, y + 5, 60, 14)
+          g.fillStyle(0xf5c518)
+          g.fillRect(x - 16, y - 75, 13, 75).fillRect(x + 3, y - 75, 13, 75)
+          g.fillRect(x - 20, y - 155, 40, 80)
+          // Strike arm: extends forward
+          g.fillRect(x + 18, y - 138 - ext * 0.2, 38 + ext, 11)
+          g.fillRect(x - 56, y - 128, 36, 11)
+          g.fillStyle(0xf2d5a8).fillEllipse(x, y - 165, 36, 40)
+          g.fillStyle(0x111111).fillRect(x - 18, y - 186, 36, 16)
+          g.fillStyle(0x222222).fillRect(x - 8, y - 170, 5, 5).fillRect(x + 3, y - 170, 5, 5)
+          // Katana
+          g.lineStyle(3, 0xcccccc, 1).lineBetween(x + 18, y - 148, x + 68 + ext, y - 155)
+        }
+
+        drawBill() {
+          const g = this.gBill
+          g.clear()
+          // Position + rotation applied at GameObject level
+          g.setPosition(this.billX, this.billY)
+          g.setRotation(this.billFall)
+
+          // Draw in local space (feet at origin 0,0 going upward)
+          g.fillStyle(0x000000, 0.2).fillEllipse(0, 5, 60, 14)
+          g.fillStyle(0x1a1a1a)
+          g.fillRect(-16, -75, 13, 75).fillRect(3, -75, 13, 75)
+          g.fillStyle(0x111111).fillRect(-22, -155, 44, 80)
+          g.fillStyle(0xdddddd).fillRect(-6, -153, 12, 70)
+          g.fillStyle(0xcc0000).fillRect(-3, -153, 6, 50)
+          g.fillStyle(0x111111)
+          g.fillRect(-34, -153, 13, 58).fillRect(21, -153, 13, 58)
+          g.fillStyle(0xf2d5a8)
+          g.fillRect(-36, -97, 13, 11).fillRect(22, -97, 13, 11)
+          g.fillStyle(0xf2d5a8).fillEllipse(0, -170, 36, 40)
+          g.fillStyle(0xbbbbbb).fillRect(-18, -192, 36, 16)
+          g.fillStyle(0x222222).fillRect(-8, -175, 5, 5).fillRect(3, -175, 5, 5)
+        }
+
+        drawCircles() {
+          const group = this.seq[this.gIdx]
+          if (!group) return
+          const spacing = 62
+          const sx = (GW - (KEYS_PER_GROUP - 1) * spacing) / 2
+          const cy = GH - 108
+          const pulse = 1 + 0.12 * Math.sin(this.time.now / 200)
+
+          for (let i = 0; i < KEYS_PER_GROUP; i++) {
+            const g = this.gCircles[i]
+            const lbl = this.lCircles[i]
+            const cx = sx + i * spacing
+            g.clear()
+            if (i < this.kIdx) {
+              g.fillStyle(0x22c55e).fillCircle(cx, cy, 22)
+              lbl.setText('✓').setPosition(cx, cy).setStyle({ color: '#ffffff', fontSize: '13px' }).setAlpha(1)
+            } else if (i === this.kIdx) {
+              g.fillStyle(0xf5c518).fillCircle(cx, cy, 22 * pulse)
+              lbl.setText(group[i]).setPosition(cx, cy).setStyle({ color: '#000000', fontSize: '16px', fontStyle: 'bold' }).setAlpha(1)
+            } else {
+              g.fillStyle(0x333333).fillCircle(cx, cy, 22)
+              lbl.setText(group[i]).setPosition(cx, cy).setStyle({ color: '#555555', fontSize: '13px' }).setAlpha(1)
+            }
           }
         }
-        drawBill(true, bill.fallAngle, headX, headY)
-      } else if (bill.phase < 2) {
-        drawBill(false, bill.phase === 1 ? Math.sin(frame * 0.2) * 0.08 : 0)
-      }
 
-      // Blood drops
-      for (const b of blood) {
-        b.y += b.vy; b.vy += 0.3; b.life--
-        ctx.fillStyle = `rgba(160,0,0,${Math.max(0, b.life / 50)})`
-        ctx.beginPath(); ctx.arc(b.x, b.y, 3, 0, Math.PI * 2); ctx.fill()
-      }
-      blood.splice(0, blood.filter(b => b.life <= 0).length)
+        hideCircles() {
+          this.gCircles.forEach(g => g.clear())
+          this.lCircles.forEach(l => l.setAlpha(0))
+        }
 
-      // Sparks
-      for (const s of sparks) {
-        s.x += s.vx; s.y += s.vy; s.vy += 0.3; s.life--
-        ctx.fillStyle = `rgba(200,0,0,${s.life / 20})`
-        ctx.fillRect(s.x - 1, s.y - 1, 3, 3)
-      }
-      sparks.splice(0, sparks.filter(s => s.life <= 0).length)
+        drawTimerBar() {
+          this.gBar.clear()
+          const ratio = Math.max(0, this.keyMs / KEY_MS)
+          const bw = 380, bx = (GW - bw) / 2, by = GH - 142
+          this.gBar.fillStyle(0x333333).fillRect(bx, by, bw, 6)
+          const col = ratio < 0.3 ? 0xef4444 : ratio < 0.6 ? 0xf5c518 : 0x22c55e
+          this.gBar.fillStyle(col).fillRect(bx, by, bw * ratio, 6)
+        }
 
-      // Katana angle follows mouse (aim toward Bill's neck level)
-      const targetAngle = Math.atan2(mouseY - katana.y, bill.x - katana.x) - Math.PI / 2
+        updateHud() {
+          this.tHudGrp.setText(`FRAPPE ${this.gIdx + 1} / ${TOTAL_GROUPS}`)
+          this.tHudLives.setText('♥'.repeat(Math.max(0, this.lives)))
+        }
 
-      if (swinging) {
-        swingTimer++
-        const progress = swingTimer / 12
-        katana.x += (bill.x - 80 - katana.x) * 0.28
-        katana.y += ((bill.y - 165) - katana.y) * 0.28
+        flash(txt: string, col: string) {
+          this.tFeedback.setText(txt).setStyle({ color: col }).setAlpha(1).setY(GH / 2 - 30)
+          this.tweens.killTweensOf(this.tFeedback)
+          this.tweens.add({ targets: this.tFeedback, alpha: 0, y: GH / 2 - 60, duration: 500 })
+        }
 
-        // Hit detection: katana tip near Bill's neck
-        const tipX = katana.x + Math.sin(katana.angle) * 120
-        const tipY = katana.y - Math.cos(katana.angle) * 120
-        const dist = Math.hypot(tipX - bill.x, tipY - (bill.y - 162))
-        if (dist < 55 && !hitRegistered && bill.phase === 0) {
-          hitRegistered = true
-          bill.phase = 1
-          bill.bleedTimer = 0
-          // Sparks at neck
-          for (let i = 0; i < 18; i++) {
-            sparks.push({
-              x: bill.x, y: bill.y - 162,
-              vx: (Math.random() - 0.5) * 8, vy: -4 - Math.random() * 4,
-              life: 30, col: '#ffaa00',
+        // ── PHASES ───────────────────────────────────────────────
+
+        beginChallenge() {
+          if (this.phase !== 'intro') return
+          this.phase = 'challenge'
+          this.tweens.add({ targets: [this.tIntroTitle, this.tIntroSub, this.tIntroPrompt], alpha: 0, duration: 300 })
+          this.time.delayedCall(320, () => {
+            this.tHudGrp.setAlpha(1)
+            this.tHudLives.setAlpha(1)
+            this.keyMs = KEY_MS
+            this.updateHud()
+            setShowCtrl(true)
+            setCurrentKey(this.seq[0][0])
+          })
+        }
+
+        onKey(key: string) {
+          if (this.phase !== 'challenge') return
+          const expected = this.seq[this.gIdx][this.kIdx]
+          if (key === expected) {
+            this.kIdx++
+            this.keyMs = KEY_MS
+            this.flash('✓', '#22c55e')
+            if (this.kIdx >= KEYS_PER_GROUP) {
+              this.kIdx = 0
+              this.gIdx++
+              this.phase = 'between'
+              this.doBetween()
+            } else {
+              setCurrentKey(this.seq[this.gIdx][this.kIdx])
+            }
+          } else {
+            this.missKey()
+          }
+        }
+
+        missKey() {
+          this.lives--
+          this.flash('✗', '#ef4444')
+          this.cameras.main.shake(260, 0.007)
+          this.keyMs = KEY_MS
+          this.updateHud()
+          if (this.lives <= 0) {
+            this.phase = 'gameover'
+            setShowCtrl(false)
+            setCurrentKey('')
+            this.hideCircles()
+            this.gBar.clear()
+            this.tHudGrp.setAlpha(0)
+            this.tHudLives.setAlpha(0)
+            this.tGameOverMsg.setAlpha(1)
+            this.tweens.add({ targets: this.tRetry, alpha: { from: 0.3, to: 1 }, duration: 700, yoyo: true, repeat: -1 })
+            this.tRetry.setAlpha(0.3)
+          }
+        }
+
+        doRestart() {
+          this.seq = genSeq()
+          this.gIdx = 0; this.kIdx = 0
+          this.lives = MAX_LIVES; this.keyMs = KEY_MS
+          this.phase = 'challenge'
+          this.tGameOverMsg.setAlpha(0)
+          this.tweens.killTweensOf(this.tRetry)
+          this.tRetry.setAlpha(0)
+          this.tHudGrp.setAlpha(1)
+          this.tHudLives.setAlpha(1)
+          this.updateHud()
+          setShowCtrl(true)
+          setCurrentKey(this.seq[0][0])
+        }
+
+        doBetween() {
+          setShowCtrl(false)
+          setCurrentKey('')
+          this.hideCircles()
+          this.gBar.clear()
+          this.tHudGrp.setAlpha(0)
+          this.tHudLives.setAlpha(0)
+
+          this.tBetween.setText(`FRAPPE ${this.gIdx} !`).setAlpha(0)
+          this.tweens.add({ targets: this.tBetween, alpha: 1, duration: 300 })
+
+          const origBX = this.brideX
+          // Bride lunges
+          this.tweens.add({
+            targets: this, brideX: origBX + 75, brideStrike: 1,
+            duration: 340, ease: 'Power2',
+            onComplete: () => {
+              this.cameras.main.flash(180, 255, 200, 80)
+              this.cameras.main.shake(200, 0.01)
+              // Bill staggers slightly
+              const origBillX = this.billX
+              this.tweens.add({ targets: this, billX: origBillX + 15, duration: 80, yoyo: true, repeat: 2,
+                onComplete: () => { this.billX = origBillX }
+              })
+              this.time.delayedCall(200, () => {
+                this.tweens.add({
+                  targets: this, brideX: origBX, brideStrike: 0,
+                  duration: 280,
+                  onComplete: () => {
+                    this.time.delayedCall(550, () => {
+                      this.tweens.add({ targets: this.tBetween, alpha: 0, duration: 200 })
+                      this.time.delayedCall(230, () => {
+                        if (this.gIdx >= TOTAL_GROUPS) {
+                          this.phase = 'ending'
+                          this.doEnding()
+                        } else {
+                          this.phase = 'challenge'
+                          this.keyMs = KEY_MS
+                          this.tHudGrp.setAlpha(1)
+                          this.tHudLives.setAlpha(1)
+                          this.updateHud()
+                          setShowCtrl(true)
+                          setCurrentKey(this.seq[this.gIdx][0])
+                        }
+                      })
+                    })
+                  },
+                })
+              })
+            },
+          })
+        }
+
+        doEnding() {
+          this.tweens.add({ targets: this.tEnding, alpha: 1, duration: 700 })
+
+          // Bill speech bubble
+          const bTxt = this.add.text(this.billX + 40, this.billY - 230, '"...impressive."', {
+            fontFamily: 'serif', fontSize: '15px', color: '#e8e8e8', fontStyle: 'italic',
+          }).setOrigin(0.5).setDepth(20)
+
+          this.time.delayedCall(1000, () => {
+            this.tweens.add({ targets: [this.tEnding, bTxt], alpha: 0, duration: 400 })
+            this.time.delayedCall(500, () => this.billWalk(0))
+          })
+        }
+
+        billWalk(step: number) {
+          if (step >= 5) { this.time.delayedCall(200, () => this.heartExplode()); return }
+          this.tweens.add({
+            targets: this, billX: this.billX + 28,
+            duration: 270, ease: 'Linear',
+            onComplete: () => this.time.delayedCall(80, () => this.billWalk(step + 1)),
+          })
+        }
+
+        heartExplode() {
+          // Spawn blood/gold particles
+          for (let i = 0; i < 75; i++) {
+            const a = Math.random() * Math.PI * 2
+            const s = 1.5 + Math.random() * 5
+            this.parts.push({
+              x: this.billX, y: this.billY - 125,
+              vx: Math.cos(a) * s, vy: Math.sin(a) * s - 2.5,
+              life: 40 + ~~(Math.random() * 35), ml: 75,
+              col: Math.random() > 0.35 ? 0xcc0000 : 0xf5c518,
             })
           }
+
+          this.cameras.main.flash(320, 200, 0, 0)
+          this.cameras.main.shake(400, 0.015)
+
+          // Bill falls after brief delay
+          this.time.delayedCall(500, () => {
+            this.billFalling = true
+            this.tweens.add({
+              targets: this, billFall: Math.PI / 2,
+              duration: 1800, ease: 'Power2',
+              onComplete: () => {
+                // Blood pool grows
+                let pr = 0
+                this.time.addEvent({
+                  delay: 60, repeat: 20,
+                  callback: () => {
+                    pr += 4
+                    this.gBlood.clear()
+                    this.gBlood.fillStyle(0x550000, 0.8)
+                    this.gBlood.fillEllipse(this.billX + 50, this.billY + 20, pr * 2.2, pr * 0.55)
+                  },
+                })
+                // "...Kiddo."
+                this.time.delayedCall(1300, () => {
+                  this.tweens.add({ targets: this.tKiddo, alpha: 1, duration: 900 })
+                  this.time.delayedCall(1600, () => {
+                    void discoverEgg('killbill')
+                    setBeaten(true)
+                  })
+                })
+              },
+            })
+          })
         }
 
-        if (swingTimer > 20) { swinging = false; swingTimer = 0 }
-      } else {
-        katana.x += (mouseX - katana.x) * 0.18
-        katana.y += (mouseY - katana.y) * 0.18
-        katana.angle += (targetAngle - katana.angle) * 0.15
+        // ── UPDATE LOOP ──────────────────────────────────────────
+        update(_time: number, delta: number) {
+          this.drawBg()
+          this.drawBride()
+          this.drawBill()
+
+          // Timer
+          if (this.phase === 'challenge') {
+            this.keyMs -= delta
+            if (this.keyMs <= 0 && this.lives > 0) {
+              this.missKey()
+              if (this.phase === 'challenge') this.keyMs = KEY_MS
+            }
+            this.drawCircles()
+            this.drawTimerBar()
+          }
+
+          // Particles
+          this.gParts.clear()
+          if (this.parts.length > 0) {
+            for (const p of this.parts) {
+              p.x += p.vx; p.y += p.vy; p.vy += 0.18; p.life--
+              const a = Math.max(0, p.life / p.ml)
+              this.gParts.fillStyle(p.col, a).fillRect(p.x - 3, p.y - 3, 6, 6)
+            }
+            this.parts = this.parts.filter(p => p.life > 0)
+          }
+        }
+      }
+      // ─────────────────────────────────────────────────────────────
+
+      const cfg: any = {
+        type: Phaser.AUTO,
+        width: GW, height: GH,
+        parent: containerRef.current!,
+        backgroundColor: '#000000',
+        scene: KBScene,
+        scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: GW, height: GH },
+        audio: { disableWebAudio: true },
+        banner: false,
       }
 
-      // Trail
-      katana.trail.push({ x: katana.x, y: katana.y })
-      if (katana.trail.length > 20) katana.trail.shift()
-
-      // Draw katana
-      if (bill.phase < 3) drawKatana(katana.x, katana.y, swinging ? katana.angle + Math.PI * 0.3 * (swingTimer / 12) : katana.angle)
-
-      // Hint
-      if (bill.phase === 0) {
-        ctx.fillStyle = 'rgba(255,255,255,0.3)'
-        ctx.font = '11px monospace'
-        ctx.textAlign = 'center'
-        ctx.fillText('Clic gauche pour frapper', GW / 2, GH - 18)
-      }
-
-      rafRef.current = requestAnimationFrame(loop)
-    }
-
-    // ── Input ──────────────────────────────────────────────
-    function onMouseMove(e: MouseEvent) {
-      const rect = canvas!.getBoundingClientRect()
-      const scaleX = GW / rect.width, scaleY = GH / rect.height
-      mouseX = (e.clientX - rect.left) * scaleX
-      mouseY = (e.clientY - rect.top) * scaleY
-    }
-
-    function onClick() {
-      if (bill.phase === 0 && !swinging) { swinging = true; swingTimer = 0; hitRegistered = false }
-    }
-
-    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onDone() }
-
-    canvas.addEventListener('mousemove', onMouseMove)
-    canvas.addEventListener('click', onClick)
-    window.addEventListener('keydown', onKey)
-    rafRef.current = requestAnimationFrame(loop)
+      game = new Phaser.Game(cfg)
+      gameRef.current = game
+    })
 
     return () => {
-      cancelAnimationFrame(rafRef.current)
-      canvas.removeEventListener('mousemove', onMouseMove)
-      canvas.removeEventListener('click', onClick)
-      window.removeEventListener('keydown', onKey)
+      mounted = false
+      game?.destroy(true)
+      gameRef.current = null
+      handleKeyRef.current = null
     }
-  }, [onDone])
+  }, [])
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <canvas
-        ref={canvasRef}
-        width={GW}
-        height={GH}
-        style={{ display: 'block', transform: `scale(${scale})`, transformOrigin: 'center', cursor: 'crosshair', imageRendering: 'pixelated' }}
-      />
+    <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: '#000', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+      <div ref={containerRef} />
+
+      {/* Mobile keyboard — 3×4 grid */}
+      {isMobile && showCtrl && !beaten && (
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6,
+          padding: '8px 10px', background: 'rgba(0,0,0,0.85)',
+          border: '1px solid rgba(245,197,24,0.25)', borderRadius: 8, marginTop: 6,
+        }}>
+          {KEYS.map(k => (
+            <button key={k}
+              onPointerDown={e => { e.preventDefault(); handleKeyRef.current?.(k) }}
+              style={{
+                width: 52, height: 52,
+                background: k === currentKey ? '#f5c518' : 'rgba(22,22,22,0.95)',
+                border: `2px solid ${k === currentKey ? '#f5c518' : 'rgba(255,255,255,0.1)'}`,
+                borderRadius: 7, color: k === currentKey ? '#000' : '#e8e8e8',
+                fontFamily: 'monospace', fontSize: '18px', fontWeight: 'bold',
+                cursor: 'pointer', touchAction: 'none',
+              }}
+            >{k}</button>
+          ))}
+        </div>
+      )}
+
+      {/* Win overlay */}
       {beaten && (
         <div style={{
           position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(0,0,0,0.85)', animation: 'ee-hal-in .6s ease',
+          background: 'rgba(0,0,0,0.9)', animation: 'ee-hal-in .6s ease',
         }}>
           <div style={{ color: '#cc0000', fontSize: '3rem', fontFamily: 'serif', fontWeight: 700, textShadow: '0 0 30px #ff0000', marginBottom: '1rem' }}>
             BILL EST MORT
           </div>
-          <div style={{ color: '#e8e8e8', fontSize: '1.1rem', fontStyle: 'italic', fontFamily: 'serif', marginBottom: '2rem' }}>
+          <div style={{ color: '#e8e8e8', fontSize: '1.1rem', fontStyle: 'italic', fontFamily: 'serif', marginBottom: '2rem', textAlign: 'center', maxWidth: 500, padding: '0 1rem' }}>
             {endText ?? "Pai mei t'a bien entraîné."}
           </div>
-          <button
-            onClick={onDone}
-            style={{ background: '#cc0000', border: 'none', color: '#fff', padding: '.8rem 2rem', borderRadius: 6, cursor: 'pointer', fontSize: '1rem', fontFamily: 'monospace', letterSpacing: '2px' }}
-          >
+          <button onClick={onDone} style={{ background: '#cc0000', border: 'none', color: '#fff', padding: '.8rem 2rem', borderRadius: 6, cursor: 'pointer', fontSize: '1rem', fontFamily: 'monospace', letterSpacing: '2px' }}>
             FERMER
           </button>
         </div>
       )}
-      <button
-        onClick={onDone}
-        style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.5)', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontSize: '.78rem', fontFamily: 'monospace' }}
-      >
+
+      <button onClick={onDone} style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.5)', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontSize: '.78rem', fontFamily: 'monospace' }}>
         ESC
       </button>
     </div>
