@@ -2117,6 +2117,12 @@ export async function initOrGetTamagotchi() {
   return { data: updated, error: null, isNew: false, evolved, evolvedTo }
 }
 
+// Niveau 9+ : XP × 1.5 sur toutes les actions tamagotchi
+function tamaXpGain(pet: any, base: number): number {
+  const lvl = 1 + Math.floor((pet?.xp ?? 0) / 30)
+  return lvl >= 9 ? Math.round(base * 1.5) : base
+}
+
 export async function feedTamagotchi(score: number = 5, perfect: boolean = false) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -2140,7 +2146,7 @@ export async function feedTamagotchi(score: number = 5, perfect: boolean = false
   const now = new Date().toISOString()
   const today = now.slice(0, 10)
   const hungerReduction = score * 2  // +2 nourriture par humain attrapé
-  const xpGain = 15 + (perfect ? 10 : 0)  // +10 EXP bonus si aucune faute
+  const xpGain = tamaXpGain(pet, 15 + (perfect ? 10 : 0))
   const updates = {
     hunger: Math.max(0, synced.hunger - hungerReduction),
     happiness: synced.happiness, health: synced.health,
@@ -2170,7 +2176,7 @@ export async function playWithTamagotchi(score: number = 5) {
   const now = new Date().toISOString()
   const today = now.slice(0, 10)
   const happinessGain = Math.max(10, Math.min(40, Math.round(score * 4)))
-  const xpGain = Math.max(10, Math.min(25, Math.round(score * 2)))
+  const xpGain = tamaXpGain(pet, Math.max(10, Math.min(25, Math.round(score * 2))))
   const updates = {
     happiness: Math.min(100, synced.happiness + happinessGain),
     hunger: synced.hunger, health: synced.health,
@@ -2210,7 +2216,7 @@ export async function healTamagotchi() {
     age_hours: synced.age_hours, stage: synced.stage,
     energy: synced.energy, is_sleeping: synced.is_sleeping, is_sick: synced.is_sick,
     last_healed: now, last_sync: now,
-    xp: Math.min(9999, (pet.xp ?? 0) + 10),
+    xp: Math.min(9999, (pet.xp ?? 0) + tamaXpGain(pet, 10)),
     ...computeStreak(pet, today),
   }
   const { data } = await (supabase as any).from('tamagotchi').update(updates).eq('user_id', user.id).select().single()
@@ -2387,7 +2393,7 @@ export async function huntTamagotchi(score: number, caught: boolean) {
   }
 
   const { pet: synced } = applyTamaDecay(pet)
-  const xpGain = caught ? 40 + Math.round(score / 5) : 10 + Math.round(score / 10)
+  const xpGain = tamaXpGain(pet, caught ? 40 + Math.round(score / 5) : 10 + Math.round(score / 10))
   const happinessGain = caught ? 25 : 8
   const huntCount = (pet.hunt_count ?? 0) + 1
 
@@ -2444,7 +2450,7 @@ export async function checkInTamagotchi() {
     age_hours: synced.age_hours, stage: synced.stage,
     energy: synced.energy, is_sleeping: synced.is_sleeping, is_sick: synced.is_sick,
     last_sync: now,
-    xp: Math.min(9999, (pet.xp ?? 0) + bonusXp),
+    xp: Math.min(9999, (pet.xp ?? 0) + tamaXpGain(pet, bonusXp)),
     achievements,
     ...streak,
   }).eq('user_id', user.id).select().single()
@@ -2486,7 +2492,8 @@ export async function caresserTamagotchi() {
   const today = new Date().toISOString().slice(0, 10)
   const lastDate = pet.last_caresse_date ?? ''
   const caressesToday = lastDate === today ? (pet.caresses_today ?? 0) : 0
-  if (caressesToday >= 5) return { data: pet, error: 'Limite de câlins atteinte (5/jour) 💔' }
+  const caresseLimit = (1 + Math.floor((pet.xp ?? 0) / 30)) >= 6 ? 6 : 5
+  if (caressesToday >= caresseLimit) return { data: pet, error: `Limite de câlins atteinte (${caresseLimit}/jour) 💔` }
 
   const { pet: synced } = applyTamaDecay(pet)
   const now = new Date().toISOString()
@@ -2498,7 +2505,7 @@ export async function caresserTamagotchi() {
     last_sync: now,
     caresses_today: caressesToday + 1,
     last_caresse_date: today,
-    xp: Math.min(9999, (pet.xp ?? 0) + 3),
+    xp: Math.min(9999, (pet.xp ?? 0) + tamaXpGain(pet, 3)),
     ...computeStreak(pet, today),
   }
   const { data } = await (supabase as any).from('tamagotchi').update(updates).eq('user_id', user.id).select().single()
@@ -2524,7 +2531,7 @@ export async function nettoyerTamagotchi() {
     age_hours: synced.age_hours, stage: synced.stage,
     energy: synced.energy, is_sleeping: synced.is_sleeping, is_sick: synced.is_sick,
     last_sync: now,
-    xp: Math.min(9999, (pet.xp ?? 0) + 8),
+    xp: Math.min(9999, (pet.xp ?? 0) + tamaXpGain(pet, 8)),
     ...computeStreak(pet, today),
   }
   const { data } = await (supabase as any).from('tamagotchi').update(updates).eq('user_id', user.id).select().single()
@@ -2586,7 +2593,7 @@ export async function guerirTamagotchi() {
     age_hours: synced.age_hours, stage: synced.stage,
     energy: synced.energy, is_sleeping: synced.is_sleeping,
     last_sync: now,
-    xp: Math.min(9999, (pet.xp ?? 0) + 12),
+    xp: Math.min(9999, (pet.xp ?? 0) + tamaXpGain(pet, 12)),
     ...computeStreak(pet, today),
   }).eq('user_id', user.id).select().single()
   return { data, error: null }

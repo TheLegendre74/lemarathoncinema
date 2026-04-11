@@ -55,6 +55,35 @@ const ACHIEVEMENTS: Record<string, { icon: string; label: string; desc: string }
   max_level:     { icon: '⭐', label: 'Maître de l\'espace', desc: 'Niveau 10 atteint' },
 }
 
+// ── Level rewards ─────────────────────────────────────────────────────────────
+type LevelReward = { icon: string; label: string; desc: string; type: 'title' | 'theme' | 'bonus' | 'action' }
+const LEVEL_REWARDS: Record<number, LevelReward> = {
+  2:  { icon: '🏷️', label: 'Titre "Explorateur"',       desc: 'Affiché sous ton alien',                       type: 'title'  },
+  3:  { icon: '🎨', label: 'Thème Nuit Cosmique',        desc: 'Le vivarium prend une teinte violette',         type: 'theme'  },
+  4:  { icon: '🌙', label: 'Repos manuel débloqué',      desc: 'Tu peux endormir ton alien toi-même',           type: 'action' },
+  5:  { icon: '🏷️', label: 'Titre "Chasseur Spatial"',  desc: 'Titre intermédiaire',                           type: 'title'  },
+  6:  { icon: '🤚', label: '+1 câlin / jour',            desc: '6 câlins par jour au lieu de 5',                type: 'bonus'  },
+  7:  { icon: '🎨', label: 'Thème Sang & Or',            desc: 'Teintes rouges et dorées pour le vivarium',     type: 'theme'  },
+  8:  { icon: '🏷️', label: 'Titre "Légende Noire"',     desc: 'Titre rare, pour les dévoués',                  type: 'title'  },
+  9:  { icon: '⚡', label: 'XP ×1.5',                   desc: 'Toutes tes actions rapportent 50% de plus',     type: 'bonus'  },
+  10: { icon: '👑', label: 'Titre "Maître de l\'Espace"', desc: 'Le titre légendaire ultime',                   type: 'title'  },
+}
+
+function getCurrentTitle(lvl: number): string | null {
+  if (lvl >= 10) return '👑 Maître de l\'Espace'
+  if (lvl >= 8)  return '🌑 Légende Noire'
+  if (lvl >= 5)  return '🎯 Chasseur Spatial'
+  if (lvl >= 2)  return '🔭 Explorateur'
+  return null
+}
+
+function getThemeStyle(lvl: number): { border: string; bg: string } | null {
+  if (lvl >= 10) return { border: 'rgba(232,196,106,.6)',  bg: 'linear-gradient(135deg,rgba(232,196,106,.14),rgba(167,139,250,.1))' }
+  if (lvl >= 7)  return { border: 'rgba(239,68,68,.45)',   bg: 'linear-gradient(135deg,rgba(239,68,68,.1),rgba(232,196,106,.08))' }
+  if (lvl >= 3)  return { border: 'rgba(139,92,246,.4)',   bg: 'linear-gradient(135deg,rgba(139,92,246,.1),rgba(34,211,238,.06))' }
+  return null
+}
+
 // ── Personality ────────────────────────────────────────────────────────────────
 function getPersonality(pet: any): { label: string; desc: string; color: string } {
   const huntCount   = pet?.hunt_count ?? 0
@@ -86,10 +115,11 @@ function fmtAge(h: number): string {
 function getLevel(xp: number) { return 1 + Math.floor((xp ?? 0) / 30) }
 
 function getLevelLabel(lvl: number): string {
-  if (lvl >= 10) return '👑'
-  if (lvl >= 7)  return '⭐⭐⭐'
-  if (lvl >= 4)  return '⭐⭐'
-  return '⭐'
+  if (lvl >= 10) return '👑 Maître'
+  if (lvl >= 8)  return '🌑 Légende Noire'
+  if (lvl >= 5)  return '🎯 Chasseur'
+  if (lvl >= 2)  return '🔭 Explorateur'
+  return '🌑 Recrue'
 }
 
 function getPoopPositions(count: number) {
@@ -139,15 +169,29 @@ function EvolveOverlay({ stage, onClose }: { stage: string; onClose: () => void 
 }
 
 function LevelUpOverlay({ level, onClose }: { level: number; onClose: () => void }) {
-  useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t) }, [onClose])
+  useEffect(() => { const t = setTimeout(onClose, 5000); return () => clearTimeout(t) }, [onClose])
+  const reward = LEVEL_REWARDS[level]
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 8999, background: 'rgba(0,0,0,.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-      <div style={{ textAlign: 'center', animation: 'tama-levelup-pop 0.5s cubic-bezier(.175,.885,.32,1.275)' }}>
-        <div style={{ fontSize: '3rem', marginBottom: '.5rem' }}>✨</div>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: '2.5rem', color: '#fbbf24', textShadow: '0 0 30px #fbbf2488' }}>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 8999, background: 'rgba(0,0,0,.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+      <div style={{ textAlign: 'center', animation: 'tama-levelup-pop 0.5s cubic-bezier(.175,.885,.32,1.275)', padding: '0 2rem', maxWidth: 340 }}>
+        <div style={{ fontSize: '3rem', marginBottom: '.4rem' }}>✨</div>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: '2.2rem', color: '#fbbf24', textShadow: '0 0 30px #fbbf2488' }}>
           Niveau {level} !
         </div>
-        <div style={{ fontSize: '.85rem', color: 'rgba(255,255,255,.6)', marginTop: '.4rem' }}>{getLevelLabel(level)}</div>
+        <div style={{ fontSize: '.85rem', color: 'rgba(255,255,255,.5)', marginTop: '.2rem', marginBottom: reward ? '.9rem' : 0 }}>
+          {getLevelLabel(level)}
+        </div>
+        {reward && (
+          <div style={{
+            background: 'rgba(251,191,36,.1)', border: '1px solid rgba(251,191,36,.35)',
+            borderRadius: 12, padding: '.9rem 1.4rem', marginTop: '.2rem',
+          }}>
+            <div style={{ fontSize: '1.8rem', marginBottom: '.3rem' }}>{reward.icon}</div>
+            <div style={{ color: '#fbbf24', fontWeight: 600, fontSize: '.95rem', marginBottom: '.2rem' }}>{reward.label}</div>
+            <div style={{ fontSize: '.76rem', color: 'rgba(255,255,255,.5)', lineHeight: 1.5 }}>{reward.desc}</div>
+          </div>
+        )}
+        <div style={{ fontSize: '.65rem', color: 'rgba(255,255,255,.25)', marginTop: '.8rem' }}>Cliquer pour continuer</div>
       </div>
     </div>
   )
@@ -211,6 +255,9 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
   const today         = useMemo(() => new Date().toISOString().slice(0, 10), [])
   const caressesToday = (pet?.last_caresse_date === today) ? (pet?.caresses_today ?? 0) : 0
   const level         = getLevel(pet?.xp ?? 0)
+  const caresseLimit  = level >= 6 ? 6 : 5
+  const themeStyle    = getThemeStyle(level)
+  const currentTitle  = getCurrentTitle(level)
   const poopCount     = pet?.poop_count ?? 0
   const needsAttention = !isDead && !isSleeping && (pet?.hunger > 70 || pet?.happiness < 20 || isSick)
 
@@ -384,7 +431,7 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
   }
 
   async function handleCaresse() {
-    if (caressesToday >= 5) { addToast('Limite de câlins atteinte (5/jour) 💔', 'error'); return }
+    if (caressesToday >= caresseLimit) { addToast(`Limite de câlins atteinte (${caresseLimit}/jour) 💔`, 'error'); return }
     setCaresseAnim(true)
     setTimeout(() => {
       setShowHearts(true)
@@ -444,8 +491,11 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
             <span style={{ color: '#f97316', fontSize: '.78rem' }}>🔥 {pet.care_streak}j de suite</span>
           )}
           <span style={{ color: '#fbbf24', fontSize: '.78rem' }}>
-            Nv.{level} {getLevelLabel(level)} · {pet.xp ?? 0} XP
+            Nv.{level} · {pet.xp ?? 0} XP
           </span>
+          {currentTitle && (
+            <span style={{ color: 'var(--text3)', fontSize: '.72rem', fontStyle: 'italic' }}>{currentTitle}</span>
+          )}
           {pet.deaths > 0 && <span style={{ color: 'var(--text3)', fontSize: '.72rem' }}>💀 {pet.deaths}×</span>}
           {needsAttention && (
             <span style={{ color: '#ef4444', fontSize: '.78rem', animation: 'tama-poop-warn 0.7s ease-in-out infinite' }}>
@@ -475,8 +525,8 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
         <>
           {/* ── Écran ── */}
           <div style={{
-            background: 'var(--bg2)',
-            border: `2px solid ${needsAttention ? '#ef444488' : screenColor + '44'}`,
+            background: themeStyle?.bg ?? 'var(--bg2)',
+            border: `2px solid ${needsAttention ? '#ef444488' : themeStyle?.border ?? screenColor + '44'}`,
             borderRadius: 'var(--rl)',
             boxShadow: needsAttention
               ? '0 0 0 1px #ef444433, 0 0 30px #ef444411, inset 0 0 20px rgba(0,0,0,.3)'
@@ -696,12 +746,12 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
               </button>
 
               {/* ── Câliner ── */}
-              <button className="btn btn-outline" disabled={loading === 'caresse' || caressesToday >= 5} onClick={handleCaresse}
-                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.2rem', padding: '.7rem', opacity: caressesToday >= 5 ? 0.5 : 1 }}>
+              <button className="btn btn-outline" disabled={loading === 'caresse' || caressesToday >= caresseLimit} onClick={handleCaresse}
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.2rem', padding: '.7rem', opacity: caressesToday >= caresseLimit ? 0.5 : 1 }}>
                 <span style={{ fontSize: '1.4rem' }}>🤚</span>
                 <span style={{ fontSize: '.75rem' }}>Câliner · +3 XP</span>
-                <span style={{ fontSize: '.6rem', color: caressesToday >= 5 ? '#ef4444' : 'var(--text3)' }}>
-                  {caressesToday}/5 aujourd&apos;hui
+                <span style={{ fontSize: '.6rem', color: caressesToday >= caresseLimit ? '#ef4444' : 'var(--text3)' }}>
+                  {caressesToday}/{caresseLimit} aujourd&apos;hui
                 </span>
               </button>
 
@@ -715,8 +765,8 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
                 </button>
               )}
 
-              {/* ── Dormir manuellement (quand énergie > 30) ── */}
-              {!isSleeping && (pet.energy ?? 100) > 30 && (
+              {/* ── Dormir manuellement — débloqué au niveau 4 ── */}
+              {!isSleeping && level >= 4 && (pet.energy ?? 100) > 30 && (
                 <button className="btn btn-outline" disabled={loading === 'dormir'} onClick={() => doAction(dormirTamagotchi, 'dormir')}
                   style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.2rem', padding: '.7rem' }}>
                   <span style={{ fontSize: '1.4rem' }}>💤</span>
@@ -759,6 +809,41 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
               </div>
             </div>
           )}
+
+          {/* ── Récompenses de niveau ── */}
+          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.8rem 1rem', marginBottom: '1.2rem' }}>
+            <div style={{ fontSize: '.7rem', color: 'var(--text3)', fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', marginBottom: '.65rem' }}>🎁 Récompenses de niveau</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '.35rem' }}>
+              {Object.entries(LEVEL_REWARDS).map(([lvlStr, r]) => {
+                const lvl = Number(lvlStr)
+                const unlocked = level >= lvl
+                return (
+                  <div key={lvl} style={{
+                    display: 'flex', alignItems: 'center', gap: '.6rem',
+                    opacity: unlocked ? 1 : 0.38,
+                    filter: unlocked ? 'none' : 'grayscale(0.6)',
+                  }}>
+                    <div style={{
+                      width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                      background: unlocked ? 'rgba(251,191,36,.15)' : 'var(--bg3)',
+                      border: `1px solid ${unlocked ? 'rgba(251,191,36,.4)' : 'var(--border2)'}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '.78rem', fontFamily: 'var(--font-display)', color: unlocked ? '#fbbf24' : 'var(--text3)',
+                    }}>
+                      {unlocked ? '✓' : lvl}
+                    </div>
+                    <span style={{ fontSize: '1rem' }}>{r.icon}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '.78rem', color: unlocked ? 'var(--text)' : 'var(--text3)', fontWeight: unlocked ? 500 : 400 }}>{r.label}</div>
+                      <div style={{ fontSize: '.65rem', color: 'var(--text3)' }}>{r.desc}</div>
+                    </div>
+                    {unlocked && <span style={{ fontSize: '.65rem', color: '#4ade80', flexShrink: 0 }}>✓</span>}
+                    {!unlocked && <span style={{ fontSize: '.65rem', color: 'var(--text3)', flexShrink: 0 }}>Nv.{lvl}</span>}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
 
           {/* ── Personnalité ── */}
           {personality && pet.stage !== 'egg' && (
