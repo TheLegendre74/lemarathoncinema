@@ -360,11 +360,7 @@ html, body {
 .chatango-mobile  { display: none !important; }
 @media (max-width: 768px) {
   .chatango-desktop { display: none !important; }
-  .chatango-mobile  {
-    display: flex !important;
-    /* Garde la bande au-dessus du menu bas */
-    padding-bottom: calc(6.5rem + env(safe-area-inset-bottom)) !important;
-  }
+  .chatango-mobile  { display: flex !important; }
 }
 
 /* ── Discord FAB ── */

@@ -41,34 +41,8 @@ function ChatangoEmbed() {
   }, [])
 
   return (
-    <>
-      {/* Desktop : embed Chatango (masqué sur mobile via CSS) */}
-      <div ref={containerRef} className="chatango-desktop" style={{ width: '100%', height: 500 }} />
-      {/* Mobile : bouton direct (masqué sur desktop via CSS) */}
-      <div className="chatango-mobile" style={{
-        display: 'none',
-        flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        gap: '1rem', padding: '2rem 1.5rem', minHeight: 200,
-      }}>
-        <div style={{ fontSize: '2.5rem' }}>💬</div>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', marginBottom: '.35rem' }}>
-            Le Salon — Chat en direct
-          </div>
-          <div style={{ fontSize: '.75rem', color: 'var(--text3)', marginBottom: '1.2rem' }}>
-            L'embed n'est pas disponible sur mobile,<br/>ouvre le chat directement :
-          </div>
-          <a href={CHATANGO_URL} target="_blank" rel="noopener noreferrer" style={{
-            display: 'inline-flex', alignItems: 'center', gap: '.5rem',
-            background: 'rgba(232,196,106,.15)', border: '1px solid rgba(232,196,106,.4)',
-            borderRadius: 'var(--r)', padding: '.75rem 1.5rem',
-            color: 'var(--gold)', textDecoration: 'none', fontSize: '.88rem', fontWeight: 500,
-          }}>
-            💬 Rejoindre le chat ↗
-          </a>
-        </div>
-      </div>
-    </>
+    /* Desktop uniquement — l'embed est masqué sur mobile via CSS */
+    <div ref={containerRef} className="chatango-desktop" style={{ width: '100%', height: 500 }} />
   )
 }
 
@@ -77,6 +51,33 @@ export default function ForumPageClient({
 }: Props) {
   return (
     <div>
+      {/* ─── Bande raccourci Chatango — mobile uniquement, en haut de page ─── */}
+      <div className="chatango-mobile" style={{
+        display: 'none',
+        alignItems: 'center', justifyContent: 'space-between',
+        gap: '.75rem', padding: '.7rem 1rem',
+        background: 'linear-gradient(90deg, rgba(232,196,106,.1), rgba(232,160,60,.07))',
+        border: '1px solid rgba(232,196,106,.3)',
+        borderRadius: 'var(--r)',
+        marginBottom: '1.2rem',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem' }}>
+          <span style={{ fontSize: '1.3rem' }}>💬</span>
+          <div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: '.9rem', color: 'var(--gold)', lineHeight: 1.2 }}>Le Salon</div>
+            <div style={{ fontSize: '.65rem', color: 'var(--text3)' }}>Chat en direct</div>
+          </div>
+        </div>
+        <a href={CHATANGO_URL} target="_blank" rel="noopener noreferrer" style={{
+          display: 'inline-flex', alignItems: 'center', gap: '.4rem',
+          background: 'rgba(232,196,106,.18)', border: '1px solid rgba(232,196,106,.4)',
+          borderRadius: 'var(--r)', padding: '.45rem 1rem',
+          color: 'var(--gold)', textDecoration: 'none', fontSize: '.78rem', fontWeight: 500, flexShrink: 0,
+        }}>
+          Ouvrir ↗
+        </a>
+      </div>
+
       {/* Header */}
       <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
         <div>
