@@ -1000,6 +1000,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
         secretDoor: { x: number; y: number; gfx: G } | null = null
         secretDoorUsed = false
         secretDoorPromptShown = false
+        secretDoorRefused = false
         healItems: { gfx: G; x: number; y: number }[] = []
         bobTributeDone = false
         bobCorpses: Array<{ gfx: any; x: number; floorY: number; face: number }> = []
@@ -1117,7 +1118,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           this.bossPhase2 = false; this.bossCinematic = false; this.bossCinemaTimer = 0
           this.endlessMode = false; this.endlessWave = 0; this.endlessHpMult = 1.0
           this.endlessTriggerX = 0; this.endlessNextX = 999999
-          this.secretDoor = null; this.secretDoorUsed = false; this.secretDoorKeyWasDown = false
+          this.secretDoor = null; this.secretDoorUsed = false; this.secretDoorKeyWasDown = false; this.secretDoorRefused = false; this.secretDoorPromptShown = false
           this.bobTributeActive = false; this.bobTributeTimer = 0; this.pendingBobTribute = false
           this.tributeEnemy = null; this.tributeBobX = 0; this.tributeBobY = 0; this.tributeTextObj = null
           this.marlaPauseActive = false; this.marlaPauseTimer = 0; this.marlaText = null
@@ -1145,6 +1146,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             ;(window as any).__fcMobileKeys = {}
             setShowDoorPrompt(false)
             this.secretDoorPromptShown = false
+            this.secretDoorRefused = true
           }
 
           // Expose endless start to React
@@ -1560,13 +1562,15 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           if (this.secretDoor && !this.secretDoorUsed) {
             const dist = Math.abs(this.player.x - this.secretDoor.x)
             const close = dist < 80 && Math.abs(this.player.floorY - this.secretDoor.y) < 80
-            if (close && !this.secretDoorPromptShown) {
+            if (close && !this.secretDoorPromptShown && !this.secretDoorRefused) {
               this.secretDoorPromptShown = true
               ;(window as any).__fcMobileKeys = {}
               setShowDoorPrompt(true)
             } else if (!close && this.secretDoorPromptShown) {
               this.secretDoorPromptShown = false
               setShowDoorPrompt(false)
+            } else if (!close) {
+              this.secretDoorRefused = false
             }
           }
 
@@ -3402,6 +3406,22 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
         </div>
       )}
 
+      {/* Bouton Sortir — hors du panneau de contrôles */}
+      {mobileCtrlsOn && !showName && !showLB && !showEndlessChoice && (
+        <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 200, pointerEvents: 'auto' }}>
+          <button
+            onPointerDown={e => { e.preventDefault(); onDone() }}
+            onTouchStart={e => { e.preventDefault(); onDone() }}
+            style={{
+              background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.2)',
+              borderRadius: 6, color: 'rgba(255,255,255,0.5)', fontSize: '0.6rem',
+              fontFamily: 'monospace', letterSpacing: 2, padding: '5px 12px',
+              cursor: 'pointer', touchAction: 'none',
+            }}
+          >SORTIR</button>
+        </div>
+      )}
+
       {/* Mobile virtual controls */}
       {mobileCtrlsOn && !showName && !showLB && !showEndlessChoice && !showDoorPrompt && (
         <div
@@ -3414,19 +3434,6 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             zIndex: 150,
           }}
         >
-          {/* Bouton Sortir */}
-          <div style={{ position: 'absolute', top: 6, right: 10, pointerEvents: 'auto', zIndex: 160 }}>
-            <button
-              onPointerDown={e => { e.preventDefault(); onDone() }}
-              onTouchStart={e => { e.preventDefault(); onDone() }}
-              style={{
-                background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.2)',
-                borderRadius: 6, color: 'rgba(255,255,255,0.5)', fontSize: '0.6rem',
-                fontFamily: 'monospace', letterSpacing: 2, padding: '4px 10px',
-                cursor: 'pointer', touchAction: 'none',
-              }}
-            >SORTIR</button>
-          </div>
           {/* D-pad gauche */}
           <div style={{ position: 'relative', width: 120, height: 120, pointerEvents: 'auto', flexShrink: 0 }}>
             {/* Haut */}
