@@ -2669,7 +2669,7 @@ export async function getFightClubLeaderboard(difficulty: string): Promise<{ pse
     .select('pseudo, score')
     .eq('difficulty', difficulty)
     .order('score', { ascending: false })
-    .limit(10)
+    .limit(100)
   return (data ?? []) as unknown as { pseudo: string; score: number }[]
 }
 

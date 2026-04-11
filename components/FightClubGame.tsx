@@ -31,9 +31,9 @@ function addToLB(d: string, name: string, score: number): LBEntry[] {
   const all = getLB(d)
   all.push({ name, score })
   all.sort((a, b) => b.score - a.score)
-  const top10 = all.slice(0, 10)
-  try { localStorage.setItem(LB_KEYS[d] ?? 'fc_lb_normal', JSON.stringify(top10)) } catch {}
-  return top10
+  const top100 = all.slice(0, 100)
+  try { localStorage.setItem(LB_KEYS[d] ?? 'fc_lb_normal', JSON.stringify(top100)) } catch {}
+  return top100
 }
 
 export default function FightClubGame({ onDone }: { onDone: () => void }) {
@@ -3301,24 +3301,32 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
       {/* Secret door prompt */}
       {showDoorPrompt && (
         <div style={{
-          position: 'absolute', bottom: '70px', left: '50%', transform: 'translateX(-50%)',
-          background: 'rgba(0,0,0,0.90)', border: '1px solid #554433',
-          padding: '14px 28px', borderRadius: '6px', zIndex: 300, textAlign: 'center',
+          position: 'absolute', top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          background: 'rgba(0,0,0,0.95)', border: '1px solid #554433',
+          padding: '20px 32px', borderRadius: '8px', zIndex: 300, textAlign: 'center',
+          minWidth: 240,
         }}>
-          <div style={{ color: '#ffcc00', fontFamily: 'Impact', fontSize: '20px', letterSpacing: '4px', marginBottom: '12px' }}>
+          <div style={{ color: '#ffcc00', fontFamily: 'Impact', fontSize: '20px', letterSpacing: '4px', marginBottom: '16px' }}>
             OUVRIR LA PORTE ?
           </div>
           <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
-            <button onClick={() => confirmDoorRef.current?.()} style={{
-              background: '#cc1111', border: 'none', color: '#fff',
-              fontFamily: 'Impact', fontSize: '16px', letterSpacing: '3px',
-              padding: '8px 28px', cursor: 'pointer', borderRadius: '3px',
-            }}>OUI</button>
-            <button onClick={() => cancelDoorRef.current?.()} style={{
-              background: 'transparent', border: '1px solid #554433', color: '#886644',
-              fontFamily: 'monospace', fontSize: '14px', letterSpacing: '3px',
-              padding: '8px 24px', cursor: 'pointer',
-            }}>NON</button>
+            <button
+              onPointerDown={e => { e.preventDefault(); confirmDoorRef.current?.() }}
+              style={{
+                background: '#cc1111', border: 'none', color: '#fff',
+                fontFamily: 'Impact', fontSize: '16px', letterSpacing: '3px',
+                padding: '12px 32px', cursor: 'pointer', borderRadius: '4px',
+                touchAction: 'none', minWidth: 80,
+              }}>OUI</button>
+            <button
+              onPointerDown={e => { e.preventDefault(); cancelDoorRef.current?.() }}
+              style={{
+                background: 'rgba(80,60,40,0.6)', border: '1px solid #554433', color: '#ccaa77',
+                fontFamily: 'Impact', fontSize: '16px', letterSpacing: '3px',
+                padding: '12px 32px', cursor: 'pointer', borderRadius: '4px',
+                touchAction: 'none', minWidth: 80,
+              }}>NON</button>
           </div>
         </div>
       )}
@@ -3406,6 +3414,19 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             zIndex: 150,
           }}
         >
+          {/* Bouton Sortir */}
+          <div style={{ position: 'absolute', top: 6, right: 10, pointerEvents: 'auto', zIndex: 160 }}>
+            <button
+              onPointerDown={e => { e.preventDefault(); onDone() }}
+              onTouchStart={e => { e.preventDefault(); onDone() }}
+              style={{
+                background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: 6, color: 'rgba(255,255,255,0.5)', fontSize: '0.6rem',
+                fontFamily: 'monospace', letterSpacing: 2, padding: '4px 10px',
+                cursor: 'pointer', touchAction: 'none',
+              }}
+            >SORTIR</button>
+          </div>
           {/* D-pad gauche */}
           <div style={{ position: 'relative', width: 120, height: 120, pointerEvents: 'auto', flexShrink: 0 }}>
             {/* Haut */}
@@ -3446,6 +3467,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             <div style={{ display: 'flex', gap: 8 }}>
               <button
                 onPointerDown={e => { e.preventDefault(); window.dispatchEvent(new CustomEvent('fc:action', { detail: { action: 'jump' } })) }}
+                onTouchStart={e => { e.preventDefault(); window.dispatchEvent(new CustomEvent('fc:action', { detail: { action: 'jump' } })) }}
                 style={{ ...actionBtn, background: 'rgba(80,180,255,0.22)', borderColor: 'rgba(80,180,255,0.55)', color: '#88ccff' }}
               >SAUT</button>
               <button
@@ -3459,6 +3481,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button
                 onPointerDown={e => { e.preventDefault(); window.dispatchEvent(new CustomEvent('fc:action', { detail: { action: 'throw' } })) }}
+                onTouchStart={e => { e.preventDefault(); window.dispatchEvent(new CustomEvent('fc:action', { detail: { action: 'throw' } })) }}
                 style={{ ...actionBtn, background: 'rgba(255,220,50,0.22)', borderColor: 'rgba(255,220,50,0.55)', color: '#ffdd66', fontSize: '0.62rem', width: 104 }}
               >🗡 LANCER</button>
             </div>
@@ -3466,10 +3489,12 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             <div style={{ display: 'flex', gap: 8 }}>
               <button
                 onPointerDown={e => { e.preventDefault(); window.dispatchEvent(new CustomEvent('fc:action', { detail: { action: 'punch' } })) }}
+                onTouchStart={e => { e.preventDefault(); window.dispatchEvent(new CustomEvent('fc:action', { detail: { action: 'punch' } })) }}
                 style={{ ...actionBtn, background: 'rgba(255,80,80,0.22)', borderColor: 'rgba(255,80,80,0.55)', color: '#ff8888', fontSize: '0.62rem' }}
               >POING</button>
               <button
                 onPointerDown={e => { e.preventDefault(); window.dispatchEvent(new CustomEvent('fc:action', { detail: { action: 'kick' } })) }}
+                onTouchStart={e => { e.preventDefault(); window.dispatchEvent(new CustomEvent('fc:action', { detail: { action: 'kick' } })) }}
                 style={{ ...actionBtn, background: 'rgba(255,160,40,0.22)', borderColor: 'rgba(255,160,40,0.55)', color: '#ffbb66', fontSize: '0.62rem' }}
               >PIED</button>
             </div>
@@ -3487,7 +3512,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           <div style={{ color: '#cc1111', fontFamily: 'Impact', fontSize: '28px', letterSpacing: '6px', marginBottom: '4px' }}>
             CLASSEMENT — {DIFFS[lbDiff].label}
           </div>
-          <table style={{ borderCollapse: 'collapse', marginBottom: '28px', marginTop: '12px' }}>
+          <table style={{ borderCollapse: 'collapse', marginBottom: '28px', marginTop: '12px', maxHeight: '60vh', display: 'block', overflowY: 'auto' }}>
             <tbody>
               {lbData.map((e, i) => (
                 <tr key={i} style={{ color: i === 0 ? '#ffdd00' : '#cccccc' }}>
