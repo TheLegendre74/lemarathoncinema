@@ -31,7 +31,7 @@ const EE_STYLES = `
   @media (max-width: 768px) {
     .ee-mobile-btn {
       display: flex; align-items: center; justify-content: center;
-      position: fixed; bottom: 72px; right: 14px;
+      position: fixed; bottom: calc(25vh + 8px); right: calc(1rem + 52px);
       width: 42px; height: 42px; border-radius: 50%;
       background: var(--bg2); border: 1px solid var(--border2);
       font-size: 1.1rem; cursor: pointer; z-index: 900;
