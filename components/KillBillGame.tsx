@@ -7,7 +7,7 @@ const GW = 960, GH = 540
 const KEYS = ['Q','W','E','R','A','S','D','F','Z','X','C','V']
 const TOTAL_GROUPS = 5
 const KEYS_PER_GROUP = 10
-const KEY_MS = 1500
+const KEY_MS = 2000
 const MAX_LIVES = 3
 
 function genSeq(): string[][] {
@@ -49,6 +49,8 @@ export default function KillBillGame({ onDone, endText }: { onDone: () => void; 
         billFall = 0; billFalling = false
         brideX = 200; brideY = 420
         brideStrike = 0
+        fistX = 0; fistY = 0; fistActive = false
+        billBlink = false
 
         // Particles
         parts: {x:number;y:number;vx:number;vy:number;life:number;ml:number;col:number}[] = []
@@ -196,22 +198,34 @@ export default function KillBillGame({ onDone, endText }: { onDone: () => void; 
           g.fillStyle(0xf5c518)
           g.fillRect(x - 16, y - 75, 13, 75).fillRect(x + 3, y - 75, 13, 75)
           g.fillRect(x - 20, y - 155, 40, 80)
-          // Strike arm: extends forward
-          g.fillRect(x + 18, y - 138 - ext * 0.2, 38 + ext, 11)
-          g.fillRect(x - 56, y - 128, 36, 11)
+          // Strike arm — ligne jusqu'au poing voyageant
+          if (this.fistActive) {
+            g.lineStyle(11, 0xf5c518, 1)
+            g.lineBetween(x + 22, y - 135, this.fistX, this.fistY)
+          } else {
+            g.fillRect(x + 18, y - 138 - ext * 0.2, 38 + ext, 11)
+          }
+          g.fillStyle(0xf5c518).fillRect(x - 56, y - 128, 36, 11)
           g.fillStyle(0xf2d5a8).fillEllipse(x, y - 165, 36, 40)
           g.fillStyle(0x111111).fillRect(x - 18, y - 186, 36, 16)
           g.fillStyle(0x222222).fillRect(x - 8, y - 170, 5, 5).fillRect(x + 3, y - 170, 5, 5)
-          // Katana
-          g.lineStyle(3, 0xcccccc, 1).lineBetween(x + 18, y - 148, x + 68 + ext, y - 155)
+          // Katana (masqué pendant la frappe)
+          if (!this.fistActive)
+            g.lineStyle(3, 0xcccccc, 1).lineBetween(x + 18, y - 148, x + 68 + ext, y - 155)
+          // Poing voyageant
+          if (this.fistActive) {
+            g.fillStyle(0xf2d5a8).fillCircle(this.fistX, this.fistY, 12)
+            g.fillStyle(0xf5c518).fillCircle(this.fistX, this.fistY, 8)
+          }
         }
 
         drawBill() {
           const g = this.gBill
           g.clear()
-          // Position + rotation applied at GameObject level
           g.setPosition(this.billX, this.billY)
           g.setRotation(this.billFall)
+          // Clignotement 0.5s après impact
+          if (this.billBlink && Math.floor(this.time.now / 70) % 2 === 0) return
 
           // Draw in local space (feet at origin 0,0 going upward)
           g.fillStyle(0x000000, 0.2).fillEllipse(0, 5, 60, 14)
@@ -363,6 +377,17 @@ export default function KillBillGame({ onDone, endText }: { onDone: () => void; 
           this.tweens.add({ targets: this.tBetween, alpha: 1, duration: 300 })
 
           const origBX = this.brideX
+          // Init poing au niveau du bras de la Bride
+          this.fistX = origBX + 56
+          this.fistY = this.brideY - 135
+          this.fistActive = true
+          // Poing voyage vers le cœur de Bill
+          this.tweens.add({
+            targets: this,
+            fistX: this.billX - 55,
+            fistY: this.billY - 130,
+            duration: 340, ease: 'Power2',
+          })
           // Bride lunges
           this.tweens.add({
             targets: this, brideX: origBX + 75, brideStrike: 1,
@@ -370,12 +395,19 @@ export default function KillBillGame({ onDone, endText }: { onDone: () => void; 
             onComplete: () => {
               this.cameras.main.flash(180, 255, 200, 80)
               this.cameras.main.shake(200, 0.01)
+              // Bill clignote 0.5s
+              this.billBlink = true
+              this.time.delayedCall(500, () => { this.billBlink = false })
               // Bill staggers slightly
               const origBillX = this.billX
               this.tweens.add({ targets: this, billX: origBillX + 15, duration: 80, yoyo: true, repeat: 2,
                 onComplete: () => { this.billX = origBillX }
               })
               this.time.delayedCall(200, () => {
+                // Poing repart
+                this.tweens.add({ targets: this, fistX: origBX + 56, fistY: this.brideY - 135, duration: 200,
+                  onComplete: () => { this.fistActive = false }
+                })
                 this.tweens.add({
                   targets: this, brideX: origBX, brideStrike: 0,
                   duration: 280,
