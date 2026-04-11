@@ -959,11 +959,15 @@ export default function EasterEggs({ config = {}, isGuest = false }: { config?: 
     if (triggered) { setMobileVal(''); setShowMobileInput(false) }
   }
 
-  // URL hash trigger — #fightclub ouvre le jeu directement (pour test)
+  // URL hash triggers — pour test direct
   useEffect(() => {
     if (window.location.hash === '#fightclub') {
       discoverEgg('fightclub')
       setShowFightClub(true)
+      history.replaceState(null, '', window.location.pathname)
+    }
+    if (window.location.hash === '#killbill') {
+      setShowKillBill(true)
       history.replaceState(null, '', window.location.pathname)
     }
   }, [])
