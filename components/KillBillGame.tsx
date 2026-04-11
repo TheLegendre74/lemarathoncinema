@@ -17,9 +17,10 @@ function genSeq(): string[][] {
 }
 
 export default function KillBillGame({ onDone, endText }: { onDone: () => void; endText?: string }) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const gameRef      = useRef<any>(null)
-  const handleKeyRef = useRef<((k: string) => void) | null>(null)
+  const containerRef   = useRef<HTMLDivElement>(null)
+  const gameRef        = useRef<any>(null)
+  const handleKeyRef   = useRef<((k: string) => void) | null>(null)
+  const mobileInputRef = useRef<HTMLInputElement>(null)
   const [beaten, setBeaten]             = useState(false)
   const [showCtrl, setShowCtrl]         = useState(false)
   const [currentKey, setCurrentKey]     = useState('')
@@ -529,31 +530,40 @@ export default function KillBillGame({ onDone, endText }: { onDone: () => void; 
     }
   }, [])
 
+  // Sur mobile : focus l'input caché quand le challenge commence → ouvre le clavier natif
+  useEffect(() => {
+    if (isMobile && showCtrl && !beaten) {
+      setTimeout(() => mobileInputRef.current?.focus(), 80)
+    }
+  }, [showCtrl, isMobile, beaten])
+
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: '#000', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
       <div ref={containerRef} />
 
-      {/* Mobile keyboard — 3×4 grid */}
+      {/* Mobile : input caché qui ouvre le clavier natif */}
       {isMobile && showCtrl && !beaten && (
-        <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6,
-          padding: '8px 10px', background: 'rgba(0,0,0,0.85)',
-          border: '1px solid rgba(245,197,24,0.25)', borderRadius: 8, marginTop: 6,
-        }}>
-          {KEYS.map(k => (
-            <button key={k}
-              onPointerDown={e => { e.preventDefault(); handleKeyRef.current?.(k) }}
-              style={{
-                width: 52, height: 52,
-                background: k === currentKey ? '#f5c518' : 'rgba(22,22,22,0.95)',
-                border: `2px solid ${k === currentKey ? '#f5c518' : 'rgba(255,255,255,0.1)'}`,
-                borderRadius: 7, color: k === currentKey ? '#000' : '#e8e8e8',
-                fontFamily: 'monospace', fontSize: '18px', fontWeight: 'bold',
-                cursor: 'pointer', touchAction: 'none',
-              }}
-            >{k}</button>
-          ))}
-        </div>
+        <>
+          <input
+            ref={mobileInputRef}
+            onInput={e => {
+              const char = (e.nativeEvent as InputEvent).data
+              if (char) handleKeyRef.current?.(char.toUpperCase())
+              ;(e.target as HTMLInputElement).value = ''
+            }}
+            onBlur={() => {
+              if (showCtrl && !beaten) setTimeout(() => mobileInputRef.current?.focus(), 50)
+            }}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="characters"
+            inputMode="text"
+            style={{ position: 'absolute', opacity: 0, width: 1, height: 1, top: 0, left: 0, pointerEvents: 'none' }}
+          />
+          <div style={{ color: 'rgba(245,197,24,0.55)', fontSize: '0.72rem', fontFamily: 'monospace', marginTop: 8, letterSpacing: 1 }}>
+            ⌨️ Tape la touche sur ton clavier
+          </div>
+        </>
       )}
 
       {/* Win overlay */}
