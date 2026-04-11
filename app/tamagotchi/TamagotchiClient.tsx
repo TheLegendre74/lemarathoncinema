@@ -5,6 +5,7 @@ import {
   feedTamagotchi, playWithTamagotchi, healTamagotchi, reviveTamagotchi,
   nameTamagotchi, caresserTamagotchi, nettoyerTamagotchi,
   dormirTamagotchi, reveillerTamagotchi, guerirTamagotchi,
+  huntTamagotchi, checkInTamagotchi,
 } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
 import { useWidgetEnabled } from '@/components/TamagotchiWidget'
@@ -14,9 +15,11 @@ import {
   adminEvolveAlien, adminAgeAlien, adminKillAlien,
   adminAddPoop, adminResetCaresses,
   adminToggleSick, adminToggleSleep, adminDrainEnergy,
+  adminTestHunt, adminResetCheckin,
 } from '@/lib/actions'
 import MiniGame from './MiniGame'
 import GameSelector from './GameSelector'
+import HuntGame from './HuntGame'
 
 // ── Constantes ───────────────────────────────────────────────────────────────
 const STAGE_INFO: Record<string, { label: string; desc: string }> = {
@@ -39,6 +42,32 @@ const SPACE_EVENTS = [
   { icon: '🛸', text: 'Vaisseau non-identifié !' },
   { icon: '🌌', text: 'Nébuleuse découverte.' },
 ]
+
+// ── Achievements ──────────────────────────────────────────────────────────────
+const ACHIEVEMENTS: Record<string, { icon: string; label: string; desc: string }> = {
+  first_feed:    { icon: '🥩', label: 'Premier repas',       desc: 'A nourri son alien pour la première fois' },
+  first_hunt:    { icon: '🏹', label: 'Première chasse',     desc: 'A lancé la chasse au xénomorphe' },
+  hunter:        { icon: '🎯', label: 'Chasseur',            desc: '5 chasses terminées' },
+  apex_hunter:   { icon: '👑', label: 'Apex Prédateur',      desc: '20 chasses terminées' },
+  perfect_hunt:  { icon: '💯', label: 'Chasse parfaite',     desc: 'Score 100+ en une seule chasse' },
+  streak_week:   { icon: '🔥', label: 'Semaine de feu',      desc: '7 jours de streak consécutifs' },
+  streak_month:  { icon: '🌟', label: 'Mois de dévotion',   desc: '30 jours de streak consécutifs' },
+  max_level:     { icon: '⭐', label: 'Maître de l\'espace', desc: 'Niveau 10 atteint' },
+}
+
+// ── Personality ────────────────────────────────────────────────────────────────
+function getPersonality(pet: any): { label: string; desc: string; color: string } {
+  const huntCount   = pet?.hunt_count ?? 0
+  const careStreak  = pet?.care_streak ?? 0
+  const happiness   = pet?.happiness ?? 50
+  const health      = pet?.health ?? 50
+  if (huntCount >= 10) return { label: '⚔️ Prédateur',    desc: 'Sauvage, efficace, né pour chasser.', color: '#ef4444' }
+  if (careStreak >= 7) return { label: '💚 Loyal',         desc: 'Attaché à son maître, profondément fidèle.', color: '#4ade80' }
+  if (happiness > 75)  return { label: '🌟 Jovial',        desc: 'Toujours de bonne humeur, débordant d\'énergie.', color: '#fbbf24' }
+  if (health < 30)     return { label: '🌿 Résilient',     desc: 'A survécu à l\'adversité. Marqué mais vivant.', color: '#a3e635' }
+  if (huntCount >= 3)  return { label: '🎯 Chasseur',      desc: 'Instinct aiguisé, regard acéré.', color: '#f97316' }
+  return               { label: '🌑 Mystérieux',           desc: 'Impénétrable. On ne sait jamais ce qu\'il pense.', color: '#a78bfa' }
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function fmtCooldown(ms: number): string {
@@ -156,6 +185,7 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
   const [nameInput, setNameInput]           = useState(initialPet?.name ?? 'Xeno')
   const [showFeedGame, setShowFeedGame]     = useState(false)
   const [showPlayGame, setShowPlayGame]     = useState(false)
+  const [showHuntGame, setShowHuntGame]     = useState(false)
   const [accessories,  setAccessories]      = useState<Accessory[]>([])
   const [showHearts,   setShowHearts]       = useState(false)
   const [caresseAnim,  setCaresseAnim]      = useState(false)
@@ -175,7 +205,7 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
   const isDead      = pet?.stage === 'dead'
   const isSleeping  = pet?.is_sleeping === true
   const isSick      = pet?.is_sick === true
-  const showingGame = showFeedGame || showPlayGame
+  const showingGame = showFeedGame || showPlayGame || showHuntGame
 
   const poopPositions = useMemo(() => getPoopPositions(pet?.poop_count ?? 0), [pet?.poop_count])
   const today         = useMemo(() => new Date().toISOString().slice(0, 10), [])
@@ -189,6 +219,22 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
   useEffect(() => { const id = setInterval(() => setTick(t => 1 - t), 800); return () => clearInterval(id) }, [])
   useEffect(() => { const id = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(id) }, [])
   useEffect(() => { if (isNew) addToast('Ton facehugger est né ! Prends-en soin. 🤍', 'success') }, []) // eslint-disable-line
+
+  // ── Check-in quotidien automatique ────────────────────────────────────────
+  useEffect(() => {
+    if (!pet || pet.stage === 'dead') return
+    const last = pet.last_checkin ? pet.last_checkin.slice(0, 10) : ''
+    if (last !== today) {
+      // silently do the check-in in background
+      checkInTamagotchi().then(res => {
+        if (res.data) {
+          setPet(res.data)
+          const bonus = (res as any).bonusXp ?? 15
+          addToast(`✨ Check-in quotidien ! +${bonus} XP — streak ${res.data.care_streak ?? 1}j 🔥`, 'success')
+        }
+      })
+    }
+  }, []) // eslint-disable-line
 
   // Level-up detection
   useEffect(() => {
@@ -263,8 +309,13 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
 
   const FEED_CD = 2 * 3_600_000
   const HEAL_CD = 24 * 3_600_000
-  const feedCd = pet?.last_fed    ? Math.max(0, FEED_CD - (now - new Date(pet.last_fed).getTime()))    : 0
-  const healCd = pet?.last_healed ? Math.max(0, HEAL_CD - (now - new Date(pet.last_healed).getTime())) : 0
+  const HUNT_CD = 4 * 3_600_000
+  const feedCd = pet?.last_fed     ? Math.max(0, FEED_CD - (now - new Date(pet.last_fed).getTime()))     : 0
+  const healCd = pet?.last_healed  ? Math.max(0, HEAL_CD - (now - new Date(pet.last_healed).getTime()))  : 0
+  const huntCd = pet?.last_hunted  ? Math.max(0, HUNT_CD - (now - new Date(pet.last_hunted).getTime()))  : 0
+  const checkinDone = pet?.last_checkin ? pet.last_checkin.slice(0, 10) === today : false
+  const petAchievements: string[] = Array.isArray(pet?.achievements) ? pet.achievements : []
+  const personality = pet ? getPersonality(pet) : null
 
   const frameKey   = pet ? getTamaFrameKey(pet) : 'egg'
   const frames     = TAMA_FRAMES[frameKey] ?? TAMA_FRAMES['egg']
@@ -363,6 +414,19 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
     addToast('Nom sauvegardé !', 'success')
   }
 
+  async function handleHuntFinish(score: number, caught: boolean) {
+    setShowHuntGame(false)
+    const res = await huntTamagotchi(score, caught)
+    if (res.error) { addToast(res.error, 'error'); return }
+    if (res.data) {
+      const prev = pet?.stage
+      setPet(res.data)
+      if (res.data.stage !== prev && res.data.stage !== 'dead') setEvolveStage(res.data.stage)
+      if (caught) addToast(`🥚 Chasse réussie ! +${score >= 100 ? 'Score parfait ! ' : ''}XP`, 'success')
+      else addToast(`💨 L'humain s'est échappé… +${score} pts`, 'error')
+    }
+  }
+
   if (!pet) return <div className="empty">Erreur chargement.</div>
 
   return (
@@ -396,6 +460,17 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
         <MiniGame stage={pet.stage} feedMode onFinish={handleFeedFinish} onClose={() => setShowFeedGame(false)} />
       ) : showPlayGame ? (
         <GameSelector stage={pet.stage} onFinish={handlePlayFinish} onClose={() => setShowPlayGame(false)} />
+      ) : showHuntGame ? (
+        <div style={{ marginBottom: '1.2rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '.6rem' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: '#a78bfa' }}>🏹 La Chasse</div>
+            <button className="btn btn-outline" style={{ fontSize: '.72rem', padding: '.3rem .7rem' }} onClick={() => setShowHuntGame(false)}>✕ Abandonner</button>
+          </div>
+          <HuntGame onEnd={handleHuntFinish} />
+          <div style={{ fontSize: '.72rem', color: 'var(--text3)', marginTop: '.5rem', textAlign: 'center', lineHeight: 1.6 }}>
+            Évitez les obstacles pour vous rapprocher · Attrapez l&apos;humain avant la fin du temps
+          </div>
+        </div>
       ) : (
         <>
           {/* ── Écran ── */}
@@ -649,6 +724,27 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
                   <span style={{ fontSize: '.6rem', color: 'var(--text3)' }}>⚡ {pet.energy ?? 100}/100</span>
                 </button>
               )}
+
+              {/* ── LA CHASSE (xenomorph uniquement) ── */}
+              {pet.stage === 'xenomorph' && (
+                <button className="btn btn-outline" disabled={huntCd > 0 || isSleeping || loading === 'hunt'}
+                  onClick={() => !isSleeping && huntCd <= 0 && setShowHuntGame(true)}
+                  style={{
+                    gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    gap: '.2rem', padding: '.9rem',
+                    background: 'rgba(167,139,250,.08)', borderColor: '#a78bfa66', color: '#a78bfa',
+                    opacity: huntCd > 0 || isSleeping ? 0.55 : 1,
+                  }}>
+                  <span style={{ fontSize: '1.6rem' }}>🏹</span>
+                  <span style={{ fontSize: '.8rem', fontWeight: 600 }}>La Chasse</span>
+                  {huntCd > 0
+                    ? <span style={{ fontSize: '.65rem', color: 'var(--text3)' }}>Disponible dans {fmtCooldown(huntCd)}</span>
+                    : isSleeping
+                    ? <span style={{ fontSize: '.62rem', color: '#8888aa' }}>dort…</span>
+                    : <span style={{ fontSize: '.65rem', color: '#c4b5fd' }}>Course-poursuite · +XP · +Humeur</span>
+                  }
+                </button>
+              )}
             </div>
           )}
 
@@ -660,6 +756,41 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
                 {accessories.map(a => (
                   <span key={a.id} title={a.name} style={{ fontSize: '1.5rem', cursor: 'default', filter: `drop-shadow(0 0 4px ${screenColor}44)` }}>{a.emoji}</span>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Personnalité ── */}
+          {personality && pet.stage !== 'egg' && (
+            <div style={{ background: 'var(--bg2)', border: `1px solid ${personality.color}33`, borderRadius: 'var(--r)', padding: '.8rem 1rem', marginBottom: '1.2rem' }}>
+              <div style={{ fontSize: '.7rem', color: 'var(--text3)', fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', marginBottom: '.4rem' }}>🧬 Personnalité</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem' }}>
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: personality.color }}>{personality.label}</span>
+                <span style={{ fontSize: '.72rem', color: 'var(--text3)', lineHeight: 1.4 }}>{personality.desc}</span>
+              </div>
+            </div>
+          )}
+
+          {/* ── Achievements ── */}
+          {petAchievements.length > 0 && (
+            <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.8rem 1rem', marginBottom: '1.2rem' }}>
+              <div style={{ fontSize: '.7rem', color: 'var(--text3)', fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', marginBottom: '.6rem' }}>🏆 Succès</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.5rem' }}>
+                {petAchievements.map(id => {
+                  const a = ACHIEVEMENTS[id]
+                  if (!a) return null
+                  return (
+                    <div key={id} title={a.desc} style={{
+                      display: 'flex', alignItems: 'center', gap: '.35rem',
+                      background: 'var(--bg3)', border: '1px solid var(--border2)',
+                      borderRadius: 99, padding: '3px 10px',
+                      fontSize: '.72rem', color: 'var(--text2)',
+                    }}>
+                      <span>{a.icon}</span>
+                      <span>{a.label}</span>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )}
@@ -715,6 +846,26 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
                       setLoading(key); const r = await fn(); setLoading(null)
                       if (r.error) { addToast(r.error, 'error'); return }
                       if (r.data) { setPet(r.data); addToast(toast(r.data), 'success') }
+                    }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {/* Test V3 */}
+              <div style={{ marginTop: '.5rem', paddingTop: '.5rem', borderTop: '1px solid rgba(239,68,68,.15)', fontSize: '.62rem', color: 'rgba(239,68,68,.6)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: '.4rem' }}>
+                🧪 Test V3
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.4rem' }}>
+                {[
+                  { key: 'adm_hunt',      label: '🏹 Activer Chasse',    color: '#a78bfa', fn: adminTestHunt,      toast: () => '🏹 Xénomorphe + cooldown reset' },
+                  { key: 'adm_checkin',   label: '✨ Reset Check-in',     color: '#22d3ee', fn: adminResetCheckin,  toast: () => '✨ Check-in réinitialisé' },
+                ].map(({ key, label, color, fn, toast }) => (
+                  <button key={key} className="btn btn-outline" style={{ fontSize: '.72rem', padding: '.45rem .4rem', borderColor: color + '44', color }}
+                    disabled={loading === key}
+                    onClick={async () => {
+                      setLoading(key); const r = await fn(); setLoading(null)
+                      if (r.error) { addToast(r.error, 'error'); return }
+                      if (r.data) { setPet(r.data); addToast(toast(), 'success') }
                     }}>
                     {label}
                   </button>

@@ -2363,6 +2363,116 @@ export async function adminDrainEnergy() {
   return { data, error: dbErr ? 'Erreur DB' : null }
 }
 
+// ── TAMAGOTCHI V3 ACTIONS ─────────────────────────────────────────────────
+
+export async function huntTamagotchi(score: number, caught: boolean) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { data: null, error: 'Non connecté' }
+  const { data: pet } = await (supabase as any).from('tamagotchi').select('*').eq('user_id', user.id).single()
+  if (!pet) return { data: null, error: 'Pas de tamagotchi' }
+  if (pet.stage !== 'xenomorph') return { data: null, error: "Seul le xénomorphe peut chasser !" }
+  if (pet.stage === 'dead') return { data: null, error: 'Ton alien est mort...' }
+
+  const now = new Date().toISOString()
+  const today = now.slice(0, 10)
+  const lastHunted = pet.last_hunted ? new Date(pet.last_hunted).getTime() : 0
+  const cooldownMs = 4 * 60 * 60 * 1000
+  if (Date.now() - lastHunted < cooldownMs) {
+    const remaining = cooldownMs - (Date.now() - lastHunted)
+    const h = Math.floor(remaining / 3_600_000)
+    const m = Math.ceil((remaining % 3_600_000) / 60_000)
+    return { data: pet, error: `Prochain chassé disponible dans ${h}h${m}m` }
+  }
+
+  const { pet: synced } = applyTamaDecay(pet)
+  const xpGain = caught ? 40 + Math.round(score / 5) : 10 + Math.round(score / 10)
+  const happinessGain = caught ? 25 : 8
+  const huntCount = (pet.hunt_count ?? 0) + 1
+
+  // Achievements
+  const achievements: string[] = Array.isArray(pet.achievements) ? [...pet.achievements] : []
+  if (caught && !achievements.includes('first_hunt'))  achievements.push('first_hunt')
+  if (huntCount >= 5  && !achievements.includes('hunter'))      achievements.push('hunter')
+  if (huntCount >= 20 && !achievements.includes('apex_hunter')) achievements.push('apex_hunter')
+  if (score >= 100 && !achievements.includes('perfect_hunt'))   achievements.push('perfect_hunt')
+
+  const { data } = await (supabase as any).from('tamagotchi').update({
+    hunt_count: huntCount,
+    last_hunted: now,
+    happiness: Math.min(100, synced.happiness + happinessGain),
+    health: caught ? Math.min(100, synced.health + 10) : synced.health,
+    hunger: synced.hunger,
+    age_hours: synced.age_hours, stage: synced.stage,
+    energy: Math.max(0, synced.energy - 15),
+    is_sleeping: synced.is_sleeping, is_sick: synced.is_sick,
+    last_sync: now,
+    xp: Math.min(9999, (pet.xp ?? 0) + xpGain),
+    achievements,
+    ...computeStreak(pet, today),
+  }).eq('user_id', user.id).select().single()
+  return { data, error: null }
+}
+
+export async function checkInTamagotchi() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { data: null, error: 'Non connecté' }
+  const { data: pet } = await (supabase as any).from('tamagotchi').select('*').eq('user_id', user.id).single()
+  if (!pet) return { data: null, error: 'Pas de tamagotchi' }
+  if (pet.stage === 'dead') return { data: null, error: 'Ton alien est mort...' }
+
+  const now = new Date().toISOString()
+  const today = now.slice(0, 10)
+  const lastCheckin = pet.last_checkin ? pet.last_checkin.slice(0, 10) : ''
+  if (lastCheckin === today) return { data: pet, error: 'Déjà check-in aujourd\'hui !' }
+
+  const { pet: synced } = applyTamaDecay(pet)
+  const streak = computeStreak(pet, today)
+  const bonusXp = 15 + Math.min(streak.care_streak * 5, 50)
+  const bonusHappiness = 10
+
+  const achievements: string[] = Array.isArray(pet.achievements) ? [...pet.achievements] : []
+  if (streak.care_streak >= 7  && !achievements.includes('streak_week'))  achievements.push('streak_week')
+  if (streak.care_streak >= 30 && !achievements.includes('streak_month')) achievements.push('streak_month')
+
+  const { data } = await (supabase as any).from('tamagotchi').update({
+    last_checkin: now,
+    happiness: Math.min(100, synced.happiness + bonusHappiness),
+    hunger: synced.hunger, health: synced.health,
+    age_hours: synced.age_hours, stage: synced.stage,
+    energy: synced.energy, is_sleeping: synced.is_sleeping, is_sick: synced.is_sick,
+    last_sync: now,
+    xp: Math.min(9999, (pet.xp ?? 0) + bonusXp),
+    achievements,
+    ...streak,
+  }).eq('user_id', user.id).select().single()
+  return { data, error: null, bonusXp }
+}
+
+export async function adminTestHunt() {
+  const { error, supabase, user, pet } = await getOrCreateAdminPet()
+  if (error || !user || !pet) return { data: null, error }
+  const now = new Date().toISOString()
+  // Force stage to xenomorph and reset cooldown for testing
+  const { data, error: dbErr } = await (supabase as any).from('tamagotchi').update({
+    stage: 'xenomorph',
+    last_hunted: null,
+    last_sync: now,
+  }).eq('user_id', user.id).select().single()
+  return { data, error: dbErr ? 'Erreur DB' : null }
+}
+
+export async function adminResetCheckin() {
+  const { error, supabase, user, pet } = await getOrCreateAdminPet()
+  if (error || !user || !pet) return { data: null, error }
+  const now = new Date().toISOString()
+  const { data, error: dbErr } = await (supabase as any).from('tamagotchi').update({
+    last_checkin: null, last_sync: now,
+  }).eq('user_id', user.id).select().single()
+  return { data, error: dbErr ? 'Erreur DB' : null }
+}
+
 export async function caresserTamagotchi() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

@@ -172,6 +172,10 @@ export function useWidgetEnabled(): [boolean, (v: boolean) => void] {
     setEnabled(v)
     localStorage.setItem(WIDGET_KEY, String(v))
     try { localStorage.removeItem(CACHE_KEY) } catch { /* ignore */ }
+    if (v) {
+      // Refresh immediately so the widget appears on all pages right away
+      setTimeout(() => window.location.reload(), 80)
+    }
   }
   return [enabled, toggle]
 }
