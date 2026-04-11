@@ -1134,6 +1134,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
 
           // Expose door confirm/cancel to React
           confirmDoorRef.current = () => {
+            ;(window as any).__fcMobileKeys = {}
             setShowDoorPrompt(false)
             this.secretDoorUsed = true
             this.secretDoorPromptShown = false
@@ -1141,6 +1142,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             this.scene.start('Cinematic')
           }
           cancelDoorRef.current = () => {
+            ;(window as any).__fcMobileKeys = {}
             setShowDoorPrompt(false)
             this.secretDoorPromptShown = false
           }
@@ -1560,6 +1562,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             const close = dist < 80 && Math.abs(this.player.floorY - this.secretDoor.y) < 80
             if (close && !this.secretDoorPromptShown) {
               this.secretDoorPromptShown = true
+              ;(window as any).__fcMobileKeys = {}
               setShowDoorPrompt(true)
             } else if (!close && this.secretDoorPromptShown) {
               this.secretDoorPromptShown = false
