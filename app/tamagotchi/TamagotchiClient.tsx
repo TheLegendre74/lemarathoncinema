@@ -384,7 +384,7 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
   }
 
   async function handleCaresse() {
-    if (caressesToday >= 3) { addToast('Limite de câlins atteinte (3/jour) 💔', 'error'); return }
+    if (caressesToday >= 5) { addToast('Limite de câlins atteinte (5/jour) 💔', 'error'); return }
     setCaresseAnim(true)
     setTimeout(() => {
       setShowHearts(true)
@@ -696,12 +696,12 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
               </button>
 
               {/* ── Câliner ── */}
-              <button className="btn btn-outline" disabled={loading === 'caresse' || caressesToday >= 3} onClick={handleCaresse}
-                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.2rem', padding: '.7rem', opacity: caressesToday >= 3 ? 0.5 : 1 }}>
+              <button className="btn btn-outline" disabled={loading === 'caresse' || caressesToday >= 5} onClick={handleCaresse}
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.2rem', padding: '.7rem', opacity: caressesToday >= 5 ? 0.5 : 1 }}>
                 <span style={{ fontSize: '1.4rem' }}>🤚</span>
                 <span style={{ fontSize: '.75rem' }}>Câliner · +3 XP</span>
-                <span style={{ fontSize: '.6rem', color: caressesToday >= 3 ? '#ef4444' : 'var(--text3)' }}>
-                  {caressesToday}/3 aujourd&apos;hui
+                <span style={{ fontSize: '.6rem', color: caressesToday >= 5 ? '#ef4444' : 'var(--text3)' }}>
+                  {caressesToday}/5 aujourd&apos;hui
                 </span>
               </button>
 
@@ -835,7 +835,7 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.4rem' }}>
                 {[
                   { key: 'adm_poop',     label: '💩 +Crotte',         color: '#fbbf24', fn: adminAddPoop,       toast: (d: any) => `💩 ×${d.poop_count}` },
-                  { key: 'adm_caresse',  label: '🤚 Reset câlins',     color: '#6ee7b7', fn: adminResetCaresses, toast: () => '🔄 0/3' },
+                  { key: 'adm_caresse',  label: '🤚 Reset câlins',     color: '#6ee7b7', fn: adminResetCaresses, toast: () => '🔄 0/5' },
                   { key: 'adm_sick',     label: '🦠 Toggle malade',    color: '#86efac', fn: adminToggleSick,    toast: (d: any) => d.is_sick ? '🤒 Malade' : '✅ Guéri' },
                   { key: 'adm_sleep',    label: '💤 Toggle sommeil',   color: '#8888cc', fn: adminToggleSleep,   toast: (d: any) => d.is_sleeping ? '💤 Dort' : '☀️ Réveillé' },
                   { key: 'adm_energy',   label: '⚡ -40 Énergie',      color: '#facc15', fn: adminDrainEnergy,   toast: (d: any) => `⚡ ${d.energy}/100` },

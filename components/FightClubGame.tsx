@@ -2776,10 +2776,17 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             fontFamily: 'monospace', fontSize: '8.5px', color: '#555555',
           }).setOrigin(0.5, 1).setDepth(701)
 
+          // Bouton ✕ cliquable (desktop + mobile)
+          const closeBtn = this.add.text(panX + panW - 10, panY + 10, '✕', {
+            fontFamily: 'monospace', fontSize: '13px', color: '#886644',
+          }).setOrigin(1, 0).setDepth(702).setInteractive({ useHandCursor: true })
+          closeBtn.on('pointerover', () => closeBtn.setColor('#ffcc66'))
+          closeBtn.on('pointerout',  () => closeBtn.setColor('#886644'))
+
           let closed = false
           const close = () => {
             if (closed) return; closed = true
-            const objs = [panel, title, txt, skip]
+            const objs = [panel, title, txt, skip, closeBtn]
             this.tweens.add({
               targets: objs, alpha: 0, duration: 350,
               onComplete: () => objs.forEach(o => o.destroy()),
@@ -2787,6 +2794,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             // Show opening quote after tutorial closes
             this.time.delayedCall(200, () => this.showQuote('"La première règle du Fight Club..."'))
           }
+          closeBtn.on('pointerdown', close)
           this.time.delayedCall(14000, close)
           this.input.keyboard!.once('keydown', close)
         }
@@ -3446,6 +3454,13 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
                 onPointerLeave={e => { e.preventDefault(); (window as any).__fcMobileKeys = { ...(window as any).__fcMobileKeys, block: false } }}
                 style={{ ...actionBtn, background: 'rgba(180,120,255,0.22)', borderColor: 'rgba(180,120,255,0.55)', color: '#cc99ff' }}
               >BLOQUER</button>
+            </div>
+            {/* Ligne milieu : LANCER */}
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                onPointerDown={e => { e.preventDefault(); window.dispatchEvent(new CustomEvent('fc:action', { detail: { action: 'throw' } })) }}
+                style={{ ...actionBtn, background: 'rgba(255,220,50,0.22)', borderColor: 'rgba(255,220,50,0.55)', color: '#ffdd66', fontSize: '0.62rem', width: 104 }}
+              >🗡 LANCER</button>
             </div>
             {/* Ligne basse : COUP DE POING + COUP DE PIED */}
             <div style={{ display: 'flex', gap: 8 }}>

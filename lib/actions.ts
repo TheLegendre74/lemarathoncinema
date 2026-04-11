@@ -2486,7 +2486,7 @@ export async function caresserTamagotchi() {
   const today = new Date().toISOString().slice(0, 10)
   const lastDate = pet.last_caresse_date ?? ''
   const caressesToday = lastDate === today ? (pet.caresses_today ?? 0) : 0
-  if (caressesToday >= 3) return { data: pet, error: 'Limite de câlins atteinte (3/jour) 💔' }
+  if (caressesToday >= 5) return { data: pet, error: 'Limite de câlins atteinte (5/jour) 💔' }
 
   const { pet: synced } = applyTamaDecay(pet)
   const now = new Date().toISOString()
