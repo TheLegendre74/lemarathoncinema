@@ -2037,6 +2037,11 @@ function applyTamaDecay(pet: any): { pet: any; evolved: boolean; evolvedTo: stri
 
   if (hunger > 70)    health = Math.max(0, Math.round(health - hoursElapsed * 3))
   if (happiness < 30) health = Math.max(0, Math.round(health - hoursElapsed * 2))
+  const poopCount = pet.poop_count ?? 0
+  if (poopCount > 0) {
+    happiness = Math.max(0, Math.round(happiness - hoursElapsed * poopCount * 2))
+    if (poopCount >= 3) health = Math.max(0, Math.round(health - hoursElapsed * poopCount))
+  }
 
   const prevStage = stage
   if (stage === 'egg'          && age_hours >= 12  )                       stage = 'facehugger'
@@ -2103,6 +2108,7 @@ export async function feedTamagotchi(score: number = 5) {
     happiness: synced.happiness, health: synced.health,
     age_hours: synced.age_hours, stage: synced.stage,
     last_fed: now, last_sync: now,
+    poop_count: Math.min(5, (pet.poop_count ?? 0) + (Math.random() < 0.6 ? 1 : 0)),
   }
   const { data } = await (supabase as any).from('tamagotchi').update(updates).eq('user_id', user.id).select().single()
   return { data, error: null }
@@ -2252,7 +2258,55 @@ export async function adminKillAlien() {
   return { data, error: dbErr ? 'Erreur DB' : null }
 }
 
+export async function adminAddPoop() {
+  const { error, supabase, user, pet } = await getOrCreateAdminPet()
+  if (error || !user || !pet) return { data: null, error }
+  const now = new Date().toISOString()
+  const { data, error: dbErr } = await (supabase as any).from('tamagotchi').update({
+    poop_count: Math.min(5, (pet.poop_count ?? 0) + 1), last_sync: now,
+  }).eq('user_id', user.id).select().single()
+  return { data, error: dbErr ? 'Erreur DB' : null }
+}
+
+export async function adminResetCaresses() {
+  const { error, supabase, user, pet } = await getOrCreateAdminPet()
+  if (error || !user || !pet) return { data: null, error }
+  const now = new Date().toISOString()
+  const { data, error: dbErr } = await (supabase as any).from('tamagotchi').update({
+    caresses_today: 0, last_caresse_date: null, last_sync: now,
+  }).eq('user_id', user.id).select().single()
+  return { data, error: dbErr ? 'Erreur DB' : null }
+}
+
 export async function caresserTamagotchi() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { data: null, error: 'Non connecté' }
+
+  const { data: pet } = await (supabase as any).from('tamagotchi').select('*').eq('user_id', user.id).single()
+  if (!pet) return { data: null, error: 'Pas de tamagotchi' }
+  if (pet.stage === 'dead') return { data: null, error: 'Ton alien est mort...' }
+
+  const today = new Date().toISOString().slice(0, 10)
+  const lastDate = pet.last_caresse_date ?? ''
+  const caressesToday = lastDate === today ? (pet.caresses_today ?? 0) : 0
+  if (caressesToday >= 3) return { data: pet, error: 'Limite de câlins atteinte (3/jour) 💔' }
+
+  const { pet: synced } = applyTamaDecay(pet)
+  const now = new Date().toISOString()
+  const updates = {
+    happiness: Math.min(100, synced.happiness + 8),
+    hunger: synced.hunger, health: synced.health,
+    age_hours: synced.age_hours, stage: synced.stage,
+    last_sync: now,
+    caresses_today: caressesToday + 1,
+    last_caresse_date: today,
+  }
+  const { data } = await (supabase as any).from('tamagotchi').update(updates).eq('user_id', user.id).select().single()
+  return { data, error: null }
+}
+
+export async function nettoyerTamagotchi() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { data: null, error: 'Non connecté' }
@@ -2264,7 +2318,8 @@ export async function caresserTamagotchi() {
   const { pet: synced } = applyTamaDecay(pet)
   const now = new Date().toISOString()
   const updates = {
-    happiness: Math.min(100, synced.happiness + 8),
+    poop_count: 0,
+    happiness: Math.min(100, synced.happiness + 5),
     hunger: synced.hunger, health: synced.health,
     age_hours: synced.age_hours, stage: synced.stage,
     last_sync: now,

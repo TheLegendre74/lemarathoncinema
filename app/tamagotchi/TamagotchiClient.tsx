@@ -1,13 +1,12 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
-import { feedTamagotchi, playWithTamagotchi, healTamagotchi, reviveTamagotchi, nameTamagotchi, caresserTamagotchi } from '@/lib/actions'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { feedTamagotchi, playWithTamagotchi, healTamagotchi, reviveTamagotchi, nameTamagotchi, caresserTamagotchi, nettoyerTamagotchi } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
 import { useWidgetEnabled } from '@/components/TamagotchiWidget'
-import { TAMA_FRAMES, STAGE_COLORS, getTamaFrameKey } from '@/lib/tamaFrames'
+import { TAMA_FRAMES, STAGE_COLORS, getTamaFrameKey, getTamaMood } from '@/lib/tamaFrames'
 import { getOwnedAccessories, type Accessory } from '@/lib/tamaAccessories'
-import { adminEvolveAlien, adminAgeAlien, adminKillAlien } from '@/lib/actions'
+import { adminEvolveAlien, adminAgeAlien, adminKillAlien, adminAddPoop, adminResetCaresses } from '@/lib/actions'
 import MiniGame from './MiniGame'
 import GameSelector from './GameSelector'
 
@@ -71,7 +70,6 @@ function EvolveOverlay({ stage, onClose }: { stage: string; onClose: () => void 
   )
 }
 
-// Floating hearts animation for caresser
 function FloatingHearts({ visible }: { visible: boolean }) {
   if (!visible) return null
   const hearts = ['❤️', '💜', '💙', '🤍', '❤️', '💚']
@@ -92,6 +90,14 @@ function FloatingHearts({ visible }: { visible: boolean }) {
   )
 }
 
+// Positions stables pour les crottes (basées sur poop_count)
+function getPoopPositions(count: number) {
+  return Array.from({ length: count }, (_, i) => ({
+    x: 6 + ((i * 137 + 42) % 76),   // 6–82 %
+    y: 6 + ((i * 73  + 17) % 26),   // 6–32 % depuis le bas
+  }))
+}
+
 // ── MAIN ─────────────────────────────────────────────────────────────────────
 interface Props {
   initialPet: any
@@ -102,31 +108,95 @@ interface Props {
 }
 
 export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew, isAdmin = false }: Props) {
-  const [pet, setPet]                   = useState(initialPet)
-  const [tick, setTick]                 = useState(0)
-  const [now, setNow]                   = useState(Date.now())
-  const [loading, setLoading]           = useState<string | null>(null)
-  const [evolveStage, setEvolveStage]   = useState<string | null>(evolved && evolvedTo ? evolvedTo : null)
-  const [naming, setNaming]             = useState(false)
-  const [nameInput, setNameInput]       = useState(initialPet?.name ?? 'Xeno')
-  const [showFeedGame, setShowFeedGame] = useState(false)
-  const [showPlayGame, setShowPlayGame] = useState(false)
-  const [accessories,  setAccessories]  = useState<Accessory[]>([])
-  const [showHearts, setShowHearts]     = useState(false)
-  const [caresseAnim, setCaresseAnim]   = useState(false)
-  const [widgetEnabled, setWidgetEnabled] = useWidgetEnabled()
-  const { addToast }                    = useToast()
-  const router                          = useRouter()
+  const [pet, setPet]                       = useState(initialPet)
+  const [tick, setTick]                     = useState(0)
+  const [now, setNow]                       = useState(Date.now())
+  const [loading, setLoading]               = useState<string | null>(null)
+  const [evolveStage, setEvolveStage]       = useState<string | null>(evolved && evolvedTo ? evolvedTo : null)
+  const [naming, setNaming]                 = useState(false)
+  const [nameInput, setNameInput]           = useState(initialPet?.name ?? 'Xeno')
+  const [showFeedGame, setShowFeedGame]     = useState(false)
+  const [showPlayGame, setShowPlayGame]     = useState(false)
+  const [accessories,  setAccessories]      = useState<Accessory[]>([])
+  const [showHearts,   setShowHearts]       = useState(false)
+  const [caresseAnim,  setCaresseAnim]      = useState(false)
+  const [widgetEnabled, setWidgetEnabled]   = useWidgetEnabled()
+  const { addToast }                        = useToast()
 
-  // Load accessories on mount and after each game session
+  // ── Animation / mouvement ──────────────────────────────────────────────────
+  const [alienLeft,    setAlienLeft]        = useState(35)   // % dans l'arène
+  const [alienMoveDur, setAlienMoveDur]     = useState(2)    // durée transition
+  const [alienAnim, setAlienAnim]           = useState<'idle'|'walk'|'eat'|'poop'>('idle')
+  const [showFoodAnim, setShowFoodAnim]     = useState(false)
+  const [moodBubble, setMoodBubble]         = useState<string|null>(null)
+  const animTimerRef = useRef<ReturnType<typeof setTimeout>|null>(null)
+
+  const isDead      = pet?.stage === 'dead'
+  const showingGame = showFeedGame || showPlayGame
+
+  // Positions des crottes (stables par count)
+  const poopPositions = useMemo(() => getPoopPositions(pet?.poop_count ?? 0), [pet?.poop_count])
+
+  // Caresses aujourd'hui
+  const today = useMemo(() => new Date().toISOString().slice(0, 10), [])
+  const caressesToday = (pet?.last_caresse_date === today) ? (pet?.caresses_today ?? 0) : 0
+
+  // Accessoires, tick, clock
   useEffect(() => { setAccessories(getOwnedAccessories()) }, [showPlayGame])
   useEffect(() => { const id = setInterval(() => setTick(t => 1 - t), 800); return () => clearInterval(id) }, [])
   useEffect(() => { const id = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(id) }, [])
   useEffect(() => { if (isNew) addToast('Ton facehugger est né ! Prends-en soin. 🤍', 'success') }, []) // eslint-disable-line
 
+  // ── Mouvement de l'alien ───────────────────────────────────────────────────
+  useEffect(() => {
+    if (isDead || showingGame) return
+    let nextTimer: ReturnType<typeof setTimeout>
+
+    const scheduleMove = () => {
+      const delay = 2500 + Math.random() * 4500
+      nextTimer = setTimeout(() => {
+        const newLeft = 5 + Math.random() * 52   // 5 – 57 %
+        const dur = 1.2 + Math.random() * 1.8
+        setAlienMoveDur(dur)
+        setAlienLeft(newLeft)
+        setAlienAnim('walk')
+        if (animTimerRef.current) clearTimeout(animTimerRef.current)
+        animTimerRef.current = setTimeout(() => setAlienAnim('idle'), dur * 1000 + 300)
+        scheduleMove()
+      }, delay)
+    }
+    scheduleMove()
+    return () => {
+      clearTimeout(nextTimer)
+      if (animTimerRef.current) clearTimeout(animTimerRef.current)
+    }
+  }, [isDead, showingGame])
+
+  // ── Bulles d'humeur ────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (isDead || !pet) return
+    const BUBBLES: Record<string, string[]> = {
+      poop:    ['🤢', '😤 Crotte !', '🤮', '😤'],
+      happy:   ['😊', '💚', '🎉', '✨', '🥳'],
+      sad:     ['😢', '💔', '😔', '😞', '🥺'],
+      dying:   ['😵', '🆘', '💀', '😱'],
+      neutral: ['😐', '👀', '💤', '🌑'],
+    }
+    const pick = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)]
+    const getBubble = () => {
+      if ((pet.poop_count ?? 0) >= 2) return pick(BUBBLES.poop)
+      const mood = getTamaMood(pet)
+      return pick(BUBBLES[mood] ?? BUBBLES.neutral)
+    }
+    const id = setInterval(() => {
+      setMoodBubble(getBubble())
+      setTimeout(() => setMoodBubble(null), 2200)
+    }, 7000 + Math.random() * 5000)
+    return () => clearInterval(id)
+  }, [isDead, pet?.happiness, pet?.poop_count, pet?.health]) // eslint-disable-line
+
   const FEED_CD = 2 * 3_600_000
   const HEAL_CD = 24 * 3_600_000
-
   const feedCd = pet?.last_fed    ? Math.max(0, FEED_CD - (now - new Date(pet.last_fed).getTime()))    : 0
   const healCd = pet?.last_healed ? Math.max(0, HEAL_CD - (now - new Date(pet.last_healed).getTime())) : 0
 
@@ -134,7 +204,6 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
   const frames      = TAMA_FRAMES[frameKey] ?? TAMA_FRAMES['egg']
   const frame       = frames[tick % frames.length]
   const stageInfo   = STAGE_INFO[pet?.stage ?? 'egg']
-  const isDead      = pet?.stage === 'dead'
   const screenColor = isDead ? '#4b5563' : (STAGE_COLORS[pet?.stage] ?? '#22d3ee')
 
   const moodLabel = (() => {
@@ -143,6 +212,19 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
     if (pet.hunger > 70 || pet.happiness < 30 || pet.health < 30)   return '😔 Malheureux'
     if (pet.hunger < 40 && pet.happiness > 60 && pet.health > 70)   return '😊 Content'
     return '😐 Neutre'
+  })()
+
+  // Animation CSS de l'alien selon son état
+  const alienAnimCss = (() => {
+    if (isDead) return 'tama-dying-shake 0.5s ease-in-out infinite'
+    if (alienAnim === 'eat')  return 'tama-eat 0.45s ease-in-out 4'
+    if (alienAnim === 'walk') return 'tama-walk 0.38s ease-in-out infinite'
+    if (caresseAnim)          return 'tama-pet-glow 0.45s ease-in-out 4'
+    const mood = getTamaMood(pet)
+    if (mood === 'happy')  return 'tama-happy-bounce 1.3s ease-in-out infinite'
+    if (mood === 'dying')  return 'tama-dying-shake 0.35s ease-in-out infinite'
+    if (mood === 'sad')    return 'tama-sad-droop 2.2s ease-in-out infinite'
+    return 'tama-breathe 3.2s ease-in-out infinite'
   })()
 
   const doAction = useCallback(async (
@@ -163,6 +245,10 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
 
   async function handleFeedFinish(score: number) {
     setShowFeedGame(false)
+    setAlienAnim('eat')
+    setShowFoodAnim(true)
+    if (animTimerRef.current) clearTimeout(animTimerRef.current)
+    animTimerRef.current = setTimeout(() => { setShowFoodAnim(false); setAlienAnim('idle') }, 2200)
     await doAction(() => feedTamagotchi(score), 'feed')
   }
 
@@ -172,6 +258,7 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
   }
 
   async function handleCaresse() {
+    if (caressesToday >= 3) { addToast('Limite de câlins atteinte (3/jour) 💔', 'error'); return }
     setCaresseAnim(true)
     setTimeout(() => {
       setShowHearts(true)
@@ -179,6 +266,11 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
       setTimeout(() => setCaresseAnim(false), 1200)
     }, 600)
     await doAction(caresserTamagotchi, 'caresse')
+  }
+
+  async function handleNettoyer() {
+    await doAction(nettoyerTamagotchi, 'nettoyer')
+    if (!loading) addToast('Zone nettoyée ! 🧹', 'success')
   }
 
   async function handleName() {
@@ -191,7 +283,7 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
 
   if (!pet) return <div className="empty">Erreur chargement.</div>
 
-  const showingGame = showFeedGame || showPlayGame
+  const poopCount = pet.poop_count ?? 0
 
   return (
     <div style={{ maxWidth: 420, margin: '0 auto', paddingBottom: '3rem' }}>
@@ -216,11 +308,11 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
           <div style={{
             background: 'var(--bg2)', border: `2px solid ${screenColor}44`, borderRadius: 'var(--rl)',
             boxShadow: `0 0 30px ${screenColor}22, inset 0 0 20px rgba(0,0,0,.3)`,
-            padding: '1.5rem', marginBottom: '1.5rem', textAlign: 'center',
+            padding: '1.2rem 1.2rem .8rem', marginBottom: '1.5rem', textAlign: 'center',
             position: 'relative', overflow: 'hidden',
           }}>
             {/* Name */}
-            <div style={{ marginBottom: '.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.5rem' }}>
+            <div style={{ marginBottom: '.6rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.5rem' }}>
               {naming ? (
                 <>
                   <input value={nameInput} onChange={e => setNameInput(e.target.value)} maxLength={20} autoFocus
@@ -240,33 +332,111 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
               )}
             </div>
 
-            {/* ASCII + caresse overlay */}
-            <div style={{ position: 'relative', display: 'inline-block' }}>
-              <div style={{ fontFamily: "'Courier New', monospace", fontSize: 'clamp(.65rem,2vw,.8rem)', lineHeight: 1.45, color: isDead ? '#6b7280' : screenColor, textShadow: isDead ? 'none' : `0 0 8px ${screenColor}66`, display: 'inline-block', textAlign: 'left' }}>
-                {frame.map((line, i) => <div key={i} style={{ whiteSpace: 'pre' }}>{line}</div>)}
-              </div>
-              {/* Floating hearts */}
-              <FloatingHearts visible={showHearts} />
-              {/* Hand animation */}
-              {caresseAnim && (
+            {/* Arène — l'alien se déplace ici */}
+            <div style={{ position: 'relative', height: '185px', margin: '0.4rem 0', overflow: 'hidden' }}>
+
+              {/* Crottes */}
+              {poopPositions.map((pos, i) => (
+                <div key={i} style={{
+                  position: 'absolute',
+                  left: `${pos.x}%`,
+                  bottom: `${pos.y}%`,
+                  fontSize: '1.25rem',
+                  animation: 'tama-poop-appear 0.5s ease-out',
+                  zIndex: 1,
+                  filter: poopCount >= 3 ? 'drop-shadow(0 0 4px #f59e0b)' : 'none',
+                }}>💩</div>
+              ))}
+
+              {/* Nourriture qui vole vers l'alien */}
+              {showFoodAnim && (
                 <div style={{
-                  position: 'absolute', right: '-10px', top: '30%',
-                  fontSize: '1.6rem', animation: 'tama-hand-pet .6s ease-in-out',
-                }}>
-                  🤚
-                </div>
+                  position: 'absolute',
+                  right: '12%',
+                  top: '25%',
+                  fontSize: '1.7rem',
+                  animation: 'tama-food-fly 1.8s ease-in-out forwards',
+                  zIndex: 3,
+                  pointerEvents: 'none',
+                }}>🥩</div>
               )}
+
+              {/* Bulle d'humeur */}
+              {moodBubble && (
+                <div style={{
+                  position: 'absolute',
+                  top: 6,
+                  right: 8,
+                  background: 'rgba(0,0,0,0.82)',
+                  border: `1px solid ${screenColor}55`,
+                  borderRadius: '10px 10px 0 10px',
+                  padding: '3px 9px',
+                  fontSize: '.78rem',
+                  zIndex: 5,
+                  animation: 'tama-bubble-in 0.25s ease-out',
+                  whiteSpace: 'nowrap',
+                  pointerEvents: 'none',
+                }}>{moodBubble}</div>
+              )}
+
+              {/* L'alien */}
+              <div style={{
+                position: 'absolute',
+                bottom: '18px',
+                left: `${alienLeft}%`,
+                transition: `left ${alienMoveDur}s ease-in-out`,
+                zIndex: 2,
+              }}>
+                <div style={{
+                  fontFamily: "'Courier New', monospace",
+                  fontSize: 'clamp(.65rem,2vw,.8rem)',
+                  lineHeight: 1.45,
+                  color: isDead ? '#6b7280' : screenColor,
+                  textShadow: isDead ? 'none' : `0 0 8px ${screenColor}66`,
+                  display: 'inline-block',
+                  textAlign: 'left',
+                  animation: alienAnimCss,
+                  transformOrigin: 'center bottom',
+                }}>
+                  {frame.map((line, i) => <div key={i} style={{ whiteSpace: 'pre' }}>{line}</div>)}
+                </div>
+                {/* Floating hearts */}
+                <FloatingHearts visible={showHearts} />
+                {/* Main caresse */}
+                {caresseAnim && (
+                  <div style={{
+                    position: 'absolute', right: '-12px', top: '25%',
+                    fontSize: '1.6rem', animation: 'tama-hand-pet .6s ease-in-out',
+                    pointerEvents: 'none',
+                  }}>🤚</div>
+                )}
+              </div>
             </div>
 
-            {/* Stage + mood */}
-            <div style={{ marginTop: '1rem' }}>
+            {/* Stage + description */}
+            <div style={{ marginTop: '.6rem' }}>
               <div style={{ display: 'inline-block', fontSize: '.7rem', fontWeight: 600, color: screenColor, border: `1px solid ${screenColor}44`, borderRadius: 99, padding: '2px 10px', marginBottom: '.4rem' }}>
                 {stageInfo?.label ?? pet.stage}
               </div>
               <div style={{ fontSize: '.78rem', color: 'var(--text2)', lineHeight: 1.5, padding: '0 .5rem' }}>{stageInfo?.desc}</div>
             </div>
+
+            {/* Humeur */}
             {moodLabel && (
-              <div style={{ marginTop: '.5rem', fontSize: '.75rem', color: 'var(--text3)' }}>{moodLabel}</div>
+              <div style={{ marginTop: '.4rem', fontSize: '.75rem', color: 'var(--text3)' }}>{moodLabel}</div>
+            )}
+
+            {/* Alerte crottes */}
+            {poopCount > 0 && !isDead && (
+              <div style={{
+                marginTop: '.5rem',
+                fontSize: '.72rem',
+                color: poopCount >= 3 ? '#f59e0b' : '#a78bfa',
+                animation: poopCount >= 3 ? 'tama-poop-warn 0.9s ease-in-out infinite' : 'none',
+              }}>
+                {'💩'.repeat(Math.min(poopCount, 5))}
+                {poopCount >= 3 ? ' La santé diminue !' : ' À nettoyer…'}
+              </div>
             )}
           </div>
 
@@ -292,6 +462,21 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.6rem', marginBottom: '1.2rem' }}>
+
+              {/* Nettoyer — full-width si crottes présentes */}
+              {poopCount > 0 && (
+                <button className="btn btn-outline" disabled={loading === 'nettoyer'} onClick={handleNettoyer}
+                  style={{
+                    gridColumn: '1 / -1',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.2rem', padding: '.7rem',
+                    background: 'rgba(251,191,36,.07)', borderColor: '#fbbf2466', color: '#fbbf24',
+                    animation: poopCount >= 3 ? 'tama-poop-warn 0.9s ease-in-out infinite' : 'none',
+                  }}>
+                  <span style={{ fontSize: '1.4rem' }}>🧹</span>
+                  <span style={{ fontSize: '.75rem' }}>Nettoyer ({poopCount} crotte{poopCount > 1 ? 's' : ''})</span>
+                </button>
+              )}
+
               {/* Nourrir */}
               <button className="btn btn-outline" disabled={loading === 'feed' || feedCd > 0} onClick={() => feedCd <= 0 && setShowFeedGame(true)}
                 style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.2rem', padding: '.7rem' }}>
@@ -307,11 +492,14 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
                 <span style={{ fontSize: '.75rem' }}>Jouer</span>
               </button>
 
-              {/* Caresser */}
-              <button className="btn btn-outline" disabled={loading === 'caresse'} onClick={handleCaresse}
-                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.2rem', padding: '.7rem' }}>
+              {/* Câliner (limite 3/jour) */}
+              <button className="btn btn-outline" disabled={loading === 'caresse' || caressesToday >= 3} onClick={handleCaresse}
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.2rem', padding: '.7rem', opacity: caressesToday >= 3 ? 0.5 : 1 }}>
                 <span style={{ fontSize: '1.4rem' }}>🤚</span>
-                <span style={{ fontSize: '.75rem' }}>Caresser</span>
+                <span style={{ fontSize: '.75rem' }}>Câliner</span>
+                <span style={{ fontSize: '.6rem', color: caressesToday >= 3 ? '#ef4444' : 'var(--text3)' }}>
+                  {caressesToday}/3 aujourd&apos;hui
+                </span>
               </button>
 
               {/* Soigner */}
@@ -399,17 +587,101 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
                   💀 Tuer
                 </button>
               </div>
+              {/* ── Test : nouvelles mécaniques ── */}
+              <div style={{ marginTop: '.5rem', paddingTop: '.5rem', borderTop: '1px solid rgba(239,68,68,.15)', fontSize: '.62rem', color: 'rgba(239,68,68,.6)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: '.4rem' }}>
+                🧪 Test — crottes &amp; câlins
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.4rem' }}>
+                <button className="btn btn-outline" style={{ fontSize: '.72rem', padding: '.45rem .4rem', borderColor: '#fbbf2444', color: '#fbbf24' }}
+                  disabled={loading === 'adm_poop'}
+                  onClick={async () => {
+                    setLoading('adm_poop')
+                    const r = await adminAddPoop()
+                    setLoading(null)
+                    if (r.error) { addToast(r.error, 'error'); return }
+                    if (r.data) { setPet(r.data); addToast(`💩 Crotte ajoutée (${r.data.poop_count})`, 'success') }
+                  }}>
+                  💩 +Crotte
+                </button>
+                <button className="btn btn-outline" style={{ fontSize: '.72rem', padding: '.45rem .4rem', borderColor: '#6ee7b744', color: '#6ee7b7' }}
+                  disabled={loading === 'adm_reset_caresse'}
+                  onClick={async () => {
+                    setLoading('adm_reset_caresse')
+                    const r = await adminResetCaresses()
+                    setLoading(null)
+                    if (r.error) { addToast(r.error, 'error'); return }
+                    if (r.data) { setPet(r.data); addToast('🔄 Câlins reset (0/3)', 'success') }
+                  }}>
+                  🤚 Reset câlins
+                </button>
+              </div>
             </div>
           )}
 
           {/* Info */}
           <div style={{ padding: '.75rem 1rem', borderRadius: 'var(--r)', background: 'rgba(255,255,255,.02)', border: '1px solid var(--border2)', fontSize: '.72rem', color: 'var(--text3)', lineHeight: 1.7 }}>
-            💡 Nourris-le toutes les 2h via le mini-jeu (faim +2/h). Tu peux jouer et caresser à volonté. S&apos;il est trop affamé ou malheureux, sa santé diminue jusqu&apos;à la mort.
+            💡 Nourris-le toutes les 2h (60 % de chance de crotte après). Nettoie les crottes ou sa santé chute. Seulement 3 câlins/jour. Les mini-jeux remontent l&apos;humeur sans limite.
           </div>
         </>
       )}
 
       <style>{`
+        /* ── Animations alien ──────────────────────────────── */
+        @keyframes tama-breathe {
+          0%, 100% { transform: translateY(0) scale(1); }
+          50%       { transform: translateY(-4px) scale(1.025); }
+        }
+        @keyframes tama-walk {
+          0%, 100% { transform: translateY(0) rotate(0deg); }
+          25%       { transform: translateY(-6px) rotate(-1.5deg); }
+          75%       { transform: translateY(-3px) rotate(1.5deg); }
+        }
+        @keyframes tama-happy-bounce {
+          0%, 100% { transform: translateY(0) scale(1); }
+          20%       { transform: translateY(-16px) scale(1.07); }
+          40%       { transform: translateY(0) scale(0.97); }
+          60%       { transform: translateY(-9px) scale(1.04); }
+          80%       { transform: translateY(0) scale(1); }
+        }
+        @keyframes tama-sad-droop {
+          0%, 100% { transform: translateX(0) rotate(0deg); }
+          30%       { transform: translateX(-4px) rotate(-1.2deg); }
+          70%       { transform: translateX(4px) rotate(1.2deg); }
+        }
+        @keyframes tama-dying-shake {
+          0%, 100% { transform: translateX(0); }
+          25%       { transform: translateX(-6px) rotate(-2deg); }
+          75%       { transform: translateX(6px) rotate(2deg); }
+        }
+        @keyframes tama-eat {
+          0%, 100% { transform: scale(1) translateY(0); }
+          20%       { transform: scale(1.14) translateY(-4px); }
+          50%       { transform: scale(0.9) translateY(3px); }
+          80%       { transform: scale(1.06) translateY(-2px); }
+        }
+        @keyframes tama-pet-glow {
+          0%, 100% { filter: brightness(1) drop-shadow(0 0 0px transparent); }
+          50%       { filter: brightness(1.6) drop-shadow(0 0 12px #ff88ffaa); }
+        }
+        /* ── Animations éléments ───────────────────────────── */
+        @keyframes tama-poop-appear {
+          0%   { transform: scale(0) rotate(-30deg) translateY(-8px); opacity: 0; }
+          65%  { transform: scale(1.25) rotate(6deg); opacity: 1; }
+          100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+        @keyframes tama-poop-warn {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0.35; }
+        }
+        @keyframes tama-food-fly {
+          0%   { transform: translateX(0) translateY(0) scale(1.2) rotate(0deg); opacity: 1; }
+          70%  { transform: translateX(-110px) translateY(20px) scale(0.85) rotate(-15deg); opacity: 0.7; }
+          100% { transform: translateX(-160px) translateY(35px) scale(0.5) rotate(-25deg); opacity: 0; }
+        }
+        @keyframes tama-bubble-in {
+          0%   { transform: scale(0.6) translateY(-6px); opacity: 0; }
+          100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
         @keyframes tama-heart-float {
           0%   { opacity: 0; transform: translateY(0) scale(.6); }
           20%  { opacity: 1; transform: translateY(-10px) scale(1); }
