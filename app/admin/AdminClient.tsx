@@ -273,7 +273,6 @@ function ConfigSection({ serverConfig, siteConfig, onSave, saving }: {
       <Sub label="Règles du jeu (page d'accueil — synchronisées en temps réel)" />
       <RulesEditor
         value={vals['MARATHON_RULES'] ?? JSON.stringify(DEFAULT_RULES, null, 2)}
-        onChange={json => setVals(v => ({ ...v, MARATHON_RULES: json }))}
         inputStyle={inputStyle}
       />
 

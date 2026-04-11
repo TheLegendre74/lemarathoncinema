@@ -5,9 +5,8 @@ import { getServerConfig } from '@/lib/serverConfig'
 
 export const runtime = 'nodejs'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 export async function GET(request: Request) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
   // Vercel injecte automatiquement Authorization: Bearer {CRON_SECRET}
   const authHeader = request.headers.get('authorization')
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
