@@ -2023,6 +2023,15 @@ export async function adminFetchOverviews(): Promise<{ success: boolean; count: 
 
 // ── TAMAGOTCHI ALIEN ──────────────────────────────────────────
 
+// ── Streak helper ─────────────────────────────────────────────────────────────
+function computeStreak(pet: any, todayStr: string) {
+  const lastDate = pet.last_care_date ?? ''
+  if (lastDate === todayStr) return { care_streak: pet.care_streak ?? 1, last_care_date: todayStr }
+  const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10)
+  if (lastDate === yesterday) return { care_streak: (pet.care_streak ?? 0) + 1, last_care_date: todayStr }
+  return { care_streak: 1, last_care_date: todayStr }
+}
+
 function applyTamaDecay(pet: any): { pet: any; evolved: boolean; evolvedTo: string | null } {
   const now = Date.now()
   const lastSync = new Date(pet.last_sync).getTime()
@@ -2031,16 +2040,40 @@ function applyTamaDecay(pet: any): { pet: any; evolved: boolean; evolvedTo: stri
   if (hoursElapsed < 0.05) return { pet, evolved: false, evolvedTo: null }
 
   let { hunger, happiness, health, age_hours, stage } = pet
-  hunger    = Math.min(100, Math.round(hunger    + hoursElapsed * 2))
-  happiness = Math.max(0,   Math.round(happiness - hoursElapsed * 1))
+  let energy      = Math.max(0, Math.min(100, pet.energy      ?? 100))
+  let isSleeping  = pet.is_sleeping ?? false
+  let isSick      = pet.is_sick     ?? false
+
   age_hours = Math.round(age_hours + hoursElapsed)
 
-  if (hunger > 70)    health = Math.max(0, Math.round(health - hoursElapsed * 3))
-  if (happiness < 30) health = Math.max(0, Math.round(health - hoursElapsed * 2))
-  const poopCount = pet.poop_count ?? 0
-  if (poopCount > 0) {
-    happiness = Math.max(0, Math.round(happiness - hoursElapsed * poopCount * 2))
-    if (poopCount >= 3) health = Math.max(0, Math.round(health - hoursElapsed * poopCount))
+  if (isSleeping) {
+    // En sommeil : énergie remonte vite, faim augmente doucement, pas de perte de bonheur
+    energy = Math.min(100, Math.round(energy + hoursElapsed * 20))
+    hunger = Math.min(100, Math.round(hunger + hoursElapsed * 0.8))
+    if (energy >= 100) isSleeping = false  // réveil automatique
+  } else {
+    // Éveillé : déclin normal + drain d'énergie
+    energy    = Math.max(0,   Math.round(energy    - hoursElapsed * 7))
+    hunger    = Math.min(100, Math.round(hunger    + hoursElapsed * 2))
+    happiness = Math.max(0,   Math.round(happiness - hoursElapsed * 1))
+
+    if (hunger > 70)    health = Math.max(0, Math.round(health - hoursElapsed * 3))
+    if (happiness < 30) health = Math.max(0, Math.round(health - hoursElapsed * 2))
+    if (isSick)         health = Math.max(0, Math.round(health - hoursElapsed * 4))
+
+    const poopCount = pet.poop_count ?? 0
+    if (poopCount > 0) {
+      happiness = Math.max(0, Math.round(happiness - hoursElapsed * poopCount * 2))
+      if (poopCount >= 3) health = Math.max(0, Math.round(health - hoursElapsed * poopCount))
+    }
+
+    // Endormissement auto quand énergie à 0
+    if (energy <= 0) isSleeping = true
+
+    // Risque de tomber malade si trop affamé et pas encore malade
+    if (!isSick && hunger > 80) {
+      if (Math.random() < hoursElapsed * 0.05) isSick = true
+    }
   }
 
   const prevStage = stage
@@ -2051,7 +2084,7 @@ function applyTamaDecay(pet: any): { pet: any; evolved: boolean; evolvedTo: stri
 
   const evolved = stage !== prevStage && stage !== 'dead'
   return {
-    pet: { ...pet, hunger, happiness, health, age_hours, stage, last_sync: new Date().toISOString() },
+    pet: { ...pet, hunger, happiness, health, age_hours, stage, energy, is_sleeping: isSleeping, is_sick: isSick, last_sync: new Date().toISOString() },
     evolved,
     evolvedTo: evolved ? stage : null,
   }
@@ -2077,6 +2110,7 @@ export async function initOrGetTamagotchi() {
     await (supabase as any).from('tamagotchi').update({
       hunger: updated.hunger, happiness: updated.happiness, health: updated.health,
       age_hours: updated.age_hours, stage: updated.stage, last_sync: updated.last_sync,
+      energy: updated.energy, is_sleeping: updated.is_sleeping, is_sick: updated.is_sick,
     }).eq('user_id', user.id)
   }
 
@@ -2100,15 +2134,21 @@ export async function feedTamagotchi(score: number = 5) {
     }
   }
 
+  if (pet.is_sleeping) return { data: null, error: "Ton alien dort… réveille-le d'abord ! 💤" }
+
   const { pet: synced } = applyTamaDecay(pet)
   const now = new Date().toISOString()
+  const today = now.slice(0, 10)
   const hungerReduction = Math.min(30, Math.max(10, 5 + Math.round(score * 2)))
   const updates = {
     hunger: Math.max(0, synced.hunger - hungerReduction),
     happiness: synced.happiness, health: synced.health,
     age_hours: synced.age_hours, stage: synced.stage,
+    energy: synced.energy, is_sleeping: synced.is_sleeping, is_sick: synced.is_sick,
     last_fed: now, last_sync: now,
     poop_count: Math.min(5, (pet.poop_count ?? 0) + (Math.random() < 0.6 ? 1 : 0)),
+    xp: Math.min(9999, (pet.xp ?? 0) + 15),
+    ...computeStreak(pet, today),
   }
   const { data } = await (supabase as any).from('tamagotchi').update(updates).eq('user_id', user.id).select().single()
   return { data, error: null }
@@ -2123,13 +2163,21 @@ export async function playWithTamagotchi(score: number = 5) {
   if (!pet) return { data: null, error: 'Pas de tamagotchi' }
   if (pet.stage === 'dead') return { data: null, error: 'Ton alien est mort...' }
 
+  if (pet.is_sleeping) return { data: null, error: "Ton alien dort… réveille-le d'abord ! 💤" }
+
   const { pet: synced } = applyTamaDecay(pet)
   const now = new Date().toISOString()
+  const today = now.slice(0, 10)
+  const happinessGain = Math.max(10, Math.min(40, Math.round(score * 4)))
+  const xpGain = Math.max(10, Math.min(25, Math.round(score * 2)))
   const updates = {
-    happiness: Math.min(100, synced.happiness + Math.max(10, Math.min(40, Math.round(score * 4)))),
+    happiness: Math.min(100, synced.happiness + happinessGain),
     hunger: synced.hunger, health: synced.health,
     age_hours: synced.age_hours, stage: synced.stage,
+    energy: synced.energy, is_sleeping: synced.is_sleeping, is_sick: synced.is_sick,
     last_played: now, last_sync: now,
+    xp: Math.min(9999, (pet.xp ?? 0) + xpGain),
+    ...computeStreak(pet, today),
   }
   const { data } = await (supabase as any).from('tamagotchi').update(updates).eq('user_id', user.id).select().single()
   return { data, error: null }
@@ -2154,11 +2202,15 @@ export async function healTamagotchi() {
 
   const { pet: synced } = applyTamaDecay(pet)
   const now = new Date().toISOString()
+  const today = now.slice(0, 10)
   const updates = {
     health: Math.min(100, synced.health + 30),
     hunger: synced.hunger, happiness: synced.happiness,
     age_hours: synced.age_hours, stage: synced.stage,
+    energy: synced.energy, is_sleeping: synced.is_sleeping, is_sick: synced.is_sick,
     last_healed: now, last_sync: now,
+    xp: Math.min(9999, (pet.xp ?? 0) + 10),
+    ...computeStreak(pet, today),
   }
   const { data } = await (supabase as any).from('tamagotchi').update(updates).eq('user_id', user.id).select().single()
   return { data, error: null }
@@ -2175,8 +2227,11 @@ export async function reviveTamagotchi() {
 
   const now = new Date().toISOString()
   const { data } = await (supabase as any).from('tamagotchi').update({
-    stage: 'egg', hunger: 20, happiness: 80, health: 100,
+    stage: 'egg', hunger: 20, happiness: 80, health: 100, energy: 100,
     age_hours: 0, last_fed: null, last_played: null, last_healed: null,
+    is_sleeping: false, is_sick: false, poop_count: 0,
+    caresses_today: 0, last_caresse_date: null,
+    xp: 0, care_streak: 0, last_care_date: null,
     last_sync: now, deaths: pet.deaths + 1,
   }).eq('user_id', user.id).select().single()
   return { data, error: null }
@@ -2278,6 +2333,36 @@ export async function adminResetCaresses() {
   return { data, error: dbErr ? 'Erreur DB' : null }
 }
 
+export async function adminToggleSick() {
+  const { error, supabase, user, pet } = await getOrCreateAdminPet()
+  if (error || !user || !pet) return { data: null, error }
+  const now = new Date().toISOString()
+  const { data, error: dbErr } = await (supabase as any).from('tamagotchi').update({
+    is_sick: !pet.is_sick, last_sync: now,
+  }).eq('user_id', user.id).select().single()
+  return { data, error: dbErr ? 'Erreur DB' : null }
+}
+
+export async function adminToggleSleep() {
+  const { error, supabase, user, pet } = await getOrCreateAdminPet()
+  if (error || !user || !pet) return { data: null, error }
+  const now = new Date().toISOString()
+  const { data, error: dbErr } = await (supabase as any).from('tamagotchi').update({
+    is_sleeping: !pet.is_sleeping, energy: pet.is_sleeping ? 100 : 0, last_sync: now,
+  }).eq('user_id', user.id).select().single()
+  return { data, error: dbErr ? 'Erreur DB' : null }
+}
+
+export async function adminDrainEnergy() {
+  const { error, supabase, user, pet } = await getOrCreateAdminPet()
+  if (error || !user || !pet) return { data: null, error }
+  const now = new Date().toISOString()
+  const { data, error: dbErr } = await (supabase as any).from('tamagotchi').update({
+    energy: Math.max(0, (pet.energy ?? 100) - 40), last_sync: now,
+  }).eq('user_id', user.id).select().single()
+  return { data, error: dbErr ? 'Erreur DB' : null }
+}
+
 export async function caresserTamagotchi() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -2298,9 +2383,12 @@ export async function caresserTamagotchi() {
     happiness: Math.min(100, synced.happiness + 8),
     hunger: synced.hunger, health: synced.health,
     age_hours: synced.age_hours, stage: synced.stage,
+    energy: synced.energy, is_sleeping: synced.is_sleeping, is_sick: synced.is_sick,
     last_sync: now,
     caresses_today: caressesToday + 1,
     last_caresse_date: today,
+    xp: Math.min(9999, (pet.xp ?? 0) + 3),
+    ...computeStreak(pet, today),
   }
   const { data } = await (supabase as any).from('tamagotchi').update(updates).eq('user_id', user.id).select().single()
   return { data, error: null }
@@ -2317,17 +2405,81 @@ export async function nettoyerTamagotchi() {
 
   const { pet: synced } = applyTamaDecay(pet)
   const now = new Date().toISOString()
+  const today = now.slice(0, 10)
   const updates = {
     poop_count: 0,
     happiness: Math.min(100, synced.happiness + 5),
     hunger: synced.hunger, health: synced.health,
     age_hours: synced.age_hours, stage: synced.stage,
+    energy: synced.energy, is_sleeping: synced.is_sleeping, is_sick: synced.is_sick,
     last_sync: now,
+    xp: Math.min(9999, (pet.xp ?? 0) + 8),
+    ...computeStreak(pet, today),
   }
   const { data } = await (supabase as any).from('tamagotchi').update(updates).eq('user_id', user.id).select().single()
   return { data, error: null }
 }
 
+export async function dormirTamagotchi() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { data: null, error: 'Non connecté' }
+  const { data: pet } = await (supabase as any).from('tamagotchi').select('*').eq('user_id', user.id).single()
+  if (!pet) return { data: null, error: 'Pas de tamagotchi' }
+  if (pet.stage === 'dead') return { data: null, error: 'Ton alien est mort...' }
+  if (pet.is_sleeping) return { data: pet, error: 'Il dort déjà ! 💤' }
+  const { pet: synced } = applyTamaDecay(pet)
+  const now = new Date().toISOString()
+  const { data } = await (supabase as any).from('tamagotchi').update({
+    is_sleeping: true,
+    hunger: synced.hunger, happiness: synced.happiness, health: synced.health,
+    age_hours: synced.age_hours, stage: synced.stage, energy: synced.energy, is_sick: synced.is_sick,
+    last_sync: now,
+  }).eq('user_id', user.id).select().single()
+  return { data, error: null }
+}
+
+export async function reveillerTamagotchi() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { data: null, error: 'Non connecté' }
+  const { data: pet } = await (supabase as any).from('tamagotchi').select('*').eq('user_id', user.id).single()
+  if (!pet) return { data: null, error: 'Pas de tamagotchi' }
+  if (!pet.is_sleeping) return { data: pet, error: 'Il est déjà réveillé !' }
+  const { pet: synced } = applyTamaDecay(pet)
+  const now = new Date().toISOString()
+  const { data } = await (supabase as any).from('tamagotchi').update({
+    is_sleeping: false,
+    hunger: synced.hunger, happiness: synced.happiness, health: synced.health,
+    age_hours: synced.age_hours, stage: synced.stage, energy: synced.energy, is_sick: synced.is_sick,
+    last_sync: now,
+  }).eq('user_id', user.id).select().single()
+  return { data, error: null }
+}
+
+export async function guerirTamagotchi() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { data: null, error: 'Non connecté' }
+  const { data: pet } = await (supabase as any).from('tamagotchi').select('*').eq('user_id', user.id).single()
+  if (!pet) return { data: null, error: 'Pas de tamagotchi' }
+  if (pet.stage === 'dead') return { data: null, error: 'Ton alien est mort...' }
+  if (!pet.is_sick) return { data: pet, error: "Il n'est pas malade !" }
+  const { pet: synced } = applyTamaDecay(pet)
+  const now = new Date().toISOString()
+  const today = now.slice(0, 10)
+  const { data } = await (supabase as any).from('tamagotchi').update({
+    is_sick: false,
+    health: Math.min(100, synced.health + 20),
+    hunger: synced.hunger, happiness: synced.happiness,
+    age_hours: synced.age_hours, stage: synced.stage,
+    energy: synced.energy, is_sleeping: synced.is_sleeping,
+    last_sync: now,
+    xp: Math.min(9999, (pet.xp ?? 0) + 12),
+    ...computeStreak(pet, today),
+  }).eq('user_id', user.id).select().single()
+  return { data, error: null }
+}
 
 // ── PROFIL BIO ────────────────────────────────────────────────
 

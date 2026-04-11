@@ -1,15 +1,24 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { feedTamagotchi, playWithTamagotchi, healTamagotchi, reviveTamagotchi, nameTamagotchi, caresserTamagotchi, nettoyerTamagotchi } from '@/lib/actions'
+import {
+  feedTamagotchi, playWithTamagotchi, healTamagotchi, reviveTamagotchi,
+  nameTamagotchi, caresserTamagotchi, nettoyerTamagotchi,
+  dormirTamagotchi, reveillerTamagotchi, guerirTamagotchi,
+} from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
 import { useWidgetEnabled } from '@/components/TamagotchiWidget'
 import { TAMA_FRAMES, STAGE_COLORS, getTamaFrameKey, getTamaMood } from '@/lib/tamaFrames'
 import { getOwnedAccessories, type Accessory } from '@/lib/tamaAccessories'
-import { adminEvolveAlien, adminAgeAlien, adminKillAlien, adminAddPoop, adminResetCaresses } from '@/lib/actions'
+import {
+  adminEvolveAlien, adminAgeAlien, adminKillAlien,
+  adminAddPoop, adminResetCaresses,
+  adminToggleSick, adminToggleSleep, adminDrainEnergy,
+} from '@/lib/actions'
 import MiniGame from './MiniGame'
 import GameSelector from './GameSelector'
 
+// ── Constantes ───────────────────────────────────────────────────────────────
 const STAGE_INFO: Record<string, { label: string; desc: string }> = {
   egg:          { label: 'Œuf',          desc: "Un œuf mystérieux vibrant légèrement… quelque chose se prépare à l'intérieur." },
   facehugger:   { label: 'Facehugger',   desc: "Il cherche un hôte. Ses doigts griffent doucement l'air." },
@@ -18,6 +27,20 @@ const STAGE_INFO: Record<string, { label: string; desc: string }> = {
   dead:         { label: 'Décédé',       desc: "Dans l'espace, personne ne peut entendre ton alien pleurer." },
 }
 
+const SPACE_EVENTS = [
+  { icon: '☄️', text: 'Pluie de météorites !' },
+  { icon: '🌑', text: 'Éclipse totale...' },
+  { icon: '📡', text: 'Signal alien capté.' },
+  { icon: '⚡', text: 'Tempête ionique !' },
+  { icon: '🌿', text: 'Jardin spatial trouvé !' },
+  { icon: '👁️', text: "L'espace vous observe..." },
+  { icon: '🎆', text: 'Aurore boréale spatiale !' },
+  { icon: '🌡️', text: 'Anomalie thermique.' },
+  { icon: '🛸', text: 'Vaisseau non-identifié !' },
+  { icon: '🌌', text: 'Nébuleuse découverte.' },
+]
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
 function fmtCooldown(ms: number): string {
   if (ms <= 0) return ''
   const h = Math.floor(ms / 3_600_000)
@@ -31,16 +54,36 @@ function fmtAge(h: number): string {
   return r > 0 ? `${d}j ${r}h` : `${d}j`
 }
 
-function StatBar({ label, value, color, icon }: { label: string; value: number; color: string; icon: string }) {
+function getLevel(xp: number) { return 1 + Math.floor((xp ?? 0) / 30) }
+
+function getLevelLabel(lvl: number): string {
+  if (lvl >= 10) return '👑'
+  if (lvl >= 7)  return '⭐⭐⭐'
+  if (lvl >= 4)  return '⭐⭐'
+  return '⭐'
+}
+
+function getPoopPositions(count: number) {
+  return Array.from({ length: count }, (_, i) => ({
+    x: 6 + ((i * 137 + 42) % 76),
+    y: 6 + ((i * 73  + 17) % 26),
+  }))
+}
+
+// ── Sub-composants ────────────────────────────────────────────────────────────
+function StatBar({ label, value, color, icon, pulse }: { label: string; value: number; color: string; icon: string; pulse?: boolean }) {
   const pct = Math.max(0, Math.min(100, value))
+  const danger = pct < 25
   return (
     <div style={{ marginBottom: '.6rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '.2rem', fontSize: '.75rem' }}>
         <span style={{ color: 'var(--text2)' }}>{icon} {label}</span>
-        <span style={{ color: pct < 25 ? '#ef4444' : color, fontWeight: 600 }}>{pct}<span style={{ color: 'var(--text3)', fontWeight: 400 }}>/100</span></span>
+        <span style={{ color: danger ? '#ef4444' : color, fontWeight: 600, animation: pulse && danger ? 'tama-poop-warn 0.8s ease-in-out infinite' : 'none' }}>
+          {pct}<span style={{ color: 'var(--text3)', fontWeight: 400 }}>/100</span>
+        </span>
       </div>
       <div style={{ height: 8, borderRadius: 99, background: 'var(--bg3)', overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${pct}%`, background: pct < 25 ? '#ef4444' : color, borderRadius: 99, transition: 'width .4s' }} />
+        <div style={{ height: '100%', width: `${pct}%`, background: danger ? '#ef4444' : color, borderRadius: 99, transition: 'width .4s', animation: pulse && danger ? 'tama-poop-warn 0.8s ease-in-out infinite' : 'none' }} />
       </div>
     </div>
   )
@@ -58,13 +101,24 @@ function EvolveOverlay({ stage, onClose }: { stage: string; onClose: () => void 
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 9000, background: 'rgba(0,10,5,.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
       <div style={{ textAlign: 'center', padding: '0 2rem', maxWidth: 560, animation: 'ee-rule-in .35s ease' }}>
         <div style={{ fontSize: 'clamp(3rem,10vw,6rem)', lineHeight: 1, marginBottom: '1rem', filter: `drop-shadow(0 0 30px ${color})` }}>🤍</div>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.4rem,5vw,2.5rem)', color, textShadow: `0 0 40px ${color}88`, lineHeight: 1.2, marginBottom: '.8rem' }}>
-          {info?.label ?? stage}
-        </div>
-        <div style={{ fontSize: 'clamp(.9rem,2.5vw,1.1rem)', color: 'rgba(255,255,255,.8)', lineHeight: 1.7, marginBottom: '1.5rem' }}>
-          {msgs[stage] ?? `Évolution : ${info?.label}`}
-        </div>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.4rem,5vw,2.5rem)', color, textShadow: `0 0 40px ${color}88`, lineHeight: 1.2, marginBottom: '.8rem' }}>{info?.label ?? stage}</div>
+        <div style={{ fontSize: 'clamp(.9rem,2.5vw,1.1rem)', color: 'rgba(255,255,255,.8)', lineHeight: 1.7, marginBottom: '1.5rem' }}>{msgs[stage] ?? `Évolution : ${info?.label}`}</div>
         <div style={{ fontSize: '.75rem', color: 'rgba(255,255,255,.4)' }}>Cliquer pour continuer</div>
+      </div>
+    </div>
+  )
+}
+
+function LevelUpOverlay({ level, onClose }: { level: number; onClose: () => void }) {
+  useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t) }, [onClose])
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 8999, background: 'rgba(0,0,0,.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+      <div style={{ textAlign: 'center', animation: 'tama-levelup-pop 0.5s cubic-bezier(.175,.885,.32,1.275)' }}>
+        <div style={{ fontSize: '3rem', marginBottom: '.5rem' }}>✨</div>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: '2.5rem', color: '#fbbf24', textShadow: '0 0 30px #fbbf2488' }}>
+          Niveau {level} !
+        </div>
+        <div style={{ fontSize: '.85rem', color: 'rgba(255,255,255,.6)', marginTop: '.4rem' }}>{getLevelLabel(level)}</div>
       </div>
     </div>
   )
@@ -77,34 +131,18 @@ function FloatingHearts({ visible }: { visible: boolean }) {
     <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
       {hearts.map((h, i) => (
         <div key={i} style={{
-          position: 'absolute',
-          left: `${20 + (i % 5) * 15}%`,
-          bottom: `${40 + Math.random() * 20}%`,
-          fontSize: `${.8 + (i % 3) * .3}rem`,
-          animation: `tama-heart-float ${0.8 + i * 0.15}s ease-out forwards`,
-          animationDelay: `${i * 0.1}s`,
-          opacity: 0,
+          position: 'absolute', left: `${20 + (i % 5) * 15}%`, bottom: `${40 + Math.random() * 20}%`,
+          fontSize: `${.8 + (i % 3) * .3}rem`, animation: `tama-heart-float ${0.8 + i * 0.15}s ease-out forwards`,
+          animationDelay: `${i * 0.1}s`, opacity: 0,
         }}>{h}</div>
       ))}
     </div>
   )
 }
 
-// Positions stables pour les crottes (basées sur poop_count)
-function getPoopPositions(count: number) {
-  return Array.from({ length: count }, (_, i) => ({
-    x: 6 + ((i * 137 + 42) % 76),   // 6–82 %
-    y: 6 + ((i * 73  + 17) % 26),   // 6–32 % depuis le bas
-  }))
-}
-
-// ── MAIN ─────────────────────────────────────────────────────────────────────
+// ── Composant principal ───────────────────────────────────────────────────────
 interface Props {
-  initialPet: any
-  evolved: boolean
-  evolvedTo: string | null
-  isNew: boolean
-  isAdmin?: boolean
+  initialPet: any; evolved: boolean; evolvedTo: string | null; isNew: boolean; isAdmin?: boolean
 }
 
 export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew, isAdmin = false }: Props) {
@@ -113,6 +151,7 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
   const [now, setNow]                       = useState(Date.now())
   const [loading, setLoading]               = useState<string | null>(null)
   const [evolveStage, setEvolveStage]       = useState<string | null>(evolved && evolvedTo ? evolvedTo : null)
+  const [levelUpShow, setLevelUpShow]       = useState<number | null>(null)
   const [naming, setNaming]                 = useState(false)
   const [nameInput, setNameInput]           = useState(initialPet?.name ?? 'Xeno')
   const [showFeedGame, setShowFeedGame]     = useState(false)
@@ -124,22 +163,26 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
   const { addToast }                        = useToast()
 
   // ── Animation / mouvement ──────────────────────────────────────────────────
-  const [alienLeft,    setAlienLeft]        = useState(35)   // % dans l'arène
-  const [alienMoveDur, setAlienMoveDur]     = useState(2)    // durée transition
-  const [alienAnim, setAlienAnim]           = useState<'idle'|'walk'|'eat'|'poop'>('idle')
-  const [showFoodAnim, setShowFoodAnim]     = useState(false)
-  const [moodBubble, setMoodBubble]         = useState<string|null>(null)
+  const [alienLeft,    setAlienLeft]    = useState(35)
+  const [alienMoveDur, setAlienMoveDur] = useState(2)
+  const [alienAnim, setAlienAnim]       = useState<'idle'|'walk'|'eat'|'wake'>('idle')
+  const [showFoodAnim, setShowFoodAnim] = useState(false)
+  const [moodBubble, setMoodBubble]     = useState<string|null>(null)
+  const [spaceEvent, setSpaceEvent]     = useState<{ icon: string; text: string } | null>(null)
   const animTimerRef = useRef<ReturnType<typeof setTimeout>|null>(null)
+  const prevXpRef    = useRef<number>(initialPet?.xp ?? 0)
 
   const isDead      = pet?.stage === 'dead'
+  const isSleeping  = pet?.is_sleeping === true
+  const isSick      = pet?.is_sick === true
   const showingGame = showFeedGame || showPlayGame
 
-  // Positions des crottes (stables par count)
   const poopPositions = useMemo(() => getPoopPositions(pet?.poop_count ?? 0), [pet?.poop_count])
-
-  // Caresses aujourd'hui
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), [])
+  const today         = useMemo(() => new Date().toISOString().slice(0, 10), [])
   const caressesToday = (pet?.last_caresse_date === today) ? (pet?.caresses_today ?? 0) : 0
+  const level         = getLevel(pet?.xp ?? 0)
+  const poopCount     = pet?.poop_count ?? 0
+  const needsAttention = !isDead && !isSleeping && (pet?.hunger > 70 || pet?.happiness < 20 || isSick)
 
   // Accessoires, tick, clock
   useEffect(() => { setAccessories(getOwnedAccessories()) }, [showPlayGame])
@@ -147,15 +190,22 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
   useEffect(() => { const id = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(id) }, [])
   useEffect(() => { if (isNew) addToast('Ton facehugger est né ! Prends-en soin. 🤍', 'success') }, []) // eslint-disable-line
 
+  // Level-up detection
+  useEffect(() => {
+    const oldLevel = getLevel(prevXpRef.current)
+    const newLevel = getLevel(pet?.xp ?? 0)
+    if (newLevel > oldLevel && pet?.xp > 0) setLevelUpShow(newLevel)
+    prevXpRef.current = pet?.xp ?? 0
+  }, [pet?.xp])
+
   // ── Mouvement de l'alien ───────────────────────────────────────────────────
   useEffect(() => {
-    if (isDead || showingGame) return
+    if (isDead || isSleeping || showingGame) return
     let nextTimer: ReturnType<typeof setTimeout>
-
     const scheduleMove = () => {
-      const delay = 2500 + Math.random() * 4500
+      const delay = isSick ? 3000 + Math.random() * 3000 : 2500 + Math.random() * 4500
       nextTimer = setTimeout(() => {
-        const newLeft = 5 + Math.random() * 52   // 5 – 57 %
+        const newLeft = 5 + Math.random() * 52
         const dur = 1.2 + Math.random() * 1.8
         setAlienMoveDur(dur)
         setAlienLeft(newLeft)
@@ -170,55 +220,77 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
       clearTimeout(nextTimer)
       if (animTimerRef.current) clearTimeout(animTimerRef.current)
     }
-  }, [isDead, showingGame])
+  }, [isDead, isSleeping, isSick, showingGame])
 
   // ── Bulles d'humeur ────────────────────────────────────────────────────────
   useEffect(() => {
-    if (isDead || !pet) return
+    if (isDead || isSleeping || !pet) return
     const BUBBLES: Record<string, string[]> = {
       poop:    ['🤢', '😤 Crotte !', '🤮', '😤'],
+      sick:    ['🤒', '🥵', '😵', '🌡️'],
+      tired:   ['😴', '💤', '🥱', 'Zzzz'],
       happy:   ['😊', '💚', '🎉', '✨', '🥳'],
-      sad:     ['😢', '💔', '😔', '😞', '🥺'],
+      sad:     ['😢', '💔', '😔', '🥺'],
       dying:   ['😵', '🆘', '💀', '😱'],
       neutral: ['😐', '👀', '💤', '🌑'],
     }
     const pick = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)]
     const getBubble = () => {
-      if ((pet.poop_count ?? 0) >= 2) return pick(BUBBLES.poop)
+      if (isSick)                      return pick(BUBBLES.sick)
+      if ((pet.energy ?? 100) < 25)    return pick(BUBBLES.tired)
+      if ((pet.poop_count ?? 0) >= 2)  return pick(BUBBLES.poop)
       const mood = getTamaMood(pet)
       return pick(BUBBLES[mood] ?? BUBBLES.neutral)
     }
     const id = setInterval(() => {
       setMoodBubble(getBubble())
-      setTimeout(() => setMoodBubble(null), 2200)
+      setTimeout(() => setMoodBubble(null), 2400)
     }, 7000 + Math.random() * 5000)
     return () => clearInterval(id)
-  }, [isDead, pet?.happiness, pet?.poop_count, pet?.health]) // eslint-disable-line
+  }, [isDead, isSleeping, isSick, pet?.happiness, pet?.poop_count, pet?.energy, pet?.health]) // eslint-disable-line
+
+  // ── Événements spatiaux ────────────────────────────────────────────────────
+  useEffect(() => {
+    const fire = () => {
+      const ev = SPACE_EVENTS[Math.floor(Math.random() * SPACE_EVENTS.length)]
+      setSpaceEvent(ev)
+      setTimeout(() => setSpaceEvent(null), 3800)
+    }
+    const delay = 60_000 + Math.random() * 120_000  // 1-3 min (réduit pour test, normalement 8-15 min)
+    const id = setInterval(fire, delay)
+    return () => clearInterval(id)
+  }, [])
 
   const FEED_CD = 2 * 3_600_000
   const HEAL_CD = 24 * 3_600_000
   const feedCd = pet?.last_fed    ? Math.max(0, FEED_CD - (now - new Date(pet.last_fed).getTime()))    : 0
   const healCd = pet?.last_healed ? Math.max(0, HEAL_CD - (now - new Date(pet.last_healed).getTime())) : 0
 
-  const frameKey    = pet ? getTamaFrameKey(pet) : 'egg'
-  const frames      = TAMA_FRAMES[frameKey] ?? TAMA_FRAMES['egg']
-  const frame       = frames[tick % frames.length]
-  const stageInfo   = STAGE_INFO[pet?.stage ?? 'egg']
+  const frameKey   = pet ? getTamaFrameKey(pet) : 'egg'
+  const frames     = TAMA_FRAMES[frameKey] ?? TAMA_FRAMES['egg']
+  const frame      = frames[tick % frames.length]
+  const stageInfo  = STAGE_INFO[pet?.stage ?? 'egg']
   const screenColor = isDead ? '#4b5563' : (STAGE_COLORS[pet?.stage] ?? '#22d3ee')
 
   const moodLabel = (() => {
     if (!pet || isDead) return null
-    if (pet.health < 15 || (pet.hunger > 70 && pet.happiness < 30)) return '😰 En danger !'
-    if (pet.hunger > 70 || pet.happiness < 30 || pet.health < 30)   return '😔 Malheureux'
-    if (pet.hunger < 40 && pet.happiness > 60 && pet.health > 70)   return '😊 Content'
+    if (isSick)                                                              return '🤒 Malade !'
+    if (isSleeping)                                                          return '💤 En sommeil'
+    if ((pet.energy ?? 100) < 25)                                           return '😴 Épuisé...'
+    if (pet.health < 15 || (pet.hunger > 70 && pet.happiness < 30))        return '😰 En danger !'
+    if (pet.hunger > 70 || pet.happiness < 30 || pet.health < 30)          return '😔 Malheureux'
+    if (pet.hunger < 40 && pet.happiness > 60 && pet.health > 70)          return '😊 Content'
     return '😐 Neutre'
   })()
 
-  // Animation CSS de l'alien selon son état
+  // Animation CSS de l'alien
   const alienAnimCss = (() => {
-    if (isDead) return 'tama-dying-shake 0.5s ease-in-out infinite'
+    if (isDead)               return 'tama-dying-shake 0.5s ease-in-out infinite'
+    if (isSleeping)           return 'tama-sleep-breathe 4s ease-in-out infinite'
+    if (isSick)               return 'tama-sick-wobble 0.8s ease-in-out infinite'
     if (alienAnim === 'eat')  return 'tama-eat 0.45s ease-in-out 4'
     if (alienAnim === 'walk') return 'tama-walk 0.38s ease-in-out infinite'
+    if (alienAnim === 'wake') return 'tama-wake-up 0.6s ease-out'
     if (caresseAnim)          return 'tama-pet-glow 0.45s ease-in-out 4'
     const mood = getTamaMood(pet)
     if (mood === 'happy')  return 'tama-happy-bounce 1.3s ease-in-out infinite'
@@ -226,6 +298,9 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
     if (mood === 'sad')    return 'tama-sad-droop 2.2s ease-in-out infinite'
     return 'tama-breathe 3.2s ease-in-out infinite'
   })()
+
+  // CSS filter quand malade
+  const alienFilter = isSick ? 'hue-rotate(80deg) saturate(2) brightness(0.85)' : 'none'
 
   const doAction = useCallback(async (
     action: () => Promise<{ data: any; error: string | null }>,
@@ -273,6 +348,13 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
     if (!loading) addToast('Zone nettoyée ! 🧹', 'success')
   }
 
+  async function handleReveiller() {
+    setAlienAnim('wake')
+    if (animTimerRef.current) clearTimeout(animTimerRef.current)
+    animTimerRef.current = setTimeout(() => setAlienAnim('idle'), 800)
+    await doAction(reveillerTamagotchi, 'reveiller')
+  }
+
   async function handleName() {
     const res = await nameTamagotchi(nameInput)
     if (res.error) { addToast(res.error, 'error'); return }
@@ -283,35 +365,67 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
 
   if (!pet) return <div className="empty">Erreur chargement.</div>
 
-  const poopCount = pet.poop_count ?? 0
-
   return (
     <div style={{ maxWidth: 420, margin: '0 auto', paddingBottom: '3rem' }}>
       {evolveStage && <EvolveOverlay stage={evolveStage} onClose={() => setEvolveStage(null)} />}
+      {levelUpShow  && <LevelUpOverlay level={levelUpShow} onClose={() => setLevelUpShow(null)} />}
 
-      {/* Header */}
-      <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
+      {/* ── Header ── */}
+      <div style={{ marginBottom: '1.2rem', textAlign: 'center' }}>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', lineHeight: 1 }}>Alien Tamagotchi</div>
-        <div style={{ color: 'var(--text3)', fontSize: '.8rem', marginTop: '.3rem' }}>
-          Âge : {fmtAge(pet.age_hours)} · {pet.deaths > 0 ? `${pet.deaths} mort${pet.deaths > 1 ? 's' : ''}` : 'Jamais mort'}
+        {/* Meta-infos : âge · streak · level */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '.4rem', flexWrap: 'wrap' }}>
+          <span style={{ color: 'var(--text3)', fontSize: '.78rem' }}>⏳ {fmtAge(pet.age_hours)}</span>
+          {(pet.care_streak ?? 0) > 0 && (
+            <span style={{ color: '#f97316', fontSize: '.78rem' }}>🔥 {pet.care_streak}j de suite</span>
+          )}
+          <span style={{ color: '#fbbf24', fontSize: '.78rem' }}>
+            Nv.{level} {getLevelLabel(level)} · {pet.xp ?? 0} XP
+          </span>
+          {pet.deaths > 0 && <span style={{ color: 'var(--text3)', fontSize: '.72rem' }}>💀 {pet.deaths}×</span>}
+          {needsAttention && (
+            <span style={{ color: '#ef4444', fontSize: '.78rem', animation: 'tama-poop-warn 0.7s ease-in-out infinite' }}>
+              🚨 Attention !
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Mini-game or main screen */}
+      {/* ── Mini-jeux ── */}
       {showFeedGame ? (
         <MiniGame stage={pet.stage} feedMode onFinish={handleFeedFinish} onClose={() => setShowFeedGame(false)} />
       ) : showPlayGame ? (
         <GameSelector stage={pet.stage} onFinish={handlePlayFinish} onClose={() => setShowPlayGame(false)} />
       ) : (
         <>
-          {/* Screen */}
+          {/* ── Écran ── */}
           <div style={{
-            background: 'var(--bg2)', border: `2px solid ${screenColor}44`, borderRadius: 'var(--rl)',
-            boxShadow: `0 0 30px ${screenColor}22, inset 0 0 20px rgba(0,0,0,.3)`,
-            padding: '1.2rem 1.2rem .8rem', marginBottom: '1.5rem', textAlign: 'center',
-            position: 'relative', overflow: 'hidden',
+            background: 'var(--bg2)',
+            border: `2px solid ${needsAttention ? '#ef444488' : screenColor + '44'}`,
+            borderRadius: 'var(--rl)',
+            boxShadow: needsAttention
+              ? '0 0 0 1px #ef444433, 0 0 30px #ef444411, inset 0 0 20px rgba(0,0,0,.3)'
+              : `0 0 30px ${screenColor}22, inset 0 0 20px rgba(0,0,0,.3)`,
+            animation: needsAttention ? 'tama-attention-pulse 1.4s ease-in-out infinite' : 'none',
+            padding: '1.2rem 1.2rem .8rem', marginBottom: '1.5rem',
+            textAlign: 'center', position: 'relative', overflow: 'hidden',
           }}>
-            {/* Name */}
+
+            {/* Événement spatial */}
+            {spaceEvent && (
+              <div style={{
+                position: 'absolute', top: 8, left: 0, right: 0, zIndex: 8,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.4rem',
+                background: 'rgba(0,0,20,.85)', padding: '4px 10px',
+                fontSize: '.75rem', color: '#a78bfa',
+                animation: 'tama-bubble-in 0.3s ease-out',
+              }}>
+                <span>{spaceEvent.icon}</span>
+                <span>{spaceEvent.text}</span>
+              </div>
+            )}
+
+            {/* Nom */}
             <div style={{ marginBottom: '.6rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.5rem' }}>
               {naming ? (
                 <>
@@ -324,113 +438,102 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
                 </>
               ) : (
                 <>
-                  <span style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: screenColor, cursor: 'pointer' }} onClick={() => setNaming(true)} title="Cliquer pour renommer">
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: screenColor, cursor: 'pointer' }} onClick={() => setNaming(true)}>
                     {pet.name}
+                    {isSick && <span style={{ marginLeft: '.3rem', fontSize: '.7rem' }}>🤒</span>}
                   </span>
                   <span style={{ fontSize: '.65rem', color: 'var(--text3)', cursor: 'pointer' }} onClick={() => setNaming(true)}>✏️</span>
                 </>
               )}
             </div>
 
-            {/* Arène — l'alien se déplace ici */}
+            {/* Arène */}
             <div style={{ position: 'relative', height: '185px', margin: '0.4rem 0', overflow: 'hidden' }}>
-
               {/* Crottes */}
               {poopPositions.map((pos, i) => (
                 <div key={i} style={{
-                  position: 'absolute',
-                  left: `${pos.x}%`,
-                  bottom: `${pos.y}%`,
-                  fontSize: '1.25rem',
-                  animation: 'tama-poop-appear 0.5s ease-out',
-                  zIndex: 1,
+                  position: 'absolute', left: `${pos.x}%`, bottom: `${pos.y}%`,
+                  fontSize: '1.25rem', animation: 'tama-poop-appear 0.5s ease-out', zIndex: 1,
                   filter: poopCount >= 3 ? 'drop-shadow(0 0 4px #f59e0b)' : 'none',
                 }}>💩</div>
               ))}
 
-              {/* Nourriture qui vole vers l'alien */}
+              {/* Nourriture en vol */}
               {showFoodAnim && (
                 <div style={{
-                  position: 'absolute',
-                  right: '12%',
-                  top: '25%',
-                  fontSize: '1.7rem',
-                  animation: 'tama-food-fly 1.8s ease-in-out forwards',
-                  zIndex: 3,
-                  pointerEvents: 'none',
+                  position: 'absolute', right: '12%', top: '25%',
+                  fontSize: '1.7rem', animation: 'tama-food-fly 1.8s ease-in-out forwards',
+                  zIndex: 3, pointerEvents: 'none',
                 }}>🥩</div>
               )}
 
               {/* Bulle d'humeur */}
-              {moodBubble && (
+              {moodBubble && !isSleeping && (
                 <div style={{
-                  position: 'absolute',
-                  top: 6,
-                  right: 8,
-                  background: 'rgba(0,0,0,0.82)',
-                  border: `1px solid ${screenColor}55`,
-                  borderRadius: '10px 10px 0 10px',
-                  padding: '3px 9px',
-                  fontSize: '.78rem',
-                  zIndex: 5,
-                  animation: 'tama-bubble-in 0.25s ease-out',
-                  whiteSpace: 'nowrap',
-                  pointerEvents: 'none',
+                  position: 'absolute', top: 6, right: 8,
+                  background: 'rgba(0,0,0,0.82)', border: `1px solid ${screenColor}55`,
+                  borderRadius: '10px 10px 0 10px', padding: '3px 9px',
+                  fontSize: '.78rem', zIndex: 5,
+                  animation: 'tama-bubble-in 0.25s ease-out', whiteSpace: 'nowrap', pointerEvents: 'none',
                 }}>{moodBubble}</div>
               )}
 
               {/* L'alien */}
               <div style={{
-                position: 'absolute',
-                bottom: '18px',
-                left: `${alienLeft}%`,
-                transition: `left ${alienMoveDur}s ease-in-out`,
+                position: 'absolute', bottom: '18px',
+                left: isSleeping ? '30%' : `${alienLeft}%`,
+                transition: `left ${isSleeping ? 0.5 : alienMoveDur}s ease-in-out`,
                 zIndex: 2,
               }}>
                 <div style={{
                   fontFamily: "'Courier New', monospace",
                   fontSize: 'clamp(.65rem,2vw,.8rem)',
                   lineHeight: 1.45,
-                  color: isDead ? '#6b7280' : screenColor,
-                  textShadow: isDead ? 'none' : `0 0 8px ${screenColor}66`,
-                  display: 'inline-block',
-                  textAlign: 'left',
+                  color: isDead ? '#6b7280' : isSick ? '#86efac' : screenColor,
+                  textShadow: isDead ? 'none' : isSick ? '0 0 8px #86efac66' : `0 0 8px ${screenColor}66`,
+                  display: 'inline-block', textAlign: 'left',
                   animation: alienAnimCss,
+                  filter: alienFilter,
                   transformOrigin: 'center bottom',
                 }}>
                   {frame.map((line, i) => <div key={i} style={{ whiteSpace: 'pre' }}>{line}</div>)}
                 </div>
-                {/* Floating hearts */}
                 <FloatingHearts visible={showHearts} />
-                {/* Main caresse */}
                 {caresseAnim && (
-                  <div style={{
-                    position: 'absolute', right: '-12px', top: '25%',
-                    fontSize: '1.6rem', animation: 'tama-hand-pet .6s ease-in-out',
-                    pointerEvents: 'none',
-                  }}>🤚</div>
+                  <div style={{ position: 'absolute', right: '-12px', top: '25%', fontSize: '1.6rem', animation: 'tama-hand-pet .6s ease-in-out', pointerEvents: 'none' }}>🤚</div>
                 )}
               </div>
+
+              {/* Overlay sommeil */}
+              {isSleeping && (
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  background: 'rgba(0,0,30,0.72)', borderRadius: 8, zIndex: 6,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <div style={{ fontSize: '2.2rem', animation: 'tama-zzz-float 2.5s ease-in-out infinite' }}>💤</div>
+                  <div style={{ color: '#8888cc', fontSize: '.82rem', marginTop: '.3rem', fontFamily: 'var(--font-display)' }}>Zzzz...</div>
+                  <div style={{ color: '#5555aa', fontSize: '.65rem', marginTop: '.15rem' }}>
+                    Énergie : {pet.energy ?? 0}/100
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Stage + description */}
+            {/* Stage + desc */}
             <div style={{ marginTop: '.6rem' }}>
-              <div style={{ display: 'inline-block', fontSize: '.7rem', fontWeight: 600, color: screenColor, border: `1px solid ${screenColor}44`, borderRadius: 99, padding: '2px 10px', marginBottom: '.4rem' }}>
-                {stageInfo?.label ?? pet.stage}
+              <div style={{ display: 'inline-block', fontSize: '.7rem', fontWeight: 600, color: isSick ? '#86efac' : screenColor, border: `1px solid ${isSick ? '#86efac44' : screenColor + '44'}`, borderRadius: 99, padding: '2px 10px', marginBottom: '.4rem' }}>
+                {stageInfo?.label ?? pet.stage}{isSick ? ' · 🤒 Malade' : ''}
               </div>
               <div style={{ fontSize: '.78rem', color: 'var(--text2)', lineHeight: 1.5, padding: '0 .5rem' }}>{stageInfo?.desc}</div>
             </div>
 
-            {/* Humeur */}
-            {moodLabel && (
-              <div style={{ marginTop: '.4rem', fontSize: '.75rem', color: 'var(--text3)' }}>{moodLabel}</div>
-            )}
+            {moodLabel && <div style={{ marginTop: '.4rem', fontSize: '.75rem', color: 'var(--text3)' }}>{moodLabel}</div>}
 
             {/* Alerte crottes */}
             {poopCount > 0 && !isDead && (
               <div style={{
-                marginTop: '.5rem',
-                fontSize: '.72rem',
+                marginTop: '.5rem', fontSize: '.72rem',
                 color: poopCount >= 3 ? '#f59e0b' : '#a78bfa',
                 animation: poopCount >= 3 ? 'tama-poop-warn 0.9s ease-in-out infinite' : 'none',
               }}>
@@ -440,16 +543,19 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
             )}
           </div>
 
-          {/* Stats */}
+          {/* ── Stats ── */}
           {!isDead && (
             <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '1rem 1.2rem', marginBottom: '1.2rem' }}>
-              <StatBar label="Satiété" value={100 - pet.hunger}  color="#f97316" icon="🥩" />
-              <StatBar label="Humeur"  value={pet.happiness}      color="#a78bfa" icon="😊" />
-              <StatBar label="Santé"   value={pet.health}         color="#22d3ee" icon="❤️" />
+              <StatBar label="Satiété"  value={100 - pet.hunger}  color="#f97316" icon="🥩" pulse />
+              <StatBar label="Humeur"   value={pet.happiness}      color="#a78bfa" icon="😊" pulse />
+              <StatBar label="Santé"    value={pet.health}         color="#22d3ee" icon="❤️" pulse />
+              <StatBar label="Énergie"  value={pet.energy ?? 100}  color="#facc15" icon="⚡"
+                pulse={(pet.energy ?? 100) < 25}
+              />
             </div>
           )}
 
-          {/* Actions */}
+          {/* ── Actions ── */}
           {isDead ? (
             <div style={{ textAlign: 'center' }}>
               <div style={{ color: 'var(--text3)', fontSize: '.85rem', marginBottom: '1rem', lineHeight: 1.6 }}>
@@ -463,82 +569,106 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.6rem', marginBottom: '1.2rem' }}>
 
-              {/* Nettoyer — full-width si crottes présentes */}
-              {poopCount > 0 && (
-                <button className="btn btn-outline" disabled={loading === 'nettoyer'} onClick={handleNettoyer}
-                  style={{
-                    gridColumn: '1 / -1',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.2rem', padding: '.7rem',
-                    background: 'rgba(251,191,36,.07)', borderColor: '#fbbf2466', color: '#fbbf24',
-                    animation: poopCount >= 3 ? 'tama-poop-warn 0.9s ease-in-out infinite' : 'none',
-                  }}>
-                  <span style={{ fontSize: '1.4rem' }}>🧹</span>
-                  <span style={{ fontSize: '.75rem' }}>Nettoyer ({poopCount} crotte{poopCount > 1 ? 's' : ''})</span>
+              {/* ── Dormir / Réveiller ── full-width */}
+              {isSleeping ? (
+                <button className="btn btn-outline" disabled={loading === 'reveiller'} onClick={handleReveiller}
+                  style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.2rem', padding: '.7rem', background: 'rgba(136,136,204,.08)', borderColor: '#8888cc66', color: '#aaaaee' }}>
+                  <span style={{ fontSize: '1.4rem' }}>☀️</span>
+                  <span style={{ fontSize: '.75rem' }}>Réveiller</span>
+                  <span style={{ fontSize: '.62rem', color: '#8888aa' }}>Énergie {pet.energy ?? 0}/100</span>
+                </button>
+              ) : (pet.energy ?? 100) <= 30 ? (
+                <button className="btn btn-outline" disabled={loading === 'dormir'} onClick={() => doAction(dormirTamagotchi, 'dormir')}
+                  style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.2rem', padding: '.7rem', background: 'rgba(250,204,21,.06)', borderColor: '#facc1566', color: '#facc15', animation: 'tama-poop-warn 1.2s ease-in-out infinite' }}>
+                  <span style={{ fontSize: '1.4rem' }}>💤</span>
+                  <span style={{ fontSize: '.75rem' }}>Mettre au dodo — épuisé !</span>
+                </button>
+              ) : null}
+
+              {/* ── Guérir ── full-width si malade */}
+              {isSick && (
+                <button className="btn btn-outline" disabled={loading === 'guerir'} onClick={() => doAction(guerirTamagotchi, 'guerir')}
+                  style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.2rem', padding: '.7rem', background: 'rgba(134,239,172,.07)', borderColor: '#86efac66', color: '#86efac', animation: 'tama-poop-warn 1s ease-in-out infinite' }}>
+                  <span style={{ fontSize: '1.4rem' }}>💉</span>
+                  <span style={{ fontSize: '.75rem' }}>Soigner la maladie (+12 XP)</span>
                 </button>
               )}
 
-              {/* Nourrir */}
-              <button className="btn btn-outline" disabled={loading === 'feed' || feedCd > 0} onClick={() => feedCd <= 0 && setShowFeedGame(true)}
-                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.2rem', padding: '.7rem' }}>
+              {/* ── Nettoyer ── */}
+              {poopCount > 0 && (
+                <button className="btn btn-outline" disabled={loading === 'nettoyer' || isSleeping} onClick={handleNettoyer}
+                  style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.2rem', padding: '.7rem', background: 'rgba(251,191,36,.07)', borderColor: '#fbbf2466', color: '#fbbf24', animation: poopCount >= 3 ? 'tama-poop-warn 0.9s ease-in-out infinite' : 'none' }}>
+                  <span style={{ fontSize: '1.4rem' }}>🧹</span>
+                  <span style={{ fontSize: '.75rem' }}>Nettoyer ({poopCount} crotte{poopCount > 1 ? 's' : ''}) · +8 XP</span>
+                </button>
+              )}
+
+              {/* ── Nourrir ── */}
+              <button className="btn btn-outline" disabled={loading === 'feed' || feedCd > 0 || isSleeping} onClick={() => feedCd <= 0 && !isSleeping && setShowFeedGame(true)}
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.2rem', padding: '.7rem', opacity: isSleeping ? 0.4 : 1 }}>
                 <span style={{ fontSize: '1.4rem' }}>🥩</span>
-                <span style={{ fontSize: '.75rem' }}>Nourrir</span>
+                <span style={{ fontSize: '.75rem' }}>Nourrir · +15 XP</span>
                 {feedCd > 0 && <span style={{ fontSize: '.65rem', color: 'var(--text3)' }}>{fmtCooldown(feedCd)}</span>}
+                {isSleeping && <span style={{ fontSize: '.6rem', color: '#8888aa' }}>dort…</span>}
               </button>
 
-              {/* Jouer */}
-              <button className="btn btn-outline" disabled={loading === 'play'} onClick={() => setShowPlayGame(true)}
-                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.2rem', padding: '.7rem' }}>
+              {/* ── Jouer ── */}
+              <button className="btn btn-outline" disabled={loading === 'play' || isSleeping} onClick={() => !isSleeping && setShowPlayGame(true)}
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.2rem', padding: '.7rem', opacity: isSleeping ? 0.4 : 1 }}>
                 <span style={{ fontSize: '1.4rem' }}>🎮</span>
-                <span style={{ fontSize: '.75rem' }}>Jouer</span>
+                <span style={{ fontSize: '.75rem' }}>Jouer · +XP</span>
+                {isSleeping && <span style={{ fontSize: '.6rem', color: '#8888aa' }}>dort…</span>}
               </button>
 
-              {/* Câliner (limite 3/jour) */}
+              {/* ── Câliner ── */}
               <button className="btn btn-outline" disabled={loading === 'caresse' || caressesToday >= 3} onClick={handleCaresse}
                 style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.2rem', padding: '.7rem', opacity: caressesToday >= 3 ? 0.5 : 1 }}>
                 <span style={{ fontSize: '1.4rem' }}>🤚</span>
-                <span style={{ fontSize: '.75rem' }}>Câliner</span>
+                <span style={{ fontSize: '.75rem' }}>Câliner · +3 XP</span>
                 <span style={{ fontSize: '.6rem', color: caressesToday >= 3 ? '#ef4444' : 'var(--text3)' }}>
                   {caressesToday}/3 aujourd&apos;hui
                 </span>
               </button>
 
-              {/* Soigner */}
+              {/* ── Soigner (santé) ── */}
               {pet.health < 80 && (
                 <button className="btn btn-outline" disabled={loading === 'heal' || healCd > 0} onClick={() => doAction(healTamagotchi, 'heal')}
                   style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.2rem', padding: '.7rem' }}>
                   <span style={{ fontSize: '1.4rem' }}>💊</span>
-                  <span style={{ fontSize: '.75rem' }}>Soigner</span>
+                  <span style={{ fontSize: '.75rem' }}>Soigner · +10 XP</span>
                   {healCd > 0 && <span style={{ fontSize: '.65rem', color: 'var(--text3)' }}>{fmtCooldown(healCd)}</span>}
+                </button>
+              )}
+
+              {/* ── Dormir manuellement (quand énergie > 30) ── */}
+              {!isSleeping && (pet.energy ?? 100) > 30 && (
+                <button className="btn btn-outline" disabled={loading === 'dormir'} onClick={() => doAction(dormirTamagotchi, 'dormir')}
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.2rem', padding: '.7rem' }}>
+                  <span style={{ fontSize: '1.4rem' }}>💤</span>
+                  <span style={{ fontSize: '.75rem' }}>Dormir</span>
+                  <span style={{ fontSize: '.6rem', color: 'var(--text3)' }}>⚡ {pet.energy ?? 100}/100</span>
                 </button>
               )}
             </div>
           )}
 
-          {/* Accessories shelf */}
+          {/* ── Accessories shelf ── */}
           {accessories.length > 0 && (
             <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.8rem 1rem', marginBottom: '1.2rem' }}>
-              <div style={{ fontSize: '.7rem', color: 'var(--text3)', fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', marginBottom: '.6rem' }}>
-                🏠 Salle des trophées
-              </div>
+              <div style={{ fontSize: '.7rem', color: 'var(--text3)', fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', marginBottom: '.6rem' }}>🏠 Salle des trophées</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.4rem' }}>
                 {accessories.map(a => (
-                  <span key={a.id} title={a.name} style={{ fontSize: '1.5rem', cursor: 'default', filter: `drop-shadow(0 0 4px ${screenColor}44)` }}>
-                    {a.emoji}
-                  </span>
+                  <span key={a.id} title={a.name} style={{ fontSize: '1.5rem', cursor: 'default', filter: `drop-shadow(0 0 4px ${screenColor}44)` }}>{a.emoji}</span>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Widget toggle */}
+          {/* ── Widget toggle ── */}
           <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.8rem 1rem', marginBottom: '1.2rem' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '.7rem', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={widgetEnabled}
-                onChange={e => setWidgetEnabled(e.target.checked)}
-                style={{ width: 16, height: 16, cursor: 'pointer', accentColor: screenColor }}
-              />
+              <input type="checkbox" checked={widgetEnabled} onChange={e => setWidgetEnabled(e.target.checked)}
+                style={{ width: 16, height: 16, cursor: 'pointer', accentColor: screenColor }} />
               <div>
                 <div style={{ fontSize: '.82rem', fontWeight: 500 }}>Afficher mon alien en bas à droite</div>
                 <div style={{ fontSize: '.7rem', color: 'var(--text3)' }}>Visible sur toutes les pages du site</div>
@@ -546,87 +676,62 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
             </label>
           </div>
 
-          {/* Admin panel */}
+          {/* ── Admin panel ── */}
           {isAdmin && (
             <div style={{ padding: '.75rem 1rem', borderRadius: 'var(--r)', background: 'rgba(239,68,68,.05)', border: '1px solid rgba(239,68,68,.25)', marginBottom: '1.2rem' }}>
-              <div style={{ fontSize: '.68rem', color: '#ef4444', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: '.6rem' }}>
-                ⚡ Admin
-              </div>
+              <div style={{ fontSize: '.68rem', color: '#ef4444', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: '.6rem' }}>⚡ Admin</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '.4rem' }}>
-                <button className="btn btn-outline" style={{ fontSize: '.72rem', padding: '.45rem .4rem', borderColor: '#a78bfa44', color: '#a78bfa' }}
-                  disabled={loading === 'adm_evolve'}
-                  onClick={async () => {
-                    setLoading('adm_evolve')
-                    const r = await adminEvolveAlien()
-                    setLoading(null)
-                    if (r.error) { addToast(r.error, 'error'); return }
-                    if (r.data) { setPet(r.data); addToast(`🔄 → ${r.data.stage}`, 'success') }
-                  }}>
-                  🔄 Évoluer
-                </button>
-                <button className="btn btn-outline" style={{ fontSize: '.72rem', padding: '.45rem .4rem', borderColor: '#f9731644', color: '#f97316' }}
-                  disabled={loading === 'adm_age'}
-                  onClick={async () => {
-                    setLoading('adm_age')
-                    const r = await adminAgeAlien()
-                    setLoading(null)
-                    if (r.error) { addToast(r.error, 'error'); return }
-                    if (r.data) { setPet(r.data); addToast(`⏩ +25h (${r.data.age_hours}h)`, 'success') }
-                  }}>
-                  ⏩ Vieillir
-                </button>
-                <button className="btn btn-outline" style={{ fontSize: '.72rem', padding: '.45rem .4rem', borderColor: '#ef444444', color: '#ef4444' }}
-                  disabled={loading === 'adm_kill'}
-                  onClick={async () => {
-                    setLoading('adm_kill')
-                    const r = await adminKillAlien()
-                    setLoading(null)
-                    if (r.error) { addToast(r.error, 'error'); return }
-                    if (r.data) { setPet(r.data); addToast('💀 Tué.', 'success') }
-                  }}>
-                  💀 Tuer
-                </button>
+                {[
+                  { key: 'adm_evolve', label: '🔄 Évoluer',  color: '#a78bfa', fn: adminEvolveAlien,   toast: (d: any) => `🔄 → ${d.stage}` },
+                  { key: 'adm_age',    label: '⏩ Vieillir', color: '#f97316', fn: adminAgeAlien,      toast: (d: any) => `⏩ ${d.age_hours}h` },
+                  { key: 'adm_kill',   label: '💀 Tuer',     color: '#ef4444', fn: adminKillAlien,     toast: () => '💀 Tué.' },
+                ].map(({ key, label, color, fn, toast }) => (
+                  <button key={key} className="btn btn-outline" style={{ fontSize: '.72rem', padding: '.45rem .4rem', borderColor: color + '44', color }}
+                    disabled={loading === key}
+                    onClick={async () => {
+                      setLoading(key); const r = await fn(); setLoading(null)
+                      if (r.error) { addToast(r.error, 'error'); return }
+                      if (r.data) { setPet(r.data); addToast(toast(r.data), 'success') }
+                    }}>
+                    {label}
+                  </button>
+                ))}
               </div>
-              {/* ── Test : nouvelles mécaniques ── */}
+              {/* Test V2 */}
               <div style={{ marginTop: '.5rem', paddingTop: '.5rem', borderTop: '1px solid rgba(239,68,68,.15)', fontSize: '.62rem', color: 'rgba(239,68,68,.6)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: '.4rem' }}>
-                🧪 Test — crottes &amp; câlins
+                🧪 Test V2
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.4rem' }}>
-                <button className="btn btn-outline" style={{ fontSize: '.72rem', padding: '.45rem .4rem', borderColor: '#fbbf2444', color: '#fbbf24' }}
-                  disabled={loading === 'adm_poop'}
-                  onClick={async () => {
-                    setLoading('adm_poop')
-                    const r = await adminAddPoop()
-                    setLoading(null)
-                    if (r.error) { addToast(r.error, 'error'); return }
-                    if (r.data) { setPet(r.data); addToast(`💩 Crotte ajoutée (${r.data.poop_count})`, 'success') }
-                  }}>
-                  💩 +Crotte
-                </button>
-                <button className="btn btn-outline" style={{ fontSize: '.72rem', padding: '.45rem .4rem', borderColor: '#6ee7b744', color: '#6ee7b7' }}
-                  disabled={loading === 'adm_reset_caresse'}
-                  onClick={async () => {
-                    setLoading('adm_reset_caresse')
-                    const r = await adminResetCaresses()
-                    setLoading(null)
-                    if (r.error) { addToast(r.error, 'error'); return }
-                    if (r.data) { setPet(r.data); addToast('🔄 Câlins reset (0/3)', 'success') }
-                  }}>
-                  🤚 Reset câlins
-                </button>
+                {[
+                  { key: 'adm_poop',     label: '💩 +Crotte',         color: '#fbbf24', fn: adminAddPoop,       toast: (d: any) => `💩 ×${d.poop_count}` },
+                  { key: 'adm_caresse',  label: '🤚 Reset câlins',     color: '#6ee7b7', fn: adminResetCaresses, toast: () => '🔄 0/3' },
+                  { key: 'adm_sick',     label: '🦠 Toggle malade',    color: '#86efac', fn: adminToggleSick,    toast: (d: any) => d.is_sick ? '🤒 Malade' : '✅ Guéri' },
+                  { key: 'adm_sleep',    label: '💤 Toggle sommeil',   color: '#8888cc', fn: adminToggleSleep,   toast: (d: any) => d.is_sleeping ? '💤 Dort' : '☀️ Réveillé' },
+                  { key: 'adm_energy',   label: '⚡ -40 Énergie',      color: '#facc15', fn: adminDrainEnergy,   toast: (d: any) => `⚡ ${d.energy}/100` },
+                ].map(({ key, label, color, fn, toast }) => (
+                  <button key={key} className="btn btn-outline" style={{ fontSize: '.72rem', padding: '.45rem .4rem', borderColor: color + '44', color }}
+                    disabled={loading === key}
+                    onClick={async () => {
+                      setLoading(key); const r = await fn(); setLoading(null)
+                      if (r.error) { addToast(r.error, 'error'); return }
+                      if (r.data) { setPet(r.data); addToast(toast(r.data), 'success') }
+                    }}>
+                    {label}
+                  </button>
+                ))}
               </div>
             </div>
           )}
 
-          {/* Info */}
+          {/* ── Info ── */}
           <div style={{ padding: '.75rem 1rem', borderRadius: 'var(--r)', background: 'rgba(255,255,255,.02)', border: '1px solid var(--border2)', fontSize: '.72rem', color: 'var(--text3)', lineHeight: 1.7 }}>
-            💡 Nourris-le toutes les 2h (60 % de chance de crotte après). Nettoie les crottes ou sa santé chute. Seulement 3 câlins/jour. Les mini-jeux remontent l&apos;humeur sans limite.
+            💡 Énergie se vide en ~14h. Laisse-le dormir 5h pour la recharger. 60% de chance de crotte après repas. Maladie si trop affamé. 3 câlins max/jour — les mini-jeux remontent l&apos;humeur sans limite.
           </div>
         </>
       )}
 
+      {/* ── CSS Animations ── */}
       <style>{`
-        /* ── Animations alien ──────────────────────────────── */
         @keyframes tama-breathe {
           0%, 100% { transform: translateY(0) scale(1); }
           50%       { transform: translateY(-4px) scale(1.025); }
@@ -659,11 +764,32 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
           50%       { transform: scale(0.9) translateY(3px); }
           80%       { transform: scale(1.06) translateY(-2px); }
         }
+        @keyframes tama-sick-wobble {
+          0%, 100% { transform: rotate(0deg) translateX(0); }
+          20%       { transform: rotate(-3deg) translateX(-3px); }
+          40%       { transform: rotate(3deg) translateX(3px); }
+          60%       { transform: rotate(-2deg) translateX(-2px); }
+          80%       { transform: rotate(2deg) translateX(2px); }
+        }
+        @keyframes tama-sleep-breathe {
+          0%, 100% { transform: translateY(0) scale(1); }
+          50%       { transform: translateY(3px) scale(0.97); }
+        }
+        @keyframes tama-wake-up {
+          0%   { transform: scale(0.9) rotate(-5deg); }
+          40%  { transform: scale(1.12) rotate(3deg); }
+          70%  { transform: scale(0.96) rotate(-1deg); }
+          100% { transform: scale(1) rotate(0deg); }
+        }
         @keyframes tama-pet-glow {
           0%, 100% { filter: brightness(1) drop-shadow(0 0 0px transparent); }
           50%       { filter: brightness(1.6) drop-shadow(0 0 12px #ff88ffaa); }
         }
-        /* ── Animations éléments ───────────────────────────── */
+        @keyframes tama-zzz-float {
+          0%   { transform: translateY(0) scale(1); opacity: 0.7; }
+          50%  { transform: translateY(-10px) scale(1.1); opacity: 1; }
+          100% { transform: translateY(0) scale(1); opacity: 0.7; }
+        }
         @keyframes tama-poop-appear {
           0%   { transform: scale(0) rotate(-30deg) translateY(-8px); opacity: 0; }
           65%  { transform: scale(1.25) rotate(6deg); opacity: 1; }
@@ -672,6 +798,10 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
         @keyframes tama-poop-warn {
           0%, 100% { opacity: 1; }
           50%       { opacity: 0.35; }
+        }
+        @keyframes tama-attention-pulse {
+          0%, 100% { box-shadow: 0 0 0 1px #ef444433, 0 0 30px #ef444411, inset 0 0 20px rgba(0,0,0,.3); }
+          50%       { box-shadow: 0 0 0 2px #ef444466, 0 0 40px #ef444422, inset 0 0 20px rgba(0,0,0,.3); }
         }
         @keyframes tama-food-fly {
           0%   { transform: translateX(0) translateY(0) scale(1.2) rotate(0deg); opacity: 1; }
@@ -693,9 +823,10 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
           60%  { transform: translateX(-8px) rotate(-5deg); opacity: 1; }
           100% { transform: translateX(40px) rotate(-20deg); opacity: 0; }
         }
-        @keyframes tama-pop-in {
-          0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
-          100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        @keyframes tama-levelup-pop {
+          0%   { transform: scale(0.4) rotate(-10deg); opacity: 0; }
+          60%  { transform: scale(1.15) rotate(3deg); opacity: 1; }
+          100% { transform: scale(1) rotate(0deg); opacity: 1; }
         }
       `}</style>
     </div>
