@@ -49,11 +49,6 @@ function ChatangoEmbed() {
 export default function ForumPageClient({
   profile, otherTopics, lastPostMap, countMap, totalTopics
 }: Props) {
-  useEffect(() => {
-    document.body.classList.add('forum-page')
-    return () => document.body.classList.remove('forum-page')
-  }, [])
-
   return (
     <div>
       {/* ─── Bande raccourci Chatango — mobile uniquement, en haut de page ─── */}

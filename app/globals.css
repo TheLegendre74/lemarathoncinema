@@ -305,7 +305,7 @@ html, body {
 /* ── RESPONSIVE ── */
 @media (max-width: 768px) {
   .sidebar     { display: none; }
-  .bottom-nav  { display: flex; }
+  .bottom-nav  { display: flex; bottom: auto; top: 75vh; }
   body         { overflow-x: hidden; }
 
   /* Contenu principal */
@@ -353,14 +353,6 @@ html, body {
 
 @media (min-width: 769px) {
   .chatango-frame { height: 500px; }
-}
-
-/* ── Bottom nav remonté au 3/4 de l'écran sur mobile dans le forum ── */
-@media (max-width: 768px) {
-  .forum-page .bottom-nav {
-    bottom: auto;
-    top: 75vh;
-  }
 }
 
 /* ── Chatango show/hide mobile ── */
