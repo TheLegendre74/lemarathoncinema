@@ -954,7 +954,7 @@ export default function EasterEggs({ config = {}, isGuest = false }: { config?: 
       snd.volume = 0.85; snd.loop = true; snd.play().catch(() => {})
       predSoundRef.current = snd; discoverEgg('predator'); setShowAVP(true)
     }
-    else if (t.endsWith('tipiak'))     { setShowTipiak(true) }
+    else if (t.endsWith('gomu gomu no tipiak pirates!')) { setShowTipiak(true) }
     else { triggered = false }
     if (triggered) { setMobileVal(''); setShowMobileInput(false) }
   }
@@ -1082,8 +1082,8 @@ export default function EasterEggs({ config = {}, isGuest = false }: { config?: 
         keyBuf.current = []
         return
       }
-      // "tipiak" → secret — streaming alternatif (liens gérés par admin)
-      if (buf.slice(-6).join('').toLowerCase() === 'tipiak') {
+      // "gomu gomu no tipiak pirates!" → secret — streaming alternatif (liens gérés par admin)
+      if (buf.slice(-26).join('').toLowerCase() === 'gomu gomu no tipiak pirates!') {
         setShowTipiak(true)
         keyBuf.current = []
         return
