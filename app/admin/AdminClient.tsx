@@ -7,6 +7,145 @@ import { useToast } from '@/components/ToastProvider'
 import { CONFIG } from '@/lib/config'
 import type { Film, Profile } from '@/lib/supabase/types'
 import type { ServerConfig } from '@/lib/serverConfig'
+import { DEFAULT_RULES, type RuleCard } from '@/app/page'
+
+// ─── RULES EDITOR ────────────────────────────────────────────────────────────
+function RulesEditor({ value, onChange, inputStyle }: {
+  value: string
+  onChange: (json: string) => void
+  inputStyle: React.CSSProperties
+}) {
+  const [cards, setCards] = useState<RuleCard[]>(() => {
+    try { const p = JSON.parse(value); return Array.isArray(p) && p.length > 0 ? p : [...DEFAULT_RULES] }
+    catch { return [...DEFAULT_RULES] }
+  })
+  const [openIdx, setOpenIdx] = useState<number | null>(null)
+
+  function sync(next: RuleCard[]) {
+    setCards(next)
+    onChange(JSON.stringify(next))
+  }
+
+  function update(i: number, patch: Partial<RuleCard>) {
+    sync(cards.map((c, idx) => idx === i ? { ...c, ...patch } : c))
+  }
+
+  function addCard() {
+    const next = [...cards, { emoji: '📌', title: 'Nouvelle section', text: '' }]
+    sync(next)
+    setOpenIdx(next.length - 1)
+  }
+
+  function remove(i: number) {
+    sync(cards.filter((_, idx) => idx !== i))
+    if (openIdx === i) setOpenIdx(null)
+  }
+
+  function move(i: number, dir: -1 | 1) {
+    const j = i + dir
+    if (j < 0 || j >= cards.length) return
+    const next = [...cards]
+    ;[next[i], next[j]] = [next[j], next[i]]
+    sync(next)
+    setOpenIdx(j)
+  }
+
+  const ta: React.CSSProperties = { ...inputStyle, resize: 'vertical', minHeight: 60 }
+
+  return (
+    <div>
+      {cards.map((c, i) => (
+        <div key={i} style={{ border: '1px solid var(--border2)', borderRadius: 'var(--r)', marginBottom: '.5rem', overflow: 'hidden' }}>
+          {/* Header bar */}
+          <div
+            onClick={() => setOpenIdx(openIdx === i ? null : i)}
+            style={{ display: 'flex', alignItems: 'center', gap: '.5rem', padding: '.5rem .75rem', background: 'var(--bg3)', cursor: 'pointer', userSelect: 'none' }}
+          >
+            <span style={{ fontSize: '1rem' }}>{c.emoji}</span>
+            <span style={{ flex: 1, fontSize: '.82rem', fontWeight: 500, color: 'var(--text2)' }}>{c.title || '(sans titre)'}</span>
+            <span style={{ fontSize: '.65rem', color: 'var(--text3)', marginRight: '.3rem' }}>{openIdx === i ? '▲' : '▼'}</span>
+            <button onClick={e => { e.stopPropagation(); move(i, -1) }} disabled={i === 0}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: '.75rem', padding: '0 3px' }}>↑</button>
+            <button onClick={e => { e.stopPropagation(); move(i, 1) }} disabled={i === cards.length - 1}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: '.75rem', padding: '0 3px' }}>↓</button>
+            <button onClick={e => { e.stopPropagation(); if (confirm(`Supprimer "${c.title}" ?`)) remove(i) }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '.75rem', padding: '0 3px' }}>✕</button>
+          </div>
+          {/* Edit fields */}
+          {openIdx === i && (
+            <div style={{ padding: '.75rem', display: 'flex', flexDirection: 'column', gap: '.5rem', background: 'var(--bg2)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '60px 1fr', gap: '.4rem' }}>
+                <div>
+                  <label style={{ fontSize: '.65rem', color: 'var(--text3)', display: 'block', marginBottom: '.15rem' }}>Emoji</label>
+                  <input value={c.emoji} onChange={e => update(i, { emoji: e.target.value })} style={inputStyle} maxLength={4} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '.65rem', color: 'var(--text3)', display: 'block', marginBottom: '.15rem' }}>Titre</label>
+                  <input value={c.title} onChange={e => update(i, { title: e.target.value })} style={inputStyle} />
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: '.65rem', color: 'var(--text3)', display: 'block', marginBottom: '.15rem' }}>
+                  Texte principal <span style={{ opacity: .5 }}>({'{EXP_FILM}'}, {'{SEANCE_JOUR}'}, etc.)</span>
+                </label>
+                <textarea value={c.text ?? ''} onChange={e => update(i, { text: e.target.value })} style={ta} />
+              </div>
+              <div>
+                <label style={{ fontSize: '.65rem', color: 'var(--text3)', display: 'block', marginBottom: '.15rem' }}>
+                  Intro liste <span style={{ opacity: .5 }}>(texte avant les puces)</span>
+                </label>
+                <input value={c.intro ?? ''} onChange={e => update(i, { intro: e.target.value })} style={inputStyle} />
+              </div>
+              <div>
+                <label style={{ fontSize: '.65rem', color: 'var(--text3)', display: 'block', marginBottom: '.15rem' }}>
+                  Liste à puces <span style={{ opacity: .5 }}>(une entrée par ligne)</span>
+                </label>
+                <textarea
+                  value={(c.list ?? []).join('\n')}
+                  onChange={e => update(i, { list: e.target.value.split('\n').filter(Boolean) })}
+                  style={ta}
+                  placeholder="Item 1&#10;Item 2&#10;Item 3"
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '.65rem', color: 'var(--text3)', display: 'block', marginBottom: '.15rem' }}>
+                  Texte après la liste
+                </label>
+                <input value={c.after ?? ''} onChange={e => update(i, { after: e.target.value })} style={inputStyle} />
+              </div>
+              <div>
+                <label style={{ fontSize: '.65rem', color: 'var(--text3)', display: 'block', marginBottom: '.15rem' }}>
+                  Tableau <span style={{ opacity: .5 }}>(une ligne : "Libellé | Valeur")</span>
+                </label>
+                <textarea
+                  value={(c.table ?? []).map(r => r.join(' | ')).join('\n')}
+                  onChange={e => {
+                    const rows = e.target.value.split('\n').filter(Boolean).map(l => {
+                      const sep = l.indexOf(' | ')
+                      return sep >= 0 ? [l.slice(0, sep), l.slice(sep + 3)] as [string, string] : [l, ''] as [string, string]
+                    })
+                    update(i, { table: rows })
+                  }}
+                  style={ta}
+                  placeholder="Regarder un film | +5 EXP&#10;Voter dans un duel | +2 EXP"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+      <button
+        onClick={addCard}
+        style={{ ...inputStyle, border: '1px dashed var(--border2)', cursor: 'pointer', textAlign: 'center', padding: '.5rem', width: '100%', color: 'var(--text3)', fontSize: '.8rem' }}
+      >
+        + Ajouter une section
+      </button>
+      <div style={{ fontSize: '.62rem', color: 'var(--text3)', marginTop: '.4rem', lineHeight: 1.5 }}>
+        Variables dynamiques : <code>{'{EXP_FILM}'}</code> <code>{'{EXP_FDLS}'}</code> <code>{'{EXP_DUEL_WIN}'}</code> <code>{'{EXP_VOTE}'}</code> <code>{'{SEANCE_JOUR}'}</code> <code>{'{SEANCE_HEURE}'}</code> <code>{'{FDLS_JOUR}'}</code> <code>{'{FDLS_HEURE}'}</code>
+      </div>
+    </div>
+  )
+}
 
 // ─── CONFIG SECTION ──────────────────────────────────────────────────────────
 function ConfigSection({ serverConfig, siteConfig, onSave, saving }: {
@@ -49,6 +188,7 @@ function ConfigSection({ serverConfig, siteConfig, onSave, saving }: {
     randy_quote:       siteConfig.randy_quote       ?? cfg.RANDY_QUOTE,
     fightclub_gameover: siteConfig.fightclub_gameover ?? cfg.FIGHTCLUB_GAMEOVER,
     killbill_end:      siteConfig.killbill_end      ?? cfg.KILLBILL_END,
+    MARATHON_RULES:    siteConfig.MARATHON_RULES    ?? cfg.MARATHON_RULES ?? JSON.stringify(DEFAULT_RULES, null, 2),
   })
 
   const f = (key: string) => ({
@@ -103,13 +243,11 @@ function ConfigSection({ serverConfig, siteConfig, onSave, saving }: {
       <Sub label="Phrase d'accueil (sous-titre du site)" />
       <input style={inputStyle} {...f('accueil_sous_titre')} />
 
-      <Sub label="Règles du marathon (texte affiché sur l'accueil)" />
-      <textarea
-        value={vals['MARATHON_RULES'] ?? ''}
-        onChange={e => setVals(v => ({ ...v, MARATHON_RULES: e.target.value }))}
-        rows={8}
-        placeholder="Décris ici les règles du marathon. Ce texte s'affiche sur la page d'accueil."
-        style={{ ...inputStyle, resize: 'vertical' }}
+      <Sub label="Règles du jeu (page d'accueil — synchronisées en temps réel)" />
+      <RulesEditor
+        value={vals['MARATHON_RULES'] ?? JSON.stringify(DEFAULT_RULES, null, 2)}
+        onChange={json => setVals(v => ({ ...v, MARATHON_RULES: json }))}
+        inputStyle={inputStyle}
       />
 
       <Sub label="Easter eggs — Matrix (taper 'red pill')" />
