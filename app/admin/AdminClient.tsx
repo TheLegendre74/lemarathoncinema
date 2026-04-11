@@ -7,7 +7,7 @@ import { useToast } from '@/components/ToastProvider'
 import { CONFIG } from '@/lib/config'
 import type { Film, Profile } from '@/lib/supabase/types'
 import type { ServerConfig } from '@/lib/serverConfig'
-import { DEFAULT_RULES, type RuleCard } from '@/app/page'
+import { DEFAULT_RULES, type RuleCard } from '@/lib/rules'
 
 // ─── RULES EDITOR ────────────────────────────────────────────────────────────
 function RulesEditor({ value, onChange, inputStyle }: {
