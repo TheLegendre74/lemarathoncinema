@@ -3427,7 +3427,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
         <div
           className="fc-mobile-controls"
           style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0,
+            position: 'absolute', bottom: 75, left: 0, right: 0,
             display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end',
             padding: '0 12px 10px',
             pointerEvents: 'none',

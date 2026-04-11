@@ -1009,7 +1009,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
       addToast(res.error, '⚠️')
       return
     }
-    addToast(wasWatched ? `"${filmTitre}" retiré` : `+${CONFIG.EXP_FILM} EXP — "${filmTitre}" vu !`, '🎬')
+    addToast(wasWatched ? `"${filmTitre}" retiré` : isMarathonLive ? `+${CONFIG.EXP_FILM} EXP — "${filmTitre}" vu !` : `"${filmTitre}" marqué vu`, '🎬')
     router.refresh()
   }
 
