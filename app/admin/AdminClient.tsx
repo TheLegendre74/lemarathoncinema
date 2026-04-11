@@ -10,44 +10,59 @@ import type { ServerConfig } from '@/lib/serverConfig'
 import { DEFAULT_RULES, type RuleCard } from '@/lib/rules'
 
 // ─── RULES EDITOR ────────────────────────────────────────────────────────────
-function RulesEditor({ value, onChange, inputStyle }: {
+function RulesEditor({ value, inputStyle }: {
   value: string
-  onChange: (json: string) => void
   inputStyle: React.CSSProperties
 }) {
+  const { addToast } = useToast()
   const [cards, setCards] = useState<RuleCard[]>(() => {
     try { const p = JSON.parse(value); return Array.isArray(p) && p.length > 0 ? p : [...DEFAULT_RULES] }
     catch { return [...DEFAULT_RULES] }
   })
   const [openIdx, setOpenIdx] = useState<number | null>(null)
-
-  function sync(next: RuleCard[]) {
-    setCards(next)
-    onChange(JSON.stringify(next))
-  }
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
 
   function update(i: number, patch: Partial<RuleCard>) {
-    sync(cards.map((c, idx) => idx === i ? { ...c, ...patch } : c))
+    setCards(prev => prev.map((c, idx) => idx === i ? { ...c, ...patch } : c))
+    setSaved(false)
   }
 
   function addCard() {
-    const next = [...cards, { emoji: '📌', title: 'Nouvelle section', text: '' }]
-    sync(next)
-    setOpenIdx(next.length - 1)
+    setCards(prev => {
+      const next = [...prev, { emoji: '📌', title: 'Nouvelle section', text: '' }]
+      setOpenIdx(next.length - 1)
+      return next
+    })
+    setSaved(false)
   }
 
   function remove(i: number) {
-    sync(cards.filter((_, idx) => idx !== i))
+    setCards(prev => prev.filter((_, idx) => idx !== i))
     if (openIdx === i) setOpenIdx(null)
+    setSaved(false)
   }
 
   function move(i: number, dir: -1 | 1) {
     const j = i + dir
-    if (j < 0 || j >= cards.length) return
-    const next = [...cards]
-    ;[next[i], next[j]] = [next[j], next[i]]
-    sync(next)
+    setCards(prev => {
+      if (j < 0 || j >= prev.length) return prev
+      const next = [...prev]
+      ;[next[i], next[j]] = [next[j], next[i]]
+      return next
+    })
     setOpenIdx(j)
+    setSaved(false)
+  }
+
+  async function handleSave() {
+    setSaving(true)
+    const json = JSON.stringify(cards)
+    const err = await adminSetConfig({ MARATHON_RULES: json })
+    setSaving(false)
+    if (err) { addToast('Erreur sauvegarde', 'error'); return }
+    setSaved(true)
+    addToast('✅ Règles sauvegardées ! La page d\'accueil est mise à jour.', 'success')
   }
 
   const ta: React.CSSProperties = { ...inputStyle, resize: 'vertical', minHeight: 60 }
@@ -134,14 +149,26 @@ function RulesEditor({ value, onChange, inputStyle }: {
           )}
         </div>
       ))}
-      <button
-        onClick={addCard}
-        style={{ ...inputStyle, border: '1px dashed var(--border2)', cursor: 'pointer', textAlign: 'center', padding: '.5rem', width: '100%', color: 'var(--text3)', fontSize: '.8rem' }}
-      >
-        + Ajouter une section
-      </button>
-      <div style={{ fontSize: '.62rem', color: 'var(--text3)', marginTop: '.4rem', lineHeight: 1.5 }}>
-        Variables dynamiques : <code>{'{EXP_FILM}'}</code> <code>{'{EXP_FDLS}'}</code> <code>{'{EXP_DUEL_WIN}'}</code> <code>{'{EXP_VOTE}'}</code> <code>{'{SEANCE_JOUR}'}</code> <code>{'{SEANCE_HEURE}'}</code> <code>{'{FDLS_JOUR}'}</code> <code>{'{FDLS_HEURE}'}</code>
+
+      {/* Ajouter + Sauvegarder */}
+      <div style={{ display: 'flex', gap: '.5rem', marginTop: '.3rem' }}>
+        <button
+          onClick={addCard}
+          style={{ ...inputStyle, border: '1px dashed var(--border2)', cursor: 'pointer', padding: '.5rem', flex: 1, color: 'var(--text3)', fontSize: '.8rem', textAlign: 'center' }}
+        >
+          + Ajouter une section
+        </button>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="btn btn-gold"
+          style={{ padding: '.5rem 1.2rem', fontSize: '.82rem', whiteSpace: 'nowrap' }}
+        >
+          {saving ? '…' : saved ? '✅ Sauvegardé' : '💾 Sauvegarder les règles'}
+        </button>
+      </div>
+      <div style={{ fontSize: '.62rem', color: 'var(--text3)', marginTop: '.5rem', lineHeight: 1.5 }}>
+        Variables : <code>{'{EXP_FILM}'}</code> <code>{'{EXP_FDLS}'}</code> <code>{'{EXP_DUEL_WIN}'}</code> <code>{'{EXP_VOTE}'}</code> <code>{'{SEANCE_JOUR}'}</code> <code>{'{SEANCE_HEURE}'}</code> <code>{'{FDLS_JOUR}'}</code> <code>{'{FDLS_HEURE}'}</code>
       </div>
     </div>
   )
