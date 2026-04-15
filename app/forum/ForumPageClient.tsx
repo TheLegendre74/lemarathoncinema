@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import Link from 'next/link'
 import ForumTopicModal from './ForumTopicModal'
 import type { Profile } from '@/lib/supabase/types'
@@ -16,46 +16,27 @@ interface Props {
 const CHATANGO_URL = 'https://lemarathoncinema.chatango.com'
 
 function ChatangoEmbed() {
-  const containerRef = useRef<HTMLDivElement>(null)
-
   useEffect(() => {
-    if (!containerRef.current) return
-    const old = document.getElementById('cid0020000437239044688')
-    if (old) old.remove()
+    // Nettoyer l'ancien embed s'il existe
+    document.getElementById('cid0020000437239044688')?.remove()
 
-    // Chatango lit la config via script.text (propriété IDL) — pas textContent
-    const config = JSON.stringify({
-      handle: 'lemarathoncinema',
-      arch: 'js',
-      styles: {
-        a: '6600cc', b: 70, c: 'FFFFFF', d: 'FFFFFF',
-        f: 70, i: 70,
-        k: '6600cc', l: '6600cc', m: '6600cc', n: 'FFFFFF',
-        o: 70, p: '10', q: '6600cc', r: 70,
-        pos: 'br', cv: 1,
-        cvfnt: "'Helvetica Neue', Helvetica, Arial, sans-serif, sans-serif",
-        cvbg: '6600cc', cvbga: 70, cvw: 75, cvh: 30,
-      },
-    })
-
-    // Créer le script via parsing HTML garantit que .text est bien défini
-    const tmp = document.createElement('div')
-    tmp.innerHTML = `<script id="cid0020000437239044688" data-cfasync="false" async src="//st.chatango.com/js/gz/emb.js" style="width:200px;height:300px;">${config}<\/script>`
-    const parsed = tmp.querySelector('script')!
     const script = document.createElement('script')
-    script.id = parsed.id
+    script.id = 'cid0020000437239044688'
     script.setAttribute('data-cfasync', 'false')
     script.async = true
+    // Ajouter la config JSON comme nœud texte AVANT de définir src
+    script.appendChild(document.createTextNode(
+      '{"handle":"lemarathoncinema","arch":"js","styles":{"a":"6600cc","b":70,"c":"FFFFFF","d":"FFFFFF","f":70,"i":70,"k":"6600cc","l":"6600cc","m":"6600cc","n":"FFFFFF","o":70,"p":"10","q":"6600cc","r":70,"pos":"br","cv":1,"cvfnt":"\'Helvetica Neue\', Helvetica, Arial, sans-serif","cvbg":"6600cc","cvbga":70,"cvw":75,"cvh":30}}'
+    ))
     script.src = '//st.chatango.com/js/gz/emb.js'
-    script.style.cssText = 'width:200px;height:300px;'
-    script.text = parsed.text  // .text = propriété IDL correcte pour les scripts
-    containerRef.current.appendChild(script)
+    // Injecter dans body (Chatango doit être au niveau document)
+    document.body.appendChild(script)
+
+    return () => { document.getElementById('cid0020000437239044688')?.remove() }
   }, [])
 
-  return (
-    /* Desktop uniquement — l'embed est masqué sur mobile via CSS */
-    <div ref={containerRef} className="chatango-desktop" style={{ width: '100%', height: 500 }} />
-  )
+  // Le widget Chatango se positionne lui-même (pos:'br') — le div est juste un placeholder
+  return <div className="chatango-desktop" />
 }
 
 export default function ForumPageClient({
