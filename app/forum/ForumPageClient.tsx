@@ -22,13 +22,9 @@ function ChatangoEmbed() {
     if (!containerRef.current) return
     const old = document.getElementById('cid0020000437239044688')
     if (old) old.remove()
-    const script = document.createElement('script')
-    script.id = 'cid0020000437239044688'
-    script.setAttribute('data-cfasync', 'false')
-    script.async = true
-    script.src = '//st.chatango.com/js/gz/emb.js'
-    script.style.cssText = 'width:200px;height:300px;'
-    script.textContent = JSON.stringify({
+
+    // Chatango lit la config via script.text (propriété IDL) — pas textContent
+    const config = JSON.stringify({
       handle: 'lemarathoncinema',
       arch: 'js',
       styles: {
@@ -41,6 +37,18 @@ function ChatangoEmbed() {
         cvbg: '6600cc', cvbga: 70, cvw: 75, cvh: 30,
       },
     })
+
+    // Créer le script via parsing HTML garantit que .text est bien défini
+    const tmp = document.createElement('div')
+    tmp.innerHTML = `<script id="cid0020000437239044688" data-cfasync="false" async src="//st.chatango.com/js/gz/emb.js" style="width:200px;height:300px;">${config}<\/script>`
+    const parsed = tmp.querySelector('script')!
+    const script = document.createElement('script')
+    script.id = parsed.id
+    script.setAttribute('data-cfasync', 'false')
+    script.async = true
+    script.src = '//st.chatango.com/js/gz/emb.js'
+    script.style.cssText = 'width:200px;height:300px;'
+    script.text = parsed.text  // .text = propriété IDL correcte pour les scripts
     containerRef.current.appendChild(script)
   }, [])
 
