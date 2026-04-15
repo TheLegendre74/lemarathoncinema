@@ -3,6 +3,8 @@
 interface Props {
   discoveredMap: Record<string, string>
   achievements: Record<string, boolean>
+  eggStats: Record<string, number>
+  totalUsers: number
 }
 
 // ── Définition des easter eggs ────────────────────────────────────────────────
@@ -187,7 +189,7 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
-export default function EasterEggsPageClient({ discoveredMap, achievements }: Props) {
+export default function EasterEggsPageClient({ discoveredMap, achievements, eggStats, totalUsers }: Props) {
   const total = EGGS.length
   const found = EGGS.filter(e => {
     if (e.category === 'Succès') return achievements[e.id]
@@ -279,7 +281,7 @@ export default function EasterEggsPageClient({ discoveredMap, achievements }: Pr
                 )}
               </div>
 
-              {/* Right: category + date */}
+              {/* Right: category + date + stats */}
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
                 <div style={{
                   display: 'inline-block',
@@ -288,10 +290,16 @@ export default function EasterEggsPageClient({ discoveredMap, achievements }: Pr
                   background: CATEGORY_COLORS[egg.category],
                   border: `1px solid ${CATEGORY_TEXT[egg.category]}44`,
                   borderRadius: 99, padding: '2px 8px',
-                  marginBottom: foundAt ? '.3rem' : 0,
+                  marginBottom: '.3rem',
                 }}>
                   {egg.category}
                 </div>
+                {/* % de joueurs qui l'ont trouvé */}
+                {totalUsers > 0 && (
+                  <div style={{ fontSize: '.65rem', color: 'var(--text3)', opacity: .75 }}>
+                    {eggStats[egg.id] ?? 0}% des joueurs
+                  </div>
+                )}
                 {foundAt && (
                   <div style={{ fontSize: '.65rem', color: 'var(--text3)', opacity: .7 }}>
                     {formatDate(foundAt)}

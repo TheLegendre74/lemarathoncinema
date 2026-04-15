@@ -134,35 +134,80 @@ export default async function ProfilPage({ searchParams }: { searchParams: Promi
         blockedIds={blockedIds}
       />
 
-      {/* Films vus */}
-      <div className="section-title">Films vus ({watched?.length ?? 0})</div>
-      {!watched?.length ? (
-        <div style={{ color: 'var(--text3)', fontSize: '.83rem' }}>Aucun film vu. Lance-toi dans le marathon !</div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
-          {watched.map((w: any) => {
-            const film = (w as any).films
-            if (!film) return null
-            return (
-              <div key={`${w.film_id}-${w.watched_at}`} style={{ display: 'flex', alignItems: 'center', gap: '.9rem', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.65rem .9rem' }}>
-                <div style={{ width: 30, height: 45, borderRadius: 4, overflow: 'hidden', flexShrink: 0, background: 'var(--bg3)' }}>
-                  {film.poster
-                    ? <Image src={film.poster} alt={film.titre} width={30} height={45} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
-                    : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.8rem' }}>🎬</div>
-                  }
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '.87rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{film.titre}</div>
-                  <div style={{ fontSize: '.7rem', color: 'var(--text3)' }}>{film.annee} · {film.genre}</div>
-                </div>
-                {w.pre && <span style={{ fontSize: '.67rem', color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 99, padding: '2px 7px', whiteSpace: 'nowrap' }}>Pré-marathon</span>}
-                <div style={{ fontSize: '.68rem', color: 'var(--text3)', flexShrink: 0 }}>{new Date(w.watched_at).toLocaleDateString('fr-FR')}</div>
-                {!w.pre && <span style={{ fontSize: '.7rem', color: 'var(--gold)', fontWeight: 500, flexShrink: 0 }}>+{CONFIG.EXP_FILM} EXP</span>}
+      {/* Films vus — Pré-marathon */}
+      {(() => {
+        const preList = (watched ?? []).filter((w: any) => w.pre)
+        return (
+          <>
+            <div className="section-title" style={{ marginTop: '1rem' }}>
+              Films vus avant le marathon ({preList.length})
+            </div>
+            {!preList.length ? (
+              <div style={{ color: 'var(--text3)', fontSize: '.83rem', marginBottom: '1.5rem' }}>Aucun film vu avant le marathon.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '.4rem', marginBottom: '1.5rem' }}>
+                {preList.map((w: any) => {
+                  const film = w.films
+                  if (!film) return null
+                  return (
+                    <div key={`pre-${w.film_id}`} style={{ display: 'flex', alignItems: 'center', gap: '.9rem', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.65rem .9rem' }}>
+                      <div style={{ width: 30, height: 45, borderRadius: 4, overflow: 'hidden', flexShrink: 0, background: 'var(--bg3)' }}>
+                        {film.poster
+                          ? <Image src={film.poster} alt={film.titre} width={30} height={45} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
+                          : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.8rem' }}>🎬</div>
+                        }
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '.87rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{film.titre}</div>
+                        <div style={{ fontSize: '.7rem', color: 'var(--text3)' }}>{film.annee} · {film.genre}</div>
+                      </div>
+                      <div style={{ fontSize: '.68rem', color: 'var(--text3)', flexShrink: 0 }}>{new Date(w.watched_at).toLocaleDateString('fr-FR')}</div>
+                    </div>
+                  )
+                })}
               </div>
-            )
-          })}
-        </div>
-      )}
+            )}
+          </>
+        )
+      })()}
+
+      {/* Films vus — Pendant le marathon */}
+      {(() => {
+        const marathonList = (watched ?? []).filter((w: any) => !w.pre)
+        return (
+          <>
+            <div className="section-title">
+              Films vus pendant le marathon ({marathonList.length})
+            </div>
+            {!marathonList.length ? (
+              <div style={{ color: 'var(--text3)', fontSize: '.83rem' }}>Aucun film vu pendant le marathon.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
+                {marathonList.map((w: any) => {
+                  const film = w.films
+                  if (!film) return null
+                  return (
+                    <div key={`marathon-${w.film_id}`} style={{ display: 'flex', alignItems: 'center', gap: '.9rem', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.65rem .9rem' }}>
+                      <div style={{ width: 30, height: 45, borderRadius: 4, overflow: 'hidden', flexShrink: 0, background: 'var(--bg3)' }}>
+                        {film.poster
+                          ? <Image src={film.poster} alt={film.titre} width={30} height={45} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
+                          : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.8rem' }}>🎬</div>
+                        }
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '.87rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{film.titre}</div>
+                        <div style={{ fontSize: '.7rem', color: 'var(--text3)' }}>{film.annee} · {film.genre}</div>
+                      </div>
+                      <div style={{ fontSize: '.68rem', color: 'var(--text3)', flexShrink: 0 }}>{new Date(w.watched_at).toLocaleDateString('fr-FR')}</div>
+                      <span style={{ fontSize: '.7rem', color: 'var(--gold)', fontWeight: 500, flexShrink: 0 }}>+{CONFIG.EXP_FILM} EXP</span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </>
+        )
+      })()}
     </div>
   )
 }

@@ -37,10 +37,29 @@ export default async function EasterEggsPage() {
     }
   }
 
+  // Statistiques globales des easter eggs (tous joueurs)
+  const [{ data: allEggs }, { count: totalUsers }] = await Promise.all([
+    supabase.from('discovered_eggs').select('egg_id'),
+    supabase.from('profiles').select('*', { count: 'exact', head: true }),
+  ])
+
+  const eggStats: Record<string, number> = {}
+  if (allEggs && totalUsers) {
+    for (const { egg_id } of allEggs) {
+      eggStats[egg_id] = (eggStats[egg_id] ?? 0) + 1
+    }
+    // Convertir en pourcentage
+    for (const id in eggStats) {
+      eggStats[id] = Math.round((eggStats[id] / totalUsers) * 100)
+    }
+  }
+
   return (
     <EasterEggsPageClient
       discoveredMap={discoveredMap}
       achievements={achievements}
+      eggStats={eggStats}
+      totalUsers={totalUsers ?? 0}
     />
   )
 }
