@@ -906,9 +906,13 @@ export async function addFilm(formData: FormData) {
   } as any)
 
   if (error) return { error: error.message }
+
+  const { data: inserted } = await supabase.from('films').select('id').ilike('titre', titre).eq('annee', annee).single()
+  const filmId = inserted?.id ?? null
+
   revalidatePath('/films')
   revalidatePath('/admin')
-  return { success: true, saison, flagged18, flagged16, isPending }
+  return { success: true, saison, flagged18, flagged16, isPending, filmId }
 }
 
 // ── POSTS (forum) ────────────────────────────────────────────

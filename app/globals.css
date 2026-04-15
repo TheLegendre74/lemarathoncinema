@@ -305,7 +305,7 @@ html, body {
 /* ── RESPONSIVE ── */
 @media (max-width: 768px) {
   .sidebar     { display: none; }
-  .bottom-nav  { display: flex; bottom: auto; top: 75vh; }
+  .bottom-nav  { display: flex; }
   body         { overflow-x: hidden; }
 
   /* Contenu principal */

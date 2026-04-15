@@ -20,10 +20,10 @@ function ChatangoEmbed() {
 
   useEffect(() => {
     if (!containerRef.current) return
-    const old = document.getElementById('cid0020000436924900725')
+    const old = document.getElementById('cid0020000437239044688')
     if (old) old.remove()
     const script = document.createElement('script')
-    script.id = 'cid0020000436924900725'
+    script.id = 'cid0020000437239044688'
     script.setAttribute('data-cfasync', 'false')
     script.async = true
     script.src = '//st.chatango.com/js/gz/emb.js'
@@ -32,10 +32,13 @@ function ChatangoEmbed() {
       handle: 'lemarathoncinema',
       arch: 'js',
       styles: {
-        a: 'CC0000', b: 100, c: 'FFFFFF', d: 'FFFFFF',
-        k: 'CC0000', l: 'CC0000', m: 'CC0000', n: 'FFFFFF',
-        p: '10', q: 'CC0000', r: 100,
-        pos: 'br', cv: 1, cvbg: 'CC0000', cvw: 75, cvh: 30,
+        a: '6600cc', b: 70, c: 'FFFFFF', d: 'FFFFFF',
+        f: 70, i: 70,
+        k: '6600cc', l: '6600cc', m: '6600cc', n: 'FFFFFF',
+        o: 70, p: '10', q: '6600cc', r: 70,
+        pos: 'br', cv: 1,
+        cvfnt: "'Helvetica Neue', Helvetica, Arial, sans-serif, sans-serif",
+        cvbg: '6600cc', cvbga: 70, cvw: 75, cvh: 30,
       },
     })
     containerRef.current.appendChild(script)

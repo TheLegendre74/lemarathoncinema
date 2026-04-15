@@ -584,6 +584,7 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
   const { addToast } = useToast()
   const [err, setErr] = useState('')
   const [loading, setLoading] = useState(false)
+  const [watchedStatus, setWatchedStatus] = useState<'none' | 'pre' | 'marathon'>('none')
   const [titre, setTitre] = useState('')
   const [annee, setAnnee] = useState('')
   const [realisateur, setRealisateur] = useState('')
@@ -693,6 +694,14 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
       const s = result.saison
       addToast(s && s > saisonNumero ? `Film réservé pour la Saison ${s} 🔴` : 'Film ajouté à la liste ! 🎬', '✅')
     }
+
+    // Marquer comme vu si l'utilisateur l'a indiqué
+    if (!result.isPending && watchedStatus !== 'none' && result.filmId) {
+      const pre = watchedStatus === 'pre'
+      await markWatched(result.filmId, pre)
+      addToast(pre ? 'Marqué vu avant le marathon 👁️' : 'Marqué vu pendant le marathon 🎬', '✅')
+    }
+
     onRefresh(); onClose()
   }
 
@@ -867,6 +876,40 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
                 {canSubmitPending && <span style={{ color: '#f5a623' }}>Si le film est introuvable, vous pouvez le <strong>soumettre à l'admin</strong> pour validation manuelle.</span>}
               </div>
             )}
+
+            {/* J'ai vu ce film */}
+            <div style={{ marginBottom: '1rem' }}>
+              <div style={{ fontSize: '.78rem', color: 'var(--text2)', marginBottom: '.5rem', fontWeight: 500 }}>J'ai vu ce film…</div>
+              <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap' }}>
+                {(['none', 'pre', 'marathon'] as const).map(opt => {
+                  const labels: Record<typeof opt, string> = { none: '🚫 Pas encore vu', pre: '⏮️ Avant le marathon', marathon: '🎬 Pendant le marathon' }
+                  const active = watchedStatus === opt
+                  const disabled = opt === 'marathon' && !isMarathonLive
+                  return (
+                    <button
+                      key={opt}
+                      type="button"
+                      disabled={disabled}
+                      onClick={() => setWatchedStatus(opt)}
+                      style={{
+                        fontSize: '.76rem', padding: '.4rem .85rem',
+                        borderRadius: 'var(--r)', border: `1px solid ${active ? 'var(--gold)' : 'var(--border2)'}`,
+                        background: active ? 'rgba(232,196,106,.15)' : 'var(--bg3)',
+                        color: active ? 'var(--gold)' : disabled ? 'var(--text3)' : 'var(--text2)',
+                        cursor: disabled ? 'not-allowed' : 'pointer',
+                        opacity: disabled ? .45 : 1,
+                        transition: 'all .15s',
+                      }}
+                    >
+                      {labels[opt]}
+                    </button>
+                  )
+                })}
+              </div>
+              {watchedStatus === 'marathon' && !isMarathonLive && (
+                <div style={{ fontSize: '.68rem', color: 'var(--text3)', marginTop: '.35rem' }}>Le marathon n'est pas en cours.</div>
+              )}
+            </div>
 
             {err && <div style={{ color: 'var(--red)', fontSize: '.78rem', marginBottom: '.8rem' }}>{err}</div>}
 
