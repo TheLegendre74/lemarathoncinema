@@ -296,8 +296,8 @@ export default function EasterEggsPageClient({ discoveredMap, achievements, eggS
                 </div>
                 {/* % de joueurs qui l'ont trouvé */}
                 {totalUsers > 0 && (
-                  <div style={{ fontSize: '.65rem', color: 'var(--text3)', opacity: .75 }}>
-                    {eggStats[egg.id] ?? 0}% des joueurs
+                  <div style={{ fontSize: '.78rem', color: '#fff', fontWeight: 600 }}>
+                    {eggStats[egg.id] ?? 0}% <span style={{ fontSize: '.62rem', fontWeight: 400, color: 'var(--text3)' }}>des joueurs</span>
                   </div>
                 )}
                 {foundAt && (
