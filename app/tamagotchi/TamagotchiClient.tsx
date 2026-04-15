@@ -360,9 +360,9 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
     const id = setInterval(() => {
       setPet((p: any) => {
         if (!p || p.stage === 'dead') return p
-        return { ...p, happiness: Math.max(0, (p.happiness ?? 50) - 1) }
+        return { ...p, happiness: Math.max(0, (p.happiness ?? 50) - 2) }
       })
-    }, 120_000) // -1 toutes les 2 minutes → oblige à jouer
+    }, 3_600_000) // -2 toutes les 2 heures → oblige à jouer
     return () => clearInterval(id)
   }, [isDead, isSleeping])
 
