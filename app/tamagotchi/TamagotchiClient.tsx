@@ -354,6 +354,18 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
     return () => clearInterval(id)
   }, [])
 
+  // ── Décroissance passive du bonheur ───────────────────────────────────────
+  useEffect(() => {
+    if (isDead || isSleeping) return
+    const id = setInterval(() => {
+      setPet((p: any) => {
+        if (!p || p.stage === 'dead') return p
+        return { ...p, happiness: Math.max(0, (p.happiness ?? 50) - 1) }
+      })
+    }, 120_000) // -1 toutes les 2 minutes → oblige à jouer
+    return () => clearInterval(id)
+  }, [isDead, isSleeping])
+
   const FEED_CD = 2 * 3_600_000
   const HEAL_CD = 24 * 3_600_000
   const HUNT_CD = 4 * 3_600_000

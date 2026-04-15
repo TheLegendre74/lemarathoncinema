@@ -17,11 +17,12 @@ export default async function ProfilPage({ searchParams }: { searchParams: Promi
   if (!user) redirect('/auth')
   const { with: withUserId } = await searchParams
 
-  const [{ data: profile }, { data: watched }, { data: votes }, { data: eggs }] = await Promise.all([
+  const [{ data: profile }, { data: watched }, { data: votes }, { data: eggs }, { data: tama }] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
     supabase.from('watched').select('*, films(id, titre, annee, genre, realisateur, poster)').eq('user_id', user.id).order('watched_at', { ascending: false }),
     supabase.from('votes').select('duel_id, voted_at').eq('user_id', user.id),
     supabase.from('discovered_eggs').select('egg_id').eq('user_id', user.id),
+    (supabase as any).from('tamagotchi').select('xp').eq('user_id', user.id).single(),
   ])
 
   if (!profile) redirect('/auth')
@@ -57,7 +58,19 @@ export default async function ProfilPage({ searchParams }: { searchParams: Promi
   const badges = getAllBadges(profile.exp)
   const badge = getBadge(profile.exp)
   const discoveredEggIds = (eggs ?? []).map((e: any) => e.egg_id as string)
-  const unlockedSpecials = SPECIAL_BADGES.filter(b => discoveredEggIds.includes(b.id))
+
+  // Titres Tamagotchi débloqués selon le niveau
+  const tamaXp = tama?.xp ?? 0
+  const tamaLevel = 1 + Math.floor(tamaXp / 30)
+  const unlockedTamaTitles: string[] = []
+  if (tamaLevel >= 2)  unlockedTamaTitles.push('tama_explorateur')
+  if (tamaLevel >= 5)  unlockedTamaTitles.push('tama_chasseur')
+  if (tamaLevel >= 8)  unlockedTamaTitles.push('tama_legende')
+  if (tamaLevel >= 10) unlockedTamaTitles.push('tama_maitre')
+
+  const unlockedSpecials = SPECIAL_BADGES.filter(b =>
+    discoveredEggIds.includes(b.id) || unlockedTamaTitles.includes(b.id)
+  )
 
   return (
     <div>

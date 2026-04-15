@@ -26,7 +26,11 @@ export function isMarathonLive(): boolean {
 // ── BADGES ──────────────────────────────────────────────────
 // ── BADGES SPÉCIAUX (easter eggs) ────────────────────────────
 export const SPECIAL_BADGES = [
-  { id: 'rageux', label: 'Le Rageux', icon: '😤', cls: 'badge-rage', desc: 'Easter egg secret — réservé aux vrais rageuxs' },
+  { id: 'rageux',          label: 'Le Rageux',          icon: '😤', cls: 'badge-rage',  desc: 'Easter egg secret — réservé aux vrais rageuxs' },
+  { id: 'tama_explorateur',label: 'Explorateur',         icon: '🔭', cls: 'badge-tama',  desc: 'Tamagotchi niveau 2 — Explorateur de l\'espace' },
+  { id: 'tama_chasseur',   label: 'Chasseur Spatial',    icon: '🎯', cls: 'badge-tama',  desc: 'Tamagotchi niveau 5 — Chasseur Spatial redouté' },
+  { id: 'tama_legende',    label: 'Légende Noire',       icon: '🌑', cls: 'badge-tama',  desc: 'Tamagotchi niveau 8 — Légende Noire de l\'univers' },
+  { id: 'tama_maitre',     label: 'Maître de l\'Espace', icon: '👑', cls: 'badge-tama',  desc: 'Tamagotchi niveau 10 — Maître absolu de l\'espace' },
 ] as const
 
 export type SpecialBadge = typeof SPECIAL_BADGES[number]
