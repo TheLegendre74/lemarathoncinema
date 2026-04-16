@@ -883,7 +883,9 @@ export default function EasterEggs({ config = {}, isGuest = false }: { config?: 
   const predSoundRef = useRef<HTMLAudioElement | null>(null)
   const [showTipiak,     setShowTipiak]     = useState(false)
   const [showPandora,    setShowPandora]    = useState(false)
-  const [showClipy,      setShowClipy]      = useState(false)
+  const [showClipy,      setShowClipy]      = useState(() =>
+    typeof window !== 'undefined' && localStorage.getItem('clippy_is_larbin') === '1'
+  )
   const [showTamagotchi, setShowTamagotchi] = useState(false)
   const keyBuf = useRef<string[]>([])
   const tarsShown = useRef(false)
@@ -1118,7 +1120,7 @@ export default function EasterEggs({ config = {}, isGuest = false }: { config?: 
       {showTipiak     && <TipiakOverlay  onDone={() => setShowTipiak(false)} />}
       {showTamagotchi && <TamagotchiKeyOverlay onClose={() => setShowTamagotchi(false)} isGuest={isGuest} />}
       {showPandora    && <PandoraBox onOpen={() => { setShowPandora(false); setShowClipy(true) }} onClose={() => setShowPandora(false)} />}
-      {showClipy      && <ClippyEgg onDismiss={() => setShowClipy(false)} customReplies={config.clippyReplies} />}
+      {showClipy      && <ClippyEgg onDismiss={() => { localStorage.removeItem('clippy_is_larbin'); setShowClipy(false) }} customReplies={config.clippyReplies} />}
 
       {/* Bouton flottant mobile — accès barre easter egg */}
       <button
