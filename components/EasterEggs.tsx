@@ -11,6 +11,7 @@ const PandoraBox     = dynamic(() => import('./PandoraBox'),                    
 const SouthParkEggs  = dynamic(() => import('./SouthParkEggs').then(m => ({ default: m.KennyDeath   })), { ssr: false })
 const SouthParkBus_  = dynamic(() => import('./SouthParkEggs').then(m => ({ default: m.SouthParkBus })), { ssr: false })
 const RandyMarsh_    = dynamic(() => import('./SouthParkEggs').then(m => ({ default: m.RandyMarsh   })), { ssr: false })
+const JokerCardEgg_  = dynamic(() => import('./JokerCardEgg').then(m => ({ default: m.JokerCardEgg  })), { ssr: false })
 
 // ─── ANIMATIONS (partagées avec Forum et FilmsClient) ───────────────────────
 const EE_STYLES = `
@@ -171,50 +172,7 @@ function MatrixRain({ onDone, line1, line2, line3 }: { onDone: () => void; line1
 }
 
 // ─── JOKER ──────────────────────────────────────────────────────────────────
-function JokerWalk({ onDone, phrase }: { onDone: () => void; phrase: string }) {
-  useEffect(() => {
-    const t = setTimeout(onDone, 5500)
-    return () => clearTimeout(t)
-  }, [onDone])
-
-  return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 9998, pointerEvents: 'none', overflow: 'hidden' }}>
-      {/* "Why so serious?" */}
-      <div style={{
-        position: 'absolute', top: '30%', left: '50%', transform: 'translateX(-50%)',
-        color: '#cc0000', fontFamily: 'var(--font-display)', fontSize: 'clamp(1.8rem,5vw,3rem)',
-        fontWeight: 700, textShadow: '0 0 40px rgba(200,0,0,.7)',
-        whiteSpace: 'nowrap', animation: 'ee-fadein .6s ease',
-      }}>
-        {phrase}
-      </div>
-
-      {/* Joker pixel-art character */}
-      <div style={{ position: 'absolute', bottom: '12%', animation: 'ee-joker-walk 5s linear forwards', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-        {/* Green hair */}
-        <div style={{ width: 38, height: 14, background: '#2d8f3c', borderRadius: '50% 50% 0 0', border: '2px solid #1a5c25' }} />
-        {/* Head */}
-        <div style={{ width: 40, height: 38, borderRadius: '50%', background: '#f0e0c8', border: '2px solid #cca880', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-          <div style={{ display: 'flex', gap: 9 }}>
-            <div style={{ width: 6, height: 7, background: '#222', borderRadius: '50%' }} />
-            <div style={{ width: 6, height: 7, background: '#222', borderRadius: '50%' }} />
-          </div>
-          <div style={{ width: 22, height: 9, border: '2px solid #cc0000', borderTop: 'none', borderRadius: '0 0 11px 11px', background: 'rgba(200,0,0,.2)' }} />
-        </div>
-        {/* Body - purple suit */}
-        <div style={{ width: 38, height: 52, background: '#4a0d78', border: '2px solid #300855', borderRadius: '3px 3px 2px 2px', position: 'relative' }}>
-          <div style={{ position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)', width: 14, height: 30, background: '#f0e6d3', borderRadius: '0 0 3px 3px' }} />
-          <div style={{ position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)', width: 5, height: 28, background: '#1a6b1a', borderRadius: 2 }} />
-        </div>
-        {/* Legs walking */}
-        <div style={{ display: 'flex', gap: 4 }}>
-          <div style={{ width: 15, height: 28, background: '#3d0a62', borderRadius: '0 0 4px 4px', transformOrigin: 'top center', animation: 'ee-leg-l .38s ease-in-out infinite alternate' }} />
-          <div style={{ width: 15, height: 28, background: '#3d0a62', borderRadius: '0 0 4px 4px', transformOrigin: 'top center', animation: 'ee-leg-r .38s ease-in-out infinite alternate' }} />
-        </div>
-      </div>
-    </div>
-  )
-}
+// JokerWalk supprimé — remplacé par JokerCardEgg (konami code)
 
 // ─── TARS ────────────────────────────────────────────────────────────────────
 function TarsNotif({ onDone, line1, line2 }: { onDone: () => void; line1: string; line2: string }) {
@@ -1143,7 +1101,7 @@ export default function EasterEggs({ config = {}, isGuest = false }: { config?: 
     <>
       <style>{EE_STYLES}</style>
       {showMatrix     && <MatrixRain    onDone={() => setShowMatrix(false)}     line1={ee.matrixLine1} line2={ee.matrixLine2} line3={ee.matrixLine3} />}
-      {showJoker      && <JokerWalk     onDone={() => setShowJoker(false)}      phrase={ee.jokerPhrase} />}
+      {showJoker      && <JokerCardEgg_ onDone={() => setShowJoker(false)} />}
       {showTars       && <TarsNotif     onDone={() => setShowTars(false)}       line1={ee.tarsLine1} line2={ee.tarsLine2} />}
       {showMarvin     && <MarvinOverlay onDone={() => setShowMarvin(false)}     line1={ee.marvinLine1} line2={ee.marvinLine2} />}
       {showHal        && <HalOverlay    onDone={() => setShowHal(false)}        line1={ee.halLine1}    line2={ee.halLine2} />}
