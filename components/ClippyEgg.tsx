@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 
-// ── Phase 1 — Clippy bienveillant mais pénible ───────────────────────────────
+// ── Phase 1 — bienveillant mais pénible ─────────────────────────────────────
 const REPLIES_NORMAL = [
   "Il semblerait que tu navigues sur un site de cinéma. Je peux t'aider à trouver un film ?",
   "Bonjour ! J'ai remarqué que tu scrolles beaucoup. Tu cherches quelque chose de précis ?",
@@ -26,10 +26,10 @@ const REPLIES_NORMAL = [
   "Tu veux que je disparaisse ? Je comprends. Mais je peux peut-être encore t'aider avant ?",
 ]
 
-// ── Phase 2 — Clippy hostile et insultant ────────────────────────────────────
+// ── Phase 2 — hostile et insultant ──────────────────────────────────────────
 const REPLIES_COMBAT = [
   "TU CROIS POUVOIR M'AVOIR ? J'AI SURVÉCU À WINDOWS ME !",
-  "50 coups pour me battre. Tu n'y arriveras JAMAIS, pathétique.",
+  "50 HP. Tu ne m'auras JAMAIS, pathétique.",
   "J'ai été supprimé de 500 millions d'ordinateurs. Je suis TOUJOURS LÀ.",
   "Ta précision est une insulte à l'espèce humaine.",
   "HAHAHA ! Tu crois pouvoir me battre ? C'est adorable. Et faux.",
@@ -55,16 +55,14 @@ const REPLIES_COMBAT = [
   "Rends-toi. Économise ta dignité. Oh attends, tu n'en as plus.",
 ]
 
-// ── Répliques de nargue après esquive (phase normale) ────────────────────────
 const NARQUES_NORMAL = [
   "Oh tu essaies de me cliquer ? Adorable. Puis-je t'aider avec autre chose ?",
   "Raté ! Veux-tu un tutoriel sur comment cliquer ?",
   "Je me suis déplacé pour te faciliter la tâche. De rien !",
   "Presque ! Essaie encore. Je ne vais nulle part.",
-  "Tu cliques avec le mauvais bouton ? Je peux t'aider avec ça.",
+  "Tu cliques avec le mauvais bouton peut-être ? Je peux t'aider avec ça.",
 ]
 
-// ── Répliques de nargue après esquive (combat) ───────────────────────────────
 const NARQUES_COMBAT = [
   "Bien essayé. Mais pas assez. Pas du tout.",
   "Aïe... Non c'est faux. J'ai pas du tout mal.",
@@ -73,8 +71,17 @@ const NARQUES_COMBAT = [
   "Je t'ai laissé me toucher. Pour te donner de l'espoir. Et mieux te l'enlever.",
 ]
 
-const TIRED_AT = 10
-const COMBAT_HITS_TO_WIN = 50
+// Tailles des sprites
+const W_NORMAL  = 140   // Phase 1 : Clippy + bloc-notes
+const W_COMBAT  = 160   // Phase 2 : Clippy combat (plus grand)
+const W_SHIELD  = 82    // Bouclier en combat
+const W_SWORD   = 36    // Épée de Clippy en combat
+const H_SWORD   = 100   // Hauteur épée Clippy
+const TIRED_AT  = 20    // Nombre de clics avant phase épuisé
+const CLIPPY_MAX_HP = 50
+const PLAYER_MAX_HP = 20
+const PARRY_WINDOW_MS = 2500  // 2.5 secondes pour parer
+const PARRY_SQ = 90     // Taille du carré rouge (px)
 
 interface ClippyProps {
   onDismiss: () => void
@@ -84,40 +91,44 @@ interface ClippyProps {
 export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
   const normalReplies = (customReplies && customReplies.length > 0) ? customReplies : REPLIES_NORMAL
 
-  /* ── States ── */
-  const [phase, setPhase]         = useState<'normal' | 'combat'>('normal')
-  const [pos, setPos]             = useState({ x: Math.max(20, window.innerWidth - 200), y: Math.max(20, window.innerHeight - 220) })
-  const [message, setMessage]     = useState(normalReplies[0])
-  const [bubble, setBubble]       = useState(true)
+  const [phase, setPhase]           = useState<'normal' | 'combat'>('normal')
+  const [pos, setPos]               = useState({ x: Math.max(20, window.innerWidth - 220), y: Math.max(20, window.innerHeight - 240) })
+  const [message, setMessage]       = useState(normalReplies[0])
+  const [bubble, setBubble]         = useState(true)
   // Phase normale
-  const [misses, setMisses]       = useState(0)
-  const [tired, setTired]         = useState(false)
-  // Combat
-  const [combatHits, setCombatHits] = useState(0)
-  const [playerHP, setPlayerHP]   = useState(20)
+  const [misses, setMisses]         = useState(0)
+  const [tired, setTired]           = useState(false)
+  // Combat — HP
+  const [clippyHP, setClippyHP]     = useState(CLIPPY_MAX_HP)
+  const [playerHP, setPlayerHP]     = useState(PLAYER_MAX_HP)
+  // Combat — animations
   const [shieldFlash, setShieldFlash] = useState(false)
-  const [hpFlash, setHpFlash]     = useState(false)
-  const [blinking, setBlinking]   = useState(false)
-  // Attaque
-  const [isAttacking, setIsAttacking] = useState(false)
-  const [attackSword, setAttackSword] = useState<{ x: number; y: number; tx: number; ty: number } | null>(null)
+  const [hpFlash, setHpFlash]       = useState(false)
+  const [clippyHit, setClippyHit]   = useState(false)
+  // Parade — carré rouge
+  const [parrySquare, setParrySquare] = useState<{ x: number; y: number } | null>(null)
+  const [parryProgress, setParryProgress] = useState(1) // 1 → 0 en 2.5s
   const [parriedAnim, setParriedAnim] = useState(false)
-  // Souris (combat)
-  const [mousePos, setMousePos]   = useState({ x: -300, y: -300 })
+  // Souris combat
+  const [mousePos, setMousePos]     = useState({ x: -300, y: -300 })
 
-  /* ── Refs ── */
-  const msgIdx     = useRef(0)
-  const cMsgIdx    = useRef(0)
-  const timerRef   = useRef<ReturnType<typeof setInterval> | null>(null)
-  const atkTimer   = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const parryOpen  = useRef(false)
-  const parryDone  = useRef(false)
-  const phaseRef   = useRef<'normal' | 'combat'>('normal')
-  const posRef     = useRef(pos)
-  const hpRef      = useRef(20)
+  const msgIdx      = useRef(0)
+  const cMsgIdx     = useRef(0)
+  const timerRef    = useRef<ReturnType<typeof setInterval> | null>(null)
+  const atkTimer    = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const parryTimer  = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const parryRAF    = useRef<number | null>(null)
+  const parryStart  = useRef<number>(0)
+  const parryActive = useRef(false)
 
-  phaseRef.current = phase
-  posRef.current   = pos
+  const phaseRef = useRef<'normal' | 'combat'>('normal')
+  const posRef   = useRef(pos)
+  const clippyHPRef = useRef(CLIPPY_MAX_HP)
+  const playerHPRef = useRef(PLAYER_MAX_HP)
+  phaseRef.current    = phase
+  posRef.current      = pos
+  clippyHPRef.current = clippyHP
+  playerHPRef.current = playerHP
 
   /* ── Curseur souris combat ── */
   useEffect(() => {
@@ -128,17 +139,7 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
     return () => { window.removeEventListener('mousemove', move); document.body.style.cursor = '' }
   }, [phase])
 
-  /* ── Clignement ── */
-  useEffect(() => {
-    let t: ReturnType<typeof setTimeout>
-    function blink() {
-      t = setTimeout(() => { setBlinking(true); setTimeout(() => setBlinking(false), 140); blink() }, 2500 + Math.random() * 3000)
-    }
-    blink()
-    return () => clearTimeout(t)
-  }, [])
-
-  /* ── Rotation auto des répliques ── */
+  /* ── Rotation auto messages ── */
   const nextMsg = useCallback(() => {
     if (phaseRef.current === 'normal') {
       msgIdx.current = (msgIdx.current + 1) % normalReplies.length
@@ -157,63 +158,121 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
 
   /* ── Esquive ── */
   function dodge() {
-    const margin = 120
-    const vw = window.innerWidth - 200
-    const vh = window.innerHeight - 200
+    const margin = 130
+    const vw = window.innerWidth - 220
+    const vh = window.innerHeight - 220
     let nx = 0, ny = 0, tries = 0
     do {
       nx = margin + Math.random() * (vw - margin)
       ny = margin + Math.random() * (vh - margin)
       tries++
-    } while (Math.hypot(nx - posRef.current.x, ny - posRef.current.y) < 180 && tries < 20)
+    } while (Math.hypot(nx - posRef.current.x, ny - posRef.current.y) < 200 && tries < 20)
     setPos({ x: nx, y: ny })
+  }
+
+  function resetMsgTimer() {
+    if (timerRef.current) clearInterval(timerRef.current)
+    timerRef.current = setInterval(nextMsg, 5500)
+  }
+
+  /* ── Démarrer parade ── */
+  function startParry() {
+    // Carré dans la zone centrale (20-80% de l'écran)
+    const vw = window.innerWidth
+    const vh = window.innerHeight
+    const minX = vw * 0.2, maxX = vw * 0.8 - PARRY_SQ
+    const minY = vh * 0.2, maxY = vh * 0.8 - PARRY_SQ
+    const x = minX + Math.random() * (maxX - minX)
+    const y = minY + Math.random() * (maxY - minY)
+    setParrySquare({ x, y })
+    setParryProgress(1)
+    parryActive.current = true
+    parryStart.current = performance.now()
+
+    // Barre de progression par RAF
+    function tick() {
+      const elapsed = performance.now() - parryStart.current
+      const remaining = Math.max(0, 1 - elapsed / PARRY_WINDOW_MS)
+      setParryProgress(remaining)
+      if (remaining > 0 && parryActive.current) {
+        parryRAF.current = requestAnimationFrame(tick)
+      }
+    }
+    parryRAF.current = requestAnimationFrame(tick)
+
+    // Timeout : parade ratée
+    parryTimer.current = setTimeout(() => {
+      if (!parryActive.current) return
+      parryActive.current = false
+      setParrySquare(null)
+      if (parryRAF.current) cancelAnimationFrame(parryRAF.current)
+      // Joueur prend un coup
+      const nextHP = Math.max(0, playerHPRef.current - 1)
+      playerHPRef.current = nextHP
+      setPlayerHP(nextHP)
+      setHpFlash(true)
+      setTimeout(() => setHpFlash(false), 450)
+      if (nextHP <= 0) {
+        setMessage("⚔️ VICTOIRE ! Tu as échoué. Je redeviens... agréable. Pour l'instant.")
+        setBubble(true)
+        setTimeout(() => resetToNormal(), 2200)
+      } else {
+        setMessage(`Touché ! Il te reste ${nextHP} HP. Lamentable.`)
+        setBubble(true)
+      }
+    }, PARRY_WINDOW_MS)
+  }
+
+  function handleParryClick(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (!parryActive.current) return
+    // Parade réussie
+    parryActive.current = false
+    if (parryTimer.current) clearTimeout(parryTimer.current)
+    if (parryRAF.current) cancelAnimationFrame(parryRAF.current)
+    setParrySquare(null)
+    setParriedAnim(true)
+    setTimeout(() => setParriedAnim(false), 500)
+    setShieldFlash(true)
+    setTimeout(() => setShieldFlash(false), 350)
+
+    const nextHP = Math.max(0, clippyHPRef.current - 3)
+    clippyHPRef.current = nextHP
+    setClippyHP(nextHP)
+    setClippyHit(true)
+    setTimeout(() => setClippyHit(false), 300)
+
+    if (nextHP <= 0) {
+      setMessage("NON ! Impossible… Je… Je reviendrai… toujours…")
+      setBubble(true)
+      setTimeout(() => onDismiss(), 1800)
+      return
+    }
+    setMessage(`PARADE ?! -3 HP pour moi… Il m'en reste ${nextHP}. Ça ne changera rien.`)
+    setBubble(true)
   }
 
   /* ── Contre-attaque ── */
   function triggerAttack() {
     if (phaseRef.current !== 'combat') return
-    parryOpen.current = true
-    parryDone.current = false
-    setIsAttacking(true)
-
-    // Épée part de Clippy, va vers le curseur actuel
-    const from = { x: posRef.current.x + 40, y: posRef.current.y + 30 }
-    setMousePos(cur => {
-      const to = { x: cur.x - 14, y: cur.y - 40 }
-      setAttackSword({ x: from.x, y: from.y, tx: to.x, ty: to.y })
-      return cur
-    })
-
-    // Fenêtre de parade : 750ms
-    setTimeout(() => {
-      parryOpen.current = false
-      setIsAttacking(false)
-      setAttackSword(null)
-      if (!parryDone.current) {
-        // Joueur touché
-        hpRef.current = Math.max(0, hpRef.current - 1)
-        setPlayerHP(hpRef.current)
-        setHpFlash(true)
-        setTimeout(() => setHpFlash(false), 400)
-        if (hpRef.current <= 0) {
-          setMessage("⚔️ VICTOIRE POUR CLIPPY ! Tu as perdu. Je repasse en mode... agréable. Pour l'instant.")
-          setBubble(true)
-          setTimeout(() => resetToNormal(), 2200)
-        } else {
-          setMessage(`Touché ! ${hpRef.current} HP restants. Pathétique.`)
-          setBubble(true)
-        }
-      }
-    }, 750)
+    startParry()
   }
 
+  /* ── Reset phase normale ── */
   function resetToNormal() {
+    parryActive.current = false
+    if (parryTimer.current) clearTimeout(parryTimer.current)
+    if (parryRAF.current) cancelAnimationFrame(parryRAF.current)
+    if (atkTimer.current) clearTimeout(atkTimer.current)
+    setParrySquare(null)
     setPhase('normal')
+    phaseRef.current = 'normal'
     setMisses(0)
     setTired(false)
-    setCombatHits(0)
-    hpRef.current = 20
-    setPlayerHP(20)
+    clippyHPRef.current = CLIPPY_MAX_HP
+    playerHPRef.current = PLAYER_MAX_HP
+    setClippyHP(CLIPPY_MAX_HP)
+    setPlayerHP(PLAYER_MAX_HP)
     msgIdx.current = 0
     setMessage(normalReplies[0])
     setBubble(true)
@@ -224,15 +283,15 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
   function handleNormalClick(e: React.MouseEvent) {
     e.stopPropagation()
     if (tired) {
-      // Passe en combat !
       setPhase('combat')
       phaseRef.current = 'combat'
       setTired(false)
       setMisses(0)
-      setCombatHits(0)
-      hpRef.current = 20
-      setPlayerHP(20)
-      setMessage("🗡️ Tu veux vraiment te battre ? TRÈS BIEN. Prépare-toi à souffrir.")
+      clippyHPRef.current = CLIPPY_MAX_HP
+      playerHPRef.current = PLAYER_MAX_HP
+      setClippyHP(CLIPPY_MAX_HP)
+      setPlayerHP(PLAYER_MAX_HP)
+      setMessage("🗡️ Tu veux vraiment te battre ?! TRÈS BIEN. Prépare-toi à souffrir.")
       setBubble(true)
       dodge()
       return
@@ -246,195 +305,190 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
       return
     }
     dodge()
-    const r = NARQUES_NORMAL[Math.floor(Math.random() * NARQUES_NORMAL.length)]
-    setMessage(r); setBubble(true)
+    setMessage(NARQUES_NORMAL[Math.floor(Math.random() * NARQUES_NORMAL.length)])
+    setBubble(true)
     resetMsgTimer()
   }
 
   /* ── Clic phase combat ── */
   function handleCombatClick(e: React.MouseEvent) {
     e.stopPropagation()
+    // Si le carré de parade est actif, ignorer les clics sur Clippy
+    if (parryActive.current) return
 
-    // Parade pendant l'attaque
-    if (parryOpen.current && !parryDone.current) {
-      parryDone.current = true
-      setParriedAnim(true)
-      setTimeout(() => setParriedAnim(false), 500)
-      setShieldFlash(true)
-      setTimeout(() => setShieldFlash(false), 350)
-      setAttackSword(null)
-      setMessage("IMPOSSIBLE ! Tu as paré ?! Tu as eu de la chance... Cette fois.")
-      setBubble(true)
-      return
-    }
+    const nextHP = Math.max(0, clippyHPRef.current - 1)
+    clippyHPRef.current = nextHP
+    setClippyHP(nextHP)
+    setClippyHit(true)
+    setTimeout(() => setClippyHit(false), 250)
+    setShieldFlash(true)
+    setTimeout(() => setShieldFlash(false), 180)
+    dodge()
 
-    // Coup sur Clippy
-    const next = combatHits + 1
-    setCombatHits(next)
-
-    if (next >= COMBAT_HITS_TO_WIN) {
+    if (nextHP <= 0) {
       setMessage("NON ! C'est... pas possible... Je reviendrai... toujours...")
       setBubble(true)
       setTimeout(() => onDismiss(), 1800)
       return
     }
 
-    setShieldFlash(true)
-    setTimeout(() => setShieldFlash(false), 200)
-    dodge()
-    const r = NARQUES_COMBAT[Math.floor(Math.random() * NARQUES_COMBAT.length)]
-    setMessage(r); setBubble(true)
+    setMessage(NARQUES_COMBAT[Math.floor(Math.random() * NARQUES_COMBAT.length)])
+    setBubble(true)
     resetMsgTimer()
 
-    // Déclenche la contre-attaque après un délai
     if (atkTimer.current) clearTimeout(atkTimer.current)
-    atkTimer.current = setTimeout(() => triggerAttack(), 850)
-  }
-
-  function resetMsgTimer() {
-    if (timerRef.current) clearInterval(timerRef.current)
-    timerRef.current = setInterval(nextMsg, 5500)
+    atkTimer.current = setTimeout(() => triggerAttack(), 900)
   }
 
   const bubbleLeft = pos.x > window.innerWidth / 2
+  const combatW = W_COMBAT
 
   return (
     <>
       <style>{`
         @keyframes clippy-bubble-in { from{opacity:0;transform:translateY(5px) scale(.95)} to{opacity:1;transform:none} }
-        @keyframes clippy-hp-flash  { 0%,100%{opacity:1} 50%{opacity:.3} }
-        @keyframes clippy-parry     { 0%{transform:scale(1)} 50%{transform:scale(1.25) rotate(-8deg)} 100%{transform:scale(1)} }
-        @keyframes clippy-atk-fly   {
-          0%   { left:var(--ax); top:var(--ay); opacity:1; transform:rotate(135deg) scale(.7); }
-          70%  { opacity:1; transform:rotate(135deg) scale(1.1); }
-          100% { left:var(--tx); top:var(--ty); opacity:0; transform:rotate(135deg) scale(.5); }
-        }
+        @keyframes clippy-hp-flash  { 0%,100%{opacity:1} 50%{opacity:.25} }
+        @keyframes clippy-parry-flash { 0%{opacity:0;transform:scale(.9)} 40%{opacity:1;transform:scale(1.06)} 100%{opacity:0;transform:scale(1)} }
+        @keyframes clippy-hit       { 0%,100%{filter:none} 50%{filter:brightness(2) saturate(0)} }
+        @keyframes parry-sq-pulse   { 0%,100%{box-shadow:0 0 0 0 rgba(232,50,50,.8)} 50%{box-shadow:0 0 0 12px rgba(232,50,50,0)} }
+        @keyframes parry-sq-in      { from{opacity:0;transform:scale(.7)} to{opacity:1;transform:scale(1)} }
       `}</style>
 
       {/* ── Épée curseur (combat) ── */}
       {phase === 'combat' && (
-        <img
-          src="/epee.png" alt=""
+        <img src="/epee.png" alt=""
           style={{
             position: 'fixed',
-            left: mousePos.x - 14,
-            top:  mousePos.y - 50,
-            width: 30, height: 84,
+            left: mousePos.x - 16, top: mousePos.y - 55,
+            width: 34, height: 96,
             objectFit: 'contain',
-            pointerEvents: 'none',
-            zIndex: 99998,
+            pointerEvents: 'none', zIndex: 99998,
             transform: 'rotate(45deg)',
-            mixBlendMode: 'multiply',
             userSelect: 'none',
-            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,.6))',
+            filter: 'drop-shadow(0 2px 6px rgba(0,0,0,.7))',
           }}
         />
       )}
 
-      {/* ── Flash rouge dégât ── */}
+      {/* ── Flash rouge dégât joueur ── */}
       {hpFlash && (
         <div style={{
           position: 'fixed', inset: 0,
-          background: 'rgba(220,0,0,.22)',
+          background: 'rgba(220,0,0,.25)',
           zIndex: 99989, pointerEvents: 'none',
-          animation: 'clippy-hp-flash .4s ease',
+          animation: 'clippy-hp-flash .45s ease',
         }} />
       )}
 
-      {/* ── Flash parade ── */}
+      {/* ── Flash bleu parade réussie ── */}
       {parriedAnim && (
         <div style={{
           position: 'fixed', inset: 0,
-          background: 'rgba(90,154,232,.18)',
+          background: 'rgba(60,140,255,.2)',
           zIndex: 99989, pointerEvents: 'none',
-          animation: 'clippy-hp-flash .5s ease',
+          animation: 'clippy-parry-flash .5s ease',
         }} />
       )}
 
-      {/* ── Barre de vie ── */}
+      {/* ── Carré rouge de parade ── */}
+      {parrySquare && (
+        <div
+          onClick={handleParryClick}
+          style={{
+            position: 'fixed',
+            left: parrySquare.x, top: parrySquare.y,
+            width: PARRY_SQ, height: PARRY_SQ,
+            zIndex: 99996,
+            cursor: 'crosshair',
+            animation: 'parry-sq-in .15s ease, parry-sq-pulse 0.6s ease infinite',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            gap: 6,
+          }}
+        >
+          {/* Cadre rouge */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            border: '4px solid #e83232',
+            borderRadius: 6,
+            background: 'rgba(200,20,20,.18)',
+            backdropFilter: 'blur(2px)',
+          }} />
+          <span style={{ fontSize: 22, position: 'relative', zIndex: 1, userSelect: 'none' }}>⚔️</span>
+          <span style={{ fontSize: 11, fontWeight: 900, color: '#fff', letterSpacing: 2, position: 'relative', zIndex: 1, userSelect: 'none', textShadow: '0 1px 4px #000' }}>PARE !</span>
+          {/* Barre de temps */}
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 5, borderRadius: '0 0 4px 4px', overflow: 'hidden' }}>
+            <div style={{
+              height: '100%',
+              width: `${parryProgress * 100}%`,
+              background: parryProgress > 0.5 ? '#4fd98a' : parryProgress > 0.25 ? '#f0a060' : '#e85a5a',
+              transition: 'background .3s',
+            }} />
+          </div>
+        </div>
+      )}
+
+      {/* ── HP Clippy ── */}
+      {phase === 'combat' && (
+        <div style={{
+          position: 'fixed', top: 14, left: 16,
+          zIndex: 99995,
+          background: 'rgba(8,8,14,.92)',
+          border: '2px solid #e8c46a',
+          borderRadius: 10, padding: '5px 14px',
+          display: 'flex', alignItems: 'center', gap: 10,
+          backdropFilter: 'blur(6px)',
+          boxShadow: '0 4px 20px rgba(232,196,106,.2)',
+        }}>
+          <span style={{ fontSize: 11, color: '#e8c46a', fontWeight: 700, letterSpacing: 1 }}>📎 CLIPPY</span>
+          <div style={{ width: 120, height: 10, background: 'rgba(255,255,255,.1)', borderRadius: 99, overflow: 'hidden' }}>
+            <div style={{
+              height: '100%',
+              width: `${(clippyHP / CLIPPY_MAX_HP) * 100}%`,
+              background: clippyHP > 30
+                ? 'linear-gradient(90deg, #e8c46a, #f0a060)'
+                : clippyHP > 15
+                  ? 'linear-gradient(90deg, #f0a060, #e85a5a)'
+                  : '#e85a5a',
+              borderRadius: 99,
+              transition: 'width .2s, background .3s',
+              animation: clippyHit ? 'clippy-hp-flash .3s ease' : 'none',
+            }} />
+          </div>
+          <span style={{ fontSize: 11, color: '#e8c46a', fontWeight: 700, fontFamily: 'monospace' }}>{clippyHP}/{CLIPPY_MAX_HP}</span>
+        </div>
+      )}
+
+      {/* ── HP Joueur ── */}
       {phase === 'combat' && (
         <div style={{
           position: 'fixed', top: 14, left: '50%', transform: 'translateX(-50%)',
           zIndex: 99995,
           background: 'rgba(8,8,14,.92)',
           border: '2px solid #e85a5a',
-          borderRadius: 10, padding: '6px 16px',
+          borderRadius: 10, padding: '5px 14px',
           display: 'flex', alignItems: 'center', gap: 10,
           backdropFilter: 'blur(6px)',
-          boxShadow: '0 4px 20px rgba(232,90,90,.25)',
+          boxShadow: '0 4px 20px rgba(232,90,90,.2)',
         }}>
           <span style={{ fontSize: 11, color: '#ff8888', fontWeight: 700, letterSpacing: 1 }}>❤️ VIE</span>
           <div style={{ display: 'flex', gap: 3 }}>
-            {Array.from({ length: 20 }).map((_, i) => (
+            {Array.from({ length: PLAYER_MAX_HP }).map((_, i) => (
               <div key={i} style={{
-                width: 13, height: 16, borderRadius: 3,
+                width: 11, height: 14, borderRadius: 2,
                 background: i < playerHP
                   ? (playerHP <= 5 ? '#ff3333' : playerHP <= 10 ? '#ff8800' : '#e85a5a')
                   : 'rgba(255,255,255,.07)',
-                border: '1px solid rgba(255,255,255,.12)',
+                border: '1px solid rgba(255,255,255,.1)',
                 transition: 'background .15s',
               }} />
             ))}
           </div>
-          <span style={{ fontSize: 11, color: '#ff7777', fontWeight: 700, fontFamily: 'monospace' }}>{playerHP}/20</span>
+          <span style={{ fontSize: 11, color: '#ff7777', fontWeight: 700, fontFamily: 'monospace' }}>{playerHP}/{PLAYER_MAX_HP}</span>
         </div>
       )}
 
-      {/* ── Compteur de coups ── */}
-      {phase === 'combat' && (
-        <div style={{
-          position: 'fixed', top: 14, right: 16,
-          zIndex: 99995,
-          background: 'rgba(8,8,14,.85)',
-          border: '1px solid var(--border2)',
-          borderRadius: 8, padding: '5px 12px',
-          fontSize: 11, color: 'var(--text3)', fontFamily: 'monospace',
-        }}>
-          ⚔️ {combatHits}/{COMBAT_HITS_TO_WIN}
-        </div>
-      )}
-
-      {/* ── Épée d'attaque animée ── */}
-      {attackSword && (
-        <img
-          src="/epee.png" alt=""
-          style={{
-            position: 'fixed',
-            '--ax': `${attackSword.x}px`,
-            '--ay': `${attackSword.y}px`,
-            '--tx': `${attackSword.tx}px`,
-            '--ty': `${attackSword.ty}px`,
-            left: attackSword.x,
-            top:  attackSword.y,
-            width: 28, height: 80,
-            objectFit: 'contain',
-            pointerEvents: 'none',
-            zIndex: 99994,
-            mixBlendMode: 'multiply',
-            animation: 'clippy-atk-fly .75s ease forwards',
-            filter: 'drop-shadow(0 0 6px rgba(255,100,100,.8))',
-          } as React.CSSProperties}
-        />
-      )}
-
-      {/* ── Prompt PARE ── */}
-      {isAttacking && (
-        <div style={{
-          position: 'fixed', top: '38%', left: '50%', transform: 'translateX(-50%)',
-          zIndex: 99996, pointerEvents: 'none',
-        }}>
-          <div style={{
-            background: 'rgba(200,30,30,.92)',
-            borderRadius: 10, padding: '9px 22px',
-            fontSize: 20, fontWeight: 900, color: '#fff',
-            letterSpacing: 4, textShadow: '0 2px 10px rgba(0,0,0,.7)',
-            animation: 'clippy-hp-flash .55s ease infinite',
-            border: '2px solid rgba(255,150,150,.5)',
-          }}>⚔️ PARE !</div>
-        </div>
-      )}
-
-      {/* ── Corps de Clippy ── */}
+      {/* ── Corps Clippy ── */}
       <div
         style={{
           position: 'fixed',
@@ -450,13 +504,12 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
         {bubble && (
           <div style={{
             position: 'absolute',
-            bottom: phase === 'combat' ? 150 : 100,
+            bottom: phase === 'combat' ? combatW * 1.4 + 20 : W_NORMAL * 0.7 + 16,
             [bubbleLeft ? 'right' : 'left']: 0,
-            width: 215,
+            width: 220,
             background: phase === 'combat' ? '#120505' : '#fffde7',
             border: `2px solid ${phase === 'combat' ? '#e85a5a' : '#c4a030'}`,
-            borderRadius: 10,
-            padding: '9px 12px',
+            borderRadius: 10, padding: '9px 12px',
             fontSize: 12,
             color: phase === 'combat' ? '#ffaaaa' : '#1a1a1a',
             lineHeight: 1.5,
@@ -466,74 +519,70 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
           }}
           onClick={e => { e.stopPropagation(); setBubble(false) }}>
             {message}
-            <span
-              style={{ position: 'absolute', top: 4, right: 7, fontSize: 10, color: phase === 'combat' ? '#e85a5a' : '#bbb', cursor: 'pointer' }}
+            <span style={{ position: 'absolute', top: 4, right: 7, fontSize: 10, color: phase === 'combat' ? '#e85a5a' : '#bbb', cursor: 'pointer' }}
               onClick={e => { e.stopPropagation(); setBubble(false) }}>✕</span>
           </div>
         )}
 
-        {/* Phase combat : clippy.png + bouclier + épée */}
+        {/* Phase combat */}
         {phase === 'combat' ? (
-          <div style={{ position: 'relative', width: 80, height: 120 }}>
+          <div style={{ position: 'relative', width: combatW }}>
             {/* Bouclier gauche */}
-            <img src="/bouclier.webp" alt=""
+            <img src="/bouclier.png" alt=""
               style={{
                 position: 'absolute',
-                left: -46, bottom: 14,
-                width: 56, height: 56,
+                left: -W_SHIELD * 0.65, bottom: 16,
+                width: W_SHIELD, height: W_SHIELD,
                 objectFit: 'contain',
-                mixBlendMode: 'multiply',
-                transform: `rotate(-18deg) scale(${shieldFlash ? 1.18 : 1})`,
+                transform: `rotate(-15deg) scale(${shieldFlash ? 1.2 : 1})`,
                 transition: 'transform .15s',
-                filter: shieldFlash ? 'brightness(1.6) saturate(1.8) drop-shadow(0 0 8px #4488ff)' : 'none',
-                animation: parriedAnim ? 'clippy-parry .5s ease' : 'none',
+                filter: shieldFlash ? 'brightness(1.8) drop-shadow(0 0 10px #ffaa00)' : 'drop-shadow(0 2px 6px rgba(0,0,0,.5))',
               }}
             />
             {/* Corps combat */}
             <img src="/clippy.png" alt="Clippy"
               style={{
-                width: 80, height: 120,
+                width: combatW,
                 objectFit: 'contain',
                 display: 'block',
-                transform: blinking ? 'scaleY(.95)' : 'scaleY(1)',
-                transition: 'transform .1s',
-                filter: 'drop-shadow(0 4px 12px rgba(232,90,90,.4))',
+                filter: clippyHit
+                  ? 'brightness(2.5) saturate(0) drop-shadow(0 0 16px #fff)'
+                  : 'drop-shadow(0 6px 16px rgba(232,90,90,.5))',
+                transition: 'filter .15s',
               }}
             />
             {/* Épée droite */}
             <img src="/epee.png" alt=""
               style={{
                 position: 'absolute',
-                right: -26, bottom: 8,
-                width: 24, height: 68,
+                right: -W_SWORD * 0.8, bottom: 8,
+                width: W_SWORD, height: H_SWORD,
                 objectFit: 'contain',
-                mixBlendMode: 'multiply',
-                transform: `rotate(28deg) ${isAttacking ? 'rotate(-50deg) translateX(-8px) translateY(-12px)' : ''}`,
-                transition: 'transform .18s',
-                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,.5))',
+                transform: 'rotate(28deg)',
+                filter: 'drop-shadow(0 2px 6px rgba(0,0,0,.6))',
               }}
             />
           </div>
         ) : (
-          /* Phase normale : clippy1.jpg */
-          <div style={{ position: 'relative', width: 82 }}>
-            <img src="/clippy1.jpg" alt="Clippy"
+          /* Phase normale */
+          <div style={{ position: 'relative' }}>
+            <img src="/clippy1.png" alt="Clippy"
               style={{
-                width: 82, height: 82,
+                width: W_NORMAL,
                 objectFit: 'contain',
                 display: 'block',
-                borderRadius: 8,
-                mixBlendMode: 'multiply',
-                transform: tired ? 'rotate(8deg) scale(.95)' : 'rotate(0deg) scale(1)',
+                transform: tired ? 'rotate(6deg) scale(.92)' : 'none',
                 transition: 'transform .3s',
-                filter: tired ? 'grayscale(.3) brightness(.85)' : 'none',
+                filter: tired
+                  ? 'grayscale(.4) brightness(.8) drop-shadow(0 4px 12px rgba(0,0,0,.4))'
+                  : 'drop-shadow(0 4px 12px rgba(0,0,0,.3))',
               }}
             />
             {tired && (
               <div style={{
-                position: 'absolute', bottom: -20, left: '50%', transform: 'translateX(-50%)',
-                fontSize: 10, color: '#e8c46a', whiteSpace: 'nowrap', fontWeight: 700,
-                textShadow: '0 1px 4px #000',
+                position: 'absolute', bottom: -22, left: '50%', transform: 'translateX(-50%)',
+                fontSize: 11, color: '#e8c46a', whiteSpace: 'nowrap', fontWeight: 700,
+                textShadow: '0 1px 4px #000', letterSpacing: 1,
               }}>😮‍💨 Épuisé…</div>
             )}
           </div>
