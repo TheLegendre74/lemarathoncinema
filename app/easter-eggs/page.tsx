@@ -37,16 +37,22 @@ export default async function EasterEggsPage() {
     }
   }
 
-  // Statistiques globales des easter eggs (tous joueurs)
+  // Statistiques globales : nombre de joueurs DISTINCTS ayant découvert chaque egg
   const [{ data: allEggs }, { count: totalUsers }] = await Promise.all([
-    supabase.from('discovered_eggs').select('egg_id'),
+    supabase.from('discovered_eggs').select('egg_id, user_id'),
     supabase.from('profiles').select('*', { count: 'exact', head: true }),
   ])
 
   const eggStats: Record<string, number> = {}
   if (allEggs) {
-    for (const { egg_id } of allEggs) {
-      eggStats[egg_id] = (eggStats[egg_id] ?? 0) + 1
+    // On group par egg_id et on dédoublonne les user_id
+    const seen: Record<string, Set<string>> = {}
+    for (const { egg_id, user_id } of allEggs) {
+      if (!seen[egg_id]) seen[egg_id] = new Set()
+      seen[egg_id].add(user_id)
+    }
+    for (const [egg_id, users] of Object.entries(seen)) {
+      eggStats[egg_id] = users.size
     }
   }
 
