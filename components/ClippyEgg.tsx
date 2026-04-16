@@ -564,22 +564,22 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
         </div>
       )}
 
-      {/* ══════════ SÉQUENCE ENFER ══════════ */}
+      {/* ══════════ SÉQUENCE ENFER — 3 éléments fixed INDÉPENDANTS ══════════ */}
+
+      {/* 1. Overlay sombre + flammes + texte final */}
       {hellPhase !== 'idle' && (
         <div style={{
-          position: 'fixed', inset: 0, zIndex: 99997,
+          position: 'fixed', inset: 0, zIndex: 99990,
           pointerEvents: 'none',
           animation: hellPhase === 'fade' ? 'hell-fade .8s ease forwards' : 'none',
         }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(8,0,0,.7)' }} />
 
-          {/* Overlay sombre */}
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(10,0,0,.6)' }} />
-
-          {/* ── Mur de flammes ── */}
+          {/* Flammes */}
           <div style={{
             position: 'absolute', bottom: 0, left: 0, right: 0,
             height: '40vh', overflow: 'hidden',
-            animation: 'hell-flame-in .6s ease forwards',
+            animation: 'hell-flame-in .5s ease forwards',
           }}>
             {Array.from({ length: 28 }).map((_, i) => {
               const w     = 60 + Math.random() * 80
@@ -592,8 +592,7 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
                   position: 'absolute', bottom: 0, left: `${x}%`,
                   width: `${w}px`, height: `${h + 130}px`,
                   background: 'radial-gradient(ellipse at 50% 100%, #ff4500 0%, #ff8c00 35%, #ffd700 60%, transparent 100%)',
-                  borderRadius: '50% 50% 0 0',
-                  transformOrigin: 'bottom center',
+                  borderRadius: '50% 50% 0 0', transformOrigin: 'bottom center',
                   animation: `hell-flame-flicker ${dur}s ease-in-out ${delay}s infinite`,
                   opacity: .92, mixBlendMode: 'screen',
                 }} />
@@ -605,121 +604,20 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
             }} />
           </div>
 
-          {/* ── Clippy RÉEL + Main démoniaque dans un wrapper à la vraie position de Clippy ── */}
-          {hellPhase !== 'idle' && hellPhase !== 'fade' && (
-            <div style={{
-              position: 'fixed',
-              left: hellPos.x + W_COMBAT / 2,
-              top:  hellPos.y + W_COMBAT / 2,
-              zIndex: 99998,
-              animation: (hellPhase === 'drag' || hellPhase === 'scream')
-                ? 'hell-drag-down 1.1s cubic-bezier(.4,0,.6,1) forwards'
-                : 'none',
-            }}>
-              {/* Bulle de dialogue Clippy pendant la séquence */}
-              {hellMsg && hellPhase !== 'scream' && (
-                <div style={{
-                  position: 'absolute',
-                  bottom: W_COMBAT / 2 + 16,
-                  left: '50%', transform: 'translateX(-50%)',
-                  width: 240, minWidth: 200,
-                  background: '#120505',
-                  border: '2px solid #e85a5a',
-                  borderRadius: 10,
-                  padding: '8px 12px',
-                  fontSize: 12,
-                  color: '#ffaaaa',
-                  lineHeight: 1.5,
-                  textAlign: 'center',
-                  zIndex: 10,
-                  animation: 'clippy-bubble-in .25s ease',
-                  whiteSpace: 'normal',
-                  boxShadow: '0 4px 20px rgba(232,90,90,.4)',
-                }}>
-                  {hellMsg}
-                </div>
-              )}
-
-              {/* Clippy — visible dès le début de la séquence */}
-              <img
-                src="/evil-clippy.png" alt="Clippy"
-                style={{
-                  position: 'absolute',
-                  left: -W_COMBAT / 2, top: -W_COMBAT / 2,
-                  width: W_COMBAT,
-                  objectFit: 'contain',
-                  // PAS de mix-blend-mode ici : le fond sombre le rendrait invisible
-                  filter: 'drop-shadow(0 0 20px rgba(255,80,80,.7))',
-                  animation: hellPhase === 'grab'
-                    ? 'hell-clippy-shake .35s ease infinite'
-                    : 'none',
-                  zIndex: 2,
-                }}
-              />
-
-              {/* Main — apparaît seulement à partir de 'grab' */}
-              {(hellPhase === 'grab' || hellPhase === 'drag' || hellPhase === 'scream') && (
-              <div style={{
-                position: 'absolute',
-                left: -160,
-                top: -(500 - W_COMBAT / 2 - 48),
-                width: 320,
-                zIndex: 1,
-                animation: 'hell-hand-rise 1s cubic-bezier(.34,1.56,.64,1) forwards',
-              }}>
-                <svg width="320" height="500" viewBox="0 0 320 500" fill="none">
-                  <rect x="95" y="370" width="130" height="130" rx="30" fill="#7a0000"/>
-                  <rect x="100" y="370" width="120" height="80" fill="#8b0000"/>
-                  <ellipse cx="160" cy="350" rx="110" ry="90" fill="#8b0000"/>
-                  <ellipse cx="160" cy="340" rx="95" ry="75" fill="#9b0000"/>
-                  <path d="M120 350 Q130 330 140 315 Q150 300 155 280" stroke="#5a0000" strokeWidth="4" fill="none"/>
-                  <path d="M160 350 Q162 328 165 310 Q168 292 170 270" stroke="#5a0000" strokeWidth="3" fill="none"/>
-                  <path d="M195 348 Q200 330 205 312" stroke="#5a0000" strokeWidth="3" fill="none"/>
-                  <rect x="28" y="230" width="52" height="150" rx="26" fill="#8b0000"/>
-                  <polygon points="28,230 80,230 54,172" fill="#1a0000"/>
-                  <ellipse cx="54" cy="230" rx="26" ry="10" fill="#6a0000"/>
-                  <rect x="82" y="155" width="48" height="205" rx="24" fill="#8b0000"/>
-                  <polygon points="82,155 130,155 106,92" fill="#0d0000"/>
-                  <ellipse cx="106" cy="155" rx="24" ry="10" fill="#6a0000"/>
-                  <rect x="138" y="118" width="48" height="242" rx="24" fill="#8b0000"/>
-                  <polygon points="138,118 186,118 162,48" fill="#0d0000"/>
-                  <ellipse cx="162" cy="118" rx="24" ry="10" fill="#6a0000"/>
-                  <rect x="194" y="138" width="44" height="222" rx="22" fill="#8b0000"/>
-                  <polygon points="194,138 238,138 216,72" fill="#0d0000"/>
-                  <ellipse cx="216" cy="138" rx="22" ry="9" fill="#6a0000"/>
-                  <rect x="240" y="188" width="38" height="182" rx="19" fill="#8b0000"/>
-                  <polygon points="240,188 278,188 259,130" fill="#0d0000"/>
-                  <ellipse cx="259" cy="188" rx="19" ry="8" fill="#6a0000"/>
-                  <ellipse cx="106" cy="310" rx="12" ry="7" fill="#6a0000"/>
-                  <ellipse cx="162" cy="310" rx="12" ry="7" fill="#6a0000"/>
-                  <ellipse cx="216" cy="308" rx="11" ry="7" fill="#6a0000"/>
-                  <ellipse cx="259" cy="320" rx="10" ry="6" fill="#6a0000"/>
-                  <ellipse cx="160" cy="360" rx="100" ry="30" fill="rgba(200,0,0,.18)"/>
-                </svg>
-              </div>
-              )}
-            </div>
-          )}
-
-          {/* ── Phrase finale ── */}
+          {/* Phrase finale */}
           {(hellPhase === 'scream' || hellPhase === 'fade') && (
             <div style={{
-              position: 'absolute',
-              bottom: '10%', left: '50%',
+              position: 'absolute', bottom: '10%', left: '50%',
+              transform: 'translateX(-50%)',
               animation: 'hell-scream-in .6s cubic-bezier(.34,1.56,.64,1) forwards',
-              zIndex: 99999,
-              textAlign: 'center',
-              width: '90vw', maxWidth: 600,
+              zIndex: 5, textAlign: 'center', width: '90vw', maxWidth: 600,
             }}>
               <div style={{
-                background: 'rgba(10,0,0,.92)',
-                border: '2px solid #cc2200',
-                borderRadius: 12,
-                padding: '14px 22px',
+                background: 'rgba(10,0,0,.95)', border: '2px solid #cc2200',
+                borderRadius: 12, padding: '14px 22px',
                 fontFamily: 'var(--font-display)',
                 fontSize: 'clamp(1rem, 2.5vw, 1.3rem)',
-                color: '#ff4444',
-                lineHeight: 1.5,
+                color: '#ff4444', lineHeight: 1.5,
                 textShadow: '0 0 20px rgba(255,50,0,.8)',
                 boxShadow: '0 0 40px rgba(200,0,0,.5)',
               }}>
@@ -727,7 +625,101 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
               </div>
             </div>
           )}
+        </div>
+      )}
 
+      {/* 2. Clippy — fixed INDÉPENDANT à sa vraie position sur l'écran */}
+      {hellPhase !== 'idle' && hellPhase !== 'fade' && (
+        <div style={{
+          position: 'fixed',
+          left: hellPos.x,
+          top:  hellPos.y,
+          width: W_COMBAT,
+          zIndex: 99995,
+          pointerEvents: 'none',
+          animation: (hellPhase === 'drag' || hellPhase === 'scream')
+            ? 'hell-drag-down 1.1s cubic-bezier(.4,0,.6,1) forwards'
+            : 'none',
+        }}>
+          {/* Bulle dialogue */}
+          {hellMsg && hellPhase !== 'scream' && (
+            <div style={{
+              position: 'absolute',
+              bottom: '105%', left: '50%',
+              transform: 'translateX(-50%)',
+              width: 250,
+              background: '#120505',
+              border: '2px solid #e85a5a',
+              borderRadius: 10, padding: '8px 12px',
+              fontSize: 12, color: '#ffaaaa', lineHeight: 1.5,
+              textAlign: 'center',
+              boxShadow: '0 4px 20px rgba(232,90,90,.5)',
+              animation: 'clippy-bubble-in .2s ease',
+              whiteSpace: 'normal',
+              zIndex: 1,
+            }}>
+              {hellMsg}
+            </div>
+          )}
+          {/* Image Clippy */}
+          <img
+            src="/evil-clippy.png" alt="Clippy"
+            style={{
+              width: W_COMBAT, display: 'block',
+              objectFit: 'contain',
+              filter: 'drop-shadow(0 0 24px rgba(255,60,60,.9))',
+              animation: hellPhase === 'grab'
+                ? 'hell-clippy-shake .3s ease infinite'
+                : 'none',
+            }}
+          />
+        </div>
+      )}
+
+      {/* 3. Main démoniaque — fixed INDÉPENDANTE, animée vers Clippy depuis le bas */}
+      {(hellPhase === 'grab' || hellPhase === 'drag' || hellPhase === 'scream') && (
+        <div style={{
+          position: 'fixed',
+          /* Centre la main sur Clippy (W_COMBAT/2 = 80, main = 320px → offset -80px) */
+          left: hellPos.x + W_COMBAT / 2 - 160,
+          /* Positionne les doigts au niveau du corps de Clippy */
+          top:  hellPos.y + 32,
+          width: 320,
+          zIndex: 99993,
+          pointerEvents: 'none',
+          animation: (hellPhase === 'drag' || hellPhase === 'scream')
+            ? 'hell-drag-down 1.1s cubic-bezier(.4,0,.6,1) forwards'
+            : 'hell-hand-rise 1s cubic-bezier(.34,1.56,.64,1) forwards',
+        }}>
+          <svg width="320" height="500" viewBox="0 0 320 500" fill="none">
+            <rect x="95" y="370" width="130" height="130" rx="30" fill="#7a0000"/>
+            <rect x="100" y="370" width="120" height="80" fill="#8b0000"/>
+            <ellipse cx="160" cy="350" rx="110" ry="90" fill="#8b0000"/>
+            <ellipse cx="160" cy="340" rx="95" ry="75" fill="#9b0000"/>
+            <path d="M120 350 Q130 330 140 315 Q150 300 155 280" stroke="#5a0000" strokeWidth="4" fill="none"/>
+            <path d="M160 350 Q162 328 165 310 Q168 292 170 270" stroke="#5a0000" strokeWidth="3" fill="none"/>
+            <path d="M195 348 Q200 330 205 312" stroke="#5a0000" strokeWidth="3" fill="none"/>
+            <rect x="28" y="230" width="52" height="150" rx="26" fill="#8b0000"/>
+            <polygon points="28,230 80,230 54,172" fill="#1a0000"/>
+            <ellipse cx="54" cy="230" rx="26" ry="10" fill="#6a0000"/>
+            <rect x="82" y="155" width="48" height="205" rx="24" fill="#8b0000"/>
+            <polygon points="82,155 130,155 106,92" fill="#0d0000"/>
+            <ellipse cx="106" cy="155" rx="24" ry="10" fill="#6a0000"/>
+            <rect x="138" y="118" width="48" height="242" rx="24" fill="#8b0000"/>
+            <polygon points="138,118 186,118 162,48" fill="#0d0000"/>
+            <ellipse cx="162" cy="118" rx="24" ry="10" fill="#6a0000"/>
+            <rect x="194" y="138" width="44" height="222" rx="22" fill="#8b0000"/>
+            <polygon points="194,138 238,138 216,72" fill="#0d0000"/>
+            <ellipse cx="216" cy="138" rx="22" ry="9" fill="#6a0000"/>
+            <rect x="240" y="188" width="38" height="182" rx="19" fill="#8b0000"/>
+            <polygon points="240,188 278,188 259,130" fill="#0d0000"/>
+            <ellipse cx="259" cy="188" rx="19" ry="8" fill="#6a0000"/>
+            <ellipse cx="106" cy="310" rx="12" ry="7" fill="#6a0000"/>
+            <ellipse cx="162" cy="310" rx="12" ry="7" fill="#6a0000"/>
+            <ellipse cx="216" cy="308" rx="11" ry="7" fill="#6a0000"/>
+            <ellipse cx="259" cy="320" rx="10" ry="6" fill="#6a0000"/>
+            <ellipse cx="160" cy="360" rx="100" ry="30" fill="rgba(200,0,0,.18)"/>
+          </svg>
         </div>
       )}
 
