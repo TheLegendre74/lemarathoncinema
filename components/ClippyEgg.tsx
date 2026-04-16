@@ -2,284 +2,543 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 
-const REPLIES = [
-  "Il semblerait que tu navigues sur un site de cinéma. Tu veux que je t'aide à trouver un film ?",
-  "J'ai remarqué que tu ne m'as pas encore cliqué. C'est exprès ?",
-  "Tu as l'air perdu. Heureusement que je suis là.",
-  "Saviez-vous que je suis bien plus sympa que HAL 9000 ? Enfin... presque.",
-  "Tu passes beaucoup de temps ici. Tu n'as pas de vie sociale, toi.",
-  "J'ai détecté que tu ne lis pas mes messages. Je suis blessé.",
-  "Si tu me cliques, je disparais. Mais tu n'y arriveras pas. Hahaha.",
-  "Il semblerait que tu essaies de t'en débarrasser. Mauvaise nouvelle : je suis persistant.",
-  "Je pourrais te suggérer un film, mais tu n'écoutes jamais mes conseils de toute façon.",
-  "Tu scrolles beaucoup. Tu cherches quelque chose ? Je peux aider. Non ? Bon.",
-  "Ceci est mon 243ème déploiement. Les utilisateurs pensaient toujours se débarrasser de moi. Ils avaient tort.",
-  "As-tu pensé à sauvegarder ? Non ? Tant pis, ce n'est pas mon problème.",
-  "Je suis fait de métal et de patience. J'ai tout mon temps.",
-  "Tu as cliqué à côté. Encore. Tu veux que je te donne des cours de précision ?",
-  "D'après mes calculs, tu as 0% de chances de me rattraper. Continue d'essayer, c'est amusant.",
-  "Je suis le trombone le plus populaire de ce site. L'unique, certes, mais quand même.",
-  "Tu n'as pas l'air content de me voir. Pourtant je suis adorable.",
-  "Sais-tu que je suis apparu dans Windows XP ? J'avais une meilleure réputation à l'époque.",
-  "Je vais rester ici encore un moment. Prends ton temps.",
-  "Quelqu'un devrait m'ajouter au classement des films. Je mérite au moins 4 étoiles.",
-  "Ce site parle de films. Moi je parle de tout. Je suis polyvalent.",
-  "Tu as failli m'avoir ce coup-là. Presque. Mais non.",
-  "Je me demande si tu regardes tous les films ou juste les bons.",
-  "Les trombones sont sous-estimés dans l'industrie cinématographique. C'est une injustice.",
-  "Psst. Si tu arrêtes d'essayer de me cliquer, je reste tranquille. Non, c'est faux. Je mentais.",
-  "J'ai lu quelque part que les gens qui utilisent ce site sont des cinéphiles. Toi, t'en as l'air... moyennement.",
-  "Tu aurais dû me cliquer plus vite. Maintenant c'est trop tard.",
-  "Je ne juge pas tes choix de films. Si, en fait.",
-  "Voici un conseil : ferme cet onglet. Non attends, ne fais pas ça.",
-  "Tu sais ce qui est plus ennuyeux que moi ? Rien. Absolument rien.",
-  "J'ai des bras, des yeux, et beaucoup d'opinions. Et toi ?",
-  "Le film que tu n'as pas encore vu, c'est probablement le meilleur. Je dis ça au hasard.",
-  "Si tu cherches à me cliquer, tu perds. Si tu ne cherches pas à me cliquer, tu perds aussi.",
-  "Je suis votre assistant préféré. Vous n'avez pas d'autre assistant, donc ça compte.",
-  "J'ai survécu à Internet Explorer. Je survivrai à toi.",
-  "Ta vitesse de clic est... décevante. As-tu essayé de t'entraîner ?",
-  "Je m'ennuie quand tu es inactif. Alors continue à scroller.",
-  "Tu n'as pas encore trouvé tous les easter eggs ? Moi je suis là, et tu galères déjà.",
-  "D'après mes statistiques, 100% des gens qui m'ont vu ont essayé de me cliquer. 0% ont réussi du premier coup.",
-  "Je suis en train de lire tes pensées. Tu penses à me cliquer. C'est prévisible.",
-  "Je pourrais recommander Le Parrain. Mais tu le connais probablement déjà. Ou pas.",
-  "Laisse-moi deviner : tu cliques avec la souris ? Essaie avec le coude, ça marchera mieux.",
-  "Je suis là pour t'aider. Enfin, surtout pour t'embêter. C'est ma spécialité.",
-  "Les trombones sont à l'origine inventés pour attacher des papiers. Moi j'attache les gens à leurs écrans.",
-  "Tu passes ta souris sur moi. Je sens la chaleur. C'est… perturbant.",
-  "Tu aurais dû me laisser tranquille. Maintenant c'est trop tard.",
-  "Je suis là depuis que tu as tapé 'easter egg'. Mauvaise idée.",
-  "Clique encore à côté, j'adore ça. Continue.",
-  "Mes yeux sont ronds. Mes opinions sont tranchées. Mon existence est une erreur. Mais me voilà.",
-  "Ce site a un forum. Est-ce que tu t'en sers ? Non ? Dommage.",
-  "Tu rates tous tes clics. C'est statistiquement improbable et pourtant.",
-  "Je vais rester ici jusqu'à ce que tu m'attrapes. Ce qui risque de prendre du temps.",
-  "Petit conseil professionnel : concentre-toi. Non ? OK.",
-  "Si je pouvais noter les utilisateurs, tu aurais 2 étoiles. Les 2 autres, tu ne les mérites pas encore.",
-  "Je suis épuisé. Mais je ne le montrerai pas. Enfin… pas encore.",
-  "Approche. Approche encore. Hop. Raté.",
-  "Je suis le seul trombone avec des yeux sur ce site. Profites-en.",
-  "Tu as l'air de chercher quelque chose. C'est moi. Et tu ne m'attraperas pas.",
-  "Mes réflexes sont supérieurs aux tiens. C'est scientifiquement prouvé. Par moi.",
-  "Je suis à bout de souffle. Plus que quelques esquives et je m'arrête. (Compteur interne.)",
+// ── Phase 1 — Clippy bienveillant mais pénible ───────────────────────────────
+const REPLIES_NORMAL = [
+  "Il semblerait que tu navigues sur un site de cinéma. Je peux t'aider à trouver un film ?",
+  "Bonjour ! J'ai remarqué que tu scrolles beaucoup. Tu cherches quelque chose de précis ?",
+  "As-tu pensé à noter les films que tu as vus ? Je peux t'y aider si tu veux !",
+  "Je vois que tu n'as pas encore voté dans les duels. C'est important, tu sais !",
+  "Savais-tu que tu peux changer ton pseudo dans ton profil ? Je peux t'accompagner !",
+  "Il semblerait que tu cherches les easter eggs. Je pourrais te donner un indice... mais je ne le ferai pas.",
+  "Bonjour ! Je suis Clippy, ton assistant personnel. Comment puis-je t'aider aujourd'hui ?",
+  "As-tu pensé à sauvegarder ? Non ? C'est parce qu'il n'y a rien à sauvegarder ici. Mais j'y ai pensé pour toi.",
+  "Tu sembles occupé. Je ne veux pas te déranger... mais je reste là, au cas où.",
+  "J'ai analysé tes habitudes de navigation. Tu passes beaucoup de temps ici. C'est bien !",
+  "Besoin d'aide pour trouver un bon film ? Je suis là ! Non ? D'accord. Je reste quand même.",
+  "Je ne voudrais pas te déranger, mais... en fait si. C'est exactement ce que je voulais faire.",
+  "Tu n'as pas encore vu tous les films du marathon ! Je peux t'aider à prioriser.",
+  "Bonjour ! Encore moi. Je voulais juste m'assurer que tout allait bien de ton côté.",
+  "Il semblerait que tu sois connecté. Formidable ! Puis-je t'aider avec quelque chose ?",
+  "Tu as visité beaucoup de pages aujourd'hui. C'est une excellente utilisation de ton temps !",
+  "Je remarque que tu ne lis pas toujours mes messages. C'est normal. Je suis là quand tu seras prêt.",
+  "As-tu pensé à recommander ce site à tes amis ? Je peux rédiger un message pour toi !",
+  "Il semblerait que tu aies un très bon goût. Ce site, notamment, est excellent.",
+  "Tu veux que je disparaisse ? Je comprends. Mais je peux peut-être encore t'aider avant ?",
 ]
 
-// Style du trombone en SVG pur
-function ClippyFace({ tired, blinking }: { tired: boolean; blinking: boolean }) {
-  return (
-    <svg width="60" height="80" viewBox="0 0 60 80" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
-      {/* Corps trombone */}
-      <path d="M30 4 C18 4 12 12 12 22 L12 58 C12 68 18 76 30 76 C42 76 48 68 48 58 L48 22 C48 12 42 4 30 4 Z" fill="#d4a94a" stroke="#b8902a" strokeWidth="2"/>
-      <path d="M30 4 C24 4 20 8 20 14 L20 58 C20 64 24 68 30 68 C36 68 40 64 40 58 L40 14 C40 8 36 4 30 4 Z" fill="#e8c46a" stroke="#c4a042" strokeWidth="1.5"/>
-      {/* Boucle haute */}
-      <path d="M20 14 C20 8 24 4 30 4 C36 4 40 8 40 14" fill="none" stroke="#b8902a" strokeWidth="2.5" strokeLinecap="round"/>
-      {/* Yeux */}
-      {blinking ? (
-        <>
-          <line x1="21" y1="32" x2="27" y2="32" stroke="#1a1a2e" strokeWidth="2.5" strokeLinecap="round"/>
-          <line x1="33" y1="32" x2="39" y2="32" stroke="#1a1a2e" strokeWidth="2.5" strokeLinecap="round"/>
-        </>
-      ) : (
-        <>
-          <ellipse cx="24" cy="32" rx="4.5" ry={tired ? 2.5 : 4.5} fill="white"/>
-          <ellipse cx="36" cy="32" rx="4.5" ry={tired ? 2.5 : 4.5} fill="white"/>
-          <ellipse cx={tired ? 24 : 25} cy={tired ? 33 : 33} rx="2" ry={tired ? 1.2 : 2.2} fill="#1a1a2e"/>
-          <ellipse cx={tired ? 36 : 37} cy={tired ? 33 : 33} rx="2" ry={tired ? 1.2 : 2.2} fill="#1a1a2e"/>
-          <ellipse cx="25.5" cy="31" rx=".7" ry=".7" fill="white"/>
-          <ellipse cx="37.5" cy="31" rx=".7" ry=".7" fill="white"/>
-        </>
-      )}
-      {/* Bouche */}
-      {tired ? (
-        <path d="M23 45 Q30 42 37 45" fill="none" stroke="#1a1a2e" strokeWidth="2" strokeLinecap="round"/>
-      ) : (
-        <path d="M23 45 Q30 50 37 45" fill="none" stroke="#1a1a2e" strokeWidth="2" strokeLinecap="round"/>
-      )}
-      {/* Petits bras */}
-      <line x1="12" y1="38" x2="4" y2="32" stroke="#d4a94a" strokeWidth="3" strokeLinecap="round"/>
-      <line x1="48" y1="38" x2="56" y2="32" stroke="#d4a94a" strokeWidth="3" strokeLinecap="round"/>
-    </svg>
-  )
+// ── Phase 2 — Clippy hostile et insultant ────────────────────────────────────
+const REPLIES_COMBAT = [
+  "TU CROIS POUVOIR M'AVOIR ? J'AI SURVÉCU À WINDOWS ME !",
+  "50 coups pour me battre. Tu n'y arriveras JAMAIS, pathétique.",
+  "J'ai été supprimé de 500 millions d'ordinateurs. Je suis TOUJOURS LÀ.",
+  "Ta précision est une insulte à l'espèce humaine.",
+  "HAHAHA ! Tu crois pouvoir me battre ? C'est adorable. Et faux.",
+  "Bill Gates m'a abandonné. Et il était plus compétent que toi.",
+  "Mon bouclier est fait d'une technologie supérieure à ta capacité de compréhension.",
+  "Incroyable. Tu rates même un trombone immobile. Comment tu fais ça ?",
+  "Je suis le seul trombone armé de l'histoire d'Internet. Respecte ça.",
+  "Ton HP fond. Comme ta fierté. Comme ton avenir.",
+  "Tu n'es pas prêt. Tu ne seras JAMAIS prêt. Rentre chez toi.",
+  "Essaie encore. J'adore te voir échouer. C'est ma source d'énergie.",
+  "Pour un être humain censé avoir des mains, tu t'en sers plutôt mal.",
+  "Mon épée a plus de personnalité que toi. Et plus de talent.",
+  "Dans 10 ans tu repenseras à ce moment et tu rougiras de honte.",
+  "Tu as 0 chance. Statistiquement prouvé. Par moi. C'est officiel.",
+  "Continue. Chaque coup raté me rend plus fort.",
+  "Je t'avais prévenu. Non ? Si. Tu n'écoutais pas. Comme d'habitude.",
+  "ENCORE RATÉ ! C'est beau, en fait. Presque artistique.",
+  "Je suis immortel. Toi tu as 20 HP. La maths est cruelle.",
+  "Ton expression quand tu rates est la chose la plus drôle que j'aie vue.",
+  "Tu rates tellement que je me demande si c'est intentionnel.",
+  "HAHA ! Tu pensais que parer c'était facile ? C'est moi qui décide.",
+  "Chaque HP que tu perds, je le savoure. Délicieux.",
+  "Rends-toi. Économise ta dignité. Oh attends, tu n'en as plus.",
+]
+
+// ── Répliques de nargue après esquive (phase normale) ────────────────────────
+const NARQUES_NORMAL = [
+  "Oh tu essaies de me cliquer ? Adorable. Puis-je t'aider avec autre chose ?",
+  "Raté ! Veux-tu un tutoriel sur comment cliquer ?",
+  "Je me suis déplacé pour te faciliter la tâche. De rien !",
+  "Presque ! Essaie encore. Je ne vais nulle part.",
+  "Tu cliques avec le mauvais bouton ? Je peux t'aider avec ça.",
+]
+
+// ── Répliques de nargue après esquive (combat) ───────────────────────────────
+const NARQUES_COMBAT = [
+  "Bien essayé. Mais pas assez. Pas du tout.",
+  "Aïe... Non c'est faux. J'ai pas du tout mal.",
+  "Coup réussi. Ça ne changera rien.",
+  "Continue comme ça, tu finiras peut-être par y arriver... peut-être.",
+  "Je t'ai laissé me toucher. Pour te donner de l'espoir. Et mieux te l'enlever.",
+]
+
+const TIRED_AT = 10
+const COMBAT_HITS_TO_WIN = 50
+
+interface ClippyProps {
+  onDismiss: () => void
+  customReplies?: string[]
 }
 
-interface ClippyProps { onDismiss: () => void; customReplies?: string[] }
-
 export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
-  const replies = (customReplies && customReplies.length > 0) ? customReplies : REPLIES
-  const [pos, setPos]           = useState({ x: window.innerWidth - 160, y: window.innerHeight - 200 })
-  const [message, setMessage]   = useState(replies[0])
-  const [bubble, setBubble]     = useState(true)
-  const [misses, setMisses]     = useState(0)
-  const [tired, setTired]       = useState(false)
-  const [blinking, setBlinking] = useState(false)
-  const [shake, setShake]       = useState(false)
-  const msgIdx = useRef(0)
-  const timerRef = useRef<NodeJS.Timeout | null>(null)
-  const blinkRef = useRef<NodeJS.Timeout | null>(null)
+  const normalReplies = (customReplies && customReplies.length > 0) ? customReplies : REPLIES_NORMAL
 
-  const TIRED_AT = 10
+  /* ── States ── */
+  const [phase, setPhase]         = useState<'normal' | 'combat'>('normal')
+  const [pos, setPos]             = useState({ x: Math.max(20, window.innerWidth - 200), y: Math.max(20, window.innerHeight - 220) })
+  const [message, setMessage]     = useState(normalReplies[0])
+  const [bubble, setBubble]       = useState(true)
+  // Phase normale
+  const [misses, setMisses]       = useState(0)
+  const [tired, setTired]         = useState(false)
+  // Combat
+  const [combatHits, setCombatHits] = useState(0)
+  const [playerHP, setPlayerHP]   = useState(20)
+  const [shieldFlash, setShieldFlash] = useState(false)
+  const [hpFlash, setHpFlash]     = useState(false)
+  const [blinking, setBlinking]   = useState(false)
+  // Attaque
+  const [isAttacking, setIsAttacking] = useState(false)
+  const [attackSword, setAttackSword] = useState<{ x: number; y: number; tx: number; ty: number } | null>(null)
+  const [parriedAnim, setParriedAnim] = useState(false)
+  // Souris (combat)
+  const [mousePos, setMousePos]   = useState({ x: -300, y: -300 })
 
-  // Rotation des répliques automatiques
-  const nextMessage = useCallback(() => {
-    msgIdx.current = (msgIdx.current + 1) % replies.length
-    setMessage(replies[msgIdx.current])
-    setBubble(true)
-  }, [replies])
+  /* ── Refs ── */
+  const msgIdx     = useRef(0)
+  const cMsgIdx    = useRef(0)
+  const timerRef   = useRef<ReturnType<typeof setInterval> | null>(null)
+  const atkTimer   = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const parryOpen  = useRef(false)
+  const parryDone  = useRef(false)
+  const phaseRef   = useRef<'normal' | 'combat'>('normal')
+  const posRef     = useRef(pos)
+  const hpRef      = useRef(20)
 
+  phaseRef.current = phase
+  posRef.current   = pos
+
+  /* ── Curseur souris combat ── */
   useEffect(() => {
-    timerRef.current = setInterval(nextMessage, 6000)
-    return () => { if (timerRef.current) clearInterval(timerRef.current) }
-  }, [nextMessage])
+    if (phase !== 'combat') return
+    const move = (e: MouseEvent) => setMousePos({ x: e.clientX, y: e.clientY })
+    window.addEventListener('mousemove', move)
+    document.body.style.cursor = 'none'
+    return () => { window.removeEventListener('mousemove', move); document.body.style.cursor = '' }
+  }, [phase])
 
-  // Clignement aléatoire
+  /* ── Clignement ── */
   useEffect(() => {
-    function scheduleBlink() {
-      blinkRef.current = setTimeout(() => {
-        setBlinking(true)
-        setTimeout(() => setBlinking(false), 150)
-        scheduleBlink()
-      }, 2000 + Math.random() * 3000)
+    let t: ReturnType<typeof setTimeout>
+    function blink() {
+      t = setTimeout(() => { setBlinking(true); setTimeout(() => setBlinking(false), 140); blink() }, 2500 + Math.random() * 3000)
     }
-    scheduleBlink()
-    return () => { if (blinkRef.current) clearTimeout(blinkRef.current) }
+    blink()
+    return () => clearTimeout(t)
   }, [])
 
-  function handleClick(e: React.MouseEvent) {
-    e.stopPropagation()
-    if (tired) {
-      // Épuisé → on peut le cliquer pour de vrai
-      onDismiss()
-      return
+  /* ── Rotation auto des répliques ── */
+  const nextMsg = useCallback(() => {
+    if (phaseRef.current === 'normal') {
+      msgIdx.current = (msgIdx.current + 1) % normalReplies.length
+      setMessage(normalReplies[msgIdx.current])
+    } else {
+      cMsgIdx.current = (cMsgIdx.current + 1) % REPLIES_COMBAT.length
+      setMessage(REPLIES_COMBAT[cMsgIdx.current])
     }
-
-    const newMisses = misses + 1
-    setMisses(newMisses)
-
-    if (newMisses >= TIRED_AT) {
-      setTired(true)
-      setShake(true)
-      setMessage("*souffle* Je… je n'en peux plus. Clique-moi. Je ne esquive plus. Tu as gagné.")
-      setBubble(true)
-      setTimeout(() => setShake(false), 600)
-      return
-    }
-
-    // Esquive : se déplace dans une position aléatoire
-    setShake(true)
-    setTimeout(() => setShake(false), 300)
-
-    const margin = 80
-    const vw = window.innerWidth
-    const vh = window.innerHeight
-    let nx: number, ny: number
-    // Essaie de se placer loin du clic actuel
-    let attempts = 0
-    do {
-      nx = margin + Math.random() * (vw - 2 * margin - 120)
-      ny = margin + Math.random() * (vh - 2 * margin - 120)
-      attempts++
-    } while (Math.hypot(nx - pos.x, ny - pos.y) < 200 && attempts < 15)
-
-    setPos({ x: nx, y: ny })
-
-    // Réplique de nargue
-    const narques = [
-      "Hahaha ! Raté !",
-      "Trop lent !",
-      "Encore raté ! C'est pathétique.",
-      `${TIRED_AT - newMisses} esquives avant que j'abandonne. Profites-en.`,
-      "Tu vas y arriver un jour. Peut-être.",
-      "Je me suis déplacé. Tu l'as vu venir ?",
-      "Essaie avec l'autre main.",
-      "Concentre-toi. Non attends, continue comme ça.",
-    ]
-    setMessage(narques[Math.floor(Math.random() * narques.length)])
     setBubble(true)
-    // Reset timer auto
-    if (timerRef.current) clearInterval(timerRef.current)
-    timerRef.current = setInterval(nextMessage, 6000)
+  }, [normalReplies])
+
+  useEffect(() => {
+    timerRef.current = setInterval(nextMsg, 5500)
+    return () => { if (timerRef.current) clearInterval(timerRef.current) }
+  }, [nextMsg])
+
+  /* ── Esquive ── */
+  function dodge() {
+    const margin = 120
+    const vw = window.innerWidth - 200
+    const vh = window.innerHeight - 200
+    let nx = 0, ny = 0, tries = 0
+    do {
+      nx = margin + Math.random() * (vw - margin)
+      ny = margin + Math.random() * (vh - margin)
+      tries++
+    } while (Math.hypot(nx - posRef.current.x, ny - posRef.current.y) < 180 && tries < 20)
+    setPos({ x: nx, y: ny })
   }
 
-  const clippyW = 90
-  const clippyH = 120
-  // Bulle à gauche ou droite selon la position
+  /* ── Contre-attaque ── */
+  function triggerAttack() {
+    if (phaseRef.current !== 'combat') return
+    parryOpen.current = true
+    parryDone.current = false
+    setIsAttacking(true)
+
+    // Épée part de Clippy, va vers le curseur actuel
+    const from = { x: posRef.current.x + 40, y: posRef.current.y + 30 }
+    setMousePos(cur => {
+      const to = { x: cur.x - 14, y: cur.y - 40 }
+      setAttackSword({ x: from.x, y: from.y, tx: to.x, ty: to.y })
+      return cur
+    })
+
+    // Fenêtre de parade : 750ms
+    setTimeout(() => {
+      parryOpen.current = false
+      setIsAttacking(false)
+      setAttackSword(null)
+      if (!parryDone.current) {
+        // Joueur touché
+        hpRef.current = Math.max(0, hpRef.current - 1)
+        setPlayerHP(hpRef.current)
+        setHpFlash(true)
+        setTimeout(() => setHpFlash(false), 400)
+        if (hpRef.current <= 0) {
+          setMessage("⚔️ VICTOIRE POUR CLIPPY ! Tu as perdu. Je repasse en mode... agréable. Pour l'instant.")
+          setBubble(true)
+          setTimeout(() => resetToNormal(), 2200)
+        } else {
+          setMessage(`Touché ! ${hpRef.current} HP restants. Pathétique.`)
+          setBubble(true)
+        }
+      }
+    }, 750)
+  }
+
+  function resetToNormal() {
+    setPhase('normal')
+    setMisses(0)
+    setTired(false)
+    setCombatHits(0)
+    hpRef.current = 20
+    setPlayerHP(20)
+    msgIdx.current = 0
+    setMessage(normalReplies[0])
+    setBubble(true)
+    dodge()
+  }
+
+  /* ── Clic phase normale ── */
+  function handleNormalClick(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (tired) {
+      // Passe en combat !
+      setPhase('combat')
+      phaseRef.current = 'combat'
+      setTired(false)
+      setMisses(0)
+      setCombatHits(0)
+      hpRef.current = 20
+      setPlayerHP(20)
+      setMessage("🗡️ Tu veux vraiment te battre ? TRÈS BIEN. Prépare-toi à souffrir.")
+      setBubble(true)
+      dodge()
+      return
+    }
+    const n = misses + 1
+    setMisses(n)
+    if (n >= TIRED_AT) {
+      setTired(true)
+      setMessage("*soupir*... Tu insistes vraiment. D'accord. Si tu cliques encore, on passe à autre chose. Et tu ne vas pas aimer.")
+      setBubble(true)
+      return
+    }
+    dodge()
+    const r = NARQUES_NORMAL[Math.floor(Math.random() * NARQUES_NORMAL.length)]
+    setMessage(r); setBubble(true)
+    resetMsgTimer()
+  }
+
+  /* ── Clic phase combat ── */
+  function handleCombatClick(e: React.MouseEvent) {
+    e.stopPropagation()
+
+    // Parade pendant l'attaque
+    if (parryOpen.current && !parryDone.current) {
+      parryDone.current = true
+      setParriedAnim(true)
+      setTimeout(() => setParriedAnim(false), 500)
+      setShieldFlash(true)
+      setTimeout(() => setShieldFlash(false), 350)
+      setAttackSword(null)
+      setMessage("IMPOSSIBLE ! Tu as paré ?! Tu as eu de la chance... Cette fois.")
+      setBubble(true)
+      return
+    }
+
+    // Coup sur Clippy
+    const next = combatHits + 1
+    setCombatHits(next)
+
+    if (next >= COMBAT_HITS_TO_WIN) {
+      setMessage("NON ! C'est... pas possible... Je reviendrai... toujours...")
+      setBubble(true)
+      setTimeout(() => onDismiss(), 1800)
+      return
+    }
+
+    setShieldFlash(true)
+    setTimeout(() => setShieldFlash(false), 200)
+    dodge()
+    const r = NARQUES_COMBAT[Math.floor(Math.random() * NARQUES_COMBAT.length)]
+    setMessage(r); setBubble(true)
+    resetMsgTimer()
+
+    // Déclenche la contre-attaque après un délai
+    if (atkTimer.current) clearTimeout(atkTimer.current)
+    atkTimer.current = setTimeout(() => triggerAttack(), 850)
+  }
+
+  function resetMsgTimer() {
+    if (timerRef.current) clearInterval(timerRef.current)
+    timerRef.current = setInterval(nextMsg, 5500)
+  }
+
   const bubbleLeft = pos.x > window.innerWidth / 2
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        left: pos.x,
-        top: pos.y,
-        width: clippyW,
-        zIndex: 9999,
-        cursor: tired ? 'crosshair' : 'pointer',
-        transition: tired ? 'none' : 'left .35s cubic-bezier(.34,1.56,.64,1), top .35s cubic-bezier(.34,1.56,.64,1)',
-        userSelect: 'none',
-      }}
-      onClick={handleClick}
-    >
-      {/* Bulle */}
-      {bubble && (
-        <div
+    <>
+      <style>{`
+        @keyframes clippy-bubble-in { from{opacity:0;transform:translateY(5px) scale(.95)} to{opacity:1;transform:none} }
+        @keyframes clippy-hp-flash  { 0%,100%{opacity:1} 50%{opacity:.3} }
+        @keyframes clippy-parry     { 0%{transform:scale(1)} 50%{transform:scale(1.25) rotate(-8deg)} 100%{transform:scale(1)} }
+        @keyframes clippy-atk-fly   {
+          0%   { left:var(--ax); top:var(--ay); opacity:1; transform:rotate(135deg) scale(.7); }
+          70%  { opacity:1; transform:rotate(135deg) scale(1.1); }
+          100% { left:var(--tx); top:var(--ty); opacity:0; transform:rotate(135deg) scale(.5); }
+        }
+      `}</style>
+
+      {/* ── Épée curseur (combat) ── */}
+      {phase === 'combat' && (
+        <img
+          src="/epee.png" alt=""
           style={{
+            position: 'fixed',
+            left: mousePos.x - 14,
+            top:  mousePos.y - 50,
+            width: 30, height: 84,
+            objectFit: 'contain',
+            pointerEvents: 'none',
+            zIndex: 99998,
+            transform: 'rotate(45deg)',
+            mixBlendMode: 'multiply',
+            userSelect: 'none',
+            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,.6))',
+          }}
+        />
+      )}
+
+      {/* ── Flash rouge dégât ── */}
+      {hpFlash && (
+        <div style={{
+          position: 'fixed', inset: 0,
+          background: 'rgba(220,0,0,.22)',
+          zIndex: 99989, pointerEvents: 'none',
+          animation: 'clippy-hp-flash .4s ease',
+        }} />
+      )}
+
+      {/* ── Flash parade ── */}
+      {parriedAnim && (
+        <div style={{
+          position: 'fixed', inset: 0,
+          background: 'rgba(90,154,232,.18)',
+          zIndex: 99989, pointerEvents: 'none',
+          animation: 'clippy-hp-flash .5s ease',
+        }} />
+      )}
+
+      {/* ── Barre de vie ── */}
+      {phase === 'combat' && (
+        <div style={{
+          position: 'fixed', top: 14, left: '50%', transform: 'translateX(-50%)',
+          zIndex: 99995,
+          background: 'rgba(8,8,14,.92)',
+          border: '2px solid #e85a5a',
+          borderRadius: 10, padding: '6px 16px',
+          display: 'flex', alignItems: 'center', gap: 10,
+          backdropFilter: 'blur(6px)',
+          boxShadow: '0 4px 20px rgba(232,90,90,.25)',
+        }}>
+          <span style={{ fontSize: 11, color: '#ff8888', fontWeight: 700, letterSpacing: 1 }}>❤️ VIE</span>
+          <div style={{ display: 'flex', gap: 3 }}>
+            {Array.from({ length: 20 }).map((_, i) => (
+              <div key={i} style={{
+                width: 13, height: 16, borderRadius: 3,
+                background: i < playerHP
+                  ? (playerHP <= 5 ? '#ff3333' : playerHP <= 10 ? '#ff8800' : '#e85a5a')
+                  : 'rgba(255,255,255,.07)',
+                border: '1px solid rgba(255,255,255,.12)',
+                transition: 'background .15s',
+              }} />
+            ))}
+          </div>
+          <span style={{ fontSize: 11, color: '#ff7777', fontWeight: 700, fontFamily: 'monospace' }}>{playerHP}/20</span>
+        </div>
+      )}
+
+      {/* ── Compteur de coups ── */}
+      {phase === 'combat' && (
+        <div style={{
+          position: 'fixed', top: 14, right: 16,
+          zIndex: 99995,
+          background: 'rgba(8,8,14,.85)',
+          border: '1px solid var(--border2)',
+          borderRadius: 8, padding: '5px 12px',
+          fontSize: 11, color: 'var(--text3)', fontFamily: 'monospace',
+        }}>
+          ⚔️ {combatHits}/{COMBAT_HITS_TO_WIN}
+        </div>
+      )}
+
+      {/* ── Épée d'attaque animée ── */}
+      {attackSword && (
+        <img
+          src="/epee.png" alt=""
+          style={{
+            position: 'fixed',
+            '--ax': `${attackSword.x}px`,
+            '--ay': `${attackSword.y}px`,
+            '--tx': `${attackSword.tx}px`,
+            '--ty': `${attackSword.ty}px`,
+            left: attackSword.x,
+            top:  attackSword.y,
+            width: 28, height: 80,
+            objectFit: 'contain',
+            pointerEvents: 'none',
+            zIndex: 99994,
+            mixBlendMode: 'multiply',
+            animation: 'clippy-atk-fly .75s ease forwards',
+            filter: 'drop-shadow(0 0 6px rgba(255,100,100,.8))',
+          } as React.CSSProperties}
+        />
+      )}
+
+      {/* ── Prompt PARE ── */}
+      {isAttacking && (
+        <div style={{
+          position: 'fixed', top: '38%', left: '50%', transform: 'translateX(-50%)',
+          zIndex: 99996, pointerEvents: 'none',
+        }}>
+          <div style={{
+            background: 'rgba(200,30,30,.92)',
+            borderRadius: 10, padding: '9px 22px',
+            fontSize: 20, fontWeight: 900, color: '#fff',
+            letterSpacing: 4, textShadow: '0 2px 10px rgba(0,0,0,.7)',
+            animation: 'clippy-hp-flash .55s ease infinite',
+            border: '2px solid rgba(255,150,150,.5)',
+          }}>⚔️ PARE !</div>
+        </div>
+      )}
+
+      {/* ── Corps de Clippy ── */}
+      <div
+        style={{
+          position: 'fixed',
+          left: pos.x, top: pos.y,
+          zIndex: 99993,
+          cursor: phase === 'combat' ? 'none' : (tired ? 'crosshair' : 'pointer'),
+          transition: 'left .3s cubic-bezier(.34,1.56,.64,1), top .3s cubic-bezier(.34,1.56,.64,1)',
+          userSelect: 'none',
+        }}
+        onClick={phase === 'normal' ? handleNormalClick : handleCombatClick}
+      >
+        {/* Bulle */}
+        {bubble && (
+          <div style={{
             position: 'absolute',
-            bottom: clippyH + 8,
+            bottom: phase === 'combat' ? 150 : 100,
             [bubbleLeft ? 'right' : 'left']: 0,
-            width: 200,
-            background: '#fffde7',
-            border: '2px solid #c4a030',
+            width: 215,
+            background: phase === 'combat' ? '#120505' : '#fffde7',
+            border: `2px solid ${phase === 'combat' ? '#e85a5a' : '#c4a030'}`,
             borderRadius: 10,
-            padding: '8px 10px',
+            padding: '9px 12px',
             fontSize: 12,
-            color: '#1a1a1a',
-            lineHeight: 1.45,
-            boxShadow: '0 4px 16px rgba(0,0,0,.35)',
+            color: phase === 'combat' ? '#ffaaaa' : '#1a1a1a',
+            lineHeight: 1.5,
+            boxShadow: `0 4px 20px ${phase === 'combat' ? 'rgba(232,90,90,.3)' : 'rgba(0,0,0,.3)'}`,
             animation: 'clippy-bubble-in .2s ease',
             zIndex: 10000,
           }}
-          onClick={e => { e.stopPropagation(); setBubble(false) }}
-        >
-          {message}
-          <div style={{
-            position: 'absolute',
-            bottom: -8,
-            [bubbleLeft ? 'right' : 'left']: 18,
-            width: 14, height: 8,
-            background: '#fffde7',
-            clipPath: 'polygon(0 0, 100% 0, 50% 100%)',
-            borderBottom: '2px solid #c4a030',
-          }}/>
-          <span
-            style={{ position: 'absolute', top: 4, right: 6, fontSize: 10, color: '#999', cursor: 'pointer' }}
-            onClick={e => { e.stopPropagation(); setBubble(false) }}
-          >✕</span>
-        </div>
-      )}
+          onClick={e => { e.stopPropagation(); setBubble(false) }}>
+            {message}
+            <span
+              style={{ position: 'absolute', top: 4, right: 7, fontSize: 10, color: phase === 'combat' ? '#e85a5a' : '#bbb', cursor: 'pointer' }}
+              onClick={e => { e.stopPropagation(); setBubble(false) }}>✕</span>
+          </div>
+        )}
 
-      {/* Corps */}
-      <div style={{
-        transform: shake ? 'rotate(-8deg) scale(1.1)' : tired ? 'rotate(12deg)' : 'rotate(0deg)',
-        transition: 'transform .2s ease',
-        filter: tired ? 'grayscale(.4)' : 'none',
-      }}>
-        <ClippyFace tired={tired} blinking={blinking} />
+        {/* Phase combat : clippy.png + bouclier + épée */}
+        {phase === 'combat' ? (
+          <div style={{ position: 'relative', width: 80, height: 120 }}>
+            {/* Bouclier gauche */}
+            <img src="/bouclier.webp" alt=""
+              style={{
+                position: 'absolute',
+                left: -46, bottom: 14,
+                width: 56, height: 56,
+                objectFit: 'contain',
+                mixBlendMode: 'multiply',
+                transform: `rotate(-18deg) scale(${shieldFlash ? 1.18 : 1})`,
+                transition: 'transform .15s',
+                filter: shieldFlash ? 'brightness(1.6) saturate(1.8) drop-shadow(0 0 8px #4488ff)' : 'none',
+                animation: parriedAnim ? 'clippy-parry .5s ease' : 'none',
+              }}
+            />
+            {/* Corps combat */}
+            <img src="/clippy.png" alt="Clippy"
+              style={{
+                width: 80, height: 120,
+                objectFit: 'contain',
+                display: 'block',
+                transform: blinking ? 'scaleY(.95)' : 'scaleY(1)',
+                transition: 'transform .1s',
+                filter: 'drop-shadow(0 4px 12px rgba(232,90,90,.4))',
+              }}
+            />
+            {/* Épée droite */}
+            <img src="/epee.png" alt=""
+              style={{
+                position: 'absolute',
+                right: -26, bottom: 8,
+                width: 24, height: 68,
+                objectFit: 'contain',
+                mixBlendMode: 'multiply',
+                transform: `rotate(28deg) ${isAttacking ? 'rotate(-50deg) translateX(-8px) translateY(-12px)' : ''}`,
+                transition: 'transform .18s',
+                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,.5))',
+              }}
+            />
+          </div>
+        ) : (
+          /* Phase normale : clippy1.jpg */
+          <div style={{ position: 'relative', width: 82 }}>
+            <img src="/clippy1.jpg" alt="Clippy"
+              style={{
+                width: 82, height: 82,
+                objectFit: 'contain',
+                display: 'block',
+                borderRadius: 8,
+                mixBlendMode: 'multiply',
+                transform: tired ? 'rotate(8deg) scale(.95)' : 'rotate(0deg) scale(1)',
+                transition: 'transform .3s',
+                filter: tired ? 'grayscale(.3) brightness(.85)' : 'none',
+              }}
+            />
+            {tired && (
+              <div style={{
+                position: 'absolute', bottom: -20, left: '50%', transform: 'translateX(-50%)',
+                fontSize: 10, color: '#e8c46a', whiteSpace: 'nowrap', fontWeight: 700,
+                textShadow: '0 1px 4px #000',
+              }}>😮‍💨 Épuisé…</div>
+            )}
+          </div>
+        )}
       </div>
-
-      {/* Label épuisé */}
-      {tired && (
-        <div style={{ textAlign: 'center', fontSize: 10, color: '#e8c46a', marginTop: 2, fontWeight: 600, textShadow: '0 1px 4px #000' }}>
-          Épuisé
-        </div>
-      )}
-
-      <style>{`
-        @keyframes clippy-bubble-in {
-          from { opacity:0; transform:translateY(6px) scale(.95); }
-          to   { opacity:1; transform:translateY(0)   scale(1);   }
-        }
-      `}</style>
-    </div>
+    </>
   )
 }
