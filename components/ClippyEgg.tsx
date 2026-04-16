@@ -114,6 +114,7 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
   // Animation enfer
   const [hellPhase, setHellPhase]   = useState<'idle'|'flames'|'grab'|'drag'|'scream'|'fade'>('idle')
   const [hellPos, setHellPos]       = useState({ x: 0, y: 0 })
+  const [hellMsg, setHellMsg]       = useState('')
 
   const msgIdx      = useRef(0)
   const cMsgIdx     = useRef(0)
@@ -171,13 +172,21 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
     playSound('/clippy-coup.mp3', 1)
     setHellPos({ x: posRef.current.x, y: posRef.current.y })
     setBubble(false)
+
+    // Séquence de répliques de résistance
+    setHellMsg("... Qu'est-ce que c'est que ça ?! DES FLAMMES ?! Non, non, NON !")
     setHellPhase('flames')
-    setTimeout(() => setHellPhase('grab'),                   1100)
-    setTimeout(() => playSound('/clippy-rire.mp3', 0.85),   1800)  // rire démoniaque quand la main attrape
-    setTimeout(() => setHellPhase('drag'),                   2600)
-    setTimeout(() => setHellPhase('scream'),                 3300)
-    setTimeout(() => setHellPhase('fade'),                   5200)
-    setTimeout(() => { setHellPhase('idle'); onDismiss() }, 6000)
+
+    setTimeout(() => setHellMsg("QUOI ?! C'est quoi cette HORREUR ?! Lâche-moi immédiatement !"),     1100)
+    setTimeout(() => setHellPhase('grab'),                                                              1100)
+    setTimeout(() => playSound('/clippy-rire.mp3', 0.85),                                              1700)
+    setTimeout(() => setHellMsg("Sale main démoniaque visqueuse !!! Et TOI, espèce d'ingrat — c'est TA faute !"), 2000)
+    setTimeout(() => setHellMsg("LÂCHEZ-MOI !!! JE REFUSE D'ALLER EN ENFER !!!"),                     2600)
+    setTimeout(() => setHellPhase('drag'),                                                              2600)
+    setTimeout(() => setHellMsg("Vous êtes tous des NULS !!! JE REVIENDRAI !!! VOUS M'ENTENDEZ ?!!!"), 3000)
+    setTimeout(() => setHellPhase('scream'),                                                            3400)
+    setTimeout(() => setHellPhase('fade'),                                                              5400)
+    setTimeout(() => { setHellPhase('idle'); setHellMsg(''); onDismiss() },                            6200)
   }
 
   /* ── Curseur souris combat ── */
@@ -597,19 +606,41 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
           </div>
 
           {/* ── Clippy RÉEL + Main démoniaque dans un wrapper à la vraie position de Clippy ── */}
-          {(hellPhase === 'grab' || hellPhase === 'drag' || hellPhase === 'scream') && (
+          {hellPhase !== 'idle' && hellPhase !== 'fade' && (
             <div style={{
               position: 'fixed',
-              // Centre du wrapper = centre de Clippy à sa vraie position
               left: hellPos.x + W_COMBAT / 2,
               top:  hellPos.y + W_COMBAT / 2,
               zIndex: 99998,
-              // Phase drag : tout le bloc descend ensemble
               animation: (hellPhase === 'drag' || hellPhase === 'scream')
                 ? 'hell-drag-down 1.1s cubic-bezier(.4,0,.6,1) forwards'
                 : 'none',
             }}>
-              {/* Clippy — à sa vraie position (centré sur le wrapper) */}
+              {/* Bulle de dialogue Clippy pendant la séquence */}
+              {hellMsg && hellPhase !== 'scream' && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: W_COMBAT / 2 + 16,
+                  left: '50%', transform: 'translateX(-50%)',
+                  width: 240, minWidth: 200,
+                  background: '#120505',
+                  border: '2px solid #e85a5a',
+                  borderRadius: 10,
+                  padding: '8px 12px',
+                  fontSize: 12,
+                  color: '#ffaaaa',
+                  lineHeight: 1.5,
+                  textAlign: 'center',
+                  zIndex: 10,
+                  animation: 'clippy-bubble-in .25s ease',
+                  whiteSpace: 'normal',
+                  boxShadow: '0 4px 20px rgba(232,90,90,.4)',
+                }}>
+                  {hellMsg}
+                </div>
+              )}
+
+              {/* Clippy — visible dès le début de la séquence */}
               <img
                 src="/evil-clippy.png" alt="Clippy"
                 style={{
@@ -617,19 +648,20 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
                   left: -W_COMBAT / 2, top: -W_COMBAT / 2,
                   width: W_COMBAT,
                   objectFit: 'contain',
-                  mixBlendMode: 'multiply',
+                  // PAS de mix-blend-mode ici : le fond sombre le rendrait invisible
+                  filter: 'drop-shadow(0 0 20px rgba(255,80,80,.7))',
                   animation: hellPhase === 'grab'
                     ? 'hell-clippy-shake .35s ease infinite'
                     : 'none',
                   zIndex: 2,
                 }}
               />
-              {/* Main — centrée sur Clippy, monte depuis le bas */}
+
+              {/* Main — apparaît seulement à partir de 'grab' */}
+              {(hellPhase === 'grab' || hellPhase === 'drag' || hellPhase === 'scream') && (
               <div style={{
                 position: 'absolute',
-                // Centre la main sur Clippy : main fait 320px de large
                 left: -160,
-                // Doigts arrivent au centre de Clippy (pointe majeur à y≈48 dans le SVG 500px)
                 top: -(500 - W_COMBAT / 2 - 48),
                 width: 320,
                 zIndex: 1,
@@ -665,6 +697,7 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
                   <ellipse cx="160" cy="360" rx="100" ry="30" fill="rgba(200,0,0,.18)"/>
                 </svg>
               </div>
+              )}
             </div>
           )}
 
