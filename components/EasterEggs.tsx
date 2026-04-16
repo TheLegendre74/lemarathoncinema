@@ -960,7 +960,7 @@ export default function EasterEggs({ config = {}, isGuest = false }: { config?: 
       predSoundRef.current = snd; discoverEgg('predator'); setShowAVP(true)
     }
     else if (t.endsWith('gomu gomu no tipiak!')) { setShowTipiak(true) }
-    else if (t.endsWith('boîte de pandore') || t.endsWith('boite de pandore')) { discoverEgg('clippy'); setShowPandora(true) }
+    else if (t.endsWith('boîte de pandore') || t.endsWith('boite de pandore') || t.endsWith('pandore')) { discoverEgg('clippy'); setShowPandora(true) }
     else { triggered = false }
     if (triggered) { setMobileVal(''); setShowMobileInput(false) }
   }
@@ -1098,9 +1098,10 @@ export default function EasterEggs({ config = {}, isGuest = false }: { config?: 
         keyBuf.current = []
         return
       }
-      // "boîte de pandore" / "boite de pandore" → Boîte de Pandore (Clippy)
+      // "pandore" et variantes → Boîte de Pandore (Clippy)
       const last16 = buf.slice(-16).join('').toLowerCase()
-      if (last16 === 'boîte de pandore' || last16 === 'boite de pandore') {
+      const last7  = buf.slice(-7).join('').toLowerCase()
+      if (last16 === 'boîte de pandore' || last16 === 'boite de pandore' || last7 === 'pandore') {
         discoverEgg('clippy')
         setShowPandora(true)
         keyBuf.current = []

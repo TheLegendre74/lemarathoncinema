@@ -73,15 +73,15 @@ const NARQUES_COMBAT = [
 
 // Tailles des sprites
 const W_NORMAL  = 140   // Phase 1 : Clippy + bloc-notes
-const W_COMBAT  = 160   // Phase 2 : Clippy combat (plus grand)
-const W_SHIELD  = 82    // Bouclier en combat
-const W_SWORD   = 36    // Épée de Clippy en combat
-const H_SWORD   = 100   // Hauteur épée Clippy
+const W_COMBAT  = 160   // Phase 2 : Clippy combat
+const W_SHIELD  = 110   // Bouclier (proportionnel à Clippy combat)
+const W_SWORD   = 52    // Épée de Clippy (proportionnelle)
+const H_SWORD   = 145   // Hauteur épée Clippy
 const TIRED_AT  = 20    // Nombre de clics avant phase épuisé
 const CLIPPY_MAX_HP = 50
 const PLAYER_MAX_HP = 20
 const PARRY_WINDOW_MS = 2500  // 2.5 secondes pour parer
-const PARRY_SQ = 90     // Taille du carré rouge (px)
+const PARRY_SQ = 150    // Taille du carré rouge (px)
 
 interface ClippyProps {
   onDismiss: () => void
@@ -359,8 +359,8 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
         <img src="/epee.png" alt=""
           style={{
             position: 'fixed',
-            left: mousePos.x - 28, top: mousePos.y - 130,
-            width: 70, height: 200,
+            left: mousePos.x - 45, top: mousePos.y - 200,
+            width: 110, height: 320,
             objectFit: 'contain',
             pointerEvents: 'none', zIndex: 99998,
             transform: 'rotate(45deg)',
@@ -531,12 +531,13 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
             <img src="/bouclier.png" alt=""
               style={{
                 position: 'absolute',
-                left: -W_SHIELD * 0.65, bottom: 16,
+                left: -W_SHIELD * 0.7, bottom: 10,
                 width: W_SHIELD, height: W_SHIELD,
                 objectFit: 'contain',
+                mixBlendMode: 'multiply',
                 transform: `rotate(-15deg) scale(${shieldFlash ? 1.2 : 1})`,
                 transition: 'transform .15s',
-                filter: shieldFlash ? 'brightness(1.8) drop-shadow(0 0 10px #ffaa00)' : 'drop-shadow(0 2px 6px rgba(0,0,0,.5))',
+                filter: shieldFlash ? 'brightness(1.8) drop-shadow(0 0 12px #ffaa00)' : 'none',
               }}
             />
             {/* Corps combat — Evil Clippy */}
@@ -556,7 +557,7 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
             <img src="/epee.png" alt=""
               style={{
                 position: 'absolute',
-                right: -W_SWORD * 0.8, bottom: 8,
+                right: -W_SWORD * 0.9, bottom: 0,
                 width: W_SWORD, height: H_SWORD,
                 objectFit: 'contain',
                 transform: 'rotate(28deg)',
@@ -572,11 +573,12 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
                 width: W_NORMAL,
                 objectFit: 'contain',
                 display: 'block',
+                mixBlendMode: 'multiply',
                 transform: tired ? 'rotate(6deg) scale(.92)' : 'none',
                 transition: 'transform .3s',
                 filter: tired
-                  ? 'grayscale(.4) brightness(.8) drop-shadow(0 4px 12px rgba(0,0,0,.4))'
-                  : 'drop-shadow(0 4px 12px rgba(0,0,0,.3))',
+                  ? 'grayscale(.4) brightness(.8)'
+                  : 'none',
               }}
             />
             {tired && (
