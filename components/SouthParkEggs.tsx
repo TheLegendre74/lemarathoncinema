@@ -562,19 +562,16 @@ class BusStopScene extends Phaser.Scene {
   private stopSignContainer!: Phaser.GameObjects.Container
   private scrollX = 0
   private readonly SCROLL_SPEED = 1.5
-  private musicObj!: Phaser.Sound.BaseSound
   private readonly onDoneCb: () => void
+  // ctrl.triggerEnd est assigné depuis React pour permettre à l'audio HTML5 de déclencher la fin
+  ctrl: { triggerEnd: () => void } = { triggerEnd: () => {} }
 
   constructor(onDone: () => void) {
     super({ key: 'BusStopScene' })
     this.onDoneCb = onDone
   }
 
-  preload() {
-    if (!this.cache.audio.exists('sp-theme')) {
-      this.load.audio('sp-theme', '/sons/south-park-theme.m4a')
-    }
-  }
+  preload() { /* audio géré en dehors de Phaser */ }
 
   create() {
     const { width: W, height: H } = this.cameras.main
@@ -652,10 +649,9 @@ class BusStopScene extends Phaser.Scene {
     this.addBuildingLabels(W)
 
     // ── Music ────────────────────────────────────────────────────
-    if (this.sound.get('sp-theme')) this.sound.remove(this.sound.get('sp-theme')!)
-    this.musicObj = this.sound.add('sp-theme', { volume: 0.88, loop: false })
-    this.musicObj.play()
-    this.musicObj.once('complete', () => this.triggerEnd())
+    // La musique est gérée par HTMLAudioElement dans React (démarre immédiatement)
+    // ctrl.triggerEnd() sera appelé par audio.onended depuis le wrapper React
+    this.ctrl.triggerEnd = () => this.triggerEnd()
 
     // ── Sequence ─────────────────────────────────────────────────
     // Bus arrives 3.2s after scene starts
@@ -846,7 +842,7 @@ class BusStopScene extends Phaser.Scene {
   private triggerEnd() {
     if (this.phase === 'ending') return
     this.phase = 'ending'
-    if (this.musicObj?.isPlaying) this.musicObj.stop()
+    // audio stoppé via audioRef dans React
     this.cameras.main.fadeOut(1200, 0, 0, 0)
     this.cameras.main.once('camerafadeoutcomplete', () => this.onDoneCb())
   }
@@ -859,12 +855,22 @@ class BusStopScene extends Phaser.Scene {
 export function SouthParkBus({ onDone }: { onDone: () => void }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const gameRef = useRef<Phaser.Game | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
     discoverEgg('southpark')
     if (!containerRef.current || gameRef.current) return
 
+    // ── Musique : démarre immédiatement, sans attendre Phaser ──
+    const audio = new Audio('/sons/south-park-theme.m4a')
+    audio.volume = 0.88
+    audio.play().catch(() => {})
+    audioRef.current = audio
+
     const scene = new BusStopScene(onDone)
+
+    // Quand la musique se termine → fadeout de la scène Phaser
+    audio.addEventListener('ended', () => scene.ctrl.triggerEnd())
 
     gameRef.current = new Phaser.Game({
       type: Phaser.AUTO,
@@ -873,7 +879,7 @@ export function SouthParkBus({ onDone }: { onDone: () => void }) {
       backgroundColor: '#000000',
       parent: containerRef.current,
       scene: [scene],
-      audio: { disableWebAudio: false },
+      audio: { disableWebAudio: true },  // audio géré par HTMLAudioElement
       scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -881,6 +887,9 @@ export function SouthParkBus({ onDone }: { onDone: () => void }) {
     })
 
     return () => {
+      audio.pause()
+      audio.src = ''
+      audioRef.current = null
       gameRef.current?.destroy(true)
       gameRef.current = null
     }
