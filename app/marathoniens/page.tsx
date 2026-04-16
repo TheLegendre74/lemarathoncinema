@@ -17,12 +17,12 @@ export default async function MarathoniensPage() {
 
   const totalFilms = totalFilmsData?.length ?? 0
 
-  // Watched count per user (marathon only, non-pre)
+  // Films vus pendant le marathon (non pré) et pré-marathon
   const watchedMap: Record<string, number> = {}
-  const watchedAllMap: Record<string, number> = {}
+  const preMap: Record<string, number> = {}
   ;(allWatched ?? []).forEach((w: any) => {
-    watchedAllMap[w.user_id] = (watchedAllMap[w.user_id] ?? 0) + 1
-    if (!w.pre) watchedMap[w.user_id] = (watchedMap[w.user_id] ?? 0) + 1
+    if (w.pre) preMap[w.user_id] = (preMap[w.user_id] ?? 0) + 1
+    else watchedMap[w.user_id] = (watchedMap[w.user_id] ?? 0) + 1
   })
 
   return (
@@ -39,6 +39,7 @@ export default async function MarathoniensPage() {
           const level = levelFromExp(p.exp)
           const badge = getActiveBadge(p.exp, p.active_badge)
           const watched = watchedMap[p.id] ?? 0
+          const pre     = preMap[p.id] ?? 0
           const pct = totalFilms ? Math.round((watched / totalFilms) * 100) : 0
           const isMe = user?.id === p.id
 
@@ -71,15 +72,19 @@ export default async function MarathoniensPage() {
                 </div>
               </div>
 
-              {/* Stats films */}
+              {/* Stats films — 3 cases */}
               <div style={{ display: 'flex', gap: '.5rem', marginBottom: '.7rem', flexWrap: 'wrap' }}>
-                <div style={{ flex: 1, minWidth: 80, background: 'var(--bg3)', borderRadius: 'var(--r)', padding: '.45rem .6rem', textAlign: 'center' }}>
+                <div style={{ flex: 1, minWidth: 72, background: 'var(--bg3)', borderRadius: 'var(--r)', padding: '.45rem .6rem', textAlign: 'center' }}>
                   <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--green)', lineHeight: 1 }}>{watched}</div>
-                  <div style={{ fontSize: '.6rem', color: 'var(--text3)', marginTop: '.15rem', textTransform: 'uppercase', letterSpacing: '.5px' }}>films vus</div>
+                  <div style={{ fontSize: '.58rem', color: 'var(--text3)', marginTop: '.15rem', textTransform: 'uppercase', letterSpacing: '.5px', lineHeight: 1.3 }}>Films vus<br/>pendant</div>
                 </div>
-                <div style={{ flex: 1, minWidth: 80, background: 'var(--bg3)', borderRadius: 'var(--r)', padding: '.45rem .6rem', textAlign: 'center' }}>
+                <div style={{ flex: 1, minWidth: 72, background: 'var(--bg3)', borderRadius: 'var(--r)', padding: '.45rem .6rem', textAlign: 'center' }}>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--blue)', lineHeight: 1 }}>{pre}</div>
+                  <div style={{ fontSize: '.58rem', color: 'var(--text3)', marginTop: '.15rem', textTransform: 'uppercase', letterSpacing: '.5px', lineHeight: 1.3 }}>Films vus<br/>pré-marathon</div>
+                </div>
+                <div style={{ flex: 1, minWidth: 72, background: 'var(--bg3)', borderRadius: 'var(--r)', padding: '.45rem .6rem', textAlign: 'center' }}>
                   <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--gold)', lineHeight: 1 }}>{pct}%</div>
-                  <div style={{ fontSize: '.6rem', color: 'var(--text3)', marginTop: '.15rem', textTransform: 'uppercase', letterSpacing: '.5px' }}>progression</div>
+                  <div style={{ fontSize: '.58rem', color: 'var(--text3)', marginTop: '.15rem', textTransform: 'uppercase', letterSpacing: '.5px', lineHeight: 1.3 }}>Progression<br/>marathon</div>
                 </div>
               </div>
 
