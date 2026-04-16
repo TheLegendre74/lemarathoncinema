@@ -71,6 +71,18 @@ export default async function MarathoniensPage() {
                 </div>
               </div>
 
+              {/* Stats films */}
+              <div style={{ display: 'flex', gap: '.5rem', marginBottom: '.7rem', flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: 80, background: 'var(--bg3)', borderRadius: 'var(--r)', padding: '.45rem .6rem', textAlign: 'center' }}>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--green)', lineHeight: 1 }}>{watched}</div>
+                  <div style={{ fontSize: '.6rem', color: 'var(--text3)', marginTop: '.15rem', textTransform: 'uppercase', letterSpacing: '.5px' }}>films vus</div>
+                </div>
+                <div style={{ flex: 1, minWidth: 80, background: 'var(--bg3)', borderRadius: 'var(--r)', padding: '.45rem .6rem', textAlign: 'center' }}>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--gold)', lineHeight: 1 }}>{pct}%</div>
+                  <div style={{ fontSize: '.6rem', color: 'var(--text3)', marginTop: '.15rem', textTransform: 'uppercase', letterSpacing: '.5px' }}>progression</div>
+                </div>
+              </div>
+
               {/* Bio */}
               {p.bio && (
                 <div style={{ fontSize: '.78rem', color: 'var(--text2)', lineHeight: 1.5, marginBottom: '.75rem', fontStyle: 'italic', borderLeft: '2px solid var(--border2)', paddingLeft: '.6rem' }}>
@@ -78,11 +90,11 @@ export default async function MarathoniensPage() {
                 </div>
               )}
 
-              {/* Progression */}
+              {/* Barre de progression */}
               <div style={{ marginBottom: '.7rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.68rem', color: 'var(--text3)', marginBottom: '.3rem' }}>
-                  <span>Progression marathon</span>
-                  <span style={{ color: pct >= 100 ? 'var(--gold)' : 'var(--text2)' }}>{watched}/{totalFilms} · {pct}%</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.65rem', color: 'var(--text3)', marginBottom: '.25rem' }}>
+                  <span>Marathon</span>
+                  <span style={{ color: pct >= 100 ? 'var(--gold)' : 'var(--text2)' }}>{watched}/{totalFilms}</span>
                 </div>
                 <div style={{ height: 5, background: 'var(--bg3)', borderRadius: 99, overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: `${pct}%`, background: pct >= 100 ? 'var(--gold)' : 'var(--green)', borderRadius: 99, transition: 'width .3s' }} />
