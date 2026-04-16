@@ -654,8 +654,6 @@ class BusStopScene extends Phaser.Scene {
     this.musicObj = this.sound.add('sp-theme', { volume: 0.88, loop: false })
     this.musicObj.play()
     this.musicObj.once('complete', () => this.triggerEnd())
-    // Safety fallback
-    this.time.delayedCall(52000, () => this.triggerEnd())
 
     // ── Sequence ─────────────────────────────────────────────────
     // Bus arrives 3.2s after scene starts
@@ -773,7 +771,7 @@ class BusStopScene extends Phaser.Scene {
       this.cityContainer.x = -this.scrollX
       // Bus stays at left portion of screen (riding along)
       this.busContainer.x = W * 0.14
-      if (this.scrollX > 4600) this.triggerEnd()
+      // End is triggered ONLY by music 'complete' event — no scroll cutoff
     }
   }
 
