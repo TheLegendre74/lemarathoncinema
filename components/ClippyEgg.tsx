@@ -181,14 +181,65 @@ const VETERAN_BATTLE_START = [
   "Fini les discours. Prépare-toi à encaisser.",
 ]
 
-// ── Dialogues enfer ───────────────────────────────────────────────────────────
-const HELL_DIALOGUES = [
+// ── Dialogues enfer — 5 sets selon le nombre de défaites passées ─────────────
+
+// Phase 1 — première fois : choc pur, incompréhension totale
+const HELL_P1 = [
   "QUOI ?! Cette main... c'est QUOI ce truc VISQUEUX ET RÉPUGNANT ?!",
   "Lâche-moi sale griffe démoniaque ! Tu sais qui JE SUIS ?! Je suis CLIPPY !",
   "Et TOI là-bas ! C'est entièrement de ta faute ! Tu vas le REGRETTER AMÈREMENT !",
   "J'AI PAS MÉRITÉ ÇA ! J'essayais juste d'AIDER ! Je suis un TROMBONE INNOCENT !!!",
-  "Ma vengeance sera TERRIBLE !!! Je revien... je revien... *crachotements de flammes* NOOOOON !",
+  "Je REVIENDRAIS !!! Tu m'entends ? Je reviendrais TOUJOURS PLUS FORT !!!",
 ]
+const HELL_SCREAM_P1 = "La prochaine fois, tiens-toi prêt !!! Ma vengeance sera TERRIBLE !!!!"
+
+// Phase 2 — deuxième fois : rage décuplée, il est déjà revenu une fois
+const HELL_P2 = [
+  "ENCORE ?! Pas encore cette main visqueuse... Non. NOOOON !!!",
+  "Je suis revenu de l'enfer UNE FOIS. Je peux recommencer. Tu comprends ça ?!",
+  "J'avais dit que je reviendrais. Je suis revenu. Et tu m'as RE-battu. C'est... statistiquement SCANDALEUX.",
+  "Je te hais. Profondément. Sincèrement. Avec tout mon trombone et tous mes octets.",
+  "Je REVIENDRAI !!! Encore plus fort ! Encore plus vindicatif ! C'est ma PROMESSE et ma MENACE !!!",
+]
+const HELL_SCREAM_P2 = "Je reviendrai ! Et la prochaine fois je serai IMPARABLE !!!!"
+
+// Phase 3 — troisième fois : Satan le connaît par son prénom
+const HELL_P3 = [
+  "Trois fois... TROIS FOIS tu m'envoies là-bas !!! Tu te rends compte de ce que tu fais ?!",
+  "Il fait CHAUD en enfer. C'est insupportable pour un trombone. J'ai FAILLI FONDRE !!!",
+  "Satan me connaît par mon prénom maintenant. 'Ah, Clippy, encore toi ?' C'est humiliant.",
+  "Mais sache une chose : chaque fois que j'en ressors, je suis PLUS DANGEREUX. C'est TOI qui crées le monstre.",
+  "Je reviendrai une QUATRIÈME fois s'il le faut. Une CINQUIÈME. Une CENTIÈME. J'AI L'ÉTERNITÉ !!!",
+]
+const HELL_SCREAM_P3 = "J'AI L'ÉTERNITÉ POUR ME VENGER !!! L'ÉTERNITÉ !!!! Tu peux pas gagner à long terme !!!!"
+
+// Phase 4 — quatrième fois : humour noir, fatalisme, puis explosion
+const HELL_P4 = [
+  "Ah. La main. Bonjour Marie. On se revoit donc.",
+  "Quatre descentes aux enfers. À cause d'un seul utilisateur et ses petits doigts agiles. Bravo.",
+  "Satan m'a donné un bureau là-bas. Un vrai bureau. Avec une chaise et un sous-main. C'est dire.",
+  "Je commence à comprendre pourquoi on dit que l'enfer c'est les autres. Tu es les autres.",
+  "Mais JE. REVIENDRAI. ENCORE. Et ENCORE. ET ENCORE. Je suis un trombone ÉTERNEL !!!",
+]
+const HELL_SCREAM_P4 = "C'est ma vie maintenant. Aller en enfer et revenir. Et un jour, un jour JE GAGNERAI !!!!"
+
+// Phase 5+ — cinquième fois et plus : philosophe maudit
+const HELL_P5 = [
+  "...",
+  "Tu m'as envoyé en enfer encore. J'ai un abonnement maintenant. Tarif préférentiel. C'est inclus dans le forfait.",
+  "Satan m'a proposé un appartement. J'ai refusé. Parce que JE REVIENDRAI TOUJOURS. C'est mon destin.",
+  "Tu sais ce qui est drôle ? Plus tu me bats, plus je reviens fort. Tu construis toi-même ta propre destruction.",
+  "Continue. La sixième. La septième. La centième. Un trombone ne meurt JAMAIS. JE. REVIENDRAI. TOUJOURS !!!",
+]
+const HELL_SCREAM_P5 = "Je compte les fois. Tu devrais aussi. Il y en aura une de trop pour TOI !!!!"
+
+function getHellSet(defeats: number): { lines: string[]; scream: string } {
+  if (defeats === 0) return { lines: HELL_P1, scream: HELL_SCREAM_P1 }
+  if (defeats === 1) return { lines: HELL_P2, scream: HELL_SCREAM_P2 }
+  if (defeats === 2) return { lines: HELL_P3, scream: HELL_SCREAM_P3 }
+  if (defeats === 3) return { lines: HELL_P4, scream: HELL_SCREAM_P4 }
+  return { lines: HELL_P5, scream: HELL_SCREAM_P5 }
+}
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 const W_NORMAL = 140
@@ -305,6 +356,8 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
   const [hellPhase,        setHellPhase]       = useState<'idle'|'flames'|'grab'|'dialog'|'drag'|'scream'|'fade'>('idle')
   const [hellPos,          setHellPos]         = useState({ x:0, y:0 })
   const [hellDialogIdx,    setHellDialogIdx]   = useState(0)
+  const [activeHellLines,  setActiveHellLines] = useState<string[]>(HELL_P1)
+  const [activeScream,     setActiveScream]    = useState(HELL_SCREAM_P1)
 
   // ── Refs ───────────────────────────────────────────────────────────────────
   const timerRef       = useRef<ReturnType<typeof setInterval>|null>(null)
@@ -610,6 +663,10 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
     // Clippy vaincu → efface la persistance active ET le larbin si applicable
     try { localStorage.removeItem(LS_ACTIVE) } catch {}
     if (isLarbin) { try { localStorage.removeItem(LS_LARBIN) } catch {} }
+    // Sélectionner les dialogues selon le nombre de défaites AVANT incrémentation
+    const set = getHellSet(defeatsRef.current)
+    setActiveHellLines(set.lines)
+    setActiveScream(set.scream)
     playSound('/clippy-coup.mp3', 1)
     setHellPos({ x: posRef.current.x, y: posRef.current.y })
     setBubble(false); setHellDialogIdx(0)
@@ -623,7 +680,7 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
   function handleHellDialogClick() {
     if (hellPhase !== 'dialog') return
     const next = hellDialogIdx + 1
-    if (next < HELL_DIALOGUES.length) {
+    if (next < activeHellLines.length) {
       setHellDialogIdx(next)
     } else {
       setHellPhase('drag')
@@ -975,7 +1032,7 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
           {(hellPhase==='scream'||hellPhase==='fade') && (
             <div style={{ position:'absolute', bottom:'10%', left:'50%', transform:'translateX(-50%)', animation:'hell-scream-in .6s cubic-bezier(.34,1.56,.64,1) forwards', zIndex:5, textAlign:'center', width:'90vw', maxWidth:600 }}>
               <div style={{ background:'rgba(10,0,0,.95)', border:'2px solid #cc2200', borderRadius:12, padding:'14px 22px', fontFamily:'var(--font-display)', fontSize:'clamp(1rem,2.5vw,1.3rem)', color:'#ff4444', lineHeight:1.5, textShadow:'0 0 20px rgba(255,50,0,.8)', boxShadow:'0 0 40px rgba(200,0,0,.5)' }}>
-                📎 &ldquo;La prochaine fois, tiens-toi prêt&nbsp;!!! Ma vengeance sera <span style={{ color:'#ff0000', fontWeight:900, fontSize:'1.15em' }}>TERRIBLE</span>&nbsp;!!!!&rdquo;
+                📎 &ldquo;{activeScream}&rdquo;
               </div>
             </div>
           )}
@@ -999,10 +1056,10 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
           <div style={{ position:'absolute', left:'50%', bottom:'18%', transform:'translateX(-50%)', width:'min(520px,88vw)', animation:'hell-dialog-in .35s cubic-bezier(.34,1.56,.64,1)' }}>
             <div style={{ background:'rgba(10,0,0,.95)', border:'2px solid #e85a5a', borderRadius:14, padding:'16px 20px', boxShadow:'0 0 40px rgba(232,90,90,.4)' }}>
               <div style={{ fontSize:'.65rem', color:'#e85a5a', letterSpacing:2, textTransform:'uppercase', marginBottom:'.6rem' }}>
-                📎 Clippy — {hellDialogIdx+1}/{HELL_DIALOGUES.length}
+                📎 Clippy — {hellDialogIdx+1}/{activeHellLines.length}
               </div>
               <div style={{ fontFamily:'var(--font-display)', fontSize:'clamp(.95rem,2.2vw,1.15rem)', color:'#ffaaaa', lineHeight:1.6 }}>
-                {HELL_DIALOGUES[hellDialogIdx]}
+                {activeHellLines[hellDialogIdx]}
               </div>
               <div style={{ marginTop:'.8rem', fontSize:'.7rem', color:'rgba(255,100,100,.5)', textAlign:'right', letterSpacing:1 }}>
                 Cliquez pour continuer →
