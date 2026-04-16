@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { discoverEgg } from '@/lib/actions'
+import { discoverEgg, unlockAgentOfChaos } from '@/lib/actions'
 
 // ═══════════════════════════════════════════════════════════════
 //  TYPES
@@ -381,6 +381,8 @@ function ShellGame({ onWin, onClose }: ShellGameProps) {
 function ChaosBadge({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     localStorage.setItem('joker-agent-of-chaos', '1')
+    // Débloque le badge en base + auto-équipe si pas de badge spécial déjà actif
+    unlockAgentOfChaos().catch(() => {})
   }, [])
 
   return (

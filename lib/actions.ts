@@ -1779,6 +1779,29 @@ export async function discoverEgg(eggId: string) {
   )
 }
 
+export async function unlockAgentOfChaos() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  // 1. Enregistre la découverte (débloque le badge dans le profil)
+  await supabase.from('discovered_eggs').upsert(
+    { user_id: user.id, egg_id: 'agent-of-chaos' },
+    { onConflict: 'user_id,egg_id', ignoreDuplicates: true }
+  )
+  // 2. Auto-équipe le badge uniquement si l'utilisateur n'a pas déjà un badge spécial actif
+  const { data: profile } = await supabase.from('profiles').select('active_badge').eq('id', user.id).single()
+  const currentBadge = (profile as any)?.active_badge
+  const specialIds = ['rageux', 'agent-of-chaos', 'tama_explorateur', 'tama_chasseur', 'tama_legende', 'tama_maitre']
+  const hasSpecialEquipped = currentBadge && specialIds.includes(currentBadge) && currentBadge !== 'agent-of-chaos'
+  if (!hasSpecialEquipped) {
+    await supabase.from('profiles').update({ active_badge: 'agent-of-chaos' } as any).eq('id', user.id)
+  }
+  revalidatePath('/profil')
+  revalidatePath('/classement')
+  revalidatePath('/marathoniens')
+  return { success: true }
+}
+
 // ── FORUM ─────────────────────────────────────────────────────
 
 export async function createForumTopic(title: string, description: string) {
