@@ -883,9 +883,11 @@ export default function EasterEggs({ config = {}, isGuest = false }: { config?: 
   const predSoundRef = useRef<HTMLAudioElement | null>(null)
   const [showTipiak,     setShowTipiak]     = useState(false)
   const [showPandora,    setShowPandora]    = useState(false)
-  const [showClipy,      setShowClipy]      = useState(() =>
-    typeof window !== 'undefined' && localStorage.getItem('clippy_is_larbin') === '1'
-  )
+  const [showClipy,      setShowClipy]      = useState(() => {
+    if (typeof window === 'undefined') return false
+    // Clippy persiste entre sessions s'il est actif (pas encore vaincu) ou si larbin
+    return localStorage.getItem('clippy_active') === '1' || localStorage.getItem('clippy_is_larbin') === '1'
+  })
   const [showTamagotchi, setShowTamagotchi] = useState(false)
   const keyBuf = useRef<string[]>([])
   const tarsShown = useRef(false)

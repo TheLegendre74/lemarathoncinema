@@ -170,6 +170,17 @@ const NARQUES_COMBAT = [
   "Tu as réussi à me toucher. Je suis presque impressionné. Presque.",
 ]
 
+// ── Dialogues pré-combat Phase 2+ — direct, sans système de fatigue ──────────
+const VETERAN_BATTLE_START = [
+  "On arrête de perdre du temps. Combat maintenant.",
+  "Pas de préliminaires cette fois. Tu sais ce qui t'attend.",
+  "Bienvenue dans la vraie partie. Ça va faire mal.",
+  "Tu te souviens de la dernière fois ? Cette fois c'est pire. Allons-y.",
+  "Directement au combat. Comme tu aimes souffrir.",
+  "Je t'attendais. On commence tout de suite.",
+  "Fini les discours. Prépare-toi à encaisser.",
+]
+
 // ── Dialogues enfer ───────────────────────────────────────────────────────────
 const HELL_DIALOGUES = [
   "QUOI ?! Cette main... c'est QUOI ce truc VISQUEUX ET RÉPUGNANT ?!",
@@ -186,20 +197,21 @@ const W_SHIELD = 110
 const W_SWORD  = 130
 const H_SWORD  = 365
 const TIRED_AT = 4
-const PLAYER_MAX_HP      = 15     // phase 2 : 15hp au lieu de 20
+// HP joueur : 15 phase 1-2, 10 phase 3+ (calculé dans le composant)
 const PARRY_WINDOW_P1    = 2500   // phase 1
 const PARRY_WINDOW_P2    = 2200   // phase 2 : -300ms
-const PARRY_WINDOW_P3    = 1900   // phase 3+ : -600ms total
+const PARRY_WINDOW_P3    = 700    // phase 3+ : 0.70s
 const PARRY_SQ           = 150
 const MG_TARGET          = 100
 const BASE_HP            = 50
-const BASE_SPEED         = 5
+const BASE_SPEED         = 5      // vitesse mini-jeu Clippy : +2 par phase
 const LARBIN_NAMES       = ['larbin', 'Igor mon servant', 'Chose débile', 'Tas de chair inutile', 'grand singe qui pue']
 
 // ── localStorage ─────────────────────────────────────────────────────────────
 const LS_DEFEATS    = 'clippy_defeats'
 const LS_LARBIN     = 'clippy_is_larbin'
 const LS_LARBIN_IDX = 'clippy_larbin_idx'
+const LS_ACTIVE     = 'clippy_active'    // persiste entre sessions tant que pas vaincu
 
 function getDefeats(): number  { return parseInt(localStorage.getItem(LS_DEFEATS)    ?? '0') }
 function setDefeatsLS(n: number) { localStorage.setItem(LS_DEFEATS, String(n)) }
@@ -224,7 +236,6 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
   const combatPhase   = getPhaseFromDefeats(defeats)   // 1 | 2 | 3 | 4
   const PARRY_WINDOW_MS = combatPhase >= 3 ? PARRY_WINDOW_P3 : combatPhase === 2 ? PARRY_WINDOW_P2 : PARRY_WINDOW_P1
   const CLIPPY_MAX_HP = BASE_HP + defeats * 10
-  const CLIPPY_SPEED  = BASE_SPEED + defeats
 
   const [isLarbin, setIsLarbin] = useState(() => getIsLarbin())
   const larbinIdxRef = useRef(parseInt((typeof window !== 'undefined' ? localStorage.getItem(LS_LARBIN_IDX) : null) ?? '0'))
@@ -238,6 +249,11 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
   function larbinMsg(msg: string): string {
     return msg.replace(/\[NAME\]/g, getLarbinName())
   }
+
+  // HP joueur dépend de la phase
+  const PLAYER_MAX_HP = combatPhase >= 3 ? 10 : 15
+  // Vitesse mini-jeu Clippy : +2 par phase (5, 7, 9, 11...)
+  const CLIPPY_SPEED  = BASE_SPEED + (combatPhase - 1) * 2
 
   // Sélection des répliques selon phase et larbin
   const normalReplies = isLarbin
@@ -305,6 +321,12 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
   clippyHPRef.current = clippyHP
   playerHPRef.current = playerHP
   mgPhaseRef.current  = mgPhase
+
+  // ── Persistance cross-session ──────────────────────────────────────────────
+  useEffect(() => {
+    // Marque Clippy comme actif — persiste sur F5 tant qu'il n'est pas vaincu
+    try { localStorage.setItem(LS_ACTIVE, '1') } catch {}
+  }, [])
 
   // ── Init queues ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -563,16 +585,15 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
   // ── Séquence enfer ─────────────────────────────────────────────────────────
   function startHellSequence() {
     stopMusic(); clearAutoAttack()
+    // Clippy vaincu → efface la persistance active ET le larbin si applicable
+    try { localStorage.removeItem(LS_ACTIVE) } catch {}
+    if (isLarbin) { try { localStorage.removeItem(LS_LARBIN) } catch {} }
     playSound('/clippy-coup.mp3', 1)
     setHellPos({ x: posRef.current.x, y: posRef.current.y })
     setBubble(false); setHellDialogIdx(0)
     setHellPhase('flames')
     setTimeout(() => { setHellPhase('grab'); playSound('/clippy-rire.mp3', 0.85) }, 800)
     setTimeout(() => setHellPhase('dialog'), 1900)
-    // si larbin → on efface le larbin lors de la victoire
-    if (isLarbin) {
-      try { localStorage.removeItem(LS_LARBIN) } catch {}
-    }
     const newD = defeatsRef.current + 1
     defeatsRef.current = newD; setDefeatsLS(newD)
   }
@@ -612,18 +633,33 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
   }
 
   // ── Clics ──────────────────────────────────────────────────────────────────
+  const veteranBattleQueue = useRef<string[]>([])
   function handleNormalClick(e: React.MouseEvent) {
     e.stopPropagation()
+
+    // ── Phase 2+ : combat direct au premier clic, nouveau dialogue ────────────
+    if (combatPhase >= 2 && !tired) {
+      setPhase('combat'); phaseRef.current = 'combat'
+      setMisses(0)
+      clippyHPRef.current = CLIPPY_MAX_HP; playerHPRef.current = PLAYER_MAX_HP
+      setClippyHP(CLIPPY_MAX_HP); setPlayerHP(PLAYER_MAX_HP)
+      if (veteranBattleQueue.current.length === 0) veteranBattleQueue.current = shuffle(VETERAN_BATTLE_START)
+      const msg = isLarbin
+        ? larbinMsg("🗡️ Pas de préliminaires [NAME]. On commence. Maintenant.")
+        : veteranBattleQueue.current.pop() ?? VETERAN_BATTLE_START[0]
+      setMessage(msg); setBubble(true); dodge(); startMusic()
+      scheduleAutoAttack()
+      return
+    }
+
+    // ── Phase 1 : système fatigue / 4 clics ────────────────────────────────────
     if (tired) {
       setPhase('combat'); phaseRef.current = 'combat'
       setTired(false); setMisses(0)
       clippyHPRef.current = CLIPPY_MAX_HP; playerHPRef.current = PLAYER_MAX_HP
       setClippyHP(CLIPPY_MAX_HP); setPlayerHP(PLAYER_MAX_HP)
-      const msg = isLarbin
-        ? larbinMsg("🗡️ [NAME] veut se battre ?! Très bien. Prépare-toi à souffrir davantage.")
-        : "🗡️ Tu veux vraiment te battre ?! TRÈS BIEN. Prépare-toi à souffrir."
-      setMessage(msg); setBubble(true); dodge(); startMusic()
-      if (combatPhase >= 2) scheduleAutoAttack()   // démarre les attaques autonomes dès phase 2
+      setMessage("🗡️ Tu veux vraiment te battre ?! TRÈS BIEN. Prépare-toi à souffrir.")
+      setBubble(true); dodge(); startMusic()
       return
     }
     const n = misses + 1; setMisses(n)
