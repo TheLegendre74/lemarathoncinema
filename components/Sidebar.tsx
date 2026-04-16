@@ -10,9 +10,9 @@ import type { Profile } from '@/lib/supabase/types'
 interface SidebarProps { profile: Profile | null; hasRageuxEgg?: boolean; hasTamagotchiEgg?: boolean; unreadMessages?: number }
 
 export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEgg = false, unreadMessages = 0 }: SidebarProps) {
-  const pathname    = usePathname()
+  const pathname     = usePathname()
   const searchParams = useSearchParams()
-  const router      = useRouter()
+  const router       = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
 
   function isActive(href: string) {
@@ -28,27 +28,80 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
   const level = profile ? levelFromExp(profile.exp) : null
   const badge = profile ? getActiveBadge(profile.exp, (profile as any).active_badge) : null
 
-  const allNav = [
-    { href: '/',            icon: '🏠', label: 'Accueil',            short: 'Accueil'    },
-    { href: '/films',       icon: '🎬', label: 'Films',              short: 'Films'      },
-    { href: '/semaine',     icon: '⭐', label: 'Film de la semaine', short: 'Semaine'    },
-    { href: '/duels',       icon: '⚔️', label: 'Duels',              short: 'Duels'      },
-    { href: '/notes',       icon: '📊', label: 'Classement films',   short: 'Notes'      },
-    ...(hasRageuxEgg      ? [{ href: '/notes?tab=pires', icon: '💀', label: 'Pires Films',      short: 'Pires'      }] : []),
-    ...(hasTamagotchiEgg  ? [{ href: '/tamagotchi',     icon: '🤍', label: 'Mon Alien',        short: 'Alien'      }] : []),
-    { href: '/classement',    icon: '🏆', label: 'Classement joueurs', short: 'Classement'   },
-    { href: '/marathoniens',  icon: '🎖️', label: 'Marathoniens',       short: 'Joueurs'      },
-    { href: '/forum',       icon: '💬', label: 'Forum',              short: 'Forum'      },
-    { href: '/rattrapage',  icon: '🎓', label: 'Rattrapage cinéma',  short: 'Rattrapage' },
-    { href: '/easter-eggs', icon: '🥚', label: 'Easter Eggs',        short: 'Easter'     },
-    ...(profile           ? [{ href: '/profil',         icon: '👤', label: 'Mon profil',       short: 'Profil'     }] : []),
-    ...(profile?.is_admin ? [{ href: '/admin',          icon: '🔧', label: 'Administration',   short: 'Admin'      }] : []),
+  /* ── Structure groupée ── */
+  const standaloneNav = [
+    { href: '/',      icon: '🏠', label: 'Accueil',        short: 'Accueil' },
+    ...(profile       ? [{ href: '/profil', icon: '👤', label: 'Mon profil', short: 'Profil', badge: unreadMessages > 0 ? unreadMessages : null }] : []),
+    ...(profile?.is_admin ? [{ href: '/admin', icon: '🔧', label: 'Administration', short: 'Admin' }] : []),
   ]
 
-  // 5 onglets toujours visibles + bouton Menu
+  const navGroups = [
+    {
+      id: 'evenement',
+      icon: '🎪',
+      label: 'Évènement Collectif',
+      items: [
+        { href: '/semaine', icon: '⭐', label: 'Films de la semaine', short: 'Semaine' },
+        { href: '/duels',   icon: '⚔️', label: 'Duels',               short: 'Duels'   },
+      ],
+    },
+    {
+      id: 'films',
+      icon: '🎬',
+      label: 'Films',
+      items: [
+        { href: '/films',          icon: '🎬', label: 'Liste de Films',      short: 'Films'     },
+        { href: '/notes',          icon: '📊', label: 'Classements Films',   short: 'Notes'     },
+        ...(hasRageuxEgg ? [{ href: '/notes?tab=pires', icon: '💀', label: 'Pires Films', short: 'Pires' }] : []),
+        { href: '/rattrapage',     icon: '🎓', label: 'Rattrapages Cinéma',  short: 'Rattrapage'},
+      ],
+    },
+    {
+      id: 'social',
+      icon: '👥',
+      label: 'Social',
+      items: [
+        { href: '/forum',        icon: '💬', label: 'Forum',              short: 'Forum'      },
+        { href: '/marathoniens', icon: '🎖️', label: 'Marathoniens',       short: 'Joueurs'    },
+        { href: '/classement',   icon: '🏆', label: 'Classement Joueurs', short: 'Classement' },
+      ],
+    },
+    {
+      id: 'secret',
+      icon: '🔮',
+      label: 'Secret',
+      items: [
+        ...(hasTamagotchiEgg ? [{ href: '/tamagotchi', icon: '🤍', label: 'Mon Alien',   short: 'Alien'  }] : []),
+        { href: '/easter-eggs', icon: '🥚', label: 'Easter Eggs', short: 'Easter' },
+      ],
+    },
+  ]
+
+  /* groupe actif selon la page courante */
+  function activeGroup() {
+    for (const g of navGroups) {
+      if (g.items.some(i => isActive(i.href))) return g.id
+    }
+    return null
+  }
+
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    const ag = activeGroup()
+    return ag ? { [ag]: true } : {}
+  })
+
+  function toggleGroup(gid: string) {
+    setOpenGroups(prev => ({ ...prev, [gid]: !prev[gid] }))
+  }
+
+  /* nav mobile : tous les items à plat */
+  const allItemsFlat = [
+    ...standaloneNav,
+    ...navGroups.flatMap(g => g.items),
+  ]
   const primaryHrefs = ['/', '/films', '/marathoniens', '/forum', '/notes']
-  const primaryNav   = allNav.filter(n => primaryHrefs.includes(n.href))
-  const menuNav      = allNav.filter(n => !primaryHrefs.includes(n.href))
+  const primaryNav   = allItemsFlat.filter(n => primaryHrefs.includes(n.href))
+  const menuNav      = allItemsFlat.filter(n => !primaryHrefs.includes(n.href))
 
   async function handleSignOut() {
     setMenuOpen(false)
@@ -66,18 +119,46 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
         <div className="sidebar-logo-sub">{CONFIG.SAISON_LABEL}</div>
       </div>
 
-      <div style={{ padding: '.8rem 0' }}>
-        {allNav.map(n => (
+      <div style={{ padding: '.6rem 0' }}>
+        {/* Items standalone */}
+        {standaloneNav.map(n => (
           <Link key={n.href} href={n.href} className={`nav-item ${isActive(n.href) ? 'active' : ''}`}>
             <span style={{ fontSize: '.95rem', width: 18, textAlign: 'center', flexShrink: 0 }}>{n.icon}</span>
             {n.label}
-            {n.href === '/profil' && unreadMessages > 0 && (
-              <span style={{ marginLeft: 'auto', background: 'var(--red, #e55)', color: '#fff', borderRadius: 99, fontSize: '.6rem', fontWeight: 700, padding: '1px 6px', minWidth: 18, textAlign: 'center' }}>
-                {unreadMessages > 99 ? '99+' : unreadMessages}
+            {(n as any).badge && (
+              <span style={{ marginLeft: 'auto', background: 'var(--red)', color: '#fff', borderRadius: 99, fontSize: '.6rem', fontWeight: 700, padding: '1px 6px', minWidth: 18, textAlign: 'center' }}>
+                {(n as any).badge > 99 ? '99+' : (n as any).badge}
               </span>
             )}
           </Link>
         ))}
+
+        <div className="nav-sep" />
+
+        {/* Groupes accordéon */}
+        {navGroups.map(g => {
+          const isOpen   = !!openGroups[g.id]
+          const isActive_ = g.items.some(i => isActive(i.href))
+          return (
+            <div key={g.id}>
+              <div
+                className={`nav-group-header ${isOpen ? 'open' : ''} ${isActive_ ? 'active' : ''}`}
+                onClick={() => toggleGroup(g.id)}
+              >
+                <span style={{ fontSize: '.95rem', width: 18, textAlign: 'center', flexShrink: 0 }}>{g.icon}</span>
+                {g.label}
+                <span className={`nav-group-arrow ${isOpen ? 'open' : ''}`}>▶</span>
+              </div>
+              <div className={`nav-submenu ${isOpen ? 'open' : ''}`}>
+                {g.items.map(item => (
+                  <Link key={item.href} href={item.href} className={`nav-subitem ${isActive(item.href) ? 'active' : ''}`}>
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )
+        })}
       </div>
 
       <div className="sidebar-bottom">
@@ -144,7 +225,6 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
 
           <div className="mobile-drawer-handle" />
 
-          {/* Infos utilisateur */}
           <div className="mobile-drawer-user">
             {profile ? (
               <>
@@ -175,7 +255,6 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
             )}
           </div>
 
-          {/* Grille des pages */}
           <div className="mobile-drawer-grid">
             {menuNav.map(n => (
               <Link
@@ -188,7 +267,7 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
                 <span className="mobile-drawer-item-icon">{n.icon}</span>
                 <span className="mobile-drawer-item-label">{n.short}</span>
                 {n.href === '/profil' && unreadMessages > 0 && (
-                  <span style={{ position: 'absolute', top: 4, right: 4, background: 'var(--red, #e55)', color: '#fff', borderRadius: 99, fontSize: '.55rem', fontWeight: 700, padding: '1px 5px', minWidth: 16, textAlign: 'center' }}>
+                  <span style={{ position: 'absolute', top: 4, right: 4, background: 'var(--red)', color: '#fff', borderRadius: 99, fontSize: '.55rem', fontWeight: 700, padding: '1px 5px', minWidth: 16, textAlign: 'center' }}>
                     {unreadMessages > 99 ? '99+' : unreadMessages}
                   </span>
                 )}

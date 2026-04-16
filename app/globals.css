@@ -85,6 +85,38 @@ html, body {
 .nav-item.active { color: var(--gold); border-left-color: var(--gold); background: rgba(232,196,106,.04); font-weight: 500; }
 .nav-badge { background: var(--red); color: #fff; font-size: .6rem; padding: 1px 5px; border-radius: 99px; margin-left: auto; }
 
+/* ── nav groupes ── */
+.nav-sep { height: 1px; background: var(--border); margin: .4rem .8rem; }
+.nav-group-header {
+  display: flex; align-items: center; gap: .7rem;
+  padding: .6rem 1.2rem; color: var(--text2);
+  cursor: pointer; font-size: .88rem;
+  transition: all .15s; user-select: none;
+}
+.nav-group-header:hover { color: var(--text); background: rgba(255,255,255,.02); }
+.nav-group-header.open { color: var(--text); }
+.nav-group-header.active { color: var(--gold); }
+.nav-group-arrow { margin-left: auto; font-size: .6rem; transition: transform .2s; opacity: .45; }
+.nav-group-arrow.open { transform: rotate(90deg); opacity: .9; }
+.nav-submenu { overflow: hidden; max-height: 0; transition: max-height .25s ease; }
+.nav-submenu.open { max-height: 400px; }
+.nav-subitem {
+  display: flex; align-items: center; gap: .65rem;
+  padding: .48rem 1.2rem .48rem 2.6rem;
+  color: var(--text3); cursor: pointer; font-size: .83rem;
+  transition: all .15s; border-left: 2px solid transparent;
+  text-decoration: none; position: relative;
+}
+.nav-subitem::before {
+  content: ''; position: absolute; left: 1.4rem; top: 50%;
+  transform: translateY(-50%); width: 4px; height: 4px;
+  border-radius: 50%; background: var(--bg4); transition: background .15s;
+}
+.nav-subitem:hover { color: var(--text2); background: rgba(255,255,255,.015); }
+.nav-subitem:hover::before { background: var(--text3); }
+.nav-subitem.active { color: var(--gold); border-left-color: var(--gold); background: rgba(232,196,106,.04); font-weight: 500; }
+.nav-subitem.active::before { background: var(--gold); }
+
 .sidebar-bottom { margin-top: auto; padding: 1rem 1.2rem; border-top: 1px solid var(--border); }
 .user-chip { display: flex; align-items: center; gap: .7rem; margin-bottom: .8rem; }
 .user-ava  {
