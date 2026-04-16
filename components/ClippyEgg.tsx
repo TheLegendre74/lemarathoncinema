@@ -130,6 +130,38 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
   clippyHPRef.current = clippyHP
   playerHPRef.current = playerHP
 
+  /* ── Audio ── */
+  const musicRef  = useRef<HTMLAudioElement | null>(null)
+
+  function playSound(src: string, volume = 1) {
+    try {
+      const a = new Audio(src)
+      a.volume = volume
+      a.play().catch(() => {})
+    } catch {}
+  }
+
+  function startMusic() {
+    if (musicRef.current) return
+    const a = new Audio('/clippy-music.m4a')
+    a.loop = true
+    a.volume = 0.25
+    a.play().catch(() => {})
+    musicRef.current = a
+  }
+
+  function stopMusic() {
+    if (!musicRef.current) return
+    musicRef.current.pause()
+    musicRef.current.currentTime = 0
+    musicRef.current = null
+  }
+
+  // Nettoyage musique à la destruction
+  useEffect(() => {
+    return () => stopMusic()
+  }, [])
+
   /* ── Curseur souris combat ── */
   useEffect(() => {
     if (phase !== 'combat') return
@@ -200,12 +232,15 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
     }
     parryRAF.current = requestAnimationFrame(tick)
 
-    // Timeout : parade ratée
+    // Timeout : parade ratée — Clippy frappe
     parryTimer.current = setTimeout(() => {
       if (!parryActive.current) return
       parryActive.current = false
       setParrySquare(null)
       if (parryRAF.current) cancelAnimationFrame(parryRAF.current)
+      // Sons : épée tape + coup porté
+      playSound('/clippy-hit.mp3', 0.9)
+      setTimeout(() => playSound('/clippy-coup.mp3', 1), 120)
       // Joueur prend un coup
       const nextHP = Math.max(0, playerHPRef.current - 1)
       playerHPRef.current = nextHP
@@ -215,6 +250,7 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
       if (nextHP <= 0) {
         setMessage("⚔️ VICTOIRE ! Tu as échoué. Je redeviens... agréable. Pour l'instant.")
         setBubble(true)
+        stopMusic()
         setTimeout(() => resetToNormal(), 2200)
       } else {
         setMessage(`Touché ! Il te reste ${nextHP} HP. Lamentable.`)
@@ -236,6 +272,9 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
     setShieldFlash(true)
     setTimeout(() => setShieldFlash(false), 350)
 
+    // Son : épée contre bouclier
+    playSound('/clippy-parry.mp3', 1)
+
     const nextHP = Math.max(0, clippyHPRef.current - 3)
     clippyHPRef.current = nextHP
     setClippyHP(nextHP)
@@ -243,8 +282,10 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
     setTimeout(() => setClippyHit(false), 300)
 
     if (nextHP <= 0) {
+      playSound('/clippy-coup.mp3', 1)
       setMessage("NON ! Impossible… Je… Je reviendrai… toujours…")
       setBubble(true)
+      stopMusic()
       setTimeout(() => onDismiss(), 1800)
       return
     }
@@ -260,6 +301,7 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
 
   /* ── Reset phase normale ── */
   function resetToNormal() {
+    stopMusic()
     parryActive.current = false
     if (parryTimer.current) clearTimeout(parryTimer.current)
     if (parryRAF.current) cancelAnimationFrame(parryRAF.current)
@@ -294,6 +336,7 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
       setMessage("🗡️ Tu veux vraiment te battre ?! TRÈS BIEN. Prépare-toi à souffrir.")
       setBubble(true)
       dodge()
+      startMusic()
       return
     }
     const n = misses + 1
@@ -316,6 +359,10 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
     // Si le carré de parade est actif, ignorer les clics sur Clippy
     if (parryActive.current) return
 
+    // Sons : swoosh d'abord, puis impact sur Clippy
+    playSound('/clippy-swoosh.wav', 0.8)
+    setTimeout(() => playSound('/clippy-hit.mp3', 0.9), 180)
+
     const nextHP = Math.max(0, clippyHPRef.current - 1)
     clippyHPRef.current = nextHP
     setClippyHP(nextHP)
@@ -326,8 +373,10 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
     dodge()
 
     if (nextHP <= 0) {
+      playSound('/clippy-coup.mp3', 1)
       setMessage("NON ! C'est... pas possible... Je reviendrai... toujours...")
       setBubble(true)
+      stopMusic()
       setTimeout(() => onDismiss(), 1800)
       return
     }
