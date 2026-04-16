@@ -113,7 +113,7 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
   const [mousePos, setMousePos]     = useState({ x: -300, y: -300 })
   // Animation enfer
   const [hellPhase, setHellPhase]   = useState<'idle'|'flames'|'grab'|'drag'|'scream'|'fade'>('idle')
-  const [hellClippyX, setHellClippyX] = useState(0)
+  const [hellPos, setHellPos]       = useState({ x: 0, y: 0 })
 
   const msgIdx      = useRef(0)
   const cMsgIdx     = useRef(0)
@@ -169,13 +169,14 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
   function startHellSequence() {
     stopMusic()
     playSound('/clippy-coup.mp3', 1)
-    setHellClippyX(posRef.current.x)
+    setHellPos({ x: posRef.current.x, y: posRef.current.y })
     setBubble(false)
     setHellPhase('flames')
-    setTimeout(() => setHellPhase('grab'),   1100)
-    setTimeout(() => setHellPhase('drag'),   2600)
-    setTimeout(() => setHellPhase('scream'), 3300)
-    setTimeout(() => setHellPhase('fade'),   5200)
+    setTimeout(() => setHellPhase('grab'),                   1100)
+    setTimeout(() => playSound('/clippy-rire.mp3', 0.85),   1800)  // rire démoniaque quand la main attrape
+    setTimeout(() => setHellPhase('drag'),                   2600)
+    setTimeout(() => setHellPhase('scream'),                 3300)
+    setTimeout(() => setHellPhase('fade'),                   5200)
     setTimeout(() => { setHellPhase('idle'); onDismiss() }, 6000)
   }
 
@@ -413,10 +414,9 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
         /* Enfer */
         @keyframes hell-flame-flicker { 0%,100%{transform:scaleY(1) skewX(0deg)} 25%{transform:scaleY(1.12) skewX(4deg)} 50%{transform:scaleY(.9) skewX(-3deg)} 75%{transform:scaleY(1.08) skewX(2deg)} }
         @keyframes hell-flame-in      { from{transform:translateY(100%)} to{transform:translateY(0)} }
-        @keyframes hell-hand-rise     { 0%{transform:translateY(500px) rotate(0deg)} 60%{transform:translateY(-30px) rotate(-4deg)} 75%{transform:translateY(10px) rotate(3deg)} 100%{transform:translateY(-10px) rotate(-2deg)} }
-        @keyframes hell-hand-drag     { from{transform:translateY(-10px) rotate(-2deg)} to{transform:translateY(700px) rotate(5deg)} }
-        @keyframes hell-clippy-shake  { 0%,100%{transform:rotate(0deg)} 20%{transform:rotate(-12deg)} 40%{transform:rotate(10deg)} 60%{transform:rotate(-9deg)} 80%{transform:rotate(7deg)} }
-        @keyframes hell-clippy-drag   { from{transform:rotate(-5deg) translateY(0)} to{transform:rotate(15deg) translateY(800px)} }
+        @keyframes hell-hand-rise     { from{transform:translateY(900px)} to{transform:translateY(0)} }
+        @keyframes hell-drag-down     { from{transform:translate(0,0)} to{transform:translate(0,1100px)} }
+        @keyframes hell-clippy-shake  { 0%,100%{transform:rotate(0deg) scale(1)} 20%{transform:rotate(-14deg) scale(1.05)} 40%{transform:rotate(12deg) scale(.97)} 60%{transform:rotate(-10deg) scale(1.03)} 80%{transform:rotate(8deg) scale(.98)} }
         @keyframes hell-scream-in     { 0%{opacity:0;transform:translateX(-50%) scale(.5) rotate(-8deg)} 40%{opacity:1;transform:translateX(-50%) scale(1.1) rotate(2deg)} 100%{opacity:1;transform:translateX(-50%) scale(1) rotate(0deg)} }
         @keyframes hell-fade          { from{opacity:1} to{opacity:0} }
       `}</style>
@@ -564,114 +564,107 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
         }}>
 
           {/* Overlay sombre */}
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(10,0,0,.55)' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(10,0,0,.6)' }} />
 
           {/* ── Mur de flammes ── */}
           <div style={{
             position: 'absolute', bottom: 0, left: 0, right: 0,
-            height: '38vh', overflow: 'hidden',
+            height: '40vh', overflow: 'hidden',
             animation: 'hell-flame-in .6s ease forwards',
           }}>
             {Array.from({ length: 28 }).map((_, i) => {
-              const w  = 60 + Math.random() * 80
-              const h  = 30 + Math.random() * 60
-              const x  = (i / 27) * 110 - 5
+              const w     = 60 + Math.random() * 80
+              const h     = 30 + Math.random() * 60
+              const x     = (i / 27) * 110 - 5
               const delay = (Math.random() * 0.5).toFixed(2)
               const dur   = (0.5 + Math.random() * 0.6).toFixed(2)
               return (
                 <div key={i} style={{
-                  position: 'absolute',
-                  bottom: 0,
-                  left: `${x}%`,
-                  width: `${w}px`,
-                  height: `${h + 120}px`,
-                  background: `radial-gradient(ellipse at 50% 100%, #ff4500 0%, #ff8c00 35%, #ffd700 60%, transparent 100%)`,
+                  position: 'absolute', bottom: 0, left: `${x}%`,
+                  width: `${w}px`, height: `${h + 130}px`,
+                  background: 'radial-gradient(ellipse at 50% 100%, #ff4500 0%, #ff8c00 35%, #ffd700 60%, transparent 100%)',
                   borderRadius: '50% 50% 0 0',
                   transformOrigin: 'bottom center',
                   animation: `hell-flame-flicker ${dur}s ease-in-out ${delay}s infinite`,
-                  opacity: .9,
-                  mixBlendMode: 'screen',
+                  opacity: .92, mixBlendMode: 'screen',
                 }} />
               )
             })}
-            {/* Socle rougeoyant */}
             <div style={{
-              position: 'absolute', bottom: 0, left: 0, right: 0, height: 60,
+              position: 'absolute', bottom: 0, left: 0, right: 0, height: 70,
               background: 'linear-gradient(to top, #8b0000, #cc2200, transparent)',
             }} />
           </div>
 
-          {/* ── Main démoniaque ── */}
+          {/* ── Clippy RÉEL + Main démoniaque dans un wrapper à la vraie position de Clippy ── */}
           {(hellPhase === 'grab' || hellPhase === 'drag' || hellPhase === 'scream') && (
             <div style={{
-              position: 'absolute',
-              bottom: hellPhase === 'drag' || hellPhase === 'scream' ? -20 : -20,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: 320,
-              animation: hellPhase === 'grab' || hellPhase === 'scream'
-                ? 'hell-hand-rise .9s cubic-bezier(.34,1.56,.64,1) forwards'
-                : 'hell-hand-drag .9s ease forwards',
-              zIndex: 2,
+              position: 'fixed',
+              // Centre du wrapper = centre de Clippy à sa vraie position
+              left: hellPos.x + W_COMBAT / 2,
+              top:  hellPos.y + W_COMBAT / 2,
+              zIndex: 99998,
+              // Phase drag : tout le bloc descend ensemble
+              animation: (hellPhase === 'drag' || hellPhase === 'scream')
+                ? 'hell-drag-down 1.1s cubic-bezier(.4,0,.6,1) forwards'
+                : 'none',
             }}>
-              <svg width="320" height="500" viewBox="0 0 320 500" fill="none">
-                {/* Avant-bras / base */}
-                <rect x="95" y="370" width="130" height="130" rx="30" fill="#7a0000"/>
-                <rect x="100" y="370" width="120" height="80" fill="#8b0000"/>
-                {/* Paume */}
-                <ellipse cx="160" cy="350" rx="110" ry="90" fill="#8b0000"/>
-                <ellipse cx="160" cy="340" rx="95" ry="75" fill="#9b0000"/>
-                {/* Veines */}
-                <path d="M120 350 Q130 330 140 315 Q150 300 155 280" stroke="#5a0000" strokeWidth="4" fill="none"/>
-                <path d="M160 350 Q162 328 165 310 Q168 292 170 270" stroke="#5a0000" strokeWidth="3" fill="none"/>
-                <path d="M195 348 Q200 330 205 312" stroke="#5a0000" strokeWidth="3" fill="none"/>
-                {/* Pouce */}
-                <rect x="28" y="230" width="52" height="150" rx="26" fill="#8b0000"/>
-                <polygon points="28,230 80,230 54,172" fill="#1a0000"/>
-                <ellipse cx="54" cy="230" rx="26" ry="10" fill="#6a0000"/>
-                {/* Index */}
-                <rect x="82" y="155" width="48" height="205" rx="24" fill="#8b0000"/>
-                <polygon points="82,155 130,155 106,92" fill="#0d0000"/>
-                <ellipse cx="106" cy="155" rx="24" ry="10" fill="#6a0000"/>
-                {/* Majeur */}
-                <rect x="138" y="118" width="48" height="242" rx="24" fill="#8b0000"/>
-                <polygon points="138,118 186,118 162,48" fill="#0d0000"/>
-                <ellipse cx="162" cy="118" rx="24" ry="10" fill="#6a0000"/>
-                {/* Annulaire */}
-                <rect x="194" y="138" width="44" height="222" rx="22" fill="#8b0000"/>
-                <polygon points="194,138 238,138 216,72" fill="#0d0000"/>
-                <ellipse cx="216" cy="138" rx="22" ry="9" fill="#6a0000"/>
-                {/* Auriculaire */}
-                <rect x="240" y="188" width="38" height="182" rx="19" fill="#8b0000"/>
-                <polygon points="240,188 278,188 259,130" fill="#0d0000"/>
-                <ellipse cx="259" cy="188" rx="19" ry="8" fill="#6a0000"/>
-                {/* Articulations */}
-                <ellipse cx="106" cy="310" rx="12" ry="7" fill="#6a0000"/>
-                <ellipse cx="162" cy="310" rx="12" ry="7" fill="#6a0000"/>
-                <ellipse cx="216" cy="308" rx="11" ry="7" fill="#6a0000"/>
-                <ellipse cx="259" cy="320" rx="10" ry="6" fill="#6a0000"/>
-                {/* Lueur rouge */}
-                <ellipse cx="160" cy="360" rx="100" ry="30" fill="rgba(200,0,0,.18)"/>
-              </svg>
-            </div>
-          )}
-
-          {/* ── Clippy agrippé et tiré ── */}
-          {(hellPhase === 'grab' || hellPhase === 'drag' || hellPhase === 'scream') && (
-            <div style={{
-              position: 'absolute',
-              bottom: hellPhase === 'drag' || hellPhase === 'scream' ? -20 : 260,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: 140,
-              zIndex: 3,
-              animation: hellPhase === 'grab'
-                ? 'hell-clippy-shake .4s ease infinite'
-                : 'hell-clippy-drag 1s ease forwards',
-            }}>
-              <img src="/evil-clippy.png" alt="Clippy"
-                style={{ width: 140, objectFit: 'contain', mixBlendMode: 'multiply' }}
+              {/* Clippy — à sa vraie position (centré sur le wrapper) */}
+              <img
+                src="/evil-clippy.png" alt="Clippy"
+                style={{
+                  position: 'absolute',
+                  left: -W_COMBAT / 2, top: -W_COMBAT / 2,
+                  width: W_COMBAT,
+                  objectFit: 'contain',
+                  mixBlendMode: 'multiply',
+                  animation: hellPhase === 'grab'
+                    ? 'hell-clippy-shake .35s ease infinite'
+                    : 'none',
+                  zIndex: 2,
+                }}
               />
+              {/* Main — centrée sur Clippy, monte depuis le bas */}
+              <div style={{
+                position: 'absolute',
+                // Centre la main sur Clippy : main fait 320px de large
+                left: -160,
+                // Doigts arrivent au centre de Clippy (pointe majeur à y≈48 dans le SVG 500px)
+                top: -(500 - W_COMBAT / 2 - 48),
+                width: 320,
+                zIndex: 1,
+                animation: 'hell-hand-rise 1s cubic-bezier(.34,1.56,.64,1) forwards',
+              }}>
+                <svg width="320" height="500" viewBox="0 0 320 500" fill="none">
+                  <rect x="95" y="370" width="130" height="130" rx="30" fill="#7a0000"/>
+                  <rect x="100" y="370" width="120" height="80" fill="#8b0000"/>
+                  <ellipse cx="160" cy="350" rx="110" ry="90" fill="#8b0000"/>
+                  <ellipse cx="160" cy="340" rx="95" ry="75" fill="#9b0000"/>
+                  <path d="M120 350 Q130 330 140 315 Q150 300 155 280" stroke="#5a0000" strokeWidth="4" fill="none"/>
+                  <path d="M160 350 Q162 328 165 310 Q168 292 170 270" stroke="#5a0000" strokeWidth="3" fill="none"/>
+                  <path d="M195 348 Q200 330 205 312" stroke="#5a0000" strokeWidth="3" fill="none"/>
+                  <rect x="28" y="230" width="52" height="150" rx="26" fill="#8b0000"/>
+                  <polygon points="28,230 80,230 54,172" fill="#1a0000"/>
+                  <ellipse cx="54" cy="230" rx="26" ry="10" fill="#6a0000"/>
+                  <rect x="82" y="155" width="48" height="205" rx="24" fill="#8b0000"/>
+                  <polygon points="82,155 130,155 106,92" fill="#0d0000"/>
+                  <ellipse cx="106" cy="155" rx="24" ry="10" fill="#6a0000"/>
+                  <rect x="138" y="118" width="48" height="242" rx="24" fill="#8b0000"/>
+                  <polygon points="138,118 186,118 162,48" fill="#0d0000"/>
+                  <ellipse cx="162" cy="118" rx="24" ry="10" fill="#6a0000"/>
+                  <rect x="194" y="138" width="44" height="222" rx="22" fill="#8b0000"/>
+                  <polygon points="194,138 238,138 216,72" fill="#0d0000"/>
+                  <ellipse cx="216" cy="138" rx="22" ry="9" fill="#6a0000"/>
+                  <rect x="240" y="188" width="38" height="182" rx="19" fill="#8b0000"/>
+                  <polygon points="240,188 278,188 259,130" fill="#0d0000"/>
+                  <ellipse cx="259" cy="188" rx="19" ry="8" fill="#6a0000"/>
+                  <ellipse cx="106" cy="310" rx="12" ry="7" fill="#6a0000"/>
+                  <ellipse cx="162" cy="310" rx="12" ry="7" fill="#6a0000"/>
+                  <ellipse cx="216" cy="308" rx="11" ry="7" fill="#6a0000"/>
+                  <ellipse cx="259" cy="320" rx="10" ry="6" fill="#6a0000"/>
+                  <ellipse cx="160" cy="360" rx="100" ry="30" fill="rgba(200,0,0,.18)"/>
+                </svg>
+              </div>
             </div>
           )}
 
@@ -679,14 +672,14 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
           {(hellPhase === 'scream' || hellPhase === 'fade') && (
             <div style={{
               position: 'absolute',
-              bottom: '12%', left: '50%',
+              bottom: '10%', left: '50%',
               animation: 'hell-scream-in .6s cubic-bezier(.34,1.56,.64,1) forwards',
-              zIndex: 4,
+              zIndex: 99999,
               textAlign: 'center',
               width: '90vw', maxWidth: 600,
             }}>
               <div style={{
-                background: 'rgba(10,0,0,.88)',
+                background: 'rgba(10,0,0,.92)',
                 border: '2px solid #cc2200',
                 borderRadius: 12,
                 padding: '14px 22px',
@@ -695,9 +688,9 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
                 color: '#ff4444',
                 lineHeight: 1.5,
                 textShadow: '0 0 20px rgba(255,50,0,.8)',
-                boxShadow: '0 0 40px rgba(200,0,0,.4)',
+                boxShadow: '0 0 40px rgba(200,0,0,.5)',
               }}>
-                📎 &ldquo;La prochaine fois, tiens-toi prêt !!! Ma vengeance sera <span style={{ color: '#ff0000', fontWeight: 900, fontSize: '1.15em' }}>TERRIBLE</span> !!!!&rdquo;
+                📎 &ldquo;La prochaine fois, tiens-toi prêt&nbsp;!!! Ma vengeance sera <span style={{ color: '#ff0000', fontWeight: 900, fontSize: '1.15em' }}>TERRIBLE</span>&nbsp;!!!!&rdquo;
               </div>
             </div>
           )}
@@ -705,7 +698,7 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
         </div>
       )}
 
-      {/* ── Corps Clippy ── */}
+      {/* ── Corps Clippy — masqué pendant la séquence enfer ── */}
       <div
         style={{
           position: 'fixed',
@@ -714,6 +707,7 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
           cursor: phase === 'combat' ? 'none' : (tired ? 'crosshair' : 'pointer'),
           transition: 'left .3s cubic-bezier(.34,1.56,.64,1), top .3s cubic-bezier(.34,1.56,.64,1)',
           userSelect: 'none',
+          display: hellPhase !== 'idle' ? 'none' : 'block',
         }}
         onClick={phase === 'normal' ? handleNormalClick : handleCombatClick}
       >
