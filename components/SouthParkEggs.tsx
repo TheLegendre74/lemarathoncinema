@@ -44,13 +44,13 @@ function drawStan(g: G) {
   // Red pompom on top
   g.fillStyle(0xCC1010); g.fillCircle(0, -127, 9)
 
-  // Eyes — SP style: big white circle, tiny black dot
+  // Eyes — SP style: white circle + small black pupil
   g.fillStyle(0xFFFFFF)
-  g.fillCircle(-10, -95, 11); g.fillCircle(10, -95, 11)
+  g.fillCircle(-9, -94, 7); g.fillCircle(9, -94, 7)
   g.fillStyle(0x111111)
-  g.fillCircle(-10, -95, 5); g.fillCircle(10, -95, 5)
+  g.fillCircle(-9, -94, 3); g.fillCircle(9, -94, 3)
   // Tiny nose dot
-  g.fillStyle(0xC8946A); g.fillCircle(0, -89, 2.5)
+  g.fillStyle(0xC8946A); g.fillCircle(0, -89, 2)
 }
 
 // ── KYLE BROFLOVSKI ─────────────────────────────────────────────────
@@ -88,10 +88,10 @@ function drawKyle(g: G) {
 
   // Eyes
   g.fillStyle(0xFFFFFF)
-  g.fillCircle(-10, -95, 11); g.fillCircle(10, -95, 11)
+  g.fillCircle(-9, -94, 7); g.fillCircle(9, -94, 7)
   g.fillStyle(0x111111)
-  g.fillCircle(-10, -95, 5); g.fillCircle(10, -95, 5)
-  g.fillStyle(0xC8946A); g.fillCircle(0, -89, 2.5)
+  g.fillCircle(-9, -94, 3); g.fillCircle(9, -94, 3)
+  g.fillStyle(0xC8946A); g.fillCircle(0, -89, 2)
 }
 
 // ── ERIC CARTMAN ────────────────────────────────────────────────────
@@ -125,10 +125,10 @@ function drawCartman(g: G) {
 
   // Eyes — wider apart on chubby face
   g.fillStyle(0xFFFFFF)
-  g.fillCircle(-11, -95, 11); g.fillCircle(11, -95, 11)
+  g.fillCircle(-10, -94, 7); g.fillCircle(10, -94, 7)
   g.fillStyle(0x111111)
-  g.fillCircle(-11, -95, 5); g.fillCircle(11, -95, 5)
-  g.fillStyle(0xC8946A); g.fillCircle(0, -89, 2.5)
+  g.fillCircle(-10, -94, 3); g.fillCircle(10, -94, 3)
+  g.fillStyle(0xC8946A); g.fillCircle(0, -89, 2)
 }
 
 // ── KENNY MCCORMICK ─────────────────────────────────────────────────
@@ -158,11 +158,11 @@ function drawKenny(g: G) {
   g.fillStyle(0x9A4808)
   g.fillRect(-9, -76, 3, 9); g.fillRect(6, -76, 3, 9)
 
-  // Eyes — small, visible through face hole
+  // Eyes — visible through face hole
   g.fillStyle(0xFFFFFF)
-  g.fillCircle(-8, -95, 8); g.fillCircle(8, -95, 8)
+  g.fillCircle(-7, -94, 6); g.fillCircle(7, -94, 6)
   g.fillStyle(0x111111)
-  g.fillCircle(-8, -95, 4); g.fillCircle(8, -95, 4)
+  g.fillCircle(-7, -94, 3); g.fillCircle(7, -94, 3)
   // Tiny nose
   g.fillStyle(0xC8946A); g.fillCircle(0, -89, 2)
 }
@@ -559,7 +559,7 @@ class BusStopScene extends Phaser.Scene {
   private cityContainer!: Phaser.GameObjects.Container
   private stopSignContainer!: Phaser.GameObjects.Container
   private scrollX = 0
-  private readonly SCROLL_SPEED = 4
+  private readonly SCROLL_SPEED = 1.5
   private musicObj!: Phaser.Sound.BaseSound
   private readonly onDoneCb: () => void
 
