@@ -61,7 +61,7 @@ export default function SemaineClient({ profile, weekFilm, film, isWatched, watc
             <div style={{ display: 'flex', gap: '1.5rem', padding: '1.5rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
               <div style={{ width: 130, height: 195, borderRadius: 'var(--r)', overflow: 'hidden', flexShrink: 0, background: 'var(--bg3)' }}>
                 {film.poster
-                  ? <Image src={film.poster} alt={film.titre} width={130} height={195} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
+                  ? <Image src={film.poster} alt={film.titre} width={130} height={195} style={{ objectFit: 'cover', width: '100%', height: '100%' }} priority />
                   : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem' }}>🎬</div>
                 }
               </div>

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { signOut } from '@/lib/actions'
 import { levelFromExp, getActiveBadge, CONFIG } from '@/lib/config'
 import type { Profile } from '@/lib/supabase/types'
@@ -25,17 +25,17 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
     return pathname === href
   }
 
-  const level = profile ? levelFromExp(profile.exp) : null
-  const badge = profile ? getActiveBadge(profile.exp, (profile as any).active_badge) : null
+  const level = useMemo(() => profile ? levelFromExp(profile.exp) : null, [profile?.exp])
+  const badge = useMemo(() => profile ? getActiveBadge(profile.exp, (profile as any).active_badge) : null, [profile?.exp, (profile as any)?.active_badge])
 
   /* ── Structure groupée ── */
-  const standaloneNav = [
+  const standaloneNav = useMemo(() => [
     { href: '/',      icon: '🏠', label: 'Accueil',        short: 'Accueil' },
     ...(profile       ? [{ href: '/profil', icon: '👤', label: 'Mon profil', short: 'Profil', badge: unreadMessages > 0 ? unreadMessages : null }] : []),
     ...(profile?.is_admin ? [{ href: '/admin', icon: '🔧', label: 'Administration', short: 'Admin' }] : []),
-  ]
+  ], [profile?.id, profile?.is_admin, unreadMessages])
 
-  const navGroups = [
+  const navGroups = useMemo(() => [
     {
       id: 'evenement',
       icon: '🎪',
@@ -75,15 +75,15 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
         { href: '/easter-eggs', icon: '🥚', label: 'Easter Eggs', short: 'Easter' },
       ],
     },
-  ]
+  ], [hasRageuxEgg, hasTamagotchiEgg])
 
   /* groupe actif selon la page courante */
-  function activeGroup() {
+  const activeGroup = useCallback(() => {
     for (const g of navGroups) {
       if (g.items.some(i => isActive(i.href))) return g.id
     }
     return null
-  }
+  }, [navGroups, pathname, searchParams])
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
     const ag = activeGroup()

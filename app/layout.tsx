@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import Image from 'next/image'
 
 export const viewport: Viewport = {
   viewportFit: 'cover',
@@ -81,8 +82,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             title="Rejoindre le Discord"
             className="discord-fab"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/discord.png" alt="Discord" width={26} height={26} style={{ objectFit: 'contain' }} />
+            <Image src="/discord.png" alt="Discord" width={26} height={26} style={{ objectFit: 'contain' }} priority />
           </a>
         </ToastProvider>
       </body>

@@ -1,9 +1,12 @@
 'use client'
 
+import { Suspense } from 'react'
 import { usePathname } from 'next/navigation'
 import Sidebar from './Sidebar'
-import TamagotchiWidget from './TamagotchiWidget'
+import dynamic from 'next/dynamic'
 import type { Profile } from '@/lib/supabase/types'
+
+const TamagotchiWidget = dynamic(() => import('./TamagotchiWidget'), { ssr: false })
 
 interface Props {
   profile: Profile | null
@@ -31,7 +34,7 @@ export default function ClientShell({ profile, hasRageuxEgg, hasTamagotchiEgg, u
           <a href="mailto:LeMarathonCinema@gmail.com" style={{ color: 'var(--text3)', textDecoration: 'none' }}>Contact</a>
         </footer>
       </main>
-      {hasTamagotchiEgg && <TamagotchiWidget />}
+      {hasTamagotchiEgg && <Suspense fallback={null}><TamagotchiWidget /></Suspense>}
     </div>
   )
 }
