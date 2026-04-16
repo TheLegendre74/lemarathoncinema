@@ -570,7 +570,7 @@ class BusStopScene extends Phaser.Scene {
 
   preload() {
     if (!this.cache.audio.exists('sp-theme')) {
-      this.load.audio('sp-theme', '/sons/south-park-theme.opus')
+      this.load.audio('sp-theme', ['/sons/south-park-theme.m4a', '/sons/south-park-theme.opus'])
     }
   }
 
