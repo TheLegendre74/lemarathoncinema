@@ -144,10 +144,10 @@ const EGGS = [
   },
   {
     id: 'clippy',
-    icon: '📎',
-    name: 'Il semblerait que…',
+    icon: '📦',
+    name: 'La Boîte de Pandore',
     category: 'Clavier',
-    condition: 'Taper "easter egg" au clavier — le trombone le plus pénible de l\'histoire informatique fait son apparition.',
+    condition: 'Taper "boîte de pandore" au clavier — un coffre mystérieux apparaît. Si tu oses l\'ouvrir, le mal le plus ancien de l\'univers en sort…',
   },
   {
     id: 'watcher',
