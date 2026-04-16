@@ -740,6 +740,7 @@ export async function adminSetConfig(configs: Record<string, string>) {
     'tars_line1','tars_line2','marvin_line1','marvin_line2','hal_line1','hal_line2',
     'nolan_quote','bond_line','noctam_line1','noctam_line2','kenny_text1','kenny_text2',
     'randy_quote','fightclub_gameover','killbill_end','MARATHON_RULES','TIPIAK_LINKS',
+    'CLIPPY_REPLIES',
   ])
 
   const adminClient = createAdminClient()

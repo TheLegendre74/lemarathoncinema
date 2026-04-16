@@ -63,6 +63,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     randyQuote:       cfg.RANDY_QUOTE,
     fightClubGameOver: cfg.FIGHTCLUB_GAMEOVER,
     killBillEnd:      cfg.KILLBILL_END,
+    clippyReplies:    cfg.CLIPPY_REPLIES,
   }
 
   return (

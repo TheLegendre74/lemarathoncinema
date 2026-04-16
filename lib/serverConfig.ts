@@ -17,6 +17,7 @@ export type ServerConfig = typeof CONFIG & {
   RANDY_QUOTE: string
   FIGHTCLUB_GAMEOVER: string
   KILLBILL_END: string
+  CLIPPY_REPLIES: string[]
 }
 
 function safeDate(str: string | undefined, fallback: Date): Date {
@@ -49,6 +50,7 @@ export const getServerConfig = cache(async (): Promise<ServerConfig> => {
     RANDY_QUOTE:         "C'est pas de l'alcoolisme, c'est du vinomoussage... c'est une activité élégamment culturelle.",
     FIGHTCLUB_GAMEOVER:  'Tyler est toujours plus fort que toi...',
     KILLBILL_END:        "Pai mei t'a bien entraîné.",
+    CLIPPY_REPLIES:      [],
   }
 
   try {
@@ -94,6 +96,7 @@ export const getServerConfig = cache(async (): Promise<ServerConfig> => {
       FIGHTCLUB_GAMEOVER: db.fightclub_gameover ?? defaults.FIGHTCLUB_GAMEOVER,
       KILLBILL_END:      db.killbill_end      ?? defaults.KILLBILL_END,
       MARATHON_RULES:    db.MARATHON_RULES     ?? defaults.MARATHON_RULES,
+      CLIPPY_REPLIES:    (() => { try { const p = JSON.parse(db.CLIPPY_REPLIES ?? '[]'); return Array.isArray(p) ? p : [] } catch { return [] } })(),
     }
   } catch {
     return defaults

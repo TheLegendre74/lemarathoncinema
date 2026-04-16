@@ -530,6 +530,13 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
   const [tipiakLinks, setTipiakLinks] = useState<{label:string;url:string}[]>(
     (() => { try { return JSON.parse(siteConfig['TIPIAK_LINKS'] ?? '[]') } catch { return [] } })()
   )
+  const [clippyReplies, setClippyReplies] = useState<string[]>(
+    (() => { try { const p = JSON.parse(siteConfig['CLIPPY_REPLIES'] ?? '[]'); return Array.isArray(p) ? p : [] } catch { return [] } })()
+  )
+  const [clippyNewReply, setClippyNewReply] = useState('')
+  const [clippyEditIdx, setClippyEditIdx] = useState<number | null>(null)
+  const [clippyEditVal, setClippyEditVal] = useState('')
+  const [clippySaving, setClippySaving] = useState(false)
   const [endingseason, setEndingSeason] = useState(false)
 
   // ── Scroll fix pour les boutons 18+ ─────────────────────────────────────────
@@ -1560,6 +1567,113 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
             </div>
           ))}
           {!tipiakLinks.length && <div style={{ color: 'var(--text3)', fontSize: '.83rem' }}>Aucun lien configuré.</div>}
+        </div>
+      </Section>
+
+      {/* CLIPPY — répliques */}
+      <Section icon="📎" title="Clippy — Répliques personnalisées">
+        <div style={{ fontSize: '.78rem', color: 'var(--text2)', marginBottom: '1rem', lineHeight: 1.5 }}>
+          Ces répliques remplacent les 60 répliques par défaut de Clippy. Si la liste est vide, les répliques par défaut (codées en dur) sont utilisées.
+          Trigger : taper <code style={{ background: 'var(--bg3)', padding: '1px 5px', borderRadius: 4 }}>easter egg</code> au clavier.
+        </div>
+
+        {/* Compteur */}
+        <div style={{ fontSize: '.75rem', color: 'var(--text3)', marginBottom: '.8rem' }}>
+          {clippyReplies.length} réplique{clippyReplies.length !== 1 ? 's' : ''} custom{clippyReplies.length === 0 ? ' — répliques par défaut actives' : ''}
+        </div>
+
+        {/* Ajouter */}
+        <div style={{ display: 'flex', gap: '.5rem', marginBottom: '1rem' }}>
+          <input
+            placeholder="Nouvelle réplique de Clippy…"
+            value={clippyNewReply}
+            onChange={e => setClippyNewReply(e.target.value)}
+            onKeyDown={async e => {
+              if (e.key !== 'Enter' || !clippyNewReply.trim()) return
+              const next = [...clippyReplies, clippyNewReply.trim()]
+              const res = await adminSetConfig({ CLIPPY_REPLIES: JSON.stringify(next) })
+              if (res.error) addToast(res.error, '⚠️')
+              else { setClippyReplies(next); setClippyNewReply(''); addToast('Réplique ajoutée !', '📎') }
+            }}
+            maxLength={300}
+            style={{ flex: 1, background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.5rem .75rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.83rem' }}
+          />
+          <button
+            className="btn btn-outline"
+            disabled={!clippyNewReply.trim() || clippySaving}
+            onClick={async () => {
+              const next = [...clippyReplies, clippyNewReply.trim()]
+              setClippySaving(true)
+              const res = await adminSetConfig({ CLIPPY_REPLIES: JSON.stringify(next) })
+              setClippySaving(false)
+              if (res.error) addToast(res.error, '⚠️')
+              else { setClippyReplies(next); setClippyNewReply(''); addToast('Réplique ajoutée !', '📎') }
+            }}
+          >Ajouter</button>
+        </div>
+
+        {/* Reset vers défaut */}
+        {clippyReplies.length > 0 && (
+          <button
+            className="btn btn-red"
+            style={{ fontSize: '.72rem', padding: '.3rem .7rem', marginBottom: '1rem' }}
+            onClick={async () => {
+              if (!confirm('Supprimer toutes les répliques custom ? Clippy utilisera à nouveau ses répliques par défaut.')) return
+              const res = await adminSetConfig({ CLIPPY_REPLIES: '[]' })
+              if (!res.error) { setClippyReplies([]); addToast('Répliques remises par défaut', '📎') }
+            }}
+          >Tout supprimer (retour aux défauts)</button>
+        )}
+
+        {/* Liste */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '.3rem', maxHeight: 420, overflowY: 'auto' }}>
+          {clippyReplies.map((reply, i) => (
+            <div key={i} style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.5rem .8rem' }}>
+              {clippyEditIdx === i ? (
+                <div style={{ display: 'flex', gap: '.4rem', alignItems: 'flex-start' }}>
+                  <textarea
+                    value={clippyEditVal}
+                    onChange={e => setClippyEditVal(e.target.value.slice(0, 300))}
+                    autoFocus
+                    rows={2}
+                    style={{ flex: 1, background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.4rem .6rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.82rem', resize: 'vertical' }}
+                  />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '.25rem' }}>
+                    <button className="btn btn-gold" style={{ fontSize: '.65rem', padding: '.2rem .5rem' }}
+                      onClick={async () => {
+                        const next = clippyReplies.map((r, j) => j === i ? clippyEditVal.trim() : r)
+                        const res = await adminSetConfig({ CLIPPY_REPLIES: JSON.stringify(next) })
+                        if (!res.error) { setClippyReplies(next); setClippyEditIdx(null); addToast('Réplique mise à jour', '📎') }
+                        else addToast(res.error, '⚠️')
+                      }}>✓</button>
+                    <button className="btn btn-outline" style={{ fontSize: '.65rem', padding: '.2rem .5rem' }}
+                      onClick={() => setClippyEditIdx(null)}>✕</button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '.7rem' }}>
+                  <span style={{ fontSize: '.6rem', color: 'var(--text3)', flexShrink: 0, marginTop: '.15rem', minWidth: 22, textAlign: 'right' }}>#{i + 1}</span>
+                  <span style={{ flex: 1, fontSize: '.82rem', color: 'var(--text2)', lineHeight: 1.45 }}>{reply}</span>
+                  <div style={{ display: 'flex', gap: '.25rem', flexShrink: 0 }}>
+                    <button className="btn btn-outline" style={{ fontSize: '.65rem', padding: '.18rem .45rem' }}
+                      onClick={() => { setClippyEditIdx(i); setClippyEditVal(reply) }}>✏️</button>
+                    <button className="btn btn-red" style={{ fontSize: '.65rem', padding: '.18rem .45rem' }}
+                      onClick={async () => {
+                        const next = clippyReplies.filter((_, j) => j !== i)
+                        const res = await adminSetConfig({ CLIPPY_REPLIES: JSON.stringify(next) })
+                        if (!res.error) setClippyReplies(next)
+                        else addToast(res.error, '⚠️')
+                      }}>✕</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+          {!clippyReplies.length && (
+            <div style={{ color: 'var(--text3)', fontSize: '.83rem', fontStyle: 'italic' }}>
+              Aucune réplique custom — les 60 répliques codées en dur sont utilisées.
+            </div>
+          )}
         </div>
       </Section>
 

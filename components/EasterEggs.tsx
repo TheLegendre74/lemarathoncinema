@@ -850,6 +850,7 @@ export interface EasterEggsConfig {
   randyQuote?: string
   fightClubGameOver?: string
   killBillEnd?: string
+  clippyReplies?: string[]
 }
 
 function TamagotchiKeyOverlay({ onClose, isGuest }: { onClose: () => void; isGuest: boolean }) {
@@ -1152,7 +1153,7 @@ export default function EasterEggs({ config = {}, isGuest = false }: { config?: 
       {showAVP        && <AVPEgg          onDone={() => { predSoundRef.current?.pause(); predSoundRef.current = null; setShowAVP(false) }} predSound={predSoundRef} />}
       {showTipiak     && <TipiakOverlay  onDone={() => setShowTipiak(false)} />}
       {showTamagotchi && <TamagotchiKeyOverlay onClose={() => setShowTamagotchi(false)} isGuest={isGuest} />}
-      {showClipy      && <ClippyEgg onDismiss={() => setShowClipy(false)} />}
+      {showClipy      && <ClippyEgg onDismiss={() => setShowClipy(false)} customReplies={config.clippyReplies} />}
 
       {/* Bouton flottant mobile — accès barre easter egg */}
       <button

@@ -103,11 +103,12 @@ function ClippyFace({ tired, blinking }: { tired: boolean; blinking: boolean }) 
   )
 }
 
-interface ClippyProps { onDismiss: () => void }
+interface ClippyProps { onDismiss: () => void; customReplies?: string[] }
 
-export default function ClippyEgg({ onDismiss }: ClippyProps) {
+export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
+  const replies = (customReplies && customReplies.length > 0) ? customReplies : REPLIES
   const [pos, setPos]           = useState({ x: window.innerWidth - 160, y: window.innerHeight - 200 })
-  const [message, setMessage]   = useState(REPLIES[0])
+  const [message, setMessage]   = useState(replies[0])
   const [bubble, setBubble]     = useState(true)
   const [misses, setMisses]     = useState(0)
   const [tired, setTired]       = useState(false)
@@ -121,10 +122,10 @@ export default function ClippyEgg({ onDismiss }: ClippyProps) {
 
   // Rotation des répliques automatiques
   const nextMessage = useCallback(() => {
-    msgIdx.current = (msgIdx.current + 1) % REPLIES.length
-    setMessage(REPLIES[msgIdx.current])
+    msgIdx.current = (msgIdx.current + 1) % replies.length
+    setMessage(replies[msgIdx.current])
     setBubble(true)
-  }, [])
+  }, [replies])
 
   useEffect(() => {
     timerRef.current = setInterval(nextMessage, 6000)
