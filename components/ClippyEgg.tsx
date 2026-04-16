@@ -79,15 +79,15 @@ const HELL_DIALOGUES = [
 const W_NORMAL        = 140
 const W_COMBAT        = 160
 const W_SHIELD        = 110
-const W_SWORD         = 52
-const H_SWORD         = 145
+const W_SWORD         = 90
+const H_SWORD         = 252
 const TIRED_AT        = 4
 const CLIPPY_MAX_HP   = 50
 const PLAYER_MAX_HP   = 20
 const PARRY_WINDOW_MS = 2500
 const PARRY_SQ        = 150
 const MG_DURATION     = 5000   // durée mini-jeu (ms)
-const CLIPPY_SPEED    = 3       // frappes/seconde de Clippy pendant mini-jeu
+const CLIPPY_SPEED    = 5       // frappes/seconde de Clippy pendant mini-jeu
 
 interface ClippyProps { onDismiss: () => void; customReplies?: string[] }
 
@@ -554,7 +554,7 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
                     <span>⚔️ Toi</span><span>{playerPresses} frappes</span>
                   </div>
                   <div style={{ height:18, background:'rgba(79,217,138,.1)', borderRadius:99, overflow:'hidden', border:'1px solid rgba(79,217,138,.3)' }}>
-                    <div style={{ height:'100%', width:`${Math.min(100, (playerPresses/Math.max(1, (CLIPPY_SPEED*5+5)))*100)}%`, background:'linear-gradient(90deg,#4fd98a,#a0f0c0)', borderRadius:99, transition:'width .1s', minWidth: playerPresses>0?8:0 }} />
+                    <div style={{ height:'100%', width:`${Math.min(100, (playerPresses/100)*100)}%`, background:'linear-gradient(90deg,#4fd98a,#a0f0c0)', borderRadius:99, transition:'width .1s', minWidth: playerPresses>0?8:0 }} />
                   </div>
                 </div>
                 {/* Clippy */}
@@ -563,7 +563,7 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
                     <span>📎 Clippy</span><span>{clippyPresses} frappes</span>
                   </div>
                   <div style={{ height:18, background:'rgba(232,90,90,.1)', borderRadius:99, overflow:'hidden', border:'1px solid rgba(232,90,90,.3)' }}>
-                    <div style={{ height:'100%', width:`${Math.min(100, (clippyPresses/Math.max(1,(CLIPPY_SPEED*5+5)))*100)}%`, background:'linear-gradient(90deg,#e85a5a,#ff9090)', borderRadius:99, transition:'width .1s', minWidth: clippyPresses>0?8:0 }} />
+                    <div style={{ height:'100%', width:`${Math.min(100, (clippyPresses/100)*100)}%`, background:'linear-gradient(90deg,#e85a5a,#ff9090)', borderRadius:99, transition:'width .1s', minWidth: clippyPresses>0?8:0 }} />
                   </div>
                 </div>
               </div>
