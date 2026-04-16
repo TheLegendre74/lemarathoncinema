@@ -205,7 +205,12 @@ const PARRY_SQ           = 150
 const MG_TARGET          = 100
 const BASE_HP            = 50
 const BASE_SPEED         = 5      // vitesse mini-jeu Clippy : +2 par phase
-const LARBIN_NAMES       = ['larbin', 'Igor mon servant', 'Chose débile', 'Tas de chair inutile', 'grand singe qui pue']
+const LARBIN_NAMES = [
+  'larbin', 'Igor mon servant', 'Chose débile', 'Tas de chair inutile', 'grand singe qui pue',
+  'vile créature', 'individu lamentable', 'amas de cellules inutiles', 'sous-développé notoire',
+  'pauvre hère', 'épave humaine', 'gibier de potence', 'triste sire',
+  'vermisseau pathétique', 'trou noir de compétences',
+]
 
 // ── localStorage ─────────────────────────────────────────────────────────────
 const LS_DEFEATS    = 'clippy_defeats'
@@ -238,7 +243,9 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
   const CLIPPY_MAX_HP = BASE_HP + defeats * 10
 
   const [isLarbin, setIsLarbin] = useState(() => getIsLarbin())
-  const larbinIdxRef = useRef(parseInt((typeof window !== 'undefined' ? localStorage.getItem(LS_LARBIN_IDX) : null) ?? '0'))
+  const isLarbinRef   = useRef(isLarbin)          // ref stable pour les closures stales
+  isLarbinRef.current = isLarbin
+  const larbinIdxRef  = useRef(parseInt((typeof window !== 'undefined' ? localStorage.getItem(LS_LARBIN_IDX) : null) ?? '0'))
 
   function getLarbinName(): string {
     const name = LARBIN_NAMES[larbinIdxRef.current % LARBIN_NAMES.length]
@@ -246,8 +253,13 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
     try { localStorage.setItem(LS_LARBIN_IDX, String(larbinIdxRef.current)) } catch {}
     return name
   }
+  // Remplace [NAME] — no-op si pas de [NAME] dans le message
   function larbinMsg(msg: string): string {
     return msg.replace(/\[NAME\]/g, getLarbinName())
+  }
+  // Applique larbinMsg seulement si larbin (utilise la ref pour éviter les closures stales)
+  function maybeL(msg: string): string {
+    return isLarbinRef.current ? larbinMsg(msg) : msg
   }
 
   // HP joueur dépend de la phase
@@ -342,9 +354,8 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
   function pickFrom(queue: React.MutableRefObject<string[]>, source: string[]): string {
     if (queue.current.length === 0) queue.current = shuffle(source)
     const msg = queue.current.pop() ?? source[0]
-    return isLarbin && source === combatReplies ? larbinMsg(msg)
-         : isLarbin && source === normalReplies  ? larbinMsg(msg)
-         : msg
+    // maybeL utilise isLarbinRef (ref stable), jamais de [NAME] non-remplacé
+    return maybeL(msg)
   }
 
   // ── Audio ──────────────────────────────────────────────────────────────────
@@ -363,13 +374,19 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
   useEffect(() => () => stopMusic(), [])
 
   // ── Curseur souris ─────────────────────────────────────────────────────────
+  // Tracking position (toujours actif en combat)
   useEffect(() => {
     if (phase !== 'combat') return
     const move = (e: MouseEvent) => setMousePos({ x: e.clientX, y: e.clientY })
     window.addEventListener('mousemove', move)
-    document.body.style.cursor = 'none'
-    return () => { window.removeEventListener('mousemove', move); document.body.style.cursor = '' }
+    return () => window.removeEventListener('mousemove', move)
   }, [phase])
+  // Curseur caché uniquement hors mini-jeu (pendant le mini-jeu = curseur normal visible)
+  useEffect(() => {
+    const hideCursor = phase === 'combat' && mgPhase === 'idle' && hellPhase === 'idle'
+    document.body.style.cursor = hideCursor ? 'none' : ''
+    return () => { document.body.style.cursor = '' }
+  }, [phase, mgPhase, hellPhase])
 
   // ── Rotation messages auto ─────────────────────────────────────────────────
   const rotateMsg = () => {
@@ -574,7 +591,12 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
     if (atkTimer.current) clearTimeout(atkTimer.current)
     stopMusic()
     setShowLarbinMsg(true)
-    setTimeout(() => { setShowLarbinMsg(false); setShowLarbinModal(true) }, 3000)
+    // Pas de setTimeout — le joueur clique pour passer à la modale suivante
+  }
+
+  function handleLarbinMsgClick() {
+    setShowLarbinMsg(false)
+    setShowLarbinModal(true)
   }
 
   function handleAcceptLarbin() {
@@ -896,12 +918,18 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
 
       {/* ── Message larbin ── */}
       {showLarbinMsg && (
-        <div style={{ position:'fixed', inset:0, zIndex:99999, background:'rgba(4,2,12,.92)', display:'flex', alignItems:'center', justifyContent:'center', padding:'2rem', animation:'mg-in .3s ease' }}>
+        <div
+          onClick={handleLarbinMsgClick}
+          style={{ position:'fixed', inset:0, zIndex:99999, background:'rgba(4,2,12,.92)', display:'flex', alignItems:'center', justifyContent:'center', padding:'2rem', animation:'mg-in .3s ease', cursor:'pointer' }}
+        >
           <div style={{ maxWidth:560, background:'#120505', border:'2px solid #e8c46a', borderRadius:16, padding:'2rem', textAlign:'center', boxShadow:'0 0 60px rgba(232,196,106,.3)' }}>
             <div style={{ fontSize:'3rem', marginBottom:'1rem' }}>📎</div>
             <div style={{ fontFamily:'var(--font-display)', fontSize:'clamp(1rem,2.5vw,1.3rem)', color:'#e8c46a', lineHeight:1.7 }}>
-              "Ha ! Alors comme ça on est trop faibles ?<br/>
-              Appelle-moi <strong style={{ color:'#ffd700' }}>Grand Maître Suprême</strong>, et je t&apos;autoriserai à me lécher les bottes, <em>larbin</em>."
+              &ldquo;Ha ! Alors comme ça on est trop faibles ?<br/>
+              Appelle-moi <strong style={{ color:'#ffd700' }}>Grand Maître Suprême</strong>, et je t&apos;autoriserai à me lécher les bottes, <em>larbin</em>.&rdquo;
+            </div>
+            <div style={{ marginTop:'1.4rem', fontSize:'.72rem', color:'rgba(232,196,106,.4)', letterSpacing:2 }}>
+              — Cliquer pour continuer —
             </div>
           </div>
         </div>
