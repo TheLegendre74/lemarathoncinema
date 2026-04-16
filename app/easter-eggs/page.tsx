@@ -1,7 +1,7 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import EasterEggsPageClient from './EasterEggsPageClient'
 
-export const revalidate = 0
+export const revalidate = 120
 
 export default async function EasterEggsPage() {
   const supabase = await createClient()

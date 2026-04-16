@@ -3,12 +3,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { discoverEgg } from '@/lib/actions'
 import dynamic from 'next/dynamic'
-const FightClubGame = dynamic(() => import('./FightClubGame'), { ssr: false })
-import { KennyDeath, SouthParkBus, RandyMarsh } from './SouthParkEggs'
-import KillBillGame from './KillBillGame'
-import AVPEgg from './AVPEgg'
-import ClippyEgg from './ClippyEgg'
-import PandoraBox from './PandoraBox'
+const FightClubGame  = dynamic(() => import('./FightClubGame'),                                   { ssr: false })
+const KillBillGame   = dynamic(() => import('./KillBillGame'),                                    { ssr: false })
+const AVPEgg         = dynamic(() => import('./AVPEgg'),                                          { ssr: false })
+const ClippyEgg      = dynamic(() => import('./ClippyEgg'),                                       { ssr: false })
+const PandoraBox     = dynamic(() => import('./PandoraBox'),                                      { ssr: false })
+const SouthParkEggs  = dynamic(() => import('./SouthParkEggs').then(m => ({ default: m.KennyDeath   })), { ssr: false })
+const SouthParkBus_  = dynamic(() => import('./SouthParkEggs').then(m => ({ default: m.SouthParkBus })), { ssr: false })
+const RandyMarsh_    = dynamic(() => import('./SouthParkEggs').then(m => ({ default: m.RandyMarsh   })), { ssr: false })
 
 // ─── ANIMATIONS (partagées avec Forum et FilmsClient) ───────────────────────
 const EE_STYLES = `
@@ -1150,9 +1152,9 @@ export default function EasterEggs({ config = {}, isGuest = false }: { config?: 
       {showNoctambule && <NoctambuleNotif onDone={() => setShowNoctambule(false)} line1={ee.noctamLine1} line2={ee.noctamLine2} />}
       {fightClubRule  && <FightClubRule   rule={fightClubRule} onDone={() => { if (fightClubRule === 4) { setFightClubRule(null); setShowFightClub(true) } else { setFightClubRule(null) } }} />}
       {showFightClub  && <FightClubGame   onDone={() => setShowFightClub(false)} />}
-      {showKenny      && <KennyDeath      onDone={() => setShowKenny(false)}     text1={ee.kennyText1} text2={ee.kennyText2} />}
-      {showSouthPark  && <SouthParkBus    onDone={() => setShowSouthPark(false)} />}
-      {showRandy      && <RandyMarsh      onDone={() => setShowRandy(false)}     quote={ee.randyQuote} />}
+      {showKenny      && <SouthParkEggs  onDone={() => setShowKenny(false)}     text1={ee.kennyText1} text2={ee.kennyText2} />}
+      {showSouthPark  && <SouthParkBus_  onDone={() => setShowSouthPark(false)} />}
+      {showRandy      && <RandyMarsh_    onDone={() => setShowRandy(false)}     quote={ee.randyQuote} />}
       {showKillBill   && <KillBillGame    onDone={() => setShowKillBill(false)}  endText={ee.killBillEnd} />}
       {showAVP        && <AVPEgg          onDone={() => { predSoundRef.current?.pause(); predSoundRef.current = null; setShowAVP(false) }} predSound={predSoundRef} />}
       {showTipiak     && <TipiakOverlay  onDone={() => setShowTipiak(false)} />}

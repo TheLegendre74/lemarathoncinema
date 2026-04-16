@@ -3,7 +3,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import type { Film } from '@/lib/supabase/types'
 
-export const revalidate = 0
+export const revalidate = 60
 
 export default async function NotesPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const { tab } = await searchParams
