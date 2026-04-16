@@ -6,6 +6,7 @@ import Image from 'next/image'
 import AvatarUpload from './AvatarUpload'
 import BadgeSelector from './BadgeSelector'
 import BioEditor from '@/components/BioEditor'
+import PseudoEditor from '@/components/PseudoEditor'
 import MessagesSection from '@/components/MessagesSection'
 import { getMyConversations, getConversationMessages } from '@/lib/actions'
 
@@ -114,6 +115,9 @@ export default async function ProfilPage({ searchParams }: { searchParams: Promi
 
         <ExpBar exp={profile.exp} />
       </div>
+
+      {/* Pseudo */}
+      <PseudoEditor initial={profile.pseudo} />
 
       {/* Bio */}
       <BioEditor initial={(profile as any).bio ?? null} />

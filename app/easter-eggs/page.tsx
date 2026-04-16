@@ -44,13 +44,9 @@ export default async function EasterEggsPage() {
   ])
 
   const eggStats: Record<string, number> = {}
-  if (allEggs && totalUsers) {
+  if (allEggs) {
     for (const { egg_id } of allEggs) {
       eggStats[egg_id] = (eggStats[egg_id] ?? 0) + 1
-    }
-    // Convertir en pourcentage
-    for (const id in eggStats) {
-      eggStats[id] = Math.round((eggStats[id] / totalUsers) * 100)
     }
   }
 

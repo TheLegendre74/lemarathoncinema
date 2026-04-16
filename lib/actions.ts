@@ -2614,6 +2614,41 @@ export async function updateBio(bio: string) {
   revalidatePath('/marathoniens')
 }
 
+// ── PSEUDO CHANGE ─────────────────────────────────────────────
+
+export async function changePseudo(pseudo: string): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté.' }
+
+  const trimmed = pseudo.trim()
+  if (!trimmed || trimmed.length < 2 || trimmed.length > 20)
+    return { error: 'Pseudo invalide (2 à 20 caractères).' }
+  if (!/^[a-zA-Z0-9_\-éèêàùûôîïçœæ ]+$/.test(trimmed))
+    return { error: 'Caractères non autorisés.' }
+
+  const { data: existing } = await supabase
+    .from('profiles')
+    .select('id')
+    .ilike('pseudo', trimmed)
+    .neq('id', user.id)
+    .maybeSingle()
+
+  if (existing) return { error: 'Ce pseudo est déjà pris.' }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ pseudo: trimmed } as any)
+    .eq('id', user.id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/profil')
+  revalidatePath('/marathoniens')
+  revalidatePath('/classement')
+  return {}
+}
+
 // ── MARATHON NOTIFICATIONS ─────────────────────────────────────
 
 export async function toggleMarathonNotification(notify: boolean) {

@@ -7,6 +7,7 @@ const FightClubGame = dynamic(() => import('./FightClubGame'), { ssr: false })
 import { KennyDeath, SouthParkBus, RandyMarsh } from './SouthParkEggs'
 import KillBillGame from './KillBillGame'
 import AVPEgg from './AVPEgg'
+import ClippyEgg from './ClippyEgg'
 
 // ─── ANIMATIONS (partagées avec Forum et FilmsClient) ───────────────────────
 const EE_STYLES = `
@@ -919,6 +920,7 @@ export default function EasterEggs({ config = {}, isGuest = false }: { config?: 
   const [showAVP,        setShowAVP]        = useState(false)
   const predSoundRef = useRef<HTMLAudioElement | null>(null)
   const [showTipiak,     setShowTipiak]     = useState(false)
+  const [showClipy,      setShowClipy]      = useState(false)
   const [showTamagotchi, setShowTamagotchi] = useState(false)
   const keyBuf = useRef<string[]>([])
   const tarsShown = useRef(false)
@@ -955,6 +957,7 @@ export default function EasterEggs({ config = {}, isGuest = false }: { config?: 
       predSoundRef.current = snd; discoverEgg('predator'); setShowAVP(true)
     }
     else if (t.endsWith('gomu gomu no tipiak!')) { setShowTipiak(true) }
+    else if (t.endsWith('easter egg')) { discoverEgg('clippy'); setShowClipy(true) }
     else { triggered = false }
     if (triggered) { setMobileVal(''); setShowMobileInput(false) }
   }
@@ -1092,6 +1095,13 @@ export default function EasterEggs({ config = {}, isGuest = false }: { config?: 
         keyBuf.current = []
         return
       }
+      // "easter egg" → Clippy le trombone
+      if (buf.slice(-10).join('').toLowerCase() === 'easter egg') {
+        discoverEgg('clippy')
+        setShowClipy(true)
+        keyBuf.current = []
+        return
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -1142,6 +1152,7 @@ export default function EasterEggs({ config = {}, isGuest = false }: { config?: 
       {showAVP        && <AVPEgg          onDone={() => { predSoundRef.current?.pause(); predSoundRef.current = null; setShowAVP(false) }} predSound={predSoundRef} />}
       {showTipiak     && <TipiakOverlay  onDone={() => setShowTipiak(false)} />}
       {showTamagotchi && <TamagotchiKeyOverlay onClose={() => setShowTamagotchi(false)} isGuest={isGuest} />}
+      {showClipy      && <ClippyEgg onDismiss={() => setShowClipy(false)} />}
 
       {/* Bouton flottant mobile — accès barre easter egg */}
       <button

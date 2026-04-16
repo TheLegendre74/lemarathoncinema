@@ -143,6 +143,13 @@ const EGGS = [
     condition: 'Défiler rapidement jusqu\'en bas de la page Films',
   },
   {
+    id: 'clippy',
+    icon: '📎',
+    name: 'Il semblerait que…',
+    category: 'Clavier',
+    condition: 'Taper "easter egg" au clavier — le trombone le plus pénible de l\'histoire informatique fait son apparition.',
+  },
+  {
     id: 'watcher',
     icon: '🎬',
     name: 'Cinéphile Confirmé',
@@ -294,12 +301,15 @@ export default function EasterEggsPageClient({ discoveredMap, achievements, eggS
                 }}>
                   {egg.category}
                 </div>
-                {/* % de joueurs qui l'ont trouvé */}
-                {totalUsers > 0 && (
-                  <div style={{ fontSize: '.78rem', color: '#fff', fontWeight: 600 }}>
-                    {eggStats[egg.id] ?? 0}% <span style={{ fontSize: '.62rem', fontWeight: 400, color: 'var(--text3)' }}>des joueurs</span>
-                  </div>
-                )}
+                {/* Nombre de joueurs qui l'ont trouvé */}
+                {(() => {
+                  const n = eggStats[egg.id] ?? 0
+                  return (
+                    <div style={{ fontSize: '.78rem', color: '#fff', fontWeight: 600 }}>
+                      {n} <span style={{ fontSize: '.62rem', fontWeight: 400, color: 'var(--text3)' }}>joueur{n > 1 ? 's' : ''}</span>
+                    </div>
+                  )
+                })()}
                 {foundAt && (
                   <div style={{ fontSize: '.65rem', color: 'var(--text3)', opacity: .7 }}>
                     {formatDate(foundAt)}
