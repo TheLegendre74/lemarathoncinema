@@ -16,155 +16,157 @@ type G = Phaser.GameObjects.Graphics
 const SKIN = 0xF5C89A  // SP skin tone (slightly warm peach)
 
 // ── STAN MARSH ──────────────────────────────────────────────────────
-// Navy beanie + red pompom | brown jacket + buttons | red mittens | blue pants
+// Beanie bleu marine + pompom rouge | veste marron + boutons | moufles rouges
+// Proportions SP : tête énorme qui repose DIRECTEMENT sur le corps, pas de cou
 function drawStan(g: G) {
-  // Short blue pants — barely visible under jacket
-  g.fillStyle(0x2A3A7A); g.fillRect(-11, -20, 22, 20)
+  // Pantalon bleu (court, à peine visible)
+  g.fillStyle(0x1E2E6E); g.fillRect(-11, -22, 22, 22)
 
-  // Brown jacket body — flat, boxy
-  g.fillStyle(0x8B5A35); g.fillRect(-19, -68, 38, 48)
-  // Dark seam down center
-  g.fillStyle(0x5A3518)
-  for (let i = 0; i < 4; i++) g.fillCircle(0, -60 + i * 13, 2.5)
+  // Veste marron — boxy, plate
+  g.fillStyle(0x8B5A32); g.fillRect(-20, -66, 40, 44)
+  // Boutons (4) au centre
+  g.fillStyle(0x4A2A10)
+  g.fillCircle(0, -56, 2); g.fillCircle(0, -46, 2); g.fillCircle(0, -36, 2); g.fillCircle(0, -26, 2)
 
-  // Red mittens
+  // Moufles rouges
   g.fillStyle(0xCC1010)
-  g.fillEllipse(-29, -46, 18, 14); g.fillEllipse(29, -46, 18, 14)
+  g.fillEllipse(-30, -44, 18, 13); g.fillEllipse(30, -44, 18, 13)
 
-  // Big round head
+  // Tête — posée directement sur la veste, pas de cou
+  // head bottom y=-60 (inside jacket top y=-66)
   g.fillStyle(SKIN)
-  g.fillCircle(0, -92, 26)
-  g.fillCircle(-27, -92, 9); g.fillCircle(27, -92, 9)  // ear bumps
+  g.fillCircle(0, -82, 22)
+  g.fillCircle(-23, -82, 7); g.fillCircle(23, -82, 7)  // petits reliefs d'oreilles
 
-  // Navy blue beanie — flat-topped, snug on head
-  g.fillStyle(0x303085)
-  g.fillRect(-24, -122, 48, 33)     // hat body
-  g.fillEllipse(0, -122, 50, 18)    // dome
-  g.fillRect(-26, -94, 52, 8)       // cuff/band at base
-  // Red pompom on top
-  g.fillStyle(0xCC1010); g.fillCircle(0, -127, 9)
+  // Beanie bleu marine — ceinture basse visible, dôme plat
+  g.fillStyle(0x2E2E8A)
+  g.fillRect(-22, -116, 44, 27)       // corps du bonnet
+  g.fillEllipse(0, -116, 46, 14)      // dôme
+  g.fillRect(-24, -93, 48, 6)         // revers en bas du bonnet (au niveau du front)
+  // Pompom rouge
+  g.fillStyle(0xCC1010); g.fillCircle(0, -121, 7)
 
-  // Eyes — SP style: white circle + small black pupil
+  // Yeux : cercles blancs + tout petit pupille noire
   g.fillStyle(0xFFFFFF)
-  g.fillCircle(-9, -94, 7); g.fillCircle(9, -94, 7)
+  g.fillCircle(-8, -85, 5); g.fillCircle(8, -85, 5)
   g.fillStyle(0x111111)
-  g.fillCircle(-9, -94, 3); g.fillCircle(9, -94, 3)
-  // Tiny nose dot
-  g.fillStyle(0xC8946A); g.fillCircle(0, -89, 2)
+  g.fillCircle(-8, -85, 2); g.fillCircle(8, -85, 2)
+  // Nez (point discret)
+  g.fillStyle(0xC08060); g.fillCircle(0, -80, 1.5)
 }
 
 // ── KYLE BROFLOVSKI ─────────────────────────────────────────────────
-// Green ushanka w/ ear flaps | orange jacket + 2 pockets | green mittens
+// Ushanka VERT (très large, rabats remontés) | veste orange + 2 poches | moufles vertes
 function drawKyle(g: G) {
-  // Dark pants
-  g.fillStyle(0x2A3344); g.fillRect(-11, -20, 22, 20)
+  // Pantalon sombre
+  g.fillStyle(0x1E2A38); g.fillRect(-11, -22, 22, 22)
 
-  // Orange jacket
-  g.fillStyle(0xE07828); g.fillRect(-19, -68, 38, 48)
-  // Two square pockets — Kyle's signature jacket detail
-  g.fillStyle(0xC06010)
-  g.fillRect(-15, -56, 12, 11); g.fillRect(3, -56, 12, 11)
+  // Veste orange
+  g.fillStyle(0xE07828); g.fillRect(-20, -66, 40, 44)
+  // 2 poches carrées (signature Kyle)
+  g.fillStyle(0xBE6010)
+  g.fillRect(-16, -54, 13, 12); g.fillRect(3, -54, 13, 12)
 
-  // Green mittens (match hat)
-  g.fillStyle(0x2EA828)
-  g.fillEllipse(-29, -46, 18, 14); g.fillEllipse(29, -46, 18, 14)
+  // Moufles vertes
+  g.fillStyle(0x20A020)
+  g.fillEllipse(-30, -44, 18, 13); g.fillEllipse(30, -44, 18, 13)
 
-  // Big round head
+  // Tête
   g.fillStyle(SKIN)
-  g.fillCircle(0, -92, 26)
-  g.fillCircle(-27, -92, 9); g.fillCircle(27, -92, 9)
+  g.fillCircle(0, -82, 22)
+  g.fillCircle(-23, -82, 7); g.fillCircle(23, -82, 7)
 
-  // Green ushanka hat — distinctive large rounded dome, ear flaps hanging
-  g.fillStyle(0x22A020)
-  // Main dome (very wide, round top — bigger than Stan's hat)
-  g.fillEllipse(0, -120, 62, 36)   // big rounded dome
-  g.fillRect(-30, -116, 60, 30)    // hat body fill (square below dome)
-  // Ear flaps — hang down on sides
-  g.fillRect(-40, -112, 14, 28)    // left flap
-  g.fillRect(26, -112, 14, 28)     // right flap
-  // Darker trim/band at base of hat
-  g.fillStyle(0x188016)
-  g.fillRect(-30, -90, 60, 6)
+  // Ushanka vert — beaucoup plus large que Stan, avec cache-oreilles remontés
+  // Le chapeau est très large et arrondi, les cache-oreilles pressés sur les côtés
+  g.fillStyle(0x20A020)
+  g.fillEllipse(0, -116, 68, 38)      // dôme très large et rond
+  g.fillRect(-32, -112, 64, 26)       // corps du chapeau
+  // Cache-oreilles (remontés = appuyés contre les côtés du bonnet)
+  g.fillRect(-42, -108, 14, 24)       // gauche
+  g.fillRect(28, -108, 14, 24)        // droit
+  // Bande plus foncée en bas
+  g.fillStyle(0x189016)
+  g.fillRect(-32, -90, 64, 6)
 
-  // Eyes
+  // Yeux
   g.fillStyle(0xFFFFFF)
-  g.fillCircle(-9, -94, 7); g.fillCircle(9, -94, 7)
+  g.fillCircle(-8, -85, 5); g.fillCircle(8, -85, 5)
   g.fillStyle(0x111111)
-  g.fillCircle(-9, -94, 3); g.fillCircle(9, -94, 3)
-  g.fillStyle(0xC8946A); g.fillCircle(0, -89, 2)
+  g.fillCircle(-8, -85, 2); g.fillCircle(8, -85, 2)
+  g.fillStyle(0xC08060); g.fillCircle(0, -80, 1.5)
 }
 
 // ── ERIC CARTMAN ────────────────────────────────────────────────────
-// Light blue bonnet + yellow pompom | red jacket WIDE | yellow mittens
-// SAME HEIGHT as others — just significantly WIDER (fat)
+// Bonnet bleu clair + pompom jaune | veste rouge LARGE | moufles jaunes
+// MÊME HAUTEUR que les autres — juste beaucoup plus LARGE (gros)
 function drawCartman(g: G) {
-  // Brown pants (wide)
-  g.fillStyle(0x6B4830); g.fillRect(-14, -20, 28, 20)
+  // Pantalon marron (large)
+  g.fillStyle(0x6B4830); g.fillRect(-15, -22, 30, 22)
 
-  // Red puffer jacket — much wider than others
-  g.fillStyle(0xCC1111); g.fillRect(-30, -68, 60, 48)
-  // Center zipper
-  g.fillStyle(0xAA0000); g.fillRect(-3, -68, 6, 48)
+  // Veste rouge — nettement plus large que les autres
+  g.fillStyle(0xCC1111); g.fillRect(-32, -66, 64, 44)
+  // Fermeture éclair centrale
+  g.fillStyle(0xAA0000); g.fillRect(-3, -66, 6, 44)
 
-  // Yellow/gold mittens (bigger)
+  // Moufles jaunes (plus grosses)
   g.fillStyle(0xFFCC00)
-  g.fillEllipse(-38, -46, 20, 16); g.fillEllipse(38, -46, 20, 16)
+  g.fillEllipse(-40, -44, 20, 15); g.fillEllipse(40, -44, 20, 15)
 
-  // Head — same height as others, slightly wider (chubby face)
+  // Tête — même hauteur que les autres, mais plus ronde/large (grosse)
   g.fillStyle(SKIN)
-  g.fillCircle(0, -92, 28)         // slightly bigger radius = chubby
-  g.fillCircle(-29, -92, 10); g.fillCircle(29, -92, 10)
+  g.fillCircle(0, -82, 24)            // radius légèrement plus grand = joues rondes
+  g.fillCircle(-25, -82, 8); g.fillCircle(25, -82, 8)
 
-  // Light blue hat — same shape as Stan's beanie but wider (for wider head)
+  // Bonnet bleu clair — adapté à sa tête plus large
   g.fillStyle(0x5AB8E8)
-  g.fillRect(-26, -124, 52, 35)
-  g.fillEllipse(0, -124, 56, 20)
-  g.fillRect(-28, -94, 56, 8)
-  // Yellow pompom
-  g.fillStyle(0xFFCC00); g.fillCircle(0, -130, 10)
+  g.fillRect(-25, -118, 50, 29)
+  g.fillEllipse(0, -118, 54, 16)
+  g.fillRect(-27, -93, 54, 6)         // revers
+  // Pompom jaune
+  g.fillStyle(0xFFCC00); g.fillCircle(0, -124, 8)
 
-  // Eyes — wider apart on chubby face
+  // Yeux — légèrement plus écartés (visage plus large)
   g.fillStyle(0xFFFFFF)
-  g.fillCircle(-10, -94, 7); g.fillCircle(10, -94, 7)
+  g.fillCircle(-9, -85, 5); g.fillCircle(9, -85, 5)
   g.fillStyle(0x111111)
-  g.fillCircle(-10, -94, 3); g.fillCircle(10, -94, 3)
-  g.fillStyle(0xC8946A); g.fillCircle(0, -89, 2)
+  g.fillCircle(-9, -85, 2); g.fillCircle(9, -85, 2)
+  g.fillStyle(0xC08060); g.fillCircle(0, -80, 1.5)
 }
 
 // ── KENNY MCCORMICK ─────────────────────────────────────────────────
-// Full orange parka — hood tied tight, only small face oval visible
+// Parka orange intégrale — capuche serrée autour du visage, petit ovale de peau
 function drawKenny(g: G) {
-  // Orange legs/pants
-  g.fillStyle(0xCC6A15); g.fillRect(-11, -20, 22, 20)
+  // Jambes orange
+  g.fillStyle(0xC06010); g.fillRect(-11, -22, 22, 22)
 
-  // Orange parka body
-  g.fillStyle(0xE07820); g.fillRect(-19, -68, 38, 48)
-  // Horizontal parka folds (texture detail)
-  g.fillStyle(0xBE5E12)
-  g.fillRect(-19, -56, 38, 4); g.fillRect(-19, -42, 38, 4)
+  // Corps de la parka orange
+  g.fillStyle(0xE07820); g.fillRect(-20, -66, 40, 44)
+  // Plis horizontaux de la parka
+  g.fillStyle(0xBE5E10)
+  g.fillRect(-20, -54, 40, 4); g.fillRect(-20, -40, 40, 4)
 
-  // Small brown mittens
+  // Petites moufles marron foncé
   g.fillStyle(0x7A4520)
-  g.fillEllipse(-26, -46, 16, 12); g.fillEllipse(26, -46, 16, 12)
+  g.fillEllipse(-28, -44, 16, 12); g.fillEllipse(28, -44, 16, 12)
 
-  // Hood — same total height as other characters
-  // Outer orange hood blob (same radius as others' heads)
-  g.fillStyle(0xE07820); g.fillCircle(0, -92, 26)
-  // Inner darker ring — the tied hood border
-  g.fillStyle(0xBE5E12); g.fillCircle(0, -92, 22)
-  // Tiny face opening — small warm oval of skin
-  g.fillStyle(SKIN); g.fillEllipse(0, -92, 26, 22)
-  // Hood tie strings (hang below face opening)
-  g.fillStyle(0x9A4808)
-  g.fillRect(-9, -76, 3, 9); g.fillRect(6, -76, 3, 9)
+  // Capuche — même hauteur que les autres (même head center y=-82)
+  // 1) Blob orange extérieur (= capuche gonflée)
+  g.fillStyle(0xE07820); g.fillCircle(0, -82, 22)
+  // 2) Anneau intérieur plus sombre (= bord de la capuche resserrée)
+  g.fillStyle(0xC05C0E); g.fillCircle(0, -82, 18)
+  // 3) Petit ovale de visage (peau) — très petit, caractéristique de Kenny
+  g.fillStyle(SKIN); g.fillEllipse(0, -83, 20, 16)
+  // Cordons de la capuche (en bas de l'ouverture)
+  g.fillStyle(0x904008)
+  g.fillRect(-8, -70, 3, 8); g.fillRect(5, -70, 3, 8)
 
-  // Eyes — visible through face hole
+  // Yeux (visibles dans l'ouverture)
   g.fillStyle(0xFFFFFF)
-  g.fillCircle(-7, -94, 6); g.fillCircle(7, -94, 6)
+  g.fillCircle(-6, -85, 5); g.fillCircle(6, -85, 5)
   g.fillStyle(0x111111)
-  g.fillCircle(-7, -94, 3); g.fillCircle(7, -94, 3)
-  // Tiny nose
-  g.fillStyle(0xC8946A); g.fillCircle(0, -89, 2)
+  g.fillCircle(-6, -85, 2); g.fillCircle(6, -85, 2)
+  // Nez
+  g.fillStyle(0xC08060); g.fillCircle(0, -80, 1.5)
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -570,7 +572,7 @@ class BusStopScene extends Phaser.Scene {
 
   preload() {
     if (!this.cache.audio.exists('sp-theme')) {
-      this.load.audio('sp-theme', ['/sons/south-park-theme.m4a', '/sons/south-park-theme.opus'])
+      this.load.audio('sp-theme', '/sons/south-park-theme.m4a')
     }
   }
 
