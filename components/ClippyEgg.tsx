@@ -354,18 +354,18 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
         @keyframes parry-sq-in      { from{opacity:0;transform:scale(.7)} to{opacity:1;transform:scale(1)} }
       `}</style>
 
-      {/* ── Épée curseur (combat) ── */}
+      {/* ── Épée curseur (combat) — taille réelle ── */}
       {phase === 'combat' && (
         <img src="/epee.png" alt=""
           style={{
             position: 'fixed',
-            left: mousePos.x - 16, top: mousePos.y - 55,
-            width: 34, height: 96,
+            left: mousePos.x - 28, top: mousePos.y - 130,
+            width: 70, height: 200,
             objectFit: 'contain',
             pointerEvents: 'none', zIndex: 99998,
             transform: 'rotate(45deg)',
             userSelect: 'none',
-            filter: 'drop-shadow(0 2px 6px rgba(0,0,0,.7))',
+            filter: 'drop-shadow(0 4px 12px rgba(0,0,0,.85))',
           }}
         />
       )}
@@ -539,15 +539,16 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
                 filter: shieldFlash ? 'brightness(1.8) drop-shadow(0 0 10px #ffaa00)' : 'drop-shadow(0 2px 6px rgba(0,0,0,.5))',
               }}
             />
-            {/* Corps combat */}
-            <img src="/clippy.png" alt="Clippy"
+            {/* Corps combat — Evil Clippy */}
+            <img src="/evil-clippy.png" alt="Clippy"
               style={{
                 width: combatW,
                 objectFit: 'contain',
                 display: 'block',
+                mixBlendMode: 'multiply',
                 filter: clippyHit
-                  ? 'brightness(2.5) saturate(0) drop-shadow(0 0 16px #fff)'
-                  : 'drop-shadow(0 6px 16px rgba(232,90,90,.5))',
+                  ? 'brightness(3) saturate(0)'
+                  : 'drop-shadow(0 6px 20px rgba(100,80,180,.6))',
                 transition: 'filter .15s',
               }}
             />
