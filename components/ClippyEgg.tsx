@@ -618,10 +618,10 @@ const TIRED_AT_TABLE: Record<number, number> = { 1: 4, 2: 7, 3: 11, 4: 14, 5: 19
 const TIRED_AT = 4 // valeur par défaut (remplacée dynamiquement dans le composant)
 // HP joueur : 15 phase 1-2, 10 phase 3+ (calculé dans le composant)
 const PARRY_WINDOW_P1    = 2500
-const PARRY_WINDOW_P2    = 2000
-const PARRY_WINDOW_P3    = 1500
-const PARRY_WINDOW_P4    = 1000
-const PARRY_WINDOW_P5    = 800
+const PARRY_WINDOW_P2    = 1800
+const PARRY_WINDOW_P3    = 1200
+const PARRY_WINDOW_P4    = 900
+const PARRY_WINDOW_P5    = 600
 const PARRY_SQ           = 150
 const MG_TARGET          = 100
 const BASE_HP            = 50
