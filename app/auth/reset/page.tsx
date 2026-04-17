@@ -14,11 +14,15 @@ export default function ResetPage() {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') setReady(true)
+      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') setReady(true)
     })
 
     const code = new URLSearchParams(window.location.search).get('code')
-    if (code) supabase.auth.exchangeCodeForSession(code)
+    if (code) {
+      supabase.auth.exchangeCodeForSession(code).then(({ data, error }) => {
+        if (!error && data.session) setReady(true)
+      })
+    }
 
     return () => subscription.unsubscribe()
   }, [supabase])
