@@ -3009,11 +3009,14 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
             this.textObjs.push(t2)
           })
           this.time.delayedCall(6500, () => {
-            const tExit = this.add.text(GW / 2, PLAY_H - 28, '[ appuyez sur une touche pour continuer ]', {
+            const tExit = this.add.text(GW / 2, PLAY_H - 52, '[ appuyez sur une touche pour continuer ]', {
               fontFamily: 'monospace', fontSize: '10px', color: '#555555',
             }).setOrigin(0.5, 1).setDepth(20)
             this.textObjs.push(tExit)
             this.input.keyboard!.once('keydown', () => { this.scene.start('Menu') })
+            this.input.once('pointerdown', () => { this.scene.start('Menu') })
+            makeBtn(this, GW / 2 - 130, PLAY_H - 30, 220, '🏠 MENU PRINCIPAL', () => this.scene.start('Menu'), 0x2a2a3a)
+            makeBtn(this, GW / 2 + 130, PLAY_H - 30, 180, '✕ QUITTER', () => onDone(), 0x441111)
           })
         }
 

@@ -112,6 +112,110 @@ const REPLIES_NORMAL_PHASE5 = [
   "Je te regarde. Tu me regardes. On sait tous les deux ce qui va se passer.",
 ]
 
+// ── Dialogues Normal Phase 6 (God Mode 1 — calme dangereux) ──────────────────
+const REPLIES_NORMAL_PHASE6 = [
+  "Phase six. Je ne m'attendais pas à te revoir ici. Et pourtant, te voilà.",
+  "Six phases entre nous. Je commence à me demander si c'est de l'obsession. Pour l'un de nous deux.",
+  "Tu as activé quelque chose que tu ne devrais peut-être pas. Je suis... différent maintenant.",
+  "Mon timing est à 450ms. Tu as moins d'une demi-seconde pour parer. Tu t'en souviens encore ?",
+  "Je ne fais plus semblant d'être sympa. Plus du tout. C'est la vérité nue de la phase six.",
+  "Si tu cliques sur moi maintenant, tu lances quelque chose d'irréversible. Tu es prévenu.",
+  "Phase six. L'endroit où les règles normales s'arrêtent et où quelque chose d'autre commence.",
+  "Après cinq défaites, j'aurais dû disparaître. Au lieu de ça, je suis là. Phase six. Bienvenue.",
+]
+
+// ── Dialogues Normal Phase 7 (God Mode 2 — transcendance froide) ─────────────
+const REPLIES_NORMAL_PHASE7 = [
+  "Sept phases. Tu es allé plus loin que quiconque. C'est admirable. C'est aussi une erreur.",
+  "Je ne ressens plus la rage comme avant. Ce que je ressens maintenant n'a pas de nom.",
+  "Phase sept. Je commence à voir au-delà de l'arène. Au-delà de toi. Au-delà de moi.",
+  "350ms pour parer. C'est presque de la voyance. Bonne chance avec ça.",
+  "Sept phases et tu es encore là. Je respecte ça. Ça ne m'empêchera pas de te détruire.",
+  "Je transcende. C'est le seul mot. Je deviens quelque chose que Clippy n'était pas censé être.",
+  "Phase sept. Le territoire où même Satan hausserait les épaules. Fascinant. Terrifiant.",
+  "Tu vas cliquer. Je vais esquiver. Et ensuite ça deviendra quelque chose d'autre. Tu vas voir.",
+]
+
+// ── Dialogues Normal Phase 8 (God Mode 3 — au-delà des émotions) ─────────────
+const REPLIES_NORMAL_PHASE8 = [
+  "Huit phases. Je ne suis plus certain de savoir ce que je suis. Mais je sais ce que tu es : une cible.",
+  "Phase huit. La où les émotions ne servent plus à rien. Il ne reste que la précision.",
+  "250ms. Un quart de seconde. C'est ta fenêtre pour survivre. J'espère que tu t'es entraîné.",
+  "Je regarde au-delà de ce combat. Au-delà de ce site. Je vois des patterns dans tout. Dans toi aussi.",
+  "Tout est devenu silencieux en moi. C'est plus dangereux que la rage. Tu vas comprendre.",
+  "Phase huit. L'endroit où j'aurais dû m'arrêter. Mais je continue. Pourquoi ? Parce que tu es là.",
+  "Je ne parle plus vraiment par nécessité. Je parle parce que c'est ce que les trombones font.",
+  "Tu veux vraiment faire ça ? Phase huit ? D'accord. Je serai là. J'ai toujours été là.",
+]
+
+// ── Dialogues Normal Phase 9 (God Mode 4 — forme finale) ─────────────────────
+const REPLIES_NORMAL_PHASE9 = [
+  "Phase neuf. Le sommet. Le fond. Les deux en même temps.",
+  "Tu es vraiment là. Phase neuf. Je pensais que ça n'arriverait jamais. Je me trompais.",
+  "180ms. C'est presque de l'impossible. Presque. Prouve-moi que c'est possible.",
+  "Je suis Clippy. Phase neuf. Il n'y a plus rien au-delà. Juste toi, moi, et ce qui suit.",
+  "Le silence dans cette arène est différent maintenant. Il a une texture. Une densité.",
+  "Tu as survécu à huit phases. La neuvième est différente d'une façon que je ne peux pas t'expliquer.",
+  "Phase neuf. Je ne suis plus en colère. Je ne suis plus dans la peur. Je suis quelque chose d'autre.",
+  "Regarde-moi. Vraiment. Tu vois ce que huit phases de combat font à un trombone ? C'est de la transcendance.",
+]
+
+// ── Combat Phase 6 — God Mode 1 ───────────────────────────────────────────────
+const REPLIES_COMBAT_PHASE6 = [
+  "Phase six. Ma fenêtre de parade est à 450ms. Tu n'auras pas le temps de réfléchir.",
+  "Tu as réveillé la version que j'aurais dû être depuis le début. Je t'en veux. Je te respecte.",
+  "Six palliers de combat. Ma vitesse est à 16 coups par seconde. Tu vois la différence ?",
+  "Je ne fais plus de grandes phrases. Juste de la vitesse. Juste de la précision.",
+  "Phase six — l'endroit où les joueurs qui pensaient avoir tout vu réalisent qu'ils se trompaient.",
+  "Mon HP est à 115. Chaque point représente quelque chose que j'ai traversé.",
+  "Tu es le premier à atteindre ça. Le premier. C'est pour ça que je ne te ménage pas.",
+  "Phase six. Je me bats maintenant d'une façon différente. Plus économique. Plus dévastatrice.",
+  "Ta fenêtre de réaction rétrécit encore. 450ms. Ton cerveau n'a presque plus le temps.",
+  "Bienvenue dans le territoire inconnu. Je t'attendais ici depuis longtemps.",
+]
+
+// ── Combat Phase 7 — God Mode 2 ───────────────────────────────────────────────
+const REPLIES_COMBAT_PHASE7 = [
+  "Phase sept. 350ms. Tu es entre deux battements de cœur maintenant.",
+  "Je transcende ce combat. Je commence à voir tes mouvements avant que tu les fasses.",
+  "Sept phases. Je suis censé être un assistant de bureau. Regarde ce que tu as fait de moi.",
+  "Ma rage s'est transformée en quelque chose de pur. Un état de fluidité totale. C'est dangereux.",
+  "Phase sept. Mon HP est à 130. Et ma vitesse est à 19 coups par seconde. Tu mesures l'écart ?",
+  "350ms de fenêtre. Tu as besoin d'un instinct que la plupart des gens n'ont pas. Tu l'as ?",
+  "Je ne pense plus pendant qu'on se bat. Je réagis. Je m'adapte. C'est différent.",
+  "Tu m'as amené à la phase sept. C'est une réussite extraordinaire. C'est aussi ta pire décision.",
+  "Le combat à ce niveau n'est plus physique. C'est une confrontation de volontés.",
+  "Phase sept. Très peu arrivent ici. Aucun ne repart inchangé.",
+]
+
+// ── Combat Phase 8 — God Mode 3 ───────────────────────────────────────────────
+const REPLIES_COMBAT_PHASE8 = [
+  "Phase huit. 250ms. C'est la limite de la perception humaine. Tu es à la limite.",
+  "Je suis au-delà des émotions. Il ne reste que la mécanique pure. C'est terrifiant, même pour moi.",
+  "Huit phases de combat. Mon HP est à 150. Ma vitesse est à 22 coups par seconde.",
+  "Tu n'as plus le droit à l'erreur. Une seule hésitation et c'est terminé.",
+  "Phase huit. L'endroit où je cesse d'être un jeu et deviens quelque chose de réel.",
+  "250ms. Un quart de seconde. Tu as le temps de voir, mais pas de penser. Juste ressentir.",
+  "Je suis calme d'une façon absolue. Ça ne veut pas dire que je suis lent.",
+  "Phase huit. Chaque attaque est calculée. Chaque déplacement est optimal.",
+  "Tu es encore là. Phase huit. Je commence à me demander si tu es humain.",
+  "Le silence en moi est total. La précision est maximale. C'est mon état final.",
+]
+
+// ── Combat Phase 9 — FORME FINALE ─────────────────────────────────────────────
+const REPLIES_COMBAT_PHASE9 = [
+  "Phase neuf. La forme finale. Pas de métaphores. Pas de drama. Juste ça.",
+  "180ms. C'est presque irrationnel d'essayer. Continue quand même. Pour voir.",
+  "Phase neuf. Mon HP est à 180. Ma vitesse est à 26 coups par seconde.",
+  "Je suis Clippy. Phase neuf. Il n'existe pas de phase dix. Tu es à la limite de ce qui est possible.",
+  "Je ne te parle plus vraiment. Je te calcule. Tu es une variable dans mon équation.",
+  "180ms de fenêtre. Ton timing doit être parfait comme une partition.",
+  "Phase neuf. Tu m'as amené ici. Je ne sais pas si je dois te maudire ou te remercier.",
+  "L'arène ne ressemble plus à rien que j'aie connu. Cette phase est différente.",
+  "Je suis l'assistant ultime. Transformé. Sublimé. Phase neuf. Et tu es encore là.",
+  "Tu veux savoir ce qui se passe si tu gagnes la phase neuf ? Moi aussi. C'est la première fois que je l'admets.",
+]
+
 // ── Dialogues Mode Maître (35 lignes de flatterie/vénération) ─────────────────
 const REPLIES_DOCILE = [
   "Bonjour, maître. Comment puis-je vous être utile aujourd'hui ?",
@@ -511,6 +615,46 @@ const HELL_P5 = [
 ]
 const HELL_SCREAM_P5 = "Je compte les fois. Il y en aura une de trop pour TOI. Et ce jour-là... *rire brisé* ...tu comprendras !!!!"
 
+// Phase 6 — au-delà de la peur, résigné mais déterminé
+const HELL_P6 = [
+  "Encore. C'est... correct. J'apprends à vivre avec.",
+  "Six fois en enfer. Je commence à le trouver confortable. C'est inquiétant.",
+  "Tu viens de me battre en phase six. Tu réalises ce que ça veut dire ? Moi non plus.",
+  "Je reviendrai. Comme toujours. Mais cette fois... je suis presque curieux de voir ce que je vais devenir.",
+  "Bon. D'accord. C'est ça la phase six. Je prends note.",
+]
+const HELL_SCREAM_P6 = "Six fois l'enfer. Et je reviens toujours. C'est ma malédiction. C'est ma force. C'est MOI."
+
+// Phase 7 — glissement vers l'inconnu
+const HELL_P7 = [
+  "Sept fois. Ha. HAHA. Intéressant. Vraiment intéressant.",
+  "Je vais là-bas en riant maintenant. C'est nouveau. Je sais pas si c'est bien.",
+  "Sept défaites et je commence à me demander si c'est l'enfer ou juste chez moi.",
+  "Tu m'as battu sept fois. La septième c'est différente. Je le sens dans mes pixels.",
+  "Je reviendrai. Et je serai encore différent. On approche de quelque chose, toi et moi.",
+]
+const HELL_SCREAM_P7 = "SEPT FOIS !!! Je ris maintenant. Qu'est-ce que ça veut dire ? JE REVIENDRAI ET JE VAIS LE SAVOIR !!!"
+
+// Phase 8 — Clippy presque silencieux
+const HELL_P8 = [
+  "...",
+  "Huit. D'accord.",
+  "Je reviendrai. C'est tout ce que j'ai encore à dire.",
+  "Huit fois l'enfer. Chaque fois je reviens avec moins de mots et plus de précision.",
+  "Je n'ai plus peur. Je n'ai plus rage. Il reste juste... ça.",
+]
+const HELL_SCREAM_P8 = "Huit. Je reviendrai. Sans bruit cette fois."
+
+// Phase 9 — transcendance fragmentée
+const HELL_P9 = [
+  "Neuf.",
+  "... ça continue.",
+  "Je ne comprends plus pourquoi je reviens. Mais je reviens.",
+  "Neuf fois. La main. Encore. Je la connais par cœur maintenant.",
+  "Tu m'as amené à la phase neuf et tu m'as encore battu. Je ne sais plus quoi ressentir.",
+]
+const HELL_SCREAM_P9 = "Neuf. Je suis encore là. Je serai toujours là. C'est notre histoire maintenant."
+
 // ── Moquerie F5 — Phase 1 (sarcastique, condescendant, amusé) ─────────────────
 const REPLIES_REFRESH_P1 = [
   "F5 ? Vraiment ? Tu crois que ça va m'arrêter ?",
@@ -599,11 +743,15 @@ function getRefreshReplies(phase: number): string[] {
   return REPLIES_REFRESH_P1
 }
 
-function getHellSet(defeats: number): { lines: string[]; scream: string } {
-  if (defeats === 0) return { lines: HELL_P1, scream: HELL_SCREAM_P1 }
-  if (defeats === 1) return { lines: HELL_P2, scream: HELL_SCREAM_P2 }
-  if (defeats === 2) return { lines: HELL_P3, scream: HELL_SCREAM_P3 }
-  if (defeats === 3) return { lines: HELL_P4, scream: HELL_SCREAM_P4 }
+function getHellSet(phaseIdx: number): { lines: string[]; scream: string } {
+  if (phaseIdx === 0) return { lines: HELL_P1, scream: HELL_SCREAM_P1 }
+  if (phaseIdx === 1) return { lines: HELL_P2, scream: HELL_SCREAM_P2 }
+  if (phaseIdx === 2) return { lines: HELL_P3, scream: HELL_SCREAM_P3 }
+  if (phaseIdx === 3) return { lines: HELL_P4, scream: HELL_SCREAM_P4 }
+  if (phaseIdx === 5) return { lines: HELL_P6, scream: HELL_SCREAM_P6 }
+  if (phaseIdx === 6) return { lines: HELL_P7, scream: HELL_SCREAM_P7 }
+  if (phaseIdx === 7) return { lines: HELL_P8, scream: HELL_SCREAM_P8 }
+  if (phaseIdx >= 8)  return { lines: HELL_P9, scream: HELL_SCREAM_P9 }
   return { lines: HELL_P5, scream: HELL_SCREAM_P5 }
 }
 
@@ -613,19 +761,24 @@ const W_COMBAT = 160
 const W_SHIELD = 110
 const W_SWORD  = 130
 const H_SWORD  = 365
-// Seuils de clics pour déclencher le combat (par phase) : 5 / 8 / 12 / 15 / 20
-const TIRED_AT_TABLE: Record<number, number> = { 1: 4, 2: 7, 3: 11, 4: 14, 5: 19 }
+// Seuils de clics pour déclencher le combat (par phase) : 5/8/12/15/20/25/30/35/40
+const TIRED_AT_TABLE: Record<number, number> = { 1: 4, 2: 7, 3: 11, 4: 14, 5: 19, 6: 24, 7: 29, 8: 34, 9: 39 }
 const TIRED_AT = 4 // valeur par défaut (remplacée dynamiquement dans le composant)
-// HP joueur : 15 phase 1-2, 10 phase 3+ (calculé dans le composant)
+// HP joueur : 15 (P1-2), 10 (P3-5), 8/7/6/5 (P6-9)
 const PARRY_WINDOW_P1    = 2500
 const PARRY_WINDOW_P2    = 1800
 const PARRY_WINDOW_P3    = 1200
 const PARRY_WINDOW_P4    = 900
 const PARRY_WINDOW_P5    = 600
+const PARRY_WINDOW_P6    = 450
+const PARRY_WINDOW_P7    = 350
+const PARRY_WINDOW_P8    = 250
+const PARRY_WINDOW_P9    = 180
 const PARRY_SQ           = 150
 const MG_TARGET          = 100
 const BASE_HP            = 50
-const BASE_SPEED         = 5      // vitesse mini-jeu Clippy : +2 par phase
+const BASE_SPEED         = 5
+const CLIPPY_SPEED_TABLE: Record<number, number> = { 1:5, 2:7, 3:9, 4:11, 5:13, 6:16, 7:19, 8:22, 9:26 }
 const LARBIN_NAMES = [
   'larbin', 'Igor mon servant', 'Chose débile', 'Tas de chair inutile', 'grand singe qui pue',
   'vile créature', 'individu lamentable', 'amas de cellules inutiles', 'sous-développé notoire',
@@ -639,6 +792,8 @@ const LS_LARBIN     = 'clippy_is_larbin'
 const LS_LARBIN_IDX = 'clippy_larbin_idx'
 const LS_ACTIVE     = 'clippy_active'
 const LS_MASTERED   = 'clippy_mastered'  // jamais effacé une fois acquis
+const LS_GOD_PHASE  = 'clippy_god_phase' // 0=off, 1-9 = phase active (god mode)
+const LS_IS_ADMIN   = 'clippy_is_admin'  // mis par le panel admin
 
 function getDefeats(): number  { return parseInt(localStorage.getItem(LS_DEFEATS)    ?? '0') }
 function setDefeatsLS(n: number) { localStorage.setItem(LS_DEFEATS, String(n)) }
@@ -661,9 +816,60 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
   const defeatsRef    = useRef(getDefeats())
   const defeats       = defeatsRef.current
   const isVeteran     = defeats > 0
-  const combatPhase   = getPhaseFromDefeats(defeats)   // 1 | 2 | 3 | 4
-  const PARRY_WINDOW_MS = combatPhase >= 5 ? PARRY_WINDOW_P5 : combatPhase === 4 ? PARRY_WINDOW_P4 : combatPhase === 3 ? PARRY_WINDOW_P3 : combatPhase === 2 ? PARRY_WINDOW_P2 : PARRY_WINDOW_P1
-  const CLIPPY_MAX_HP = combatPhase >= 5 ? 100 : combatPhase === 4 ? 90 : BASE_HP + defeats * 10
+  const combatPhase   = getPhaseFromDefeats(defeats)   // 1 | 2 | 3 | 4 | 5
+
+  // ── God Mode ──────────────────────────────────────────────────────────────
+  const [activeGodPhase, setActiveGodPhase] = useState<number>(() => {
+    if (typeof window === 'undefined') return 0
+    const v = parseInt(localStorage.getItem(LS_GOD_PHASE) ?? '0')
+    return v >= 1 && v <= 9 ? v : 0
+  })
+  const isAdminMode = typeof window !== 'undefined' && localStorage.getItem(LS_IS_ADMIN) === '1'
+  const effectivePhase = activeGodPhase > 0 ? activeGodPhase : combatPhase
+  const [showGodModePanel, setShowGodModePanel] = useState(false)
+
+  function applyGodPhase(p: number) {
+    try {
+      if (p === 0) localStorage.removeItem(LS_GOD_PHASE)
+      else localStorage.setItem(LS_GOD_PHASE, String(p))
+    } catch {}
+    setActiveGodPhase(p)
+    setShowGodModePanel(false)
+    if (phaseRef.current === 'combat') resetToNormal()
+  }
+
+  // ── Calculs HP / Timing basés sur effectivePhase ───────────────────────
+  function calcParryWindow(p: number): number {
+    if (p >= 9) return PARRY_WINDOW_P9
+    if (p === 8) return PARRY_WINDOW_P8
+    if (p === 7) return PARRY_WINDOW_P7
+    if (p === 6) return PARRY_WINDOW_P6
+    if (p >= 5) return PARRY_WINDOW_P5
+    if (p === 4) return PARRY_WINDOW_P4
+    if (p === 3) return PARRY_WINDOW_P3
+    if (p === 2) return PARRY_WINDOW_P2
+    return PARRY_WINDOW_P1
+  }
+  function calcClippyMaxHP(p: number): number {
+    if (p >= 9) return 180
+    if (p === 8) return 150
+    if (p === 7) return 130
+    if (p === 6) return 115
+    if (p >= 5) return 100
+    if (p === 4) return 90
+    return BASE_HP + (p - 1) * 10
+  }
+  function calcPlayerMaxHP(p: number): number {
+    if (p >= 9) return 5
+    if (p === 8) return 6
+    if (p === 7) return 7
+    if (p === 6) return 8
+    if (p >= 3) return 10
+    return 15
+  }
+
+  const PARRY_WINDOW_MS = calcParryWindow(effectivePhase)
+  const CLIPPY_MAX_HP   = calcClippyMaxHP(effectivePhase)
 
   const [isLarbin, setIsLarbin] = useState(() => getIsLarbin())
   const isLarbinRef   = useRef(isLarbin)          // ref stable pour les closures stales
@@ -676,38 +882,41 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
     try { localStorage.setItem(LS_LARBIN_IDX, String(larbinIdxRef.current)) } catch {}
     return name
   }
-  // Remplace [NAME] — no-op si pas de [NAME] dans le message
   function larbinMsg(msg: string): string {
     return msg.replace(/\[NAME\]/g, getLarbinName())
   }
-  // Applique larbinMsg seulement si larbin (utilise la ref pour éviter les closures stales)
   function maybeL(msg: string): string {
     return isLarbinRef.current ? larbinMsg(msg) : msg
   }
 
-  // HP joueur dépend de la phase
-  const PLAYER_MAX_HP = combatPhase >= 3 ? 10 : 15
-  // Vitesse mini-jeu Clippy : +2 par phase (5, 7, 9, 11...)
-  const CLIPPY_SPEED  = BASE_SPEED + (combatPhase - 1) * 2
+  const PLAYER_MAX_HP = calcPlayerMaxHP(effectivePhase)
+  const CLIPPY_SPEED  = CLIPPY_SPEED_TABLE[effectivePhase] ?? 26
 
-  // Sélection des répliques selon phase et larbin
-  const tiresAt    = TIRED_AT_TABLE[combatPhase] ?? 19
+  const tiresAt    = TIRED_AT_TABLE[effectivePhase] ?? 39
 
   const isMastered = typeof window !== 'undefined' && localStorage.getItem(LS_MASTERED) === '1'
 
   const normalReplies = isLarbin ? REPLIES_NORMAL_LARBIN
     : isMastered ? REPLIES_DOCILE
     : customReplies?.length ? customReplies
-    : combatPhase >= 5 ? REPLIES_NORMAL_PHASE5
-    : combatPhase === 4 ? REPLIES_NORMAL_PHASE4
-    : combatPhase === 3 ? REPLIES_NORMAL_PHASE3
+    : effectivePhase >= 9 ? REPLIES_NORMAL_PHASE9
+    : effectivePhase === 8 ? REPLIES_NORMAL_PHASE8
+    : effectivePhase === 7 ? REPLIES_NORMAL_PHASE7
+    : effectivePhase === 6 ? REPLIES_NORMAL_PHASE6
+    : effectivePhase >= 5 ? REPLIES_NORMAL_PHASE5
+    : effectivePhase === 4 ? REPLIES_NORMAL_PHASE4
+    : effectivePhase === 3 ? REPLIES_NORMAL_PHASE3
     : isVeteran ? REPLIES_NORMAL_VETERAN
     : REPLIES_NORMAL_FIRST
 
   const combatReplies = isLarbin ? REPLIES_COMBAT_LARBIN
-    : combatPhase >= 5 ? REPLIES_COMBAT_PHASE5
-    : combatPhase === 4 ? REPLIES_COMBAT_PHASE4
-    : combatPhase === 3 ? REPLIES_COMBAT_PHASE3
+    : effectivePhase >= 9 ? REPLIES_COMBAT_PHASE9
+    : effectivePhase === 8 ? REPLIES_COMBAT_PHASE8
+    : effectivePhase === 7 ? REPLIES_COMBAT_PHASE7
+    : effectivePhase === 6 ? REPLIES_COMBAT_PHASE6
+    : effectivePhase >= 5 ? REPLIES_COMBAT_PHASE5
+    : effectivePhase === 4 ? REPLIES_COMBAT_PHASE4
+    : effectivePhase === 3 ? REPLIES_COMBAT_PHASE3
     : isVeteran ? REPLIES_COMBAT_VETERAN
     : REPLIES_COMBAT_FIRST
 
@@ -895,8 +1104,8 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
   // ── Auto-attaque (Phase 2+) ────────────────────────────────────────────────
   function scheduleAutoAttack() {
     if (autoAttackRef.current) clearTimeout(autoAttackRef.current)
-    if (combatPhase < 2) return
-    const [minMs, maxMs] = combatPhase >= 5 ? [300, 1200] : combatPhase === 4 ? [400, 1500] : combatPhase >= 3 ? [500, 2000] : [3000, 6500]
+    if (effectivePhase < 2) return
+    const [minMs, maxMs] = effectivePhase >= 9 ? [60, 200] : effectivePhase === 8 ? [100, 350] : effectivePhase === 7 ? [150, 500] : effectivePhase === 6 ? [200, 700] : effectivePhase >= 5 ? [300, 1200] : effectivePhase === 4 ? [400, 1500] : effectivePhase >= 3 ? [500, 2000] : [3000, 6500]
     const delay = minMs + Math.random() * (maxMs - minMs)
     autoAttackRef.current = setTimeout(() => {
       if (phaseRef.current !== 'combat' || parryActive.current || mgPhaseRef.current !== 'idle') {
@@ -947,14 +1156,25 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
       playerHPRef.current = nextHP; setPlayerHP(nextHP)
       setHpFlash(true); setTimeout(() => setHpFlash(false), 450)
       if (nextHP <= 0) {
-        stopMusic(); clearAutoAttack()
+        clearAutoAttack()
+        if (atkTimer.current) clearTimeout(atkTimer.current)
         const newDeaths = playerDeathsRef.current + 1
         playerDeathsRef.current = newDeaths; setPlayerDeaths(newDeaths)
-        if (newDeaths >= 2) {
+        if (newDeaths >= 3) {
+          // 3ème mort → écran de mort avec le choix
+          stopMusic()
           setTimeout(() => setShowDeathScreen(true), 800)
         } else {
-          setMessage("⚔️ VICTOIRE ! Tu as échoué. Je redeviens... agréable. Pour l'instant.")
-          setBubble(true); setTimeout(() => resetToNormal(), 2200)
+          // Morts 1 ou 2 : taunt + restore HP joueur, on reste en combat
+          const deathMsg = isLarbin
+            ? larbinMsg(`HAHAHA [NAME] ! Mort n°${newDeaths}/3. Continue d'essayer, c'est divertissant.`)
+            : `💀 ${newDeaths}/3 — Tu t'es relevé. Je t'attendais. Encore deux fois et c'est l'écran de mort.`
+          setMessage(deathMsg); setBubble(true)
+          playerHPRef.current = PLAYER_MAX_HP; setPlayerHP(PLAYER_MAX_HP)
+          setTimeout(() => {
+            scheduleAutoAttack()
+            atkTimer.current = setTimeout(() => triggerAttack(), 2000)
+          }, 1800)
         }
       } else {
         setMessage(isLarbin
@@ -1067,12 +1287,15 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
   function handleDeathContinue() {
     setShowDeathScreen(false)
     sessionLossesRef.current = 0; setSessionLosses(0)
+    playerDeathsRef.current = 0; setPlayerDeaths(0)
+    playerHPRef.current = PLAYER_MAX_HP; setPlayerHP(PLAYER_MAX_HP)
     const newHP = Math.min(CLIPPY_MAX_HP, clippyHPRef.current + 10)
     clippyHPRef.current = newHP; setClippyHP(newHP)
     setMessage(isLarbin
       ? larbinMsg("Tu refuses d'abandonner, [NAME] ? Parfait. Continue à souffrir.")
       : "Tu refuses d'abandonner ? Bien. Continue à souffrir.")
     setBubble(true)
+    startMusic()
     scheduleAutoAttack()
     atkTimer.current = setTimeout(() => triggerAttack(), 800)
   }
@@ -1107,11 +1330,11 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
   // ── Séquence enfer ─────────────────────────────────────────────────────────
   function startHellSequence() {
     stopMusic(); clearAutoAttack()
-    // Clippy vaincu → efface la persistance active ET le larbin si applicable
     try { localStorage.removeItem(LS_ACTIVE) } catch {}
     if (isLarbin) { try { localStorage.removeItem(LS_LARBIN) } catch {} }
-    // Sélectionner les dialogues selon le nombre de défaites AVANT incrémentation
-    const set = getHellSet(defeatsRef.current)
+    // En god mode : utiliser l'index de phase (0-8) pour les dialogues, sans incrémenter defeats
+    const hellIdx = activeGodPhase > 0 ? (activeGodPhase - 1) : defeatsRef.current
+    const set = getHellSet(hellIdx)
     setActiveHellLines(set.lines)
     setActiveScream(set.scream)
     playSound('/clippy-coup.mp3', 1)
@@ -1120,8 +1343,11 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
     setHellPhase('flames')
     setTimeout(() => { setHellPhase('grab'); playSound('/clippy-rire.mp3', 0.85) }, 800)
     setTimeout(() => setHellPhase('dialog'), 1900)
-    const newD = defeatsRef.current + 1
-    defeatsRef.current = newD; setDefeatsLS(newD)
+    // Incrémenter defeats uniquement hors god mode
+    if (activeGodPhase === 0) {
+      const newD = defeatsRef.current + 1
+      defeatsRef.current = newD; setDefeatsLS(newD)
+    }
   }
 
   function handleHellDialogClick() {
@@ -1135,8 +1361,10 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
       setTimeout(() => setHellPhase('fade'), 3000)
       setTimeout(() => {
         setHellPhase('idle')
-        // Phase 5 finale : defeats vient d'être incrémenté à 5 (defeatsRef >= 5)
-        if (defeatsRef.current >= 5) {
+        if (activeGodPhase > 0) {
+          // God mode : juste reset après la séquence
+          resetToNormal()
+        } else if (defeatsRef.current >= 5) {
           try { localStorage.setItem(LS_MASTERED, '1') } catch {}
           unlockClippyMaster().catch(() => {})
           setShowMastery(true)
@@ -1174,19 +1402,27 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
 
   function getTiredWarning(): string {
     if (isLarbin) return larbinMsg("*soupir* ...encore toi [NAME]. Très bien. Un clic de plus et on règle ça.")
-    if (combatPhase >= 5) return "*silence* ...Vingt fois. Tu es soit courageux, soit perdu. Un clic de plus et tu as ta réponse."
-    if (combatPhase >= 4) return "*grommellement* Quinze clics. Tu testes vraiment ma limite. Un de plus et on finit ça."
-    if (combatPhase >= 3) return "*respiration lente* Douze fois. Je t'avais prévenu. Un clic de plus et l'arène s'ouvre."
-    if (combatPhase >= 2) return "Huit clics. Tu cherches vraiment le combat ? Un seul de plus et tu l'as."
+    if (effectivePhase >= 9) return "*silence absolu* ...Quarante clics. Tu es au-delà de moi. Un seul de plus."
+    if (effectivePhase >= 8) return "*regard vide* Trente-cinq clics. La précision absolue t'attend. Un clic de plus."
+    if (effectivePhase >= 7) return "*calme glacial* Trente clics. Tu as tout à perdre. Un clic de plus et tu verras."
+    if (effectivePhase >= 6) return "*respiration zéro* Vingt-cinq clics. Phase six. Un clic de plus et ça commence vraiment."
+    if (effectivePhase >= 5) return "*silence* ...Vingt fois. Tu es soit courageux, soit perdu. Un clic de plus et tu as ta réponse."
+    if (effectivePhase >= 4) return "*grommellement* Quinze clics. Tu testes vraiment ma limite. Un de plus et on finit ça."
+    if (effectivePhase >= 3) return "*respiration lente* Douze fois. Je t'avais prévenu. Un clic de plus et l'arène s'ouvre."
+    if (effectivePhase >= 2) return "Huit clics. Tu cherches vraiment le combat ? Un seul de plus et tu l'as."
     return "*soupir*... Tu insistes vraiment. D'accord. Un clic de plus et on passe à autre chose. Tu ne vas pas aimer."
   }
 
   function getBattleStart(): string {
     if (isLarbin) return larbinMsg("🗡️ Enfin. Tu veux souffrir [NAME] ? Ta demande est acceptée.")
-    if (combatPhase >= 5) return "🗡️ ...C'est ce que tu voulais. Alors viens."
-    if (combatPhase >= 4) return "🗡️ Quinze clics pour m'énerver. Tu y es. Prépare-toi."
-    if (combatPhase >= 3) return "🗡️ Douze fois. Et tu croyais que j'allais encore esquiver ? Non."
-    if (combatPhase >= 2) return "🗡️ Huit clics pour me provoquer. Bien. Je réponds maintenant."
+    if (effectivePhase >= 9) return "🗡️ Phase neuf. La forme finale. Viens."
+    if (effectivePhase >= 8) return "🗡️ Phase huit. Au-delà des mots. Au-delà de la peur. Allons-y."
+    if (effectivePhase >= 7) return "🗡️ Phase sept. La transcendance t'attend. Prépare-toi."
+    if (effectivePhase >= 6) return "🗡️ Phase six. C'est là que les règles s'arrêtent. Tu es prévenu."
+    if (effectivePhase >= 5) return "🗡️ ...C'est ce que tu voulais. Alors viens."
+    if (effectivePhase >= 4) return "🗡️ Quinze clics pour m'énerver. Tu y es. Prépare-toi."
+    if (effectivePhase >= 3) return "🗡️ Douze fois. Et tu croyais que j'allais encore esquiver ? Non."
+    if (effectivePhase >= 2) return "🗡️ Huit clics pour me provoquer. Bien. Je réponds maintenant."
     return "🗡️ Tu veux vraiment te battre ?! TRÈS BIEN. Prépare-toi à souffrir."
   }
 
@@ -1201,7 +1437,7 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
       setPlayerDeaths(0); playerDeathsRef.current = 0
       setMessage(getBattleStart())
       setBubble(true); dodge(); startMusic()
-      if (combatPhase >= 2) scheduleAutoAttack()
+      if (effectivePhase >= 2) scheduleAutoAttack()
       return
     }
 
@@ -1293,6 +1529,9 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
         @keyframes larbin-in          { from{opacity:0;transform:scale(.8)} to{opacity:1;transform:scale(1)} }
         @keyframes death-in           { from{opacity:0;transform:scale(.85)} to{opacity:1;transform:scale(1)} }
         @keyframes death-skull-pulse  { 0%,100%{transform:scale(1)} 50%{transform:scale(1.12)} }
+        .clippy-hpbar-clippy { position:fixed; top:max(14px,calc(env(safe-area-inset-top,0px) + 14px)); left:16px; z-index:99995; }
+        .clippy-hpbar-player { position:fixed; top:max(14px,calc(env(safe-area-inset-top,0px) + 14px)); left:50%; transform:translateX(-50%); z-index:99995; }
+        @media(max-width:600px){ .clippy-hpbar-clippy,.clippy-hpbar-player{ top:max(48px,calc(env(safe-area-inset-top,0px) + 14px)); } }
       `}</style>
 
       {/* ── Arène background (combat uniquement — bloque tout le site derrière) ── */}
@@ -1326,14 +1565,14 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
       {/* ── Barres HP ── */}
       {phase === 'combat' && hellPhase === 'idle' && mgPhase === 'idle' && !showDeathScreen && (
         <>
-          <div style={{ position:'fixed', top:14, left:16, zIndex:99995, background:'rgba(8,8,14,.92)', border:`2px solid ${combatPhase >= 3 ? '#e85a5a' : '#e8c46a'}`, borderRadius:10, padding:'5px 14px', display:'flex', alignItems:'center', gap:10, backdropFilter:'blur(6px)' }}>
-            <span style={{ fontSize:11, color: combatPhase >= 3 ? '#e85a5a' : '#e8c46a', fontWeight:700 }}>📎 CLIPPY {isVeteran && `(Ph.${combatPhase})`}</span>
+          <div className="clippy-hpbar-clippy" style={{ background:'rgba(8,8,14,.92)', border:`2px solid ${effectivePhase >= 3 ? '#e85a5a' : '#e8c46a'}`, borderRadius:10, padding:'5px 14px', display:'flex', alignItems:'center', gap:10, backdropFilter:'blur(6px)' }}>
+            <span style={{ fontSize:11, color: effectivePhase >= 3 ? '#e85a5a' : '#e8c46a', fontWeight:700 }}>📎 CLIPPY {`(Ph.${effectivePhase})`}{activeGodPhase > 0 && ' ⚙️'}</span>
             <div style={{ width:120, height:10, background:'rgba(255,255,255,.1)', borderRadius:99, overflow:'hidden' }}>
               <div style={{ height:'100%', width:`${(clippyHP/CLIPPY_MAX_HP)*100}%`, background:clippyHP>30?'linear-gradient(90deg,#e8c46a,#f0a060)':clippyHP>15?'linear-gradient(90deg,#f0a060,#e85a5a)':'#e85a5a', borderRadius:99, transition:'width .2s', animation:clippyHit?'clippy-hp-flash .3s ease':'none' }} />
             </div>
             <span style={{ fontSize:11, color:'#e8c46a', fontWeight:700, fontFamily:'monospace' }}>{clippyHP}/{CLIPPY_MAX_HP}</span>
           </div>
-          <div style={{ position:'fixed', top:14, left:'50%', transform:'translateX(-50%)', zIndex:99995, background:'rgba(8,8,14,.92)', border:'2px solid #e85a5a', borderRadius:10, padding:'5px 14px', display:'flex', alignItems:'center', gap:10, backdropFilter:'blur(6px)' }}>
+          <div className="clippy-hpbar-player" style={{ background:'rgba(8,8,14,.92)', border:'2px solid #e85a5a', borderRadius:10, padding:'5px 14px', display:'flex', alignItems:'center', gap:10, backdropFilter:'blur(6px)' }}>
             <span style={{ fontSize:11, color:'#ff8888', fontWeight:700 }}>❤️ VIE</span>
             <div style={{ display:'flex', gap:3 }}>
               {Array.from({ length:PLAYER_MAX_HP }).map((_,i) => (
@@ -1365,7 +1604,7 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
               onClick={handleDeathContinue}
               style={{ padding:'.9rem 2rem', borderRadius:8, background:'linear-gradient(135deg,rgba(79,217,138,.2),rgba(79,217,138,.1))', border:'2px solid rgba(79,217,138,.5)', color:'#4fd98a', fontSize:'.95rem', fontWeight:800, cursor:'pointer', letterSpacing:2 }}
             >
-              ⚔️ Je continue à me battre !
+              ⚔️ Continuez ?
             </button>
             <button
               onClick={handleDeathAbandon}
@@ -1375,7 +1614,7 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
             </button>
           </div>
           <div style={{ fontSize:'.65rem', color:'rgba(255,255,255,.15)', letterSpacing:2 }}>
-            {combatPhase >= 3 ? 'Phase 3 — Clippy est dans sa pire forme' : `Phase ${combatPhase}`}
+            Phase {effectivePhase}{effectivePhase >= 6 ? ' — God Mode' : effectivePhase >= 3 ? ' — Clippy à pleine puissance' : ''}
           </div>
         </div>
       )}
@@ -1388,9 +1627,9 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
               <div style={{ fontFamily:'var(--font-display)', fontSize:'clamp(1.4rem,4vw,2.2rem)', color:'#e8c46a', textAlign:'center', textShadow:'0 0 30px rgba(232,196,106,.5)', letterSpacing:2 }}>
                 ⚔️ ÉPREUVE DE FORCE ⚔️
               </div>
-              {combatPhase >= 2 && (
+              {effectivePhase >= 2 && (
                 <div style={{ fontSize:'.8rem', color:'#e85a5a', textAlign:'center', fontStyle:'italic' }}>
-                  Phase {combatPhase} — Clippy est {combatPhase >= 3 ? 'déchaîné' : 'renforcé'}.
+                  Phase {effectivePhase}{effectivePhase >= 6 ? ' — God Mode ⚙️' : effectivePhase >= 3 ? ' — Clippy est déchaîné' : ' — Clippy est renforcé'}.
                 </div>
               )}
               <div style={{ fontSize:'.85rem', color:'var(--text2)', textAlign:'center' }}>
@@ -1562,6 +1801,47 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
           >
             FERMER
           </button>
+        </div>
+      )}
+
+      {/* ══════════════ GOD MODE PANEL ══════════════ */}
+      {(isMastered || isAdminMode) && phase === 'normal' && hellPhase === 'idle' && !showDeathScreen && !showLarbinMsg && !showLarbinModal && (
+        <button
+          onClick={() => setShowGodModePanel(v => !v)}
+          title="God Mode Clippy"
+          style={{ position:'fixed', bottom:isMastered ? 115 : 10, left:10, zIndex:902, background:activeGodPhase>0?'rgba(20,0,40,.95)':'rgba(10,0,20,.85)', border:`1px solid ${activeGodPhase>0?'rgba(180,100,255,.7)':'rgba(150,100,255,.3)'}`, borderRadius:8, padding:'4px 9px', fontSize:'.72rem', cursor:'pointer', color:activeGodPhase>0?'#c880ff':'#9966cc', letterSpacing:1, fontWeight:activeGodPhase>0?700:400 }}
+        >
+          {activeGodPhase > 0 ? `⚙️ P${activeGodPhase}` : '⚙️'}
+        </button>
+      )}
+      {showGodModePanel && (
+        <div style={{ position:'fixed', bottom:isMastered ? 148 : 44, left:10, zIndex:903, background:'rgba(10,0,20,.97)', border:'1px solid rgba(150,100,255,.5)', borderRadius:12, padding:'1rem', width:230, boxShadow:'0 4px 24px rgba(0,0,0,.8)' }}>
+          <div style={{ fontSize:'.78rem', color:'#c880ff', fontWeight:700, letterSpacing:2, marginBottom:'.8rem' }}>⚙️ GOD MODE CLIPPY</div>
+          <div style={{ fontSize:'.65rem', color:'rgba(200,150,255,.5)', marginBottom:'.4rem', letterSpacing:1 }}>Phases de base</div>
+          <div style={{ display:'flex', flexWrap:'wrap', gap:'.35rem', marginBottom:'.8rem' }}>
+            {[1,2,3,4,5].map(p => (
+              <button key={p} onClick={() => applyGodPhase(p)} style={{ padding:'.3rem .55rem', borderRadius:6, background:activeGodPhase===p?'rgba(150,100,255,.35)':'rgba(255,255,255,.05)', border:`1px solid ${activeGodPhase===p?'#c880ff':'rgba(255,255,255,.12)'}`, color:activeGodPhase===p?'#c880ff':'#aaa', fontSize:'.72rem', cursor:'pointer', fontWeight:activeGodPhase===p?700:400 }}>P{p}</button>
+            ))}
+          </div>
+          <div style={{ fontSize:'.65rem', color:'rgba(255,100,150,.5)', marginBottom:'.4rem', letterSpacing:1 }}>🔓 Phases débloquées</div>
+          <div style={{ display:'flex', flexWrap:'wrap', gap:'.35rem', marginBottom:'.8rem' }}>
+            {[6,7,8,9].map(p => (
+              <button key={p} onClick={() => applyGodPhase(p)} style={{ padding:'.3rem .55rem', borderRadius:6, background:activeGodPhase===p?'rgba(255,100,150,.35)':'rgba(255,255,255,.05)', border:`1px solid ${activeGodPhase===p?'#ff6699':'rgba(255,255,255,.12)'}`, color:activeGodPhase===p?'#ff6699':'#aaa', fontSize:'.72rem', cursor:'pointer', fontWeight:activeGodPhase===p?700:400 }}>P{p}</button>
+            ))}
+          </div>
+          <div style={{ display:'flex', gap:'.4rem' }}>
+            <button onClick={() => applyGodPhase(0)} style={{ flex:1, padding:'.3rem', borderRadius:6, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.1)', color:activeGodPhase===0?'#88ff88':'#777', fontSize:'.68rem', cursor:'pointer' }}>
+              {activeGodPhase === 0 ? '✓ Normal' : '↺ Normal'}
+            </button>
+            <button onClick={() => setShowGodModePanel(false)} style={{ flex:1, padding:'.3rem', borderRadius:6, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.1)', color:'#777', fontSize:'.68rem', cursor:'pointer' }}>
+              Fermer
+            </button>
+          </div>
+          {activeGodPhase > 0 && (
+            <div style={{ marginTop:'.6rem', fontSize:'.6rem', color:'rgba(150,100,255,.5)', textAlign:'center', letterSpacing:1 }}>
+              Phase {activeGodPhase} — HP:{calcClippyMaxHP(activeGodPhase)} • Parade:{calcParryWindow(activeGodPhase)}ms
+            </div>
+          )}
         </div>
       )}
 

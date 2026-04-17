@@ -1714,9 +1714,35 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
             }}>📦 Spawn max (8%)</button>
           <button className="btn btn-red" style={{ fontSize: '.78rem' }}
             onClick={() => {
-              ;['clippy_defeats','clippy_active','clippy_is_larbin','clippy_larbin_idx','clippy_mastered','clippy_triggers'].forEach(k => localStorage.removeItem(k))
+              ;['clippy_defeats','clippy_active','clippy_is_larbin','clippy_larbin_idx','clippy_mastered','clippy_triggers','clippy_god_phase','clippy_is_admin'].forEach(k => localStorage.removeItem(k))
               addToast('Clippy reset complet', '🗑️')
             }}>🗑️ Reset tout</button>
+        </div>
+      </Section>
+
+      {/* Clippy God Mode — Admin */}
+      <Section icon="⚙️" title="Clippy God Mode (Admin)">
+        <div style={{ fontSize: '.78rem', color: 'var(--text2)', marginBottom: '.75rem' }}>
+          Sélectionne une phase pour toi-même sur le site principal. Les phases 6-9 sont des phases bonus au-delà de la phase 5 normale.
+          <br /><span style={{ color: 'var(--text3)', fontSize: '.7rem' }}>Stocké en localStorage — n'affecte que ton navigateur.</span>
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.5rem', marginBottom: '.75rem' }}>
+          {[0,1,2,3,4,5,6,7,8,9].map(p => (
+            <button key={p} className="btn btn-outline" style={{ fontSize: '.78rem' }}
+              onClick={() => {
+                localStorage.setItem('clippy_is_admin', '1')
+                if (p === 0) localStorage.removeItem('clippy_god_phase')
+                else localStorage.setItem('clippy_god_phase', String(p))
+                addToast(p === 0 ? 'God Mode désactivé' : `God Mode Phase ${p} activé`, '⚙️')
+              }}>
+              {p === 0 ? '🔴 Désactiver' : `Phase ${p}`}
+            </button>
+          ))}
+        </div>
+        <div style={{ fontSize: '.7rem', color: 'var(--text3)' }}>
+          <strong>Stats par phase :</strong>{' '}
+          P1: 50HP•2500ms•5/s | P2: 60HP•1800ms•7/s | P3: 70HP•1200ms•9/s | P4: 90HP•900ms•11/s | P5: 100HP•600ms•13/s
+          <br />P6: 115HP•450ms•16/s | P7: 130HP•350ms•19/s | P8: 150HP•250ms•22/s | P9: 180HP•180ms•26/s
         </div>
       </Section>
 
