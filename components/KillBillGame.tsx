@@ -248,7 +248,7 @@ export default function KillBillGame({ onDone, endText }: { onDone: () => void; 
           if (!group) return
           const spacing = 62
           const sx = (GW - (KEYS_PER_GROUP - 1) * spacing) / 2
-          const cy = GH - 108
+          const cy = isMobile ? 115 : GH - 108
           const pulse = 1 + 0.12 * Math.sin(this.time.now / 200)
 
           for (let i = 0; i < KEYS_PER_GROUP; i++) {
@@ -277,7 +277,7 @@ export default function KillBillGame({ onDone, endText }: { onDone: () => void; 
         drawTimerBar() {
           this.gBar.clear()
           const ratio = Math.max(0, this.keyMs / KEY_MS)
-          const bw = 380, bx = (GW - bw) / 2, by = GH - 142
+          const bw = 380, bx = (GW - bw) / 2, by = isMobile ? 150 : GH - 142
           this.gBar.fillStyle(0x333333).fillRect(bx, by, bw, 6)
           const col = ratio < 0.3 ? 0xef4444 : ratio < 0.6 ? 0xf5c518 : 0x22c55e
           this.gBar.fillStyle(col).fillRect(bx, by, bw * ratio, 6)
@@ -289,9 +289,10 @@ export default function KillBillGame({ onDone, endText }: { onDone: () => void; 
         }
 
         flash(txt: string, col: string) {
-          this.tFeedback.setText(txt).setStyle({ color: col }).setAlpha(1).setY(GH / 2 - 30)
+          const fy = isMobile ? 175 : GH / 2 - 30
+          this.tFeedback.setText(txt).setStyle({ color: col }).setAlpha(1).setY(fy)
           this.tweens.killTweensOf(this.tFeedback)
-          this.tweens.add({ targets: this.tFeedback, alpha: 0, y: GH / 2 - 60, duration: 500 })
+          this.tweens.add({ targets: this.tFeedback, alpha: 0, y: fy - 30, duration: 500 })
         }
 
         // ── PHASES ───────────────────────────────────────────────
@@ -562,9 +563,9 @@ export default function KillBillGame({ onDone, endText }: { onDone: () => void; 
     }
   }, [])
 
-  // Sur mobile : focus l'input caché quand le challenge commence → ouvre le clavier natif
   useEffect(() => {
     if (isMobile && showCtrl && !beaten) {
+      window.scrollTo(0, 0)
       setTimeout(() => mobileInputRef.current?.focus(), 80)
     }
   }, [showCtrl, isMobile, beaten])
