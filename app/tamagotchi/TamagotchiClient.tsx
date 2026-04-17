@@ -251,6 +251,19 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
   const isSick      = pet?.is_sick === true
   const showingGame = showFeedGame || showPlayGame || showHuntGame
 
+  const X2_PENDING = '1970-01-01T00:00:00.000Z'
+  const isX2Pending = pet?.x2_exp_until === X2_PENDING
+  const isX2Active  = !isX2Pending && !!pet?.x2_exp_until && new Date(pet.x2_exp_until).getTime() > now
+  const x2TimeLeft  = isX2Active ? Math.max(0, new Date(pet.x2_exp_until).getTime() - now) : 0
+  const x2MinLeft   = Math.ceil(x2TimeLeft / 60_000)
+
+  // Énergie estimée côté client pendant le sommeil (mise à jour toutes les 30s via `now`)
+  const displayEnergy = useMemo(() => {
+    if (!isSleeping || !pet?.last_sync) return pet?.energy ?? 100
+    const elapsed = (now - new Date(pet.last_sync).getTime()) / 3_600_000
+    return Math.min(100, Math.round((pet.energy ?? 0) + elapsed * 20))
+  }, [isSleeping, pet?.energy, pet?.last_sync, now])
+
   const poopPositions = useMemo(() => getPoopPositions(pet?.poop_count ?? 0), [pet?.poop_count])
   const today         = useMemo(() => new Date().toISOString().slice(0, 10), [])
   const caressesToday = (pet?.last_caresse_date === today) ? (pet?.caresses_today ?? 0) : 0
@@ -651,7 +664,7 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
                   <div style={{ fontSize: '2.2rem', animation: 'tama-zzz-float 2.5s ease-in-out infinite' }}>💤</div>
                   <div style={{ color: '#8888cc', fontSize: '.82rem', marginTop: '.3rem', fontFamily: 'var(--font-display)' }}>Zzzz...</div>
                   <div style={{ color: '#5555aa', fontSize: '.65rem', marginTop: '.15rem' }}>
-                    Énergie : {pet.energy ?? 0}/100
+                    Énergie : {displayEnergy}/100
                   </div>
                 </div>
               )}
@@ -686,8 +699,8 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
               <StatBar label="Satiété"  value={100 - pet.hunger}  color="#f97316" icon="🥩" pulse />
               <StatBar label="Humeur"   value={pet.happiness}      color="#a78bfa" icon="😊" pulse />
               <StatBar label="Santé"    value={pet.health}         color="#22d3ee" icon="❤️" pulse />
-              <StatBar label="Énergie"  value={pet.energy ?? 100}  color="#facc15" icon="⚡"
-                pulse={(pet.energy ?? 100) < 25}
+              <StatBar label="Énergie"  value={displayEnergy}  color="#facc15" icon="⚡"
+                pulse={displayEnergy < 25}
               />
             </div>
           )}
@@ -712,7 +725,7 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
                   style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.2rem', padding: '.7rem', background: 'rgba(136,136,204,.08)', borderColor: '#8888cc66', color: '#aaaaee' }}>
                   <span style={{ fontSize: '1.4rem' }}>☀️</span>
                   <span style={{ fontSize: '.75rem' }}>Réveiller</span>
-                  <span style={{ fontSize: '.62rem', color: '#8888aa' }}>Énergie {pet.energy ?? 0}/100</span>
+                  <span style={{ fontSize: '.62rem', color: '#8888aa' }}>Énergie {displayEnergy}/100</span>
                 </button>
               ) : (pet.energy ?? 100) <= 30 ? (
                 <button className="btn btn-outline" disabled={loading === 'dormir'} onClick={() => doAction(dormirTamagotchi, 'dormir')}
@@ -750,12 +763,32 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
               </button>
 
               {/* ── Jouer ── */}
-              <button className="btn btn-outline" disabled={loading === 'play' || isSleeping} onClick={() => !isSleeping && setShowPlayGame(true)}
-                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.2rem', padding: '.7rem', opacity: isSleeping ? 0.4 : 1 }}>
-                <span style={{ fontSize: '1.4rem' }}>🎮</span>
-                <span style={{ fontSize: '.75rem' }}>Jouer · +XP</span>
-                {isSleeping && <span style={{ fontSize: '.6rem', color: '#8888aa' }}>dort…</span>}
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem' }}>
+                <button className="btn btn-outline" disabled={loading === 'play' || isSleeping} onClick={() => !isSleeping && setShowPlayGame(true)}
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.2rem', padding: '.7rem',
+                    opacity: isSleeping ? 0.4 : 1,
+                    ...(isX2Pending || isX2Active ? {
+                      borderColor: '#fbbf24',
+                      boxShadow: '0 0 12px rgba(251,191,36,.5)',
+                      animation: 'tama-x2-glow 1.2s ease-in-out infinite',
+                    } : {}),
+                  }}>
+                  <span style={{ fontSize: '1.4rem' }}>🎮</span>
+                  {(isX2Pending || isX2Active) ? (
+                    <span style={{ fontSize: '.75rem', color: '#fbbf24', fontWeight: 700 }}>Jouer · ×2 EXP !</span>
+                  ) : (
+                    <span style={{ fontSize: '.75rem' }}>Jouer · +XP</span>
+                  )}
+                  {isSleeping && <span style={{ fontSize: '.6rem', color: '#8888aa' }}>dort…</span>}
+                </button>
+                {isX2Active && (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: '.65rem', color: '#fbbf24', fontWeight: 700, lineHeight: 1.3 }}>
+                    <span>⏱</span>
+                    <span>{x2MinLeft}m</span>
+                  </div>
+                )}
+              </div>
 
               {/* ── Câliner ── */}
               <button className="btn btn-outline" disabled={loading === 'caresse' || caressesToday >= caresseLimit} onClick={handleCaresse}
@@ -1075,6 +1108,10 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
           0%   { transform: scale(0.4) rotate(-10deg); opacity: 0; }
           60%  { transform: scale(1.15) rotate(3deg); opacity: 1; }
           100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+        @keyframes tama-x2-glow {
+          0%, 100% { box-shadow: 0 0 8px rgba(251,191,36,.4); border-color: rgba(251,191,36,.7); }
+          50%       { box-shadow: 0 0 20px rgba(251,191,36,.9); border-color: #fbbf24; }
         }
       `}</style>
     </div>

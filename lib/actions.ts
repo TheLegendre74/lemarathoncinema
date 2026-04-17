@@ -2081,6 +2081,8 @@ function computeStreak(pet: any, todayStr: string) {
   return { care_streak: 1, last_care_date: todayStr }
 }
 
+const X2_PENDING = '1970-01-01T00:00:00.000Z'
+
 function applyTamaDecay(pet: any): { pet: any; evolved: boolean; evolvedTo: string | null } {
   const now = Date.now()
   const lastSync = new Date(pet.last_sync).getTime()
@@ -2092,19 +2094,25 @@ function applyTamaDecay(pet: any): { pet: any; evolved: boolean; evolvedTo: stri
   let energy      = Math.max(0, Math.min(100, pet.energy      ?? 100))
   let isSleeping  = pet.is_sleeping ?? false
   let isSick      = pet.is_sick     ?? false
+  let lastNeglectPenaltyAt: string | null = pet.last_neglect_penalty_at ?? null
+  let x2ExpUntil: string | null = pet.x2_exp_until ?? null
 
   age_hours = Math.round(age_hours + hoursElapsed)
 
   if (isSleeping) {
-    // En sommeil : énergie remonte vite, faim augmente doucement, pas de perte de bonheur
     energy = Math.min(100, Math.round(energy + hoursElapsed * 20))
     hunger = Math.min(100, Math.round(hunger + hoursElapsed * 0.8))
-    if (energy >= 100) isSleeping = false  // réveil automatique
+    if (energy >= 100) isSleeping = false
   } else {
-    // Éveillé : déclin normal + drain d'énergie
     energy    = Math.max(0,   Math.round(energy    - hoursElapsed * 7))
     hunger    = Math.min(100, Math.round(hunger    + hoursElapsed * 2))
     happiness = Math.max(0,   Math.round(happiness - hoursElapsed * 1))
+
+    // -2 humeur par 3h supplémentaires si pas caressé/joué
+    const lastInteracted = pet.last_interacted_at ? new Date(pet.last_interacted_at).getTime() : 0
+    if (lastInteracted > 0) {
+      happiness = Math.max(0, Math.round(happiness - (2 / 3) * hoursElapsed))
+    }
 
     if (hunger > 70)    health = Math.max(0, Math.round(health - hoursElapsed * 3))
     if (happiness < 30) health = Math.max(0, Math.round(health - hoursElapsed * 2))
@@ -2116,12 +2124,20 @@ function applyTamaDecay(pet: any): { pet: any; evolved: boolean; evolvedTo: stri
       if (poopCount >= 3) health = Math.max(0, Math.round(health - hoursElapsed * poopCount))
     }
 
-    // Endormissement auto quand énergie à 0
     if (energy <= 0) isSleeping = true
 
-    // Risque de tomber malade si trop affamé et pas encore malade
     if (!isSick && hunger > 80) {
       if (Math.random() < hoursElapsed * 0.05) isSick = true
+    }
+
+    // -40 humeur si pas joué en 24h (max 1x par 24h)
+    const lastPlayed = pet.last_played ? new Date(pet.last_played).getTime() : 0
+    const lastNeglect = lastNeglectPenaltyAt ? new Date(lastNeglectPenaltyAt).getTime() : 0
+    const H24 = 24 * 3_600_000
+    if ((now - lastPlayed) >= H24 && (now - lastNeglect) >= H24) {
+      happiness = Math.max(0, happiness - 40)
+      lastNeglectPenaltyAt = new Date().toISOString()
+      if (!x2ExpUntil) x2ExpUntil = X2_PENDING
     }
   }
 
@@ -2133,7 +2149,7 @@ function applyTamaDecay(pet: any): { pet: any; evolved: boolean; evolvedTo: stri
 
   const evolved = stage !== prevStage && stage !== 'dead'
   return {
-    pet: { ...pet, hunger, happiness, health, age_hours, stage, energy, is_sleeping: isSleeping, is_sick: isSick, last_sync: new Date().toISOString() },
+    pet: { ...pet, hunger, happiness, health, age_hours, stage, energy, is_sleeping: isSleeping, is_sick: isSick, last_sync: new Date().toISOString(), last_neglect_penalty_at: lastNeglectPenaltyAt, x2_exp_until: x2ExpUntil },
     evolved,
     evolvedTo: evolved ? stage : null,
   }
@@ -2160,6 +2176,8 @@ export async function initOrGetTamagotchi() {
       hunger: updated.hunger, happiness: updated.happiness, health: updated.health,
       age_hours: updated.age_hours, stage: updated.stage, last_sync: updated.last_sync,
       energy: updated.energy, is_sleeping: updated.is_sleeping, is_sick: updated.is_sick,
+      last_neglect_penalty_at: updated.last_neglect_penalty_at,
+      x2_exp_until: updated.x2_exp_until,
     }).eq('user_id', user.id)
   }
 
@@ -2204,6 +2222,8 @@ export async function feedTamagotchi(score: number = 5, perfect: boolean = false
     last_fed: now, last_sync: now,
     poop_count: Math.min(5, (pet.poop_count ?? 0) + (Math.random() < 0.6 ? 1 : 0)),
     xp: Math.min(9999, (pet.xp ?? 0) + xpGain),
+    last_neglect_penalty_at: synced.last_neglect_penalty_at,
+    x2_exp_until: synced.x2_exp_until,
     ...computeStreak(pet, today),
   }
   const { data } = await (supabase as any).from('tamagotchi').update(updates).eq('user_id', user.id).select().single()
@@ -2225,7 +2245,20 @@ export async function playWithTamagotchi(score: number = 5) {
   const now = new Date().toISOString()
   const today = now.slice(0, 10)
   const happinessGain = Math.max(10, Math.min(40, Math.round(score * 4)))
-  const xpGain = tamaXpGain(pet, Math.max(10, Math.min(25, Math.round(score * 2))))
+
+  // x2 EXP : activé si bonus en attente (X2_PENDING) ou timer encore actif
+  let x2Multiplier = 1
+  let x2ExpUpdate: string | null = synced.x2_exp_until ?? null
+  if (synced.x2_exp_until === X2_PENDING) {
+    x2ExpUpdate = new Date(Date.now() + 3_600_000).toISOString()
+    x2Multiplier = 2
+  } else if (synced.x2_exp_until && new Date(synced.x2_exp_until) > new Date()) {
+    x2Multiplier = 2
+  } else if (synced.x2_exp_until && synced.x2_exp_until !== X2_PENDING && new Date(synced.x2_exp_until) <= new Date()) {
+    x2ExpUpdate = null
+  }
+
+  const xpGain = tamaXpGain(pet, Math.max(10, Math.min(25, Math.round(score * 2)))) * x2Multiplier
   const updates = {
     happiness: Math.min(100, synced.happiness + happinessGain),
     hunger: synced.hunger, health: synced.health,
@@ -2233,6 +2266,9 @@ export async function playWithTamagotchi(score: number = 5) {
     energy: synced.energy, is_sleeping: synced.is_sleeping, is_sick: synced.is_sick,
     last_played: now, last_sync: now,
     xp: Math.min(9999, (pet.xp ?? 0) + xpGain),
+    last_interacted_at: now,
+    x2_exp_until: x2ExpUpdate,
+    last_neglect_penalty_at: synced.last_neglect_penalty_at,
     ...computeStreak(pet, today),
   }
   const { data } = await (supabase as any).from('tamagotchi').update(updates).eq('user_id', user.id).select().single()
@@ -2265,6 +2301,8 @@ export async function healTamagotchi() {
     age_hours: synced.age_hours, stage: synced.stage,
     energy: synced.energy, is_sleeping: synced.is_sleeping, is_sick: synced.is_sick,
     last_healed: now, last_sync: now,
+    last_neglect_penalty_at: synced.last_neglect_penalty_at,
+    x2_exp_until: synced.x2_exp_until,
     xp: Math.min(9999, (pet.xp ?? 0) + tamaXpGain(pet, 10)),
     ...computeStreak(pet, today),
   }
@@ -2288,6 +2326,7 @@ export async function reviveTamagotchi() {
     is_sleeping: false, is_sick: false, poop_count: 0,
     caresses_today: 0, last_caresse_date: null,
     xp: 0, care_streak: 0, last_care_date: null,
+    last_interacted_at: null, last_neglect_penalty_at: null, x2_exp_until: null,
     last_sync: now, deaths: pet.deaths + 1,
   }).eq('user_id', user.id).select().single()
   return { data, error: null }
@@ -2462,6 +2501,8 @@ export async function huntTamagotchi(score: number, caught: boolean) {
     age_hours: synced.age_hours, stage: synced.stage,
     energy: Math.max(0, synced.energy - 15),
     is_sleeping: synced.is_sleeping, is_sick: synced.is_sick,
+    last_neglect_penalty_at: synced.last_neglect_penalty_at,
+    x2_exp_until: synced.x2_exp_until,
     last_sync: now,
     xp: Math.min(9999, (pet.xp ?? 0) + xpGain),
     achievements,
@@ -2498,6 +2539,8 @@ export async function checkInTamagotchi() {
     hunger: synced.hunger, health: synced.health,
     age_hours: synced.age_hours, stage: synced.stage,
     energy: synced.energy, is_sleeping: synced.is_sleeping, is_sick: synced.is_sick,
+    last_neglect_penalty_at: synced.last_neglect_penalty_at,
+    x2_exp_until: synced.x2_exp_until,
     last_sync: now,
     xp: Math.min(9999, (pet.xp ?? 0) + tamaXpGain(pet, bonusXp)),
     achievements,
@@ -2554,7 +2597,10 @@ export async function caresserTamagotchi() {
     last_sync: now,
     caresses_today: caressesToday + 1,
     last_caresse_date: today,
+    last_interacted_at: now,
     xp: Math.min(9999, (pet.xp ?? 0) + tamaXpGain(pet, 3)),
+    last_neglect_penalty_at: synced.last_neglect_penalty_at,
+    x2_exp_until: synced.x2_exp_until,
     ...computeStreak(pet, today),
   }
   const { data } = await (supabase as any).from('tamagotchi').update(updates).eq('user_id', user.id).select().single()
@@ -2601,6 +2647,8 @@ export async function dormirTamagotchi() {
     is_sleeping: true,
     hunger: synced.hunger, happiness: synced.happiness, health: synced.health,
     age_hours: synced.age_hours, stage: synced.stage, energy: synced.energy, is_sick: synced.is_sick,
+    last_neglect_penalty_at: synced.last_neglect_penalty_at,
+    x2_exp_until: synced.x2_exp_until,
     last_sync: now,
   }).eq('user_id', user.id).select().single()
   return { data, error: null }
@@ -2619,6 +2667,8 @@ export async function reveillerTamagotchi() {
     is_sleeping: false,
     hunger: synced.hunger, happiness: synced.happiness, health: synced.health,
     age_hours: synced.age_hours, stage: synced.stage, energy: synced.energy, is_sick: synced.is_sick,
+    last_neglect_penalty_at: synced.last_neglect_penalty_at,
+    x2_exp_until: synced.x2_exp_until,
     last_sync: now,
   }).eq('user_id', user.id).select().single()
   return { data, error: null }
@@ -2641,6 +2691,8 @@ export async function guerirTamagotchi() {
     hunger: synced.hunger, happiness: synced.happiness,
     age_hours: synced.age_hours, stage: synced.stage,
     energy: synced.energy, is_sleeping: synced.is_sleeping,
+    last_neglect_penalty_at: synced.last_neglect_penalty_at,
+    x2_exp_until: synced.x2_exp_until,
     last_sync: now,
     xp: Math.min(9999, (pet.xp ?? 0) + tamaXpGain(pet, 12)),
     ...computeStreak(pet, today),
