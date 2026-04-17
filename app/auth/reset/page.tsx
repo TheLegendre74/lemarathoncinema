@@ -10,16 +10,29 @@ export default function ResetPage() {
   const [info, setInfo] = useState('')
   const [loading, setLoading] = useState(false)
   const [ready, setReady] = useState(false)
+  const [debug, setDebug] = useState('')
   const supabase = createClient()
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const code = params.get('code')
+    const tokenHash = params.get('token_hash')
+    const type = params.get('type')
+    setDebug(`code=${code ? '✅' : '❌'} token_hash=${tokenHash ? '✅' : '❌'} type=${type} hash=${window.location.hash.slice(0, 30)}`)
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      setDebug(d => d + ` | event=${event}`)
       if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') setReady(true)
     })
 
-    const code = new URLSearchParams(window.location.search).get('code')
     if (code) {
       supabase.auth.exchangeCodeForSession(code).then(({ data, error }) => {
+        setDebug(d => d + ` | exchange=${error ? error.message : 'OK'}`)
+        if (!error && data.session) setReady(true)
+      })
+    } else if (tokenHash && type === 'recovery') {
+      supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'recovery' }).then(({ data, error }) => {
+        setDebug(d => d + ` | verifyOtp=${error ? error.message : 'OK'}`)
         if (!error && data.session) setReady(true)
       })
     }
@@ -46,7 +59,10 @@ export default function ResetPage() {
           Nouveau mot de passe
         </div>
         {!ready ? (
-          <div style={{ color: 'var(--text2)', fontSize: '.85rem', textAlign: 'center' }}>Vérification du lien en cours…</div>
+          <div style={{ color: 'var(--text2)', fontSize: '.85rem', textAlign: 'center' }}>
+            Vérification du lien en cours…
+            <div style={{ fontSize: '.7rem', color: 'var(--text3)', marginTop: '.5rem', wordBreak: 'break-all' }}>{debug}</div>
+          </div>
         ) : (
           <>
             <div className="field">
