@@ -31,7 +31,8 @@ export const SPECIAL_BADGES = [
   { id: 'tama_explorateur',label: 'Explorateur',         icon: '🔭', cls: 'badge-tama',  desc: 'Tamagotchi niveau 2 — Explorateur de l\'espace' },
   { id: 'tama_chasseur',   label: 'Chasseur Spatial',    icon: '🎯', cls: 'badge-tama',  desc: 'Tamagotchi niveau 5 — Chasseur Spatial redouté' },
   { id: 'tama_legende',    label: 'Légende Noire',       icon: '🌑', cls: 'badge-tama',  desc: 'Tamagotchi niveau 8 — Légende Noire de l\'univers' },
-  { id: 'tama_maitre',     label: 'Maître de l\'Espace', icon: '👑', cls: 'badge-tama',  desc: 'Tamagotchi niveau 10 — Maître absolu de l\'espace' },
+  { id: 'tama_maitre',     label: 'Maître de l\'Espace', icon: '👑', cls: 'badge-tama',   desc: 'Tamagotchi niveau 10 — Maître absolu de l\'espace' },
+  { id: 'legende-vivante', label: 'Légende Vivante',    icon: '🏆', cls: 'badge-master', desc: 'A dompté la bête — Clippy lui obéit désormais' },
 ] as const
 
 export type SpecialBadge = typeof SPECIAL_BADGES[number]

@@ -885,9 +885,9 @@ export default function EasterEggs({ config = {}, isGuest = false }: { config?: 
   const [showPandora,    setShowPandora]    = useState(false)
   const [showClipy,      setShowClipy]      = useState(() => {
     if (typeof window === 'undefined') return false
-    // Clippy persiste entre sessions s'il est actif (pas encore vaincu) ou si larbin
     return localStorage.getItem('clippy_active') === '1' || localStorage.getItem('clippy_is_larbin') === '1'
   })
+  const [isMastered,     setIsMastered]     = useState(() => typeof window !== 'undefined' && localStorage.getItem('clippy_mastered') === '1')
   const [showTamagotchi, setShowTamagotchi] = useState(false)
   const keyBuf = useRef<string[]>([])
   const tarsShown = useRef(false)
@@ -1122,7 +1122,27 @@ export default function EasterEggs({ config = {}, isGuest = false }: { config?: 
       {showTipiak     && <TipiakOverlay  onDone={() => setShowTipiak(false)} />}
       {showTamagotchi && <TamagotchiKeyOverlay onClose={() => setShowTamagotchi(false)} isGuest={isGuest} />}
       {showPandora    && <PandoraBox onOpen={() => { setShowPandora(false); setShowClipy(true) }} onClose={() => setShowPandora(false)} />}
-      {showClipy      && <ClippyEgg onDismiss={() => { localStorage.removeItem('clippy_is_larbin'); setShowClipy(false) }} customReplies={config.clippyReplies} />}
+      {showClipy      && <ClippyEgg onDismiss={() => { localStorage.removeItem('clippy_is_larbin'); setIsMastered(localStorage.getItem('clippy_mastered') === '1'); setShowClipy(false) }} customReplies={config.clippyReplies} />}
+
+      {/* Coffre maître — visible uniquement si Clippy a été dompté */}
+      {isMastered && !showClipy && (
+        <button
+          onClick={() => setShowClipy(true)}
+          title="Invoquer Clippy"
+          style={{ position:'fixed', bottom:78, left:10, zIndex:900, background:'rgba(18,14,4,.92)', border:'1px solid rgba(232,196,106,.4)', borderRadius:8, padding:'6px 10px', fontSize:'1.2rem', cursor:'pointer', boxShadow:'0 2px 10px rgba(0,0,0,.4)', color:'#e8c46a', lineHeight:1 }}
+        >
+          📦
+        </button>
+      )}
+      {isMastered && showClipy && (
+        <button
+          onClick={() => { localStorage.removeItem('clippy_is_larbin'); setShowClipy(false) }}
+          title="Révoquer Clippy"
+          style={{ position:'fixed', bottom:78, left:10, zIndex:900, background:'rgba(18,4,4,.92)', border:'1px solid rgba(232,90,90,.4)', borderRadius:8, padding:'6px 10px', fontSize:'1.2rem', cursor:'pointer', boxShadow:'0 2px 10px rgba(0,0,0,.4)', color:'#e85a5a', lineHeight:1 }}
+        >
+          📦
+        </button>
+      )}
 
       {/* Bouton flottant mobile — accès barre easter egg */}
       <button

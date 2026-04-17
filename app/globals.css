@@ -200,6 +200,7 @@ html, body {
 .badge-rage   { border-color: rgba(239,68,68,.5); color: #ef4444; background: rgba(239,68,68,.1); }
 .badge-tama   { border-color: rgba(34,211,238,.4); color: #22d3ee; background: rgba(34,211,238,.08); }
 .badge-chaos  { border-color: rgba(180,0,255,.45); color: #cc44ff; background: rgba(140,0,220,.1); text-shadow: 0 0 8px rgba(200,0,255,.4); }
+.badge-master { border-color: rgba(232,196,106,.6); color: #e8c46a; background: rgba(232,196,106,.12); text-shadow: 0 0 10px rgba(232,196,106,.5); box-shadow: 0 0 12px rgba(232,196,106,.2); }
 
 /* ── FORUM ── */
 .forum-post { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--r); padding: .9rem 1rem; margin-bottom: .6rem; }

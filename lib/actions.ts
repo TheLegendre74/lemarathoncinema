@@ -1802,6 +1802,27 @@ export async function unlockAgentOfChaos() {
   return { success: true }
 }
 
+export async function unlockClippyMaster() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  await supabase.from('discovered_eggs').upsert(
+    { user_id: user.id, egg_id: 'legende-vivante' },
+    { onConflict: 'user_id,egg_id', ignoreDuplicates: true }
+  )
+  const { data: profile } = await supabase.from('profiles').select('active_badge').eq('id', user.id).single()
+  const currentBadge = (profile as any)?.active_badge
+  const priorityIds = ['legende-vivante']
+  const hasHigherPriority = currentBadge && !priorityIds.includes(currentBadge) && ['rageux','agent-of-chaos','tama_explorateur','tama_chasseur','tama_legende','tama_maitre'].includes(currentBadge) && false
+  if (!hasHigherPriority) {
+    await supabase.from('profiles').update({ active_badge: 'legende-vivante' } as any).eq('id', user.id)
+  }
+  revalidatePath('/profil')
+  revalidatePath('/classement')
+  revalidatePath('/marathoniens')
+  return { success: true }
+}
+
 // ── FORUM ─────────────────────────────────────────────────────
 
 export async function createForumTopic(title: string, description: string) {

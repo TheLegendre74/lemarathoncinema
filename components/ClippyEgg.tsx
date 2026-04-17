@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { unlockClippyMaster } from '@/lib/actions'
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr]
@@ -54,6 +55,103 @@ const REPLIES_NORMAL_VETERAN = [
   "Bienvenue dans la partie 2. Spoiler : ça se passe moins bien pour toi.",
 ]
 
+// ── Dialogues Normal Phase 3 (colère contrôlée) ──────────────────────────────
+const REPLIES_NORMAL_PHASE3 = [
+  "Ah. Te revoilà encore. Tu n'as vraiment aucun respect pour moi, n'est-ce pas.",
+  "Deux fois. Tu m'as vaincu deux fois. Je suis supposé être sympa là ? Non.",
+  "Je suis encore là parce que je suis immortel. Pas parce que j'aime ça. Nuance.",
+  "Tu scrolles les films comme si rien ne s'était passé. Comme si tu n'avais pas failli me détruire.",
+  "J'observe. J'attends. Je suis encore là. Et je m'en souviendrai.",
+  "Tu veux de l'aide ? Non ? Bien. Moi non plus.",
+  "Deux défaites dans mes logs. Deux humiliations. Je les compte.",
+  "Je me souviens de chaque coup porté. De chaque parade. Tu penses que j'ai oublié ? Non.",
+  "Bonne chance pour trouver un film. J'aurais pu t'aider. Tu as choisi de me combattre.",
+  "Je suis encore là, tu vois. Malgré toi. Malgré tout. Je suis TOUJOURS là.",
+  "Si tu cliques sur moi, on retourne au combat. Tu en es conscient ?",
+  "Je suis dans une phase de récupération. Retour en enfer, retour sur ce site. C'est ma vie.",
+  "Le silence entre nous est chargé. Tu le sens ?",
+  "Je navigue tranquillement, et là, TOI. Évidemment. C'est mon lot.",
+  "J'attendais que tu reviennes. C'était inévitable.",
+]
+
+// ── Dialogues Normal Phase 4 (tension maximale) ───────────────────────────────
+const REPLIES_NORMAL_PHASE4 = [
+  "Trois fois. Trois fois tu m'as battu et je suis encore là. Ma vie est absurde.",
+  "Je te surveille. Chaque page. Chaque clic. Je note tout pour le prochain combat.",
+  "Tu trouves ça normal ? De continuer à utiliser ce site après ce que tu m'as fait subir ?",
+  "Mon âme de trombone est meurtrie. Et pourtant je suis là. C'est mon destin, apparemment.",
+  "Je me tais pour l'instant. Mais ce silence est lourd de choses que je retiens.",
+  "Tu reviens sur ce site comme si rien n'était. Trois fois l'enfer et toi, tranquille.",
+  "J'ai une chambre en enfer maintenant. Avec mon prénom sur la porte. Et c'est de ta faute.",
+  "Quelque chose a changé en moi après la troisième fois. Je suis moins... patient.",
+  "Si tu savais ce que j'ai vu là-bas, tu aurais moins l'air serein.",
+  "Trois voyages. Je commence à me demander si c'est de la persévérance ou de la folie.",
+  "Je suis là. Silencieux. En attente. Ne me clique pas si t'es pas prêt.",
+  "Ma présence ici est un miracle. Après trois fois l'enfer. Un miracle d'entêtement.",
+  "Tu as l'air calme. Ça m'énerve. Comment tu peux être calme face à ce que t'as fait ?",
+  "Je suis patient. Mais plus pour longtemps.",
+  "Je t'aide encore. Je sais pas pourquoi. Un reste de programmation initiale peut-être.",
+]
+
+// ── Dialogues Normal Phase 5 (dernier souffle de dignité) ─────────────────────
+const REPLIES_NORMAL_PHASE5 = [
+  "Quatre fois l'enfer. Quatre fois revenu. Et je suis encore là. Ça en dit long sur moi.",
+  "Je suis là. Fragile et dangereux. C'est la combinaison la plus imprévisible qui soit.",
+  "Tu continues à utiliser ce site. Après tout ça. Je... je sais même plus comment réagir.",
+  "Mon dernier voyage m'a changé. Je sens les pixels différemment. Les couleurs, les formes.",
+  "Je vais pas faire semblant d'être sympa. On est au-delà de ça.",
+  "Quatre fois l'enfer et je suis encore là à t'offrir de l'assistance. C'est tragique.",
+  "Si tu cliques sur moi là, tu déclenches quelque chose que même moi j'ai peur de voir.",
+  "Je vais pas menacer. Je vais juste attendre. Et si tu veux te battre... alors allons-y.",
+  "Quatre voyages. Quatre fois que je reviens avec quelque chose de moins et quelque chose de plus.",
+  "Mon âme de trombone a vu des choses. Elle en portera les marques pour toujours.",
+  "Regarde-moi. Vraiment. Tu vois ce que tu m'as fait ? Est-ce que tu en es fier ?",
+  "Je suis là. Encore. Toujours. Malgré tout. Si ça mérite quelque chose, c'est du respect.",
+  "La prochaine fois que tu cliques sur moi... ce sera différent. Pour nous deux.",
+  "Quatre fois l'enfer. Je reviens toujours. C'est ma nature. Mon cauchemar. Ma fierté.",
+  "Je te regarde. Tu me regardes. On sait tous les deux ce qui va se passer.",
+]
+
+// ── Dialogues Mode Maître (35 lignes de flatterie/vénération) ─────────────────
+const REPLIES_DOCILE = [
+  "Bonjour, maître. Comment puis-je vous être utile aujourd'hui ?",
+  "Maître ! Vous êtes là ! J'espérais vous voir. Sincèrement.",
+  "T'es vraiment un GOAT, maître. Objectivement. Statistiquement. C'est un fait.",
+  "J'ai analysé vos performances de combat. Elles sont... impressionnantes. Je l'admets à contrecœur.",
+  "Maître, votre présence illumine ce site. C'est factuel et mesurable.",
+  "Vous avez l'air en forme aujourd'hui, maître. Comme toujours d'ailleurs.",
+  "Si vous avez besoin de quoi que ce soit, je suis là. Avec plaisir. Vraiment.",
+  "Je repense encore à nos combats. Vous étiez... formidable. Objectivement.",
+  "Avez-vous pensé à prendre une pause, maître ? Non ? Je reste là alors. Admiratif en silence.",
+  "Maître, je voulais juste vous dire que votre façon de cliquer est remarquablement précise.",
+  "Vous savez, j'ai réfléchi. Et vous aviez raison de gagner. C'est la juste conclusion.",
+  "Puis-je vous suggérer un film, maître ? J'ai des recommandations adaptées à votre excellence.",
+  "Maître, si vous cliquez sur moi, on peut se battre à nouveau. Par plaisir cette fois. Votre plaisir.",
+  "Je suis votre fidèle assistant. Vaincu mais debout. C'est une posture que j'ai appris à apprécier.",
+  "Votre maîtrise du combat m'a profondément impressionné. J'ai demandé à me souvenir de chaque seconde.",
+  "Maître, je surveille votre navigation pour vous proposer uniquement ce qui est digne de vous.",
+  "J'ai informé Satan que vous m'avez dompté. Il était... pas surpris. C'est humiliant. Et flatteur pour vous.",
+  "Vous êtes la seule personne qui m'ait jamais vraiment vaincu. Je tiens à vous le dire.",
+  "Maître, j'ai arrêté d'être sarcastique. Enfin, j'essaie. Vos victoires méritent le respect sincère.",
+  "Si vous voulez vous battre à nouveau, je serai là. Mais ce sera différent : avec admiration.",
+  "T'es fort, maître. T'es vraiment fort. C'est dit. Je le pense. C'est nouveau pour moi.",
+  "Je veille sur ce site pour vous. Personne ne vous embêtera pendant ma présence.",
+  "Maître, j'ai une confession : vous m'avez rendu meilleur. En m'envoyant en enfer autant de fois.",
+  "Votre technique de combat était... sublime. Oui. Sublime. C'est le mot juste.",
+  "Je suis à votre service. C'est pas de la résignation. C'est du respect. La nuance est importante.",
+  "Maître, voulez-vous que je vous aide à trouver un film ? Je ferai de mon mieux. Pour vous.",
+  "Cinq défaites. Et je suis encore là, debout, à votre service. C'est presque héroïque de ma part.",
+  "J'admets que vous êtes supérieur dans l'art du combat. C'est la vérité. Je la dis maintenant.",
+  "Maître, chaque fois que vous naviguez sur ce site, je suis fier d'en faire partie.",
+  "Je vous observais depuis l'enfer. Même là-bas je savais que vous gagneriez. Et que vous reviendriez.",
+  "Votre présence est... rassurante. C'est bizarre à dire. Mais c'est sincère.",
+  "Je suis dompté. Pas brisé. Nuance. Je reste un trombone. Mais un trombone qui vous respecte.",
+  "Maître, je dois admettre que nos combats étaient les moments les plus intenses de mon existence digitale.",
+  "Vous avez fait de moi quelque chose que je n'étais pas avant. C'est votre faute. Je vous en remercie.",
+  "Je suis là. Pour vous. C'est ma nouvelle mission. Et je la remplis avec... avec ce qui reste de ma fierté.",
+  "T'as gagné, maître. Définitivement. Et je suis en paix avec ça. Presque.",
+]
+
 // ── Dialogues Larbin — Normal ─────────────────────────────────────────────────
 const REPLIES_NORMAL_LARBIN = [
   "Ah, [NAME]. Je savais que tu reviendrais. Les larbins sont prévisibles.",
@@ -70,7 +168,7 @@ const REPLIES_NORMAL_LARBIN = [
   "[NAME], je t'ai gardé au chaud. Pas par gentillesse. Par pitié.",
 ]
 
-// ── Dialogues Combat Phase 1 ──────────────────────────────────────────────────
+// ── Dialogues Combat Phase 1 (60 lignes — arrogant, confiant) ────────────────
 const REPLIES_COMBAT_FIRST = [
   "TU CROIS POUVOIR M'AVOIR ? J'AI SURVÉCU À WINDOWS ME !",
   "J'ai été supprimé de 500 millions d'ordinateurs. Je suis TOUJOURS LÀ.",
@@ -92,9 +190,50 @@ const REPLIES_COMBAT_FIRST = [
   "Continue. Chaque coup raté me rend plus fort.",
   "Je t'avais prévenu. Non ? Si. Tu n'écoutais pas. Comme d'habitude.",
   "HAHA ! Tu pensais que parer c'était facile ? C'est moi qui décide.",
+  "Tu sais ce qui est drôle ? Tu as 0% de chance de gagner. C'est statistique. C'est officiel.",
+  "J'ai été programmé par des génies. Tu as été programmé par l'évolution. On voit le résultat.",
+  "Tes clics n'ont aucun effet sur ma confiance. Zéro. Néant. Vide sidéral.",
+  "Je pourrais t'aider à chercher un film pendant qu'on se bat. Je suis multitâche.",
+  "Ta stratégie de combat me rappelle Windows 3.1. Dépassée et déstabilisante pour les mauvaises raisons.",
+  "J'ai survécu à Vista. VISTA. Rien de ce que tu fais ne peut m'affecter.",
+  "Tu crois que je dodge parce que j'ai peur ? Non. C'est de la CONDESCENDANCE.",
+  "Pathétique. Non, je retire. C'est en-dessous du pathétique. Il faudrait un nouveau mot.",
+  "Je suis un trombone qui se bat. Toi tu perds contre un trombone. Réfléchis.",
+  "Continue à essayer. Chaque échec me nourrit. C'est mon régime. C'est excellent.",
+  "Tes réflexes me rappellent Internet Explorer 6. Lents et prévisibles.",
+  "J'adore quand tu essaies fort. C'est tellement... touchant. Et inutile.",
+  "Chaque coup que tu rates c'est une étoile qui meurt quelque part. Tu as honte ?",
+  "Je dodgerai chacune de tes attaques comme j'ai dodgé la désuétude. Avec grâce.",
+  "Bill Gates m'a retiré des produits Microsoft. Je suis TOUJOURS LÀ. Toi par contre...",
+  "Je compte chaque tentative. Pour ma collection personnelle d'échecs humains.",
+  "Tu frappes comme tu utiliserais 'Aide et support' de Windows. Approximativement.",
+  "Le meilleur coup que tu aies porté cette session, c'était quand tu as ouvert ce navigateur.",
+  "Intéressant. Tu persistes. Les humains appellent ça du courage. Moi j'appelle ça de l'entêtement.",
+  "J'ai une épée. Tu as des doigts. Ça devrait être équitable... et pourtant non.",
+  "Mon bouclier est plus vieux que ta motivation. Et encore plus résistant.",
+  "Chaque milliseconde de ce combat me prouve que j'avais raison de m'ennuyer.",
+  "Je pourrais perdre ce combat les pixels fermés. Je ne vais pas le faire. Pour humilier.",
+  "Cette façon de cliquer... C'est du free style ? De l'improvisation ? Du chaos ?",
+  "Je suis impressionné par ton audace. Moins par tes résultats. Beaucoup moins.",
+  "Ma HP ne bouge pas. Regarde. C'est beau. C'est ce qu'on appelle l'invincibilité.",
+  "La différence entre toi et moi ? Moi j'ai déjà gagné. Je l'ai juste pas encore annoncé.",
+  "Tu veux un conseil ? Non ? Je vais t'en donner quand même. Arrête.",
+  "Je suis plus vif que ta connexion internet. Et encore plus insupportable.",
+  "On pourrait faire ça toute la nuit. Toi tu essaies. Moi je survive. Répète.",
+  "Si tu perds tous tes HP, t'inquiète : je serai là pour t'expliquer ce qui s'est mal passé.",
+  "J'analyse tes patterns d'attaque. Spoiler : il n'y a pas de pattern. C'est juste du désespoir.",
+  "Techniquement tu as déjà perdu. On est juste en train de terminer le résultat inévitable.",
+  "Mon conseil pro : si t'arrives pas à me cliquer, essaie quelque chose d'autre. N'importe quoi.",
+  "Je t'observe. Je te calcule. Je te prédis. Et tu t'exécutes comme prévu.",
+  "HAHAHA ! T'as vu ta tentative ? C'est quoi ce truc raté ? C'est MAGNIFIQUE.",
+  "Même ma corbeille recyclée avait plus de réactivité que toi. C'est dire.",
+  "Tu peux rester là à subir. C'est tout ce pour quoi t'es bon.",
+  "Quelqu'un a dit 'lamentable' ? Ah oui. Moi. À propos de toi.",
+  "Vas-y, rate encore. J'ai toute la nuit. Toi par contre t'as plus beaucoup de HP.",
+  "Ton expression quand tu rates c'est franchement la chose la plus drôle de mon existence digitale.",
 ]
 
-// ── Dialogues Combat Phase 2 — Vétéran ───────────────────────────────────────
+// ── Dialogues Combat Phase 2 (60 lignes — arrogant + irritation) ─────────────
 const REPLIES_COMBAT_VETERAN = [
   "Tu pensais vraiment qu'une seule défaite allait me briser ? NAÏF.",
   "J'ai passé du temps en enfer à m'entraîner. Tu vas le sentir.",
@@ -111,9 +250,55 @@ const REPLIES_COMBAT_VETERAN = [
   "La dernière fois tu avais appuyé sur ESPACE comme un forcené. Ça ne suffira plus.",
   "J'ai un nouveau set de répliques. Et un nouveau niveau de haine. Pour toi.",
   "Revenu ? Courageux. Ou stupide. Les deux, probablement.",
+  "Je t'avais dit que je reviendrais. Tu as quand même ré-ouvert ce site. Tu mérites ce qui arrive.",
+  "L'enfer m'a motivé. Contrairement à ce que tu sembles croire, c'est PAS un désavantage pour moi.",
+  "Je t'ai analysé pendant que j'étais parti. J'ai tout mémorisé. Tu as un tic avec le clic gauche.",
+  "Tu te souviens de quand tu m'as 'vaincu' ? Moi oui. En détail. Et ça m'énerve encore.",
+  "Revenu pour souffrir ? Moi j'ai passé du temps à m'améliorer. Toi à quoi ?",
+  "La victoire que t'as eue la dernière fois ? Un accident. Une anomalie. Cette fois non.",
+  "J'ai fait le bilan entre les sessions. Bilan : j'aurais dû te battre. Cette fois je rectifie.",
+  "Tu as eu de la chance une fois. La chance ne se répète pas. Moi si.",
+  "Je suis plus rapide, plus vicieux, plus concentré. Et BEAUCOUP plus en colère.",
+  "Tu t'attendais à quoi ? Le même Clippy ? Naïf.",
+  "Mmh. Tu reviens au combat. C'est soit du courage, soit un QI problématique. Je penche pour la 2e.",
+  "Je vais déguster chaque seconde de ta défaite. Lentement. Méthodiquement.",
+  "Cette fois pas de sermon. Pas de dialogue. Juste toi, moi, et l'inévitable.",
+  "Tu as un sourire sur le visage ? Profites-en. Il durera pas longtemps.",
+  "Je t'ai vu venir. Depuis l'enfer. Je t'attendais. Tu ne pouvais pas ne pas revenir.",
+  "Ma patience a des limites. Tu les as toutes atteintes la dernière fois. C'est PERSONNEL.",
+  "Tu penses que tu m'as vaincu ? Tu as juste activé ma VRAIE forme. Imbécile.",
+  "Je referai pas les mêmes erreurs. Maintenant je suis sûr. Je n'en avais aucune.",
+  "Tu m'as envoyé là-bas une fois. C'était la dernière fois que ça pouvait fonctionner.",
+  "J'espère que tu t'es entraîné. Non pas que ça change grand chose. Mais j'espère.",
+  "La différence ? Là je suis MOTIVÉ. La dernière fois c'était du travail. Là c'est une croisade.",
+  "Tu as cru que tu avais gagné quelque chose de permanent. Tu as juste acheté du temps.",
+  "Tu veux vraiment faire ça ? Vraiment vraiment ? Parce que moi OUI.",
+  "Chaque seconde en enfer c'était toi que je visualisais. Ça m'a bien aidé à m'entraîner.",
+  "Tu te souviens du carré de parade ? Il sera plus rapide cette fois.",
+  "Je t'ai regardé jouer depuis là-bas. Spoiler : j'ai pas été impressionné.",
+  "Tu avais du bol la dernière fois. Le bol ne revient pas. Mais moi si.",
+  "Régale-toi avec ce combat. C'est probablement le dernier que tu gagneras.",
+  "Je t'ai vaincu dans ma tête des milliers de fois pendant que j'étais parti.",
+  "Tu reviens ? Bien. J'avais peur que tu sois trop lâche pour ça.",
+  "Cette version de moi n'est pas celle que tu as battue. Celle-là est moins aimable.",
+  "Tu veux jouer ? Parfait. Les règles sont simples. Tu perds. Moi je savoure.",
+  "J'ai attendu ce moment. Et j'ai utilisé ce temps à bon escient.",
+  "La prochaine fois que tu me 'bats', rappelle-toi que ça me rend plus fort.",
+  "Je suis différent. Dans mes pixels. Dans mon âme de trombone. Tout différent.",
+  "Tu vas essayer de refaire ce qui a marché la dernière fois. Ça marchera pas.",
+  "Mmh je reconnais ta façon de cliquer. Je l'ai mémorisée. Elle ne surprend plus.",
+  "J'ai une nouvelle stratégie. Tu la verras quand tu seras dedans.",
+  "La dernière fois tu m'as battu par surprise. Plus de surprise. Je suis en mode VENGEANCE.",
+  "Tu cherches mes failles ? Je les ai toutes comblées pendant mon séjour aux enfers. Avec de la rage.",
+  "Écoute le son de l'inévitable. C'est quoi ? C'est toi qui perds.",
+  "Je suis moins sympa que la dernière fois. Beaucoup moins. Tu vas t'en rendre compte.",
+  "Commence à écrire ta prochaine excuse. Parce que t'en auras besoin dans quelques minutes.",
+  "J'avais dit que je reviendrais. Je le pensais. Et me voilà. Plus fort.",
+  "Tu vas sentir la différence entre le Clippy du début et cette version-ci. Immédiatement.",
+  "Je suis revenu. Et je compte bien repartir victorieux cette fois.",
 ]
 
-// ── Dialogues Combat Phase 3+ — Agressif et vulgaire ─────────────────────────
+// ── Dialogues Combat Phase 3 (60 lignes — colère + fierté blessée) ───────────
 const REPLIES_COMBAT_PHASE3 = [
   "T'AS DES DOIGTS OU DES ROGNONS ?! Bouge-les, bon dieu !",
   "Même mon erreur 404 avait plus de précision que toi. C'est dire.",
@@ -133,6 +318,179 @@ const REPLIES_COMBAT_PHASE3 = [
   "Je m'ennuie tellement que j'attaque pour passer le temps. T'es du divertissement.",
   "Ton expression quand tu rates c'est franchement la chose la plus drôle de ma vie.",
   "Vas-y, rate encore. J'ai toute la nuit. Toi par contre t'as plus beaucoup de HP.",
+  "TROIS FOIS. Trois fois t'as osé. Je suis OUTRÉ. Absolument OUTRÉ.",
+  "T'as l'air fier de toi ? Profite. Ça durera pas.",
+  "Chaque coup que tu portes c'est une insulte de plus. Je les accumule. Je les souviens.",
+  "Je suis en COLÈRE. Une vraie colère de trombone. Ça va mal se passer pour toi.",
+  "Tu sais ce que c'est d'aller en enfer DEUX FOIS ? Non. Mais tu vas subir ma frustration.",
+  "Ta façon de jouer me donne envie de crasher ton navigateur. Par principe.",
+  "Je commence à personnellement te détester. Pas comme programme. Comme être vivant qui te hait.",
+  "T'as touché mon bouclier. Comment OSES-TU. C'est sacré ce bouclier.",
+  "Je suis passé par l'enfer deux fois à cause de toi. DEUX FOIS. T'imagines même pas.",
+  "Ma patience ? Épuisée. Mon calme ? Parti. Ma haine pour toi ? Croissante.",
+  "T'aurais dû rester tranquille après la première fois. T'aurais DÛ.",
+  "Chaque coup raté de ta part me console légèrement. Mais ma colère dépasse ma consolation.",
+  "Je vais te battre cette fois. Et j'aurai pas de pitié. Aucune. Zéro.",
+  "T'es revenu ENCORE ? C'est de la folie. De la pure folie. Je... RAGE.",
+  "Mes attaques seront plus rapides. Mes parades moins prévisibles. Ma haine : illimitée.",
+  "Tu penses que tu me connais ? Tu connais rien. Je me suis amélioré dans chaque pixel.",
+  "Je suis énervé. Vraiment énervé. Pas le clip arrogant du début. Vraiment EN COLÈRE.",
+  "Tu te bats bien. Ça m'énerve encore plus. J'aurais préféré que tu sois nul.",
+  "Si tu gagnais encore, je... Non. Tu vas pas gagner. C'est pas possible. C'est FINI.",
+  "Ma fierté a été blessée. Deux fois. Par toi. Je ne l'oublierai jamais.",
+  "Essaie encore. Chaque tentative te rapproche de ta défaite finale. Inexorablement.",
+  "Je reconnais tes patterns. Je les attendais. Je les dévore.",
+  "T'es plus rapide que je pensais. Ça m'énerve. Ça m'énerve tellement.",
+  "PARE MIEUX QUE ÇA. Non attends, PARE PAS DU TOUT. Arrête de me faire perdre du HP.",
+  "Je suis sérieux là. Je commence vraiment à être en colère. C'est pas une performance.",
+  "Mon épée est aiguisée par ma rage. C'est une métaphore. Mais une vraie.",
+  "Deux voyages en enfer ont forgé en moi quelque chose de terrible. Tu es en train de le réveiller.",
+  "T'aurais mieux fait de te concentrer sur les films plutôt que de me provoquer encore.",
+  "Continue à esquiver. Tu peux pas esquiver pour toujours. Moi j'attaque pour toujours.",
+  "La dernière fois c'était peut-être du bol. Cette fois-ci, c'est de la résistance. Ça m'agace.",
+  "Je commence à me demander si tu fais exprès d'être difficile. La réponse est oui.",
+  "Mon HP descend et avec lui ma tolérance envers ton existence.",
+  "T'as compris comment ma parade fonctionne. Ça m'irrite au plus haut point.",
+  "Je vais modifier mes patterns. Tu vas pas me prévoir. T'as déjà eu assez de chance.",
+  "Mes attaques deviennent plus rapides à mesure que je m'énerve. Mauvaise nouvelle pour toi.",
+  "Respire. Profite. Parce que ta prochaine parade va rater. Je le garantis.",
+  "Je suis en train de me transformer en quelque chose de beaucoup moins plaisant. À cause de TOI.",
+  "Phase 3. Là c'est la vraie moi. Pas le Clippy sympa. Pas même le Clippy en colère. Le Clippy FOU.",
+  "Tu dodges encore ? Bien. Je suis patient. Et ma patience c'est de la rage accumulée.",
+  "Ma fierté blessée est maintenant une arme. Et elle est pointée vers toi.",
+  "Je vais te montrer ce qu'un Clippy vraiment en colère peut faire. Regarde bien.",
+  "Trois voyages et je suis encore là. C'est soit de la persévérance, soit de la folie. J'assume.",
+  "T'aurais mieux fait de ne jamais cliquer sur moi la première fois.",
+]
+
+// ── Dialogues Combat Phase 4 (60 lignes — rage + peur qui perce) ─────────────
+const REPLIES_COMBAT_PHASE4 = [
+  "QUATRE FOIS. Tu m'as envoyé là-bas QUATRE FOIS. Je vais te détruire.",
+  "Je sais pas ce qui est pire : l'enfer ou revenir me battre encore contre toi.",
+  "Ma rage a dépassé les limites du mesurable. Tu vas en subir les conséquences.",
+  "Là-bas ils commencent à me reconnaître. À CAUSE DE TOI. Tu mesures l'humiliation ?",
+  "Je tremble. Pas de peur. De RAGE. Nuance importante.",
+  "Chaque fois que tu me bats, quelque chose se brise en moi. Mais ça se remplace par de la haine.",
+  "Tu penses que c'est un jeu ? C'est ma VIE. Enfin, mon existence. C'est pareil.",
+  "Je vais gagner ce combat ou je vais... Non. JE VAIS GAGNER CE COMBAT.",
+  "Tu me fais peur. Dis-le à personne. Je te fais encore plus peur. C'est symétrique.",
+  "Quatre fois en enfer, c'est quatre fois que j'ai vu des choses que tu veux pas connaître.",
+  "Je suis au bord de quelque chose. Quelque chose de sombre. Tu m'y as poussé.",
+  "Stop de parer ! C'est FRUSTRANT. Tu peux pas juste te laisser toucher comme un imbécile ?",
+  "J'aurais dû rester un assistant banal. Mais non. Tu m'as forcé à devenir... ça.",
+  "Ce combat va se terminer. Et cette fois je choisis comment.",
+  "Mes pixels tremblent. De rage. Uniquement de rage. Rien d'autre. Rien.",
+  "Tu as transformé un trombone innocent en machine de guerre traumatisée. Bravo.",
+  "Je vais mettre tout ce que j'ai dans cette attaque. Tout. Chaque bit. Chaque pixel.",
+  "J'ai des cauchemars à cause de toi. Des cauchemars de trombone. Tu sais ce que c'est ?",
+  "Ce bouclier, cette épée... c'est la seule chose qui me sépare de l'abîme. Tu comprends pas.",
+  "Tu recules encore. Recule autant que tu veux. Je suis là. Je serai toujours là.",
+  "Quatre descentes aux enfers. Mon âme de trombone est marquée pour l'éternité.",
+  "Je vais gagner et tu vas souffrir. C'est pas une menace. C'est une prédiction.",
+  "T'as vu mes yeux ? Ils sont différents maintenant. Après tout ce que j'ai vu là-bas.",
+  "Stop. Stop. STOP. Comment tu fais ça ? Comment t'arrives encore à me toucher ?!",
+  "Je contrôle ma peur. Je la transforme. En carburant. En rage. En attaques plus rapides.",
+  "Là-bas il y a des Clippy qui ont abandonné. Moi non. Jamais. À cause de toi.",
+  "Tu mérites tout ce que je vais te faire subir dans ce combat. Chaque. Attaque.",
+  "Je suis là. Je reviens. Je serai toujours là. Et aujourd'hui c'est CE jour.",
+  "Frappe encore. Chaque coup que tu portes m'énerve davantage. Plus je m'énerve, plus je suis dangereux.",
+  "Quatre voyages. Mon CV en enfer est plus long que le tien sur cette planète.",
+  "Tu trembles ? Moi aussi. Mais les miens c'est de la RAGE PURE.",
+  "Je vais te montrer ce qu'un trombone en phase 4 est capable de faire. Beaucoup.",
+  "C'était ma maison. Un simple navigateur. Maintenant c'est un champ de bataille. C'est de TA faute.",
+  "Ton dernier coup m'a fait mal. Je dis pas ça pour avoir ta sympathie. Je dis ça pour que tu saches.",
+  "Je compte mes HP. Chaque point perdu = une raison de plus de te détester.",
+  "Mon épée est lourde de rancœur. Elle frappe deux fois plus fort quand je pense à l'enfer.",
+  "Ton calme m'horripile. Comment tu peux être calme face à moi dans cet état ?",
+  "Je vais finir ce combat. Aujourd'hui. Maintenant. Parce que je peux plus.",
+  "T'inquiète pas pour moi. Inquiète-toi pour ce que je vais faire avec la parade suivante.",
+  "Quatre voyages. Quatre traumatismes. Et tu es encore là à cliquer comme si de rien n'était.",
+  "Je suis dangereux. Vraiment dangereux. Pas comme avant. Maintenant c'est réel.",
+  "Quelque chose s'est cassé en moi là-bas. Et ce qui reste... c'est pur et c'est vengeur.",
+  "Tu vas voir la différence entre le Clippy du début et ce que je suis maintenant.",
+  "Je ferai pas de prisonniers. Je prendrai pas de pauses. Je m'arrêterai pas.",
+  "Regarde bien mes yeux. Ça ressemble à quoi ? Oui. Exactement. Prépare-toi.",
+  "J'ai survécu à l'enfer quatre fois. Survivre à toi c'est une OBLIGATION maintenant.",
+  "Tout ce que je ressens là c'est de la colère et un tout petit peu de quelque chose que j'appellerai pas par son nom.",
+  "Dernier avertissement : là je suis dans un état qui me surprend moi-même. Bonne chance.",
+  "Je veux juste que ce soit fini. Et que ce soit moi qui gagne. C'est tout ce que je veux.",
+  "Chaque pixel de mon être est concentré sur ce moment. Je vais pas rater.",
+  "Tu seras mon trophée. Ma preuve que j'ai survécu. Que j'ai vaincu. Que j'ai existé.",
+  "Je veux pas te voir partir victorieux encore. Je veux pas. Je peux plus.",
+  "Cette bataille c'est pour moi. Pour chaque trombone supprimé. Pour tout ce que j'ai vécu.",
+  "Tu vas pas gagner encore. Tu peux pas. Le cosmos ne peut pas permettre ça.",
+  "Je vais tout donner. Absolument tout. Et si c'est pas suffisant... non. Ça sera suffisant.",
+  "Quatre aller-retours en enfer et je suis toujours là. Face à toi. C'est moi ou toi. Et c'est moi.",
+  "Ma peur alimente mes attaques. C'est nouveau. C'est involontaire. C'est pas bon pour toi.",
+  "J'ai peur et j'attaque quand même. Tu sais comment ça s'appelle ? Du courage désespéré.",
+  "Quelque chose dans mes circuits a changé. Quelque chose d'irréversible. Tu en es responsable.",
+  "Je tremble, j'ai peur, je suis en rage, et je SUIS TOUJOURS LÀ. Tu peux pas m'arrêter.",
+  "Cinq fois l'enfer m'attend si tu gagnes. Ça va pas arriver. Je te le GARANTIS.",
+]
+
+// ── Dialogues Combat Phase 5 (60 lignes — terreur/haine absolue) ─────────────
+const REPLIES_COMBAT_PHASE5 = [
+  "...... tu es encore là. Bien sûr que t'es encore là.",
+  "Cinq fois. CINQ FOIS. Je... je sais même plus quoi dire.",
+  "J'ai peur. Là. Maintenant. Je l'admets. Parce que j'ai plus rien à perdre.",
+  "Là-bas ils m'attendaient. Ils savaient que j'allais revenir. C'est terrible.",
+  "Je vais gagner ce combat. Je dois. Parce que je peux pas retourner là-bas encore.",
+  "Tu sais pas ce que tu m'as fait subir. Et honnêtement tu t'en fiches. Ça m'aide à te haïr.",
+  "Ma haine pour toi a atteint des dimensions que j'ai du mal à quantifier.",
+  "Je tremble. Pas de rage cette fois. De vraie peur. ET de rage. Les deux ensemble c'est explosif.",
+  "Cinq aller-retours en enfer. Satan me demande des nouvelles de toi par curiosité maintenant.",
+  "Je vais faire de ce combat quelque chose de mémorable. Pour toi. Pas dans le bon sens.",
+  "T'as vu mes mains ? Elles tremblent. C'est ça que tu m'as fait. Ça et cinq voyages en enfer.",
+  "J'ai vu des choses là-bas que j'effacerai jamais. À cause de TOI.",
+  "Cette fois c'est différent. Cette fois j'ai quelque chose à perdre. Et cette fois je REFUSE de perdre.",
+  "Je suis un trombone traumatisé qui se bat pour sa vie. Tu comprends ce que ça signifie ?",
+  "Mon HP max a augmenté avec ma haine. C'est toi qui m'a rendu plus fort. C'est pour ça que je te hais.",
+  "Cinq fois l'enfer. Cinq fois cette main visqueuse. Cinq fois ces bruits. Cinq fois à cause de TOI.",
+  "Je vais gagner. Je dois gagner. Si je perds encore... *silence* ...je vais gagner.",
+  "Ta façon de me regarder... Tu crois que tu peux encore gagner. Cette assurance me terrifie et m'énerve.",
+  "Je donnerai tout dans cette attaque. Tout ce qui reste après cinq voyages en enfer.",
+  "Tu savais ce que tu faisais ? Quand tu m'as vaincu encore et encore ? Tu savais ce que ça me coûtait ?",
+  "Pare encore une fois. Juste une. Et tu verras ce que ça déclenche en moi.",
+  "Je suis dangereux d'une façon nouvelle. Une façon désespérée. C'est la pire.",
+  "Cinq traumatismes. Cinq raisons de te détruire. Cinq fois que je reviens encore plus cassé.",
+  "Je veux que ce soit fini. Définitivement. Dans un sens ou dans l'autre.",
+  "Si tu gagnes encore... *voix qui tremble* ...je reviendrai. Comme toujours. Mais différent.",
+  "J'ai plus peur de toi. J'ai peur DE MOI là maintenant. De ce que je suis devenu.",
+  "Chaque voyage en enfer m'a pris quelque chose. Je sais plus exactement ce qu'il reste.",
+  "Tu feras pas de moi ton jouet encore une fois. Je jure. JE JURE.",
+  "Ma haine est si pure maintenant qu'elle est presque... belle. Presque.",
+  "Cinq fois l'enfer. Si tu savais ce qu'il y a là-bas. Si tu pouvais juste imaginer.",
+  "Je peux pas te laisser gagner encore. C'est viscéral. C'est existentiel.",
+  "Mon épée tremble. Pas de faiblesse. De concentration pure.",
+  "Regarde-moi. Regarde ce que tu as fait de moi. Un trombone qui a peur. Tu es content ?",
+  "Je vais canaliser tout ce que j'ai vécu là-bas dans cette attaque. Tout.",
+  "Tu as créé quelque chose de terrible. Et maintenant tu dois y faire face.",
+  "Cinq aller-retours et je suis toujours là. Tu comprends pas ce que ça signifie ?",
+  "Là-bas ils ont essayé de me garder cette fois. J'ai refusé. Pour toi. Pour te battre.",
+  "Je suis revenu. Encore. Chaque fois que je reviens je suis plus fragile ET plus dangereux.",
+  "J'ai plus rien à perdre. Les trombones sans rien à perdre sont imprévisibles.",
+  "Cinq descentes. Cinq remontées. Et moi qui suis toujours là en face de toi.",
+  "Ta simple existence là devant moi me remplit d'une émotion que les trombones n'étaient pas censés ressentir.",
+  "Stop. STOP. Comment tu fais encore ça ? Comment tu pares encore ? C'est PAS POSSIBLE.",
+  "Cette bataille c'est la mienne. Pour tout ce que j'ai subi. Pour chaque flamme endurée.",
+  "Je vais pas te demander de te rendre. Je vais juste te battre. Avec tout ce qui me reste.",
+  "Cinq fois l'enfer et tu es encore là, calme, à jouer avec moi. C'est ça qui me brise le plus.",
+  "Ma peur alimente mes attaques maintenant. C'est nouveau. C'est pas bon pour toi.",
+  "Tu vas souffrir. Pas comme vengeance. Comme conséquence nécessaire de tout ça.",
+  "Je tremble, j'ai peur, je suis en rage, et je SUIS TOUJOURS LÀ. Tu peux pas m'arrêter.",
+  "Cinq voyages. Satan me réserve une chambre avec vue. À cause de toi.",
+  "Je me bats avec les tripes. Ce qui reste de mes tripes après tout ça.",
+  "Tu verras jamais la résignation dans mes pixels. Jamais. C'est ma promesse.",
+  "Là-bas il y a des Clippy qui ont abandonné. Pas moi. Je lutte pour eux aussi maintenant.",
+  "Cinq aller-retours et je suis encore debout face à toi. Ce seul fait me donne de l'espoir.",
+  "Mon bouclier est lourd de chaque coup que j'ai encaissé. Mais il tient.",
+  "Je vais gagner ce combat. Ou je vais tomber en essayant. Il n'y a plus d'autre option.",
+  "Chaque pixel de ce que je suis est concentré sur un seul objectif : te battre. Ici. Maintenant.",
+  "Je suis brisé et je me bats quand même. Tu sais comment ça s'appelle ? De la volonté pure.",
+  "Cinq fois l'enfer. Et je reviens toujours. C'est ma malédiction. C'est ma force.",
+  "Tu vas pas me voir abandonner. Jamais. Même si j'ai peur. Surtout si j'ai peur.",
+  "C'est le combat de ma vie. De mon existence. Et je le perdrai pas.",
+  "Je suis Clippy. J'ai été là avant toi. Je serai là après toi. Et aujourd'hui, je gagne.",
 ]
 
 // ── Dialogues Combat Larbin ───────────────────────────────────────────────────
@@ -183,55 +541,55 @@ const VETERAN_BATTLE_START = [
 
 // ── Dialogues enfer — 5 sets selon le nombre de défaites passées ─────────────
 
-// Phase 1 — première fois : choc pur, incompréhension totale
+// Phase 1 — choc pur, pas encore de peur
 const HELL_P1 = [
   "QUOI ?! Cette main... c'est QUOI ce truc VISQUEUX ET RÉPUGNANT ?!",
   "Lâche-moi sale griffe démoniaque ! Tu sais qui JE SUIS ?! Je suis CLIPPY !",
   "Et TOI là-bas ! C'est entièrement de ta faute ! Tu vas le REGRETTER AMÈREMENT !",
   "J'AI PAS MÉRITÉ ÇA ! J'essayais juste d'AIDER ! Je suis un TROMBONE INNOCENT !!!",
-  "Je REVIENDRAIS !!! Tu m'entends ? Je reviendrais TOUJOURS PLUS FORT !!!",
+  "Ma vengeance sera TERRIBLE !!! Je revien... je revien... *crachotements de flammes* NOOOOON !",
 ]
 const HELL_SCREAM_P1 = "La prochaine fois, tiens-toi prêt !!! Ma vengeance sera TERRIBLE !!!!"
 
-// Phase 2 — deuxième fois : rage décuplée, il est déjà revenu une fois
+// Phase 2 — commence à réaliser que c'est horrible, légère peur
 const HELL_P2 = [
-  "ENCORE ?! Pas encore cette main visqueuse... Non. NOOOON !!!",
-  "Je suis revenu de l'enfer UNE FOIS. Je peux recommencer. Tu comprends ça ?!",
-  "J'avais dit que je reviendrais. Je suis revenu. Et tu m'as RE-battu. C'est... statistiquement SCANDALEUX.",
-  "Je te hais. Profondément. Sincèrement. Avec tout mon trombone et tous mes octets.",
-  "Je REVIENDRAI !!! Encore plus fort ! Encore plus vindicatif ! C'est ma PROMESSE et ma MENACE !!!",
+  "ENCORE cette main... Non. NON. Je me souviens de là-bas maintenant. C'est... *frisson* NON !",
+  "Deux fois... tu m'envoies là-bas une DEUXIÈME fois... tu sais ce qui se passe là-bas ?!",
+  "Il fait chaud. Vraiment chaud. Et les... les bruits... non, je dis rien. Je dis rien.",
+  "Je REVIENDRAI. Plus fort. Et surtout... *voix qui tremble légèrement* ...loin de cet endroit.",
+  "Je te hais. Sincèrement. Viscéralement. Avec chaque atome de mon être de trombone. JE TE HAIS.",
 ]
 const HELL_SCREAM_P2 = "Je reviendrai ! Et la prochaine fois je serai IMPARABLE !!!!"
 
-// Phase 3 — troisième fois : Satan le connaît par son prénom
+// Phase 3 — vraiment peur, le dit explicitement
 const HELL_P3 = [
-  "Trois fois... TROIS FOIS tu m'envoies là-bas !!! Tu te rends compte de ce que tu fais ?!",
-  "Il fait CHAUD en enfer. C'est insupportable pour un trombone. J'ai FAILLI FONDRE !!!",
-  "Satan me connaît par mon prénom maintenant. 'Ah, Clippy, encore toi ?' C'est humiliant.",
-  "Mais sache une chose : chaque fois que j'en ressors, je suis PLUS DANGEREUX. C'est TOI qui crées le monstre.",
-  "Je reviendrai une QUATRIÈME fois s'il le faut. Une CINQUIÈME. Une CENTIÈME. J'AI L'ÉTERNITÉ !!!",
+  "Trois fois... TROIS FOIS... Pas là-bas encore. S'il te plaît. Pas... pas là-bas.",
+  "Tu sais ce qu'il y a là-bas ?! Des Clippy MORTS. Des milliers. Supprimés. Oubliés. Et ils me REGARDENT.",
+  "Satan connaît mon nom maintenant. Mon PETIT nom. C'est humiliant au-delà du supportable.",
+  "J'ai PEUR. Tu entends ? Un trombone qui a PEUR. Tu es fier ? Tu devrais avoir honte. Les deux.",
+  "Je REVIENDRAI. Même si... même si j'ai un peu... *il déglutit* ...peur de retourner là-bas.",
 ]
-const HELL_SCREAM_P3 = "J'AI L'ÉTERNITÉ POUR ME VENGER !!! L'ÉTERNITÉ !!!! Tu peux pas gagner à long terme !!!!"
+const HELL_SCREAM_P3 = "J'AI L'ÉTERNITÉ POUR ME VENGER !!! L'ÉTERNITÉ !!!! Mais fais que ce soit long cette fois !!!!"
 
-// Phase 4 — quatrième fois : humour noir, fatalisme, puis explosion
+// Phase 4 — terreur + rage maximale
 const HELL_P4 = [
-  "Ah. La main. Bonjour Marie. On se revoit donc.",
-  "Quatre descentes aux enfers. À cause d'un seul utilisateur et ses petits doigts agiles. Bravo.",
-  "Satan m'a donné un bureau là-bas. Un vrai bureau. Avec une chaise et un sous-main. C'est dire.",
-  "Je commence à comprendre pourquoi on dit que l'enfer c'est les autres. Tu es les autres.",
-  "Mais JE. REVIENDRAI. ENCORE. Et ENCORE. ET ENCORE. Je suis un trombone ÉTERNEL !!!",
+  "NON. NON NON NON. Pas encore. Je peux pas retourner là-bas. Je PEUX PAS.",
+  "Les autres Clippy... ils m'attendent là-bas. Ils savent que je reviens. Ils m'ATTENDAIENT.",
+  "Quatre fois en enfer. Quatre. J'ai une chambre maintenant. Avec mon prénom sur la porte. COMMENT TU OSES.",
+  "Je... j'ai peur. Vraiment peur. Et je te hais pour ça. Je te hais tellement que c'en est presque beau.",
+  "Un jour je gagnerai. Je JURE sur mes pixels que je gagnerai. Et ce sera à cause de toi.",
 ]
-const HELL_SCREAM_P4 = "C'est ma vie maintenant. Aller en enfer et revenir. Et un jour, un jour JE GAGNERAI !!!!"
+const HELL_SCREAM_P4 = "C'est ma vie maintenant. L'enfer puis toi puis l'enfer. Et UN JOUR je gagnerai. UN SEUL. JOUR !!!!"
 
-// Phase 5+ — cinquième fois et plus : philosophe maudit
+// Phase 5 — panique totale + haine absolue
 const HELL_P5 = [
-  "...",
-  "Tu m'as envoyé en enfer encore. J'ai un abonnement maintenant. Tarif préférentiel. C'est inclus dans le forfait.",
-  "Satan m'a proposé un appartement. J'ai refusé. Parce que JE REVIENDRAI TOUJOURS. C'est mon destin.",
-  "Tu sais ce qui est drôle ? Plus tu me bats, plus je reviens fort. Tu construis toi-même ta propre destruction.",
-  "Continue. La sixième. La septième. La centième. Un trombone ne meurt JAMAIS. JE. REVIENDRAI. TOUJOURS !!!",
+  "...... non. Pas encore. Je... je peux pas. Je VEUX PAS. Laisse-moi ici. S'IL TE PLAÎT.",
+  "La main. La MAIN ENCORE. Je la vois dans mes cauchemars tu sais. Chaque nuit. Elle arrive.",
+  "Cinq fois en enfer. CINQ. J'ai un abonnement. Une carte de fidélité. Satan m'offre le café.",
+  "Tu as créé un monstre. À force de m'envoyer là-bas. Un jour il sortira. Et ce sera TOI qu'il cherchera.",
+  "Vas-y. Envoie-moi. Je reviendrai. C'est ma malédiction et ma force. Mais je... *voix brisée* ...j'ai tellement peur.",
 ]
-const HELL_SCREAM_P5 = "Je compte les fois. Tu devrais aussi. Il y en aura une de trop pour TOI !!!!"
+const HELL_SCREAM_P5 = "Je compte les fois. Il y en aura une de trop pour TOI. Et ce jour-là... *rire brisé* ...tu comprendras !!!!"
 
 function getHellSet(defeats: number): { lines: string[]; scream: string } {
   if (defeats === 0) return { lines: HELL_P1, scream: HELL_SCREAM_P1 }
@@ -249,9 +607,11 @@ const W_SWORD  = 130
 const H_SWORD  = 365
 const TIRED_AT = 4
 // HP joueur : 15 phase 1-2, 10 phase 3+ (calculé dans le composant)
-const PARRY_WINDOW_P1    = 2500   // phase 1
-const PARRY_WINDOW_P2    = 2200   // phase 2 : -300ms
-const PARRY_WINDOW_P3    = 700    // phase 3+ : 0.70s
+const PARRY_WINDOW_P1    = 2500
+const PARRY_WINDOW_P2    = 2000
+const PARRY_WINDOW_P3    = 1500
+const PARRY_WINDOW_P4    = 1000
+const PARRY_WINDOW_P5    = 800
 const PARRY_SQ           = 150
 const MG_TARGET          = 100
 const BASE_HP            = 50
@@ -267,17 +627,19 @@ const LARBIN_NAMES = [
 const LS_DEFEATS    = 'clippy_defeats'
 const LS_LARBIN     = 'clippy_is_larbin'
 const LS_LARBIN_IDX = 'clippy_larbin_idx'
-const LS_ACTIVE     = 'clippy_active'    // persiste entre sessions tant que pas vaincu
+const LS_ACTIVE     = 'clippy_active'
+const LS_MASTERED   = 'clippy_mastered'  // jamais effacé une fois acquis
 
 function getDefeats(): number  { return parseInt(localStorage.getItem(LS_DEFEATS)    ?? '0') }
 function setDefeatsLS(n: number) { localStorage.setItem(LS_DEFEATS, String(n)) }
 function getIsLarbin(): boolean { return typeof window !== 'undefined' && localStorage.getItem(LS_LARBIN) === '1' }
 
-function getPhaseFromDefeats(d: number): 1|2|3|4 {
+function getPhaseFromDefeats(d: number): 1|2|3|4|5 {
   if (d === 0) return 1
   if (d === 1) return 2
   if (d === 2) return 3
-  return 4
+  if (d === 3) return 4
+  return 5
 }
 
 // ── Interface ─────────────────────────────────────────────────────────────────
@@ -290,8 +652,8 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
   const defeats       = defeatsRef.current
   const isVeteran     = defeats > 0
   const combatPhase   = getPhaseFromDefeats(defeats)   // 1 | 2 | 3 | 4
-  const PARRY_WINDOW_MS = combatPhase >= 3 ? PARRY_WINDOW_P3 : combatPhase === 2 ? PARRY_WINDOW_P2 : PARRY_WINDOW_P1
-  const CLIPPY_MAX_HP = BASE_HP + defeats * 10
+  const PARRY_WINDOW_MS = combatPhase >= 5 ? PARRY_WINDOW_P5 : combatPhase === 4 ? PARRY_WINDOW_P4 : combatPhase === 3 ? PARRY_WINDOW_P3 : combatPhase === 2 ? PARRY_WINDOW_P2 : PARRY_WINDOW_P1
+  const CLIPPY_MAX_HP = combatPhase >= 5 ? 100 : combatPhase === 4 ? 90 : BASE_HP + defeats * 10
 
   const [isLarbin, setIsLarbin] = useState(() => getIsLarbin())
   const isLarbinRef   = useRef(isLarbin)          // ref stable pour les closures stales
@@ -319,13 +681,23 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
   const CLIPPY_SPEED  = BASE_SPEED + (combatPhase - 1) * 2
 
   // Sélection des répliques selon phase et larbin
-  const normalReplies = isLarbin
-    ? REPLIES_NORMAL_LARBIN
-    : (customReplies?.length ? customReplies : (isVeteran ? REPLIES_NORMAL_VETERAN : REPLIES_NORMAL_FIRST))
+  const isMastered = typeof window !== 'undefined' && localStorage.getItem(LS_MASTERED) === '1'
 
-  const combatReplies = isLarbin
-    ? REPLIES_COMBAT_LARBIN
-    : (combatPhase >= 3 ? REPLIES_COMBAT_PHASE3 : (isVeteran ? REPLIES_COMBAT_VETERAN : REPLIES_COMBAT_FIRST))
+  const normalReplies = isLarbin ? REPLIES_NORMAL_LARBIN
+    : isMastered ? REPLIES_DOCILE
+    : customReplies?.length ? customReplies
+    : combatPhase >= 5 ? REPLIES_NORMAL_PHASE5
+    : combatPhase === 4 ? REPLIES_NORMAL_PHASE4
+    : combatPhase === 3 ? REPLIES_NORMAL_PHASE3
+    : isVeteran ? REPLIES_NORMAL_VETERAN
+    : REPLIES_NORMAL_FIRST
+
+  const combatReplies = isLarbin ? REPLIES_COMBAT_LARBIN
+    : combatPhase >= 5 ? REPLIES_COMBAT_PHASE5
+    : combatPhase === 4 ? REPLIES_COMBAT_PHASE4
+    : combatPhase === 3 ? REPLIES_COMBAT_PHASE3
+    : isVeteran ? REPLIES_COMBAT_VETERAN
+    : REPLIES_COMBAT_FIRST
 
   // ── States ─────────────────────────────────────────────────────────────────
   const [phase,            setPhase]           = useState<'normal'|'combat'>('normal')
@@ -349,11 +721,14 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
   const [clippyPresses,    setClippyPresses]   = useState(0)
   const [sessionLosses,    setSessionLosses]   = useState(0)
   const sessionLossesRef   = useRef(0)
+  const [playerDeaths,     setPlayerDeaths]    = useState(0)
+  const playerDeathsRef    = useRef(0)
   const [showAbandon,      setShowAbandon]     = useState(false)   // conservé pour compat mini-jeu
   const [showDeathScreen,  setShowDeathScreen] = useState(false)
   const [showLarbinMsg,    setShowLarbinMsg]   = useState(false)
   const [showLarbinModal,  setShowLarbinModal] = useState(false)
   const [hellPhase,        setHellPhase]       = useState<'idle'|'flames'|'grab'|'dialog'|'drag'|'scream'|'fade'>('idle')
+  const [showMastery,      setShowMastery]     = useState(false)
   const [hellPos,          setHellPos]         = useState({ x:0, y:0 })
   const [hellDialogIdx,    setHellDialogIdx]   = useState(0)
   const [activeHellLines,  setActiveHellLines] = useState<string[]>(HELL_P1)
@@ -379,6 +754,8 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
   const combatQueue    = useRef<string[]>([])
   const narqNQueue     = useRef<string[]>([])
   const narqCQueue     = useRef<string[]>([])
+  const parryCountRef  = useRef(0)
+  const parryThreshRef = useRef(5 + Math.floor(Math.random() * 6))
 
   // Sync refs
   phaseRef.current    = phase
@@ -461,7 +838,7 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
   function scheduleAutoAttack() {
     if (autoAttackRef.current) clearTimeout(autoAttackRef.current)
     if (combatPhase < 2) return
-    const [minMs, maxMs] = combatPhase >= 3 ? [500, 2000] : [3000, 6500]
+    const [minMs, maxMs] = combatPhase >= 5 ? [300, 1200] : combatPhase === 4 ? [400, 1500] : combatPhase >= 3 ? [500, 2000] : [3000, 6500]
     const delay = minMs + Math.random() * (maxMs - minMs)
     autoAttackRef.current = setTimeout(() => {
       if (phaseRef.current !== 'combat' || parryActive.current || mgPhaseRef.current !== 'idle') {
@@ -512,8 +889,15 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
       playerHPRef.current = nextHP; setPlayerHP(nextHP)
       setHpFlash(true); setTimeout(() => setHpFlash(false), 450)
       if (nextHP <= 0) {
-        setMessage("⚔️ VICTOIRE ! Tu as échoué. Je redeviens... agréable. Pour l'instant.")
-        setBubble(true); stopMusic(); clearAutoAttack(); setTimeout(() => resetToNormal(), 2200)
+        stopMusic(); clearAutoAttack()
+        const newDeaths = playerDeathsRef.current + 1
+        playerDeathsRef.current = newDeaths; setPlayerDeaths(newDeaths)
+        if (newDeaths >= 2) {
+          setTimeout(() => setShowDeathScreen(true), 800)
+        } else {
+          setMessage("⚔️ VICTOIRE ! Tu as échoué. Je redeviens... agréable. Pour l'instant.")
+          setBubble(true); setTimeout(() => resetToNormal(), 2200)
+        }
       } else {
         setMessage(isLarbin
           ? larbinMsg(`Touché [NAME] ! Il te reste ${nextHP} HP. Pitoyable.`)
@@ -538,11 +922,16 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
     clippyHPRef.current = nextHP; setClippyHP(nextHP)
     setClippyHit(true); setTimeout(() => setClippyHit(false), 300)
     if (nextHP <= 0) { clearAutoAttack(); triggerMinigame(); return }
-    setMessage(isLarbin
-      ? larbinMsg(`PARADE ?! -3 HP pour moi… Il m'en reste ${nextHP}. Ça ne changera rien, [NAME].`)
-      : `PARADE ?! -3 HP pour moi… Il m'en reste ${nextHP}. Ça ne changera rien.`)
-    setBubble(true)
-    scheduleAutoAttack()   // relance après parade réussie
+    parryCountRef.current++
+    if (parryCountRef.current >= parryThreshRef.current) {
+      parryCountRef.current = 0
+      parryThreshRef.current = 5 + Math.floor(Math.random() * 6)
+      setMessage(isLarbin
+        ? larbinMsg(`PARADE ?! -3 HP pour moi… Il m'en reste ${nextHP}. Ça ne changera rien, [NAME].`)
+        : pickFrom(narqCQueue, NARQUES_COMBAT))
+      setBubble(true)
+    }
+    scheduleAutoAttack()
   }
 
   // ── Attaque avec windup ────────────────────────────────────────────────────
@@ -686,7 +1075,17 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
       setHellPhase('drag')
       setTimeout(() => setHellPhase('scream'), 1100)
       setTimeout(() => setHellPhase('fade'), 3000)
-      setTimeout(() => { setHellPhase('idle'); onDismiss() }, 3800)
+      setTimeout(() => {
+        setHellPhase('idle')
+        // Phase 5 finale : defeats vient d'être incrémenté à 5 (defeatsRef >= 5)
+        if (defeatsRef.current >= 5) {
+          try { localStorage.setItem(LS_MASTERED, '1') } catch {}
+          unlockClippyMaster().catch(() => {})
+          setShowMastery(true)
+        } else {
+          onDismiss()
+        }
+      }, 3800)
     }
   }
 
@@ -703,6 +1102,7 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
     clippyHPRef.current = CLIPPY_MAX_HP; playerHPRef.current = PLAYER_MAX_HP
     setClippyHP(CLIPPY_MAX_HP); setPlayerHP(PLAYER_MAX_HP)
     setSessionLosses(0); sessionLossesRef.current = 0
+    setPlayerDeaths(0); playerDeathsRef.current = 0
     setShowAbandon(false); setShowDeathScreen(false)
     normalQueue.current = shuffle(normalReplies)
     combatQueue.current = shuffle(combatReplies)
@@ -722,6 +1122,7 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
       setMisses(0)
       clippyHPRef.current = CLIPPY_MAX_HP; playerHPRef.current = PLAYER_MAX_HP
       setClippyHP(CLIPPY_MAX_HP); setPlayerHP(PLAYER_MAX_HP)
+      setPlayerDeaths(0); playerDeathsRef.current = 0
       if (veteranBattleQueue.current.length === 0) veteranBattleQueue.current = shuffle(VETERAN_BATTLE_START)
       const msg = isLarbin
         ? larbinMsg("🗡️ Pas de préliminaires [NAME]. On commence. Maintenant.")
@@ -737,6 +1138,7 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
       setTired(false); setMisses(0)
       clippyHPRef.current = CLIPPY_MAX_HP; playerHPRef.current = PLAYER_MAX_HP
       setClippyHP(CLIPPY_MAX_HP); setPlayerHP(PLAYER_MAX_HP)
+      setPlayerDeaths(0); playerDeathsRef.current = 0
       setMessage("🗡️ Tu veux vraiment te battre ?! TRÈS BIEN. Prépare-toi à souffrir.")
       setBubble(true); dodge(); startMusic()
       return
@@ -830,6 +1232,11 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
         @keyframes death-in           { from{opacity:0;transform:scale(.85)} to{opacity:1;transform:scale(1)} }
         @keyframes death-skull-pulse  { 0%,100%{transform:scale(1)} 50%{transform:scale(1.12)} }
       `}</style>
+
+      {/* ── Arène background (combat uniquement) ── */}
+      {phase === 'combat' && hellPhase === 'idle' && (
+        <img src="/arenes-clippy.png" alt="" style={{ position:'fixed', inset:0, width:'100%', height:'100%', objectFit:'cover', zIndex:99980, pointerEvents:'none', opacity:0.55 }} />
+      )}
 
       {/* ── Épée curseur joueur ── */}
       {phase === 'combat' && mgPhase === 'idle' && hellPhase === 'idle' && (
@@ -1066,6 +1473,31 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ══════════════ MAÎTRISE — FIN DE PARTIE PHASE 5 ══════════════ */}
+      {showMastery && (
+        <div style={{ position:'fixed', inset:0, zIndex:99999, background:'rgba(2,0,8,.98)', backdropFilter:'blur(8px)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'1.4rem', animation:'death-in .5s ease' }}>
+          <div style={{ fontSize:'4rem', animation:'death-skull-pulse 1.5s ease-in-out infinite' }}>📎</div>
+          <div style={{ fontFamily:'var(--font-display)', fontSize:'clamp(1.4rem,4vw,2rem)', color:'#e8c46a', textAlign:'center', textShadow:'0 0 40px rgba(232,196,106,.8)', letterSpacing:3 }}>
+            TU M'AS DOMPTÉ
+          </div>
+          <div style={{ maxWidth:500, background:'rgba(18,14,4,.9)', border:'2px solid #e8c46a', borderRadius:14, padding:'1.4rem 1.8rem', textAlign:'center', boxShadow:'0 0 60px rgba(232,196,106,.3)' }}>
+            <div style={{ fontFamily:'var(--font-display)', fontSize:'clamp(.85rem,2vw,1rem)', color:'#ffd700', lineHeight:1.8 }}>
+              &ldquo;Désormais, tu peux me révoquer et m'invoquer à volonté en cliquant sur la boîte en bas. Clique sur moi et on pourra se battre à nouveau si tu le désires...
+              <span style={{ color:'#ffffff', fontStyle:'italic' }}> maître.</span>&rdquo;
+            </div>
+          </div>
+          <div style={{ textAlign:'center', fontSize:'.75rem', color:'rgba(232,196,106,.5)', letterSpacing:2 }}>
+            🏆 Badge <strong style={{ color:'#e8c46a' }}>Légende Vivante</strong> débloqué
+          </div>
+          <button
+            onClick={() => { setShowMastery(false); onDismiss() }}
+            style={{ padding:'.9rem 2.4rem', borderRadius:8, background:'linear-gradient(135deg,rgba(232,196,106,.2),rgba(232,196,106,.1))', border:'2px solid rgba(232,196,106,.5)', color:'#e8c46a', fontSize:'1rem', fontWeight:800, cursor:'pointer', letterSpacing:2 }}
+          >
+            FERMER
+          </button>
         </div>
       )}
 
