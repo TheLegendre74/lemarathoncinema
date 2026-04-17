@@ -1677,6 +1677,49 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
         </div>
       </Section>
 
+      {/* CLIPPY — God mode test */}
+      <Section icon="🎮" title="Clippy — God Mode (test toutes les phases)">
+        <div style={{ fontSize: '.78rem', color: 'var(--text2)', marginBottom: '1rem' }}>
+          Manipule le localStorage Clippy directement pour tester chaque phase. Recharge la page <code>/films</code> après.
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.5rem' }}>
+          {[0,1,2,3,4].map(d => (
+            <button key={d} className="btn btn-outline" style={{ fontSize: '.78rem' }}
+              onClick={() => {
+                localStorage.setItem('clippy_defeats', String(d))
+                localStorage.setItem('clippy_active', '1')
+                localStorage.removeItem('clippy_is_larbin')
+                localStorage.removeItem('clippy_mastered')
+                addToast(`Phase ${d+1} activée — ouvre /films`, '📎')
+              }}>Phase {d+1} ({d} défaite{d>1?'s':''})</button>
+          ))}
+          <button className="btn btn-outline" style={{ fontSize: '.78rem' }}
+            onClick={() => {
+              localStorage.setItem('clippy_defeats', '0')
+              localStorage.setItem('clippy_active', '1')
+              localStorage.setItem('clippy_is_larbin', '1')
+              addToast('Mode Larbin activé', '🥾')
+            }}>🥾 Mode Larbin</button>
+          <button className="btn btn-outline" style={{ fontSize: '.78rem' }}
+            onClick={() => {
+              localStorage.setItem('clippy_defeats', '5')
+              localStorage.setItem('clippy_mastered', '1')
+              localStorage.removeItem('clippy_active')
+              addToast('Mode Maître activé — coffre visible', '🏆')
+            }}>🏆 Mode Maître</button>
+          <button className="btn btn-outline" style={{ fontSize: '.78rem' }}
+            onClick={() => {
+              localStorage.setItem('clippy_triggers', '5')
+              addToast('Triggers = 5 (8% spawn aléatoire)', '📦')
+            }}>📦 Spawn max (8%)</button>
+          <button className="btn btn-red" style={{ fontSize: '.78rem' }}
+            onClick={() => {
+              ;['clippy_defeats','clippy_active','clippy_is_larbin','clippy_larbin_idx','clippy_mastered','clippy_triggers'].forEach(k => localStorage.removeItem(k))
+              addToast('Clippy reset complet', '🗑️')
+            }}>🗑️ Reset tout</button>
+        </div>
+      </Section>
+
       {/* Configuration */}
       <ConfigSection serverConfig={serverConfig} siteConfig={siteConfig} onSave={saveConfig} saving={savingConfig} />
 

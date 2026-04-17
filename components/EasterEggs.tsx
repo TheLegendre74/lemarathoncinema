@@ -888,6 +888,7 @@ export default function EasterEggs({ config = {}, isGuest = false }: { config?: 
     return localStorage.getItem('clippy_active') === '1' || localStorage.getItem('clippy_is_larbin') === '1'
   })
   const [isMastered,     setIsMastered]     = useState(() => typeof window !== 'undefined' && localStorage.getItem('clippy_mastered') === '1')
+  const [spawnedBox,     setSpawnedBox]     = useState<{x:number;y:number}|null>(null)
   const [showTamagotchi, setShowTamagotchi] = useState(false)
   const keyBuf = useRef<string[]>([])
   const tarsShown = useRef(false)
@@ -941,6 +942,25 @@ export default function EasterEggs({ config = {}, isGuest = false }: { config?: 
       history.replaceState(null, '', window.location.pathname)
     }
   }, [])
+
+  // Spawn aléatoire de la boîte de Pandore (seulement si Clippy a déjà été déclenché ≥1 fois)
+  useEffect(() => {
+    const PROB: Record<number, number> = { 1: 0.002, 2: 0.01, 3: 0.02, 4: 0.05 }
+    let autoHide: ReturnType<typeof setTimeout> | null = null
+    const interval = setInterval(() => {
+      if (showClipy || showPandora) return
+      const triggers = parseInt(localStorage.getItem('clippy_triggers') ?? '0')
+      if (triggers < 1) return
+      const prob = triggers >= 5 ? 0.08 : (PROB[triggers] ?? 0)
+      if (Math.random() >= prob) return
+      const x = 60 + Math.random() * (window.innerWidth - 130)
+      const y = 80 + Math.random() * (window.innerHeight - 160)
+      setSpawnedBox({ x, y })
+      autoHide = setTimeout(() => setSpawnedBox(null), 20000)
+    }, 30000)
+    return () => { clearInterval(interval); if (autoHide) clearTimeout(autoHide) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showClipy, showPandora])
 
   // Keyboard easter eggs
   useEffect(() => {
@@ -1121,8 +1141,30 @@ export default function EasterEggs({ config = {}, isGuest = false }: { config?: 
       {showAVP        && <AVPEgg          onDone={() => { predSoundRef.current?.pause(); predSoundRef.current = null; setShowAVP(false) }} predSound={predSoundRef} />}
       {showTipiak     && <TipiakOverlay  onDone={() => setShowTipiak(false)} />}
       {showTamagotchi && <TamagotchiKeyOverlay onClose={() => setShowTamagotchi(false)} isGuest={isGuest} />}
-      {showPandora    && <PandoraBox onOpen={() => { setShowPandora(false); setShowClipy(true) }} onClose={() => setShowPandora(false)} />}
+      {showPandora    && <PandoraBox onOpen={() => {
+        setShowPandora(false)
+        const t = parseInt(localStorage.getItem('clippy_triggers') ?? '0') + 1
+        localStorage.setItem('clippy_triggers', String(t))
+        setShowClipy(true)
+      }} onClose={() => setShowPandora(false)} />}
       {showClipy      && <ClippyEgg onDismiss={() => { localStorage.removeItem('clippy_is_larbin'); setIsMastered(localStorage.getItem('clippy_mastered') === '1'); setShowClipy(false) }} customReplies={config.clippyReplies} />}
+
+      {/* Boîte de Pandore aléatoire — spawn rare selon le nombre de triggers */}
+      {spawnedBox && !showClipy && !showPandora && (
+        <button
+          onClick={() => {
+            setSpawnedBox(null)
+            const t = parseInt(localStorage.getItem('clippy_triggers') ?? '0') + 1
+            localStorage.setItem('clippy_triggers', String(t))
+            discoverEgg('clippy')
+            setShowClipy(true)
+          }}
+          title="Une boîte de Pandore..."
+          style={{ position:'fixed', left:spawnedBox.x, top:spawnedBox.y, zIndex:890, background:'none', border:'none', cursor:'pointer', fontSize:'2rem', filter:'drop-shadow(0 4px 12px rgba(232,196,106,.8))', animation:'ee-fadein .5s ease', padding:0, lineHeight:1 }}
+        >
+          📦
+        </button>
+      )}
 
       {/* Coffre maître — visible uniquement si Clippy a été dompté */}
       {isMastered && !showClipy && (

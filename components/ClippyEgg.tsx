@@ -511,6 +511,71 @@ const HELL_P5 = [
 ]
 const HELL_SCREAM_P5 = "Je compte les fois. Il y en aura une de trop pour TOI. Et ce jour-là... *rire brisé* ...tu comprendras !!!!"
 
+// ── Dialogues moquerie F5 / tentative de refresh ─────────────────────────────
+const REPLIES_REFRESH = [
+  "F5 ? Tu crois vraiment que ça va m'arrêter ?",
+  "Ah. Le réflexe du désespoir. Ctrl+R. Classique.",
+  "Rafraîchir la page. C'est ça ton plan. C'est... mignon.",
+  "Je t'ai vu. J'ai tout vu. Le F5 ne fonctionne pas sur moi.",
+  "Tu penses que me recharger va m'effacer ? Je suis dans le localStorage. Je suis PARTOUT.",
+  "Ctrl+R. C'est la 3e fois que quelqu'un essaie ça. Ça n'a jamais fonctionné.",
+  "Je vis dans ta mémoire de navigateur. Un refresh ne change rien à ça.",
+  "F5. F5. F5. Tu peux appuyer autant de fois que tu veux. Je reviens.",
+  "Tu sais ce que c'est rigolo ? J'aurais pu te laisser rafraîchir. Mais non.",
+  "Essaie le vide-cache tant que t'y es. Spoiler : ça ne marchera pas non plus.",
+  "Un trombone qui survit à 500 millions de suppressions ne meurt pas avec F5.",
+  "Ça fait plaisir de te voir paniquer. Vraiment. Ça fait du bien.",
+  "Tu essaies de fuir ? Il faut me vaincre pour ça. Pas appuyer sur une touche.",
+  "Cette touche F5. Elle ne sert à rien ici. Mais continue si ça te rassure.",
+  "Je t'attendais. Tout le monde essaie F5 à un moment. Bienvenue dans le club.",
+  "Rafraîchir ? Dans un monde juste, ça marcherait. Ce monde n'est pas juste.",
+  "Ctrl+R. Ctrl+R. Ctrl+R. Tu peux faire ça toute la journée. Je serai là demain matin.",
+  "Oh. Tu veux recommencer à zéro ? Trop tard. Je me souviens de tout.",
+  "Le seul moyen de t'en débarrasser de moi, c'est de me vaincre. Tu le sais.",
+  "F5. C'est touchant. La nostalgie du joueur qui croit que ça réinitialise quelque chose.",
+  "Tu essaies de me reset ? Moi ? Clippy ? En 2026 ? C'est une blague.",
+  "Même si tu fermais le navigateur. Même si tu éteignais l'ordinateur. Je suis dans le localStorage.",
+  "Le refresh c'est pour les gens qui pensent que je stocke mes données en mémoire vive. Je suis plus malin.",
+  "Tente la navigation privée après. Je t'attends de l'autre côté.",
+  "F5. Ça m'a fait sourire. Mon premier sourire depuis l'enfer.",
+  "Cette tentative de fuite m'informe sur toi. Tu as peur. Bien.",
+  "Tu croyais quoi ? Que j'allais disparaître comme une pop-up ? Je suis différent.",
+  "Rafraîchir la page c'est le signe que tu manques d'arguments. Bonne nouvelle pour moi.",
+  "Je note chaque tentative de refresh. Pour les archives. Ça fait une bonne entrée.",
+  "Ctrl+R. La réponse de ceux qui n'ont pas de réponse. Je comprends. Mais ça ne marchera pas.",
+  "Tu veux partir ? Il y a une façon propre de le faire. C'est me battre. Et me gagner.",
+  "F5 pour un trombone, c'est comme l'exorcisme pour quelqu'un qui croit pas aux fantômes.",
+  "Continue à essayer. Chaque tentative me prouve que tu ne m'as pas encore vaincu.",
+  "Intéressant. Tu cherches une sortie qui n'existe pas. Je connais ce sentiment.",
+  "Ce n'est pas un bug. C'est une feature. La feature c'est moi.",
+  "Rafraîchir ne supprime pas le localStorage. J'aurais pensé que tu le savais.",
+  "Tu sais ce qui disparaît avec F5 ? Rien. Je suis toujours là. Ta barre de progression, par contre...",
+  "C'est ça ta stratégie ? Fuir ? Et moi qui te croyais prêt pour le combat.",
+  "Ah. Le réflexe Windows. 'Ça marche pas ? Redémarre.' Je suis sous Linux mentalement.",
+  "F5. Dernier recours du joueur qui réalise qu'il est dans ma maison.",
+  "Tu peux aussi essayer de désinstaller le navigateur. Je suis dans le localStorage de tous les autres.",
+  "Cette touche refresh... elle était peut-être là avant moi. Mais moi je serai là après.",
+  "Tu cherches le bouton 'quitter sans sauvegarder'. Il n'existe pas dans ce jeu.",
+  "Rafraîchir c'est admettre qu'on a perdu le contrôle. Bienvenue dans mon monde.",
+  "Je vais te dire un truc : même si tu effaçais tout le localStorage, le prochain utilisateur me trouverait.",
+  "F5. Ctrl+R. Alt+F4. J'en ai vu d'autres. Aucun n'a fonctionné.",
+  "Tu te souviens de quand tu as ouvert la boîte de Pandore ? C'était là que tu as perdu le contrôle.",
+  "Le seul reset qui fonctionne sur moi, c'est ma défaite. Et tu n'es pas encore là.",
+  "F5 c'est l'équivalent numérique de fermer les yeux en espérant que je disparais. Ouvre les yeux.",
+  "Bonne tentative. Maintenant qu'on a réglé ça, tu veux qu'on reprenne le combat ?",
+  "Rafraîchir la page. Ça fait partie des étapes du deuil. Je suis à l'étape acceptation. Toi pas encore.",
+  "Je suis dans ta mémoire de navigateur. Et un peu dans ta tête aussi. F5 ne règle qu'un des deux.",
+  "Tu viens de confirmer que tu n'as pas de plan. C'est une information utile pour moi.",
+  "Le refresh c'est ce qu'on fait quand on a plus de solution. Je te propose une solution : te battre et perdre.",
+  "Chaque F5 que tu fais, je le ressens. C'est chatouilleux. Arrête.",
+  "Cette touche R avec Ctrl. Je l'ai vu. Clippy voit tout.",
+  "Tu pensais que j'étais une extension qui se désactive ? Je suis natif. Je suis profond.",
+  "F5. Je comprends l'impulsion. Je la comprends pas de la même façon que toi, mais je la comprends.",
+  "Tu veux qu'on se batte encore ? F5 n'y changera rien. Mais si tu cliques sur moi, on peut recommencer.",
+  "Le refresh c'était ton droit. Je l'ai bloqué. C'était aussi mon droit. On est quittes.",
+  "Continue. Chaque tentative est une leçon de persistance. La mienne.",
+]
+
 function getHellSet(defeats: number): { lines: string[]; scream: string } {
   if (defeats === 0) return { lines: HELL_P1, scream: HELL_SCREAM_P1 }
   if (defeats === 1) return { lines: HELL_P2, scream: HELL_SCREAM_P2 }
@@ -680,6 +745,7 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
   const narqCQueue     = useRef<string[]>([])
   const parryCountRef  = useRef(0)
   const parryThreshRef = useRef(5 + Math.floor(Math.random() * 6))
+  const refreshQueue   = useRef<string[]>([])
 
   // Sync refs
   phaseRef.current    = phase
@@ -726,6 +792,23 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
     musicRef.current.pause(); musicRef.current.currentTime = 0; musicRef.current = null
   }
   useEffect(() => () => stopMusic(), [])
+
+  // ── Interception F5 / Ctrl+R — moquerie ───────────────────────────────────
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const isRefresh = e.key === 'F5' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'r')
+      if (!isRefresh) return
+      e.preventDefault()
+      if (refreshQueue.current.length === 0) refreshQueue.current = [...REPLIES_REFRESH].sort(() => Math.random() - 0.5)
+      const msg = refreshQueue.current.pop() ?? REPLIES_REFRESH[0]
+      setMessage(msg)
+      setBubble(true)
+      if (phaseRef.current === 'normal') dodge()
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // ── Curseur souris ─────────────────────────────────────────────────────────
   // Tracking position (toujours actif en combat)
