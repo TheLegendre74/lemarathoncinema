@@ -18,7 +18,24 @@
       "Bash(mv \"South Park\"* \"south-park-theme.opus\")",
       "Bash(mv \"Jaws\"* \"jaws-theme.m4a\")",
       "Bash(find C:UsersSteamDesktopmarathoncinema-marathon-nextjs-completecm-next -name *.sql -o -name seed* -o -name migration*)",
-      "Bash(npx next:*)"
+      "Bash(npx next:*)",
+      "Bash(node -e \"require\\('fs'\\).existsSync\\('./app/api/search-film/route.ts'\\) ? console.log\\('EXISTS'\\) : console.log\\('MISSING'\\)\")",
+      "Bash(vercel --version)",
+      "Bash(npm i:*)",
+      "Bash(ls:*)",
+      "Bash(dir sprites:*)",
+      "Bash(dir app:*)",
+      "Bash(findstr -i game)",
+      "Bash(xargs grep:*)",
+      "Bash(node:*)",
+      "Bash(python3:*)",
+      "Bash(sed:*)",
+      "Bash(grep:*)",
+      "Bash(npx supabase:*)",
+      "Bash(cat next.config.ts)",
+      "Bash(cat next.config.js)",
+      "Bash(cat next.config.mjs)",
+      "Bash(git *)"
     ]
   }
 }
