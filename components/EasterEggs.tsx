@@ -909,7 +909,7 @@ function TamagotchiKeyOverlay({ onClose, isGuest }: { onClose: () => void; isGue
   )
 }
 
-export default function EasterEggs({ config = {}, isGuest = false }: { config?: EasterEggsConfig; isGuest?: boolean }) {
+export default function EasterEggs({ config = {}, isGuest = false, watchedCount = 0 }: { config?: EasterEggsConfig; isGuest?: boolean; watchedCount?: number }) {
   const ee = {
     matrixLine1:     config.matrixLine1     ?? 'Wake up, Neo...',
     matrixLine2:     config.matrixLine2     ?? 'The Matrix has you.',
@@ -1028,6 +1028,23 @@ export default function EasterEggs({ config = {}, isGuest = false }: { config?: 
     document.addEventListener('click', onGlobalClick, true)
     return () => document.removeEventListener('click', onGlobalClick, true)
   }, []) // deps vides — on lit depuis refs
+
+  // ── Ghost box : 100 films regardés (one-shot milestone) ──────────────────
+  useEffect(() => {
+    if (watchedCount < 100) return
+    if (typeof window === 'undefined') return
+    if (parseInt(localStorage.getItem('clippy_triggers') ?? '0') > 0) return
+    if (localStorage.getItem(LS_BOX_IGNORED) === '1') return
+    if (localStorage.getItem('clippy_100films_shown') === '1') return
+    if (ghostBoxActiveRef.current || anyEggActiveRef.current) return
+    localStorage.setItem('clippy_100films_shown', '1')
+    const x = 40 + Math.random() * (window.innerWidth - 160)
+    const y = 80 + Math.random() * (window.innerHeight - 200)
+    setGhostBox({ x, y })
+    setGhostBoxMsg('Hey! Ouvre moi!')
+    setGhostBoxWarn(false)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedCount])
 
   // ── Ghost box : rotation de messages + timer de disparition ──────────────
   useEffect(() => {

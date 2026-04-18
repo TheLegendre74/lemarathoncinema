@@ -2207,9 +2207,8 @@ export async function feedTamagotchi(score: number = 5, perfect: boolean = false
     }
   }
 
-  if (pet.is_sleeping) return { data: null, error: "Ton alien dort… réveille-le d'abord ! 💤" }
-
   const { pet: synced } = applyTamaDecay(pet)
+  if (synced.is_sleeping) return { data: null, error: "Ton alien dort… réveille-le d'abord ! 💤" }
   const now = new Date().toISOString()
   const today = now.slice(0, 10)
   const hungerReduction = score * 2  // +2 nourriture par humain attrapé
@@ -2239,9 +2238,8 @@ export async function playWithTamagotchi(score: number = 5) {
   if (!pet) return { data: null, error: 'Pas de tamagotchi' }
   if (pet.stage === 'dead') return { data: null, error: 'Ton alien est mort...' }
 
-  if (pet.is_sleeping) return { data: null, error: "Ton alien dort… réveille-le d'abord ! 💤" }
-
   const { pet: synced } = applyTamaDecay(pet)
+  if (synced.is_sleeping) return { data: null, error: "Ton alien dort… réveille-le d'abord ! 💤" }
   const now = new Date().toISOString()
   const today = now.slice(0, 10)
   const happinessGain = Math.max(10, Math.min(40, Math.round(score * 4)))

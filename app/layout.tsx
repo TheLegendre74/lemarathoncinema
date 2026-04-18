@@ -32,16 +32,19 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   let hasRageuxEgg = false
   let hasTamagotchiEgg = false
   let unreadMessages = 0
+  let watchedCount = 0
   if (user) {
-    const [{ data: profileData }, { data: eggs }, unread] = await Promise.all([
+    const [{ data: profileData }, { data: eggs }, unread, { count }] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', user.id).single(),
       supabase.from('discovered_eggs').select('egg_id').eq('user_id', user.id),
       getUnreadMessageCount(),
+      supabase.from('watched').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
     ])
     profile = profileData
     hasRageuxEgg = (eggs ?? []).some((e: any) => e.egg_id === 'rageux')
     hasTamagotchiEgg = (eggs ?? []).some((e: any) => e.egg_id === 'tamagotchi')
     unreadMessages = unread
+    watchedCount = count ?? 0
   }
 
   const eeConfig = {
@@ -71,7 +74,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="fr">
       <body>
         <ToastProvider>
-          <EasterEggs config={eeConfig} isGuest={!user} />
+          <EasterEggs config={eeConfig} isGuest={!user} watchedCount={watchedCount} />
           <ClientShell profile={profile} hasRageuxEgg={hasRageuxEgg} hasTamagotchiEgg={hasTamagotchiEgg} unreadMessages={unreadMessages}>
             {children}
           </ClientShell>
