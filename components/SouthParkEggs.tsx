@@ -548,6 +548,74 @@ function drawBusStop(g: G) {
   g.fillRect(13, -157, 6, 7)   // bag
 }
 
+// Tegridy Farm — legal cannabis farm (Colorado)
+function drawTegridyFarm(g: G) {
+  // Green grass field
+  g.fillStyle(0x3A8A20); g.fillRect(0, -30, 260, 30)
+
+  // Wooden fence
+  g.fillStyle(0xB8935A)
+  for (let i = 0; i <= 13; i++) g.fillRect(i * 20, -40, 6, 40)
+  g.fillRect(0, -34, 260, 5)
+  g.fillRect(0, -20, 260, 4)
+
+  // Red barn
+  g.fillStyle(0xCC2020); g.fillRect(0, -130, 120, 130)
+  // Barn roof
+  g.fillStyle(0x991111)
+  g.fillTriangle(-8, -130, 60, -188, 128, -130)
+  // Round barn window (loft)
+  g.fillStyle(0xFFEE88); g.fillCircle(60, -162, 14)
+  g.fillStyle(0x881111); g.fillRect(53, -162, 14, 3); g.fillRect(60, -169, 3, 14)
+  // Barn double doors
+  g.fillStyle(0x881111)
+  g.fillRect(18, -90, 40, 90); g.fillRect(62, -90, 40, 90)
+  g.lineStyle(3, 0x661111, 1)
+  g.beginPath(); g.moveTo(18, -90); g.lineTo(58, 0); g.strokePath()
+  g.beginPath(); g.moveTo(58, -90); g.lineTo(18, 0); g.strokePath()
+  g.beginPath(); g.moveTo(62, -90); g.lineTo(102, 0); g.strokePath()
+  g.beginPath(); g.moveTo(102, -90); g.lineTo(62, 0); g.strokePath()
+  // Side barn window
+  g.fillStyle(0xFFEE88); g.fillRect(4, -120, 10, 12)
+
+  // Cannabis plants (7 plants)
+  for (let i = 0; i < 7; i++) {
+    const px = 132 + i * 18
+    // Stem
+    g.fillStyle(0x2A8A18); g.fillRect(px + 3, -96, 4, 66)
+    // Leaves (5-finger cannabis shape)
+    g.fillStyle(0x22BB22)
+    g.fillTriangle(px + 5, -96, px - 4, -76, px + 14, -76)   // top center
+    g.fillTriangle(px + 5, -89, px - 14, -76, px + 2, -69)   // mid-left
+    g.fillTriangle(px + 5, -89, px + 8, -69, px + 22, -76)   // mid-right
+    g.fillTriangle(px + 5, -81, px - 10, -72, px + 1, -65)   // low-left
+    g.fillTriangle(px + 5, -81, px + 9, -65, px + 19, -72)   // low-right
+    // Bud (yellow-green)
+    g.fillStyle(0x88CC22); g.fillCircle(px + 5, -99, 5)
+  }
+
+  // Farmhouse (right side)
+  g.fillStyle(0xF5F0DC); g.fillRect(135, -100, 125, 100)
+  // Roof
+  g.fillStyle(0xAA2020)
+  g.fillTriangle(125, -100, 197, -155, 270, -100)
+  // Windows
+  g.fillStyle(0x88CCFF)
+  g.fillRect(143, -85, 26, 22); g.fillRect(208, -85, 26, 22)
+  g.lineStyle(1, 0x5599BB); g.strokeRect(143, -85, 26, 22); g.strokeRect(208, -85, 26, 22)
+  g.lineStyle(1, 0xAADDFF)
+  g.beginPath(); g.moveTo(156, -85); g.lineTo(156, -63); g.strokePath()
+  g.beginPath(); g.moveTo(143, -74); g.lineTo(169, -74); g.strokePath()
+  g.beginPath(); g.moveTo(221, -85); g.lineTo(221, -63); g.strokePath()
+  g.beginPath(); g.moveTo(208, -74); g.lineTo(234, -74); g.strokePath()
+  // Door
+  g.fillStyle(0x7A5030); g.fillRect(181, -54, 28, 54)
+  g.fillStyle(0xFFCC00); g.fillCircle(205, -30, 3)
+  // Chimney
+  g.fillStyle(0xAA6040); g.fillRect(244, -158, 14, 40)
+  g.fillStyle(0x884030); g.fillRect(241, -162, 20, 8)
+}
+
 // ═══════════════════════════════════════════════════════════════════
 //  PHASER SCENE
 // ═══════════════════════════════════════════════════════════════════
@@ -560,6 +628,7 @@ class BusStopScene extends Phaser.Scene {
   private busContainer!: Phaser.GameObjects.Container
   private cityContainer!: Phaser.GameObjects.Container
   private stopSignContainer!: Phaser.GameObjects.Container
+  private labelContainer!: Phaser.GameObjects.Container
   private scrollX = 0
   private readonly SCROLL_SPEED = 1.5
   private readonly onDoneCb: () => void
@@ -645,6 +714,9 @@ class BusStopScene extends Phaser.Scene {
     })
     this.busContainer.add(busText)
 
+    // Label container — created AFTER bus so labels render on top of bus
+    this.labelContainer = this.add.container(0, 0)
+
     // Building labels
     this.addBuildingLabels(W)
 
@@ -703,25 +775,26 @@ class BusStopScene extends Phaser.Scene {
 
   // ── City layout ───────────────────────────────────────────────
   private buildCity(W: number, gY: number) {
-    const buildings: { x: number; fn: (g: G) => void }[] = [
+    const buildings: { x: number; fn: (g: G) => void; scale?: number }[] = [
       { x: 180,  fn: g => { drawPineTree(g, 1.1) } },
-      { x: 340,  fn: drawSodoSopa },
+      { x: 340,  fn: drawSodoSopa,        scale: 1.3 },
       { x: 600,  fn: g => { drawPineTree(g, 1.0) } },
       { x: 760,  fn: g => { drawPineTree(g, 0.85) } },
-      { x: 920,  fn: drawCartmanland },
+      { x: 920,  fn: drawCartmanland,     scale: 1.3 },
       { x: 1260, fn: g => { drawPineTree(g, 1.2) } },
-      { x: 1440, fn: drawCityWok },
+      { x: 1440, fn: drawCityWok,         scale: 1.3 },
       { x: 1700, fn: g => { drawPineTree(g, 1.0) } },
-      { x: 1870, fn: drawElementary },
+      { x: 1870, fn: drawElementary,      scale: 1.3 },
       { x: 2230, fn: g => { drawPineTree(g, 0.9) } },
       { x: 2380, fn: g => { drawPineTree(g, 1.1) } },
-      { x: 2560, fn: drawKennysHouse },
+      { x: 2560, fn: drawKennysHouse,     scale: 1.3 },
       { x: 2770, fn: g => { drawPineTree(g, 1.0) } },
-      { x: 2950, fn: drawCityHall },
+      { x: 2950, fn: drawCityHall,        scale: 1.3 },
       { x: 3280, fn: g => { drawPineTree(g, 1.2) } },
-      { x: 3460, fn: drawPipisWaterpark },
+      { x: 3460, fn: drawPipisWaterpark,  scale: 1.3 },
       { x: 3900, fn: g => { drawPineTree(g, 1.0) } },
       { x: 3980, fn: g => { drawPineTree(g, 0.9) } },
+      { x: 4180, fn: drawTegridyFarm,     scale: 1.3 },
     ]
 
     buildings.forEach(b => {
@@ -729,30 +802,34 @@ class BusStopScene extends Phaser.Scene {
       const gfx = this.add.graphics()
       b.fn(gfx)
       cont.add(gfx)
+      if (b.scale) cont.setScale(b.scale)
       this.cityContainer.add(cont)
     })
   }
 
   private addBuildingLabels(W: number) {
+    // x values account for scale 1.3 applied to building containers:
+    // visual center = container_x + building_half_width * 1.3
     const labels: { x: number; text: string }[] = [
-      { x: W + 420,  text: 'SODOSOPA' },
-      { x: W + 1020, text: 'CARTMANLAND' },
-      { x: W + 1517, text: 'CITY WOK' },
-      { x: W + 1975, text: 'SOUTH PARK ELEMENTARY' },
-      { x: W + 2607, text: "MAISON DE KENNY" },
-      { x: W + 3032, text: 'CITY HALL' },
-      { x: W + 3605, text: "PIPI'S WATERPARK" },
+      { x: W + 444,  text: 'SODOSOPA' },            // 340 + 80*1.3
+      { x: W + 1057, text: 'CARTMANLAND' },          // 920 + 105*1.3
+      { x: W + 1541, text: 'CITY WOK' },             // 1440 + 77*1.3
+      { x: W + 2007, text: 'SOUTH PARK ELEMENTARY' }, // 1870 + 105*1.3
+      { x: W + 2622, text: "MAISON DE KENNY" },       // 2560 + 47*1.3
+      { x: W + 3057, text: 'CITY HALL' },             // 2950 + 82*1.3
+      { x: W + 3649, text: "PIPI'S WATERPARK" },      // 3460 + 145*1.3
+      { x: W + 4349, text: "LA FERME TEGRITÉ" },      // 4180 + 130*1.3
     ]
     labels.forEach(l => {
-      const t = this.add.text(l.x, this.groundY - 14, l.text, {
+      const t = this.add.text(l.x, this.groundY - 158, l.text, {
         fontFamily: 'monospace',
-        fontSize: '13px',
+        fontSize: '16px',
         color: '#FFFF00',
         fontStyle: 'bold',
         stroke: '#000000',
-        strokeThickness: 3,
+        strokeThickness: 4,
       }).setOrigin(0.5, 1)
-      this.cityContainer.add(t)
+      this.labelContainer.add(t)
     })
   }
 
@@ -767,6 +844,7 @@ class BusStopScene extends Phaser.Scene {
     if (this.phase === 'touring') {
       this.scrollX += this.SCROLL_SPEED
       this.cityContainer.x = -this.scrollX
+      this.labelContainer.x = -this.scrollX
       // Bus stays at left portion of screen (riding along)
       this.busContainer.x = W * 0.14
       // End is triggered ONLY by music 'complete' event — no scroll cutoff

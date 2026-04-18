@@ -766,14 +766,14 @@ const TIRED_AT_TABLE: Record<number, number> = { 1: 4, 2: 7, 3: 11, 4: 14, 5: 19
 const TIRED_AT = 4 // valeur par défaut (remplacée dynamiquement dans le composant)
 // HP joueur : 15 (P1-2), 10 (P3-5), 8/7/6/5 (P6-9)
 const PARRY_WINDOW_P1    = 2500
-const PARRY_WINDOW_P2    = 1800
-const PARRY_WINDOW_P3    = 1200
-const PARRY_WINDOW_P4    = 900
-const PARRY_WINDOW_P5    = 600
-const PARRY_WINDOW_P6    = 450
-const PARRY_WINDOW_P7    = 350
-const PARRY_WINDOW_P8    = 250
-const PARRY_WINDOW_P9    = 180
+const PARRY_WINDOW_P2    = 1900
+const PARRY_WINDOW_P3    = 1300
+const PARRY_WINDOW_P4    = 1000
+const PARRY_WINDOW_P5    = 700
+const PARRY_WINDOW_P6    = 550
+const PARRY_WINDOW_P7    = 450
+const PARRY_WINDOW_P8    = 350
+const PARRY_WINDOW_P9    = 280
 const PARRY_SQ           = 150
 const MG_TARGET          = 100
 const BASE_HP            = 50
@@ -832,10 +832,68 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
     try {
       if (p === 0) localStorage.removeItem(LS_GOD_PHASE)
       else localStorage.setItem(LS_GOD_PHASE, String(p))
+      // Phase 5+ débloque automatiquement le statut maître de Clippy
+      if (p >= 5) localStorage.setItem(LS_MASTERED, '1')
     } catch {}
+
+    const effectiveP = p > 0 ? p : combatPhase
+    const willMastered = typeof window !== 'undefined' && localStorage.getItem(LS_MASTERED) === '1'
+
+    // Calcul des nouveaux dialogues directement (évite le problème de closure stale)
+    const newNormalReplies = willMastered ? REPLIES_DOCILE
+      : p >= 9 ? REPLIES_NORMAL_PHASE9
+      : p === 8 ? REPLIES_NORMAL_PHASE8
+      : p === 7 ? REPLIES_NORMAL_PHASE7
+      : p === 6 ? REPLIES_NORMAL_PHASE6
+      : p >= 5 ? REPLIES_NORMAL_PHASE5
+      : p === 4 ? REPLIES_NORMAL_PHASE4
+      : p === 3 ? REPLIES_NORMAL_PHASE3
+      : isVeteran ? REPLIES_NORMAL_VETERAN
+      : REPLIES_NORMAL_FIRST
+
+    const newCombatReplies = p >= 9 ? REPLIES_COMBAT_PHASE9
+      : p === 8 ? REPLIES_COMBAT_PHASE8
+      : p === 7 ? REPLIES_COMBAT_PHASE7
+      : p === 6 ? REPLIES_COMBAT_PHASE6
+      : p >= 5 ? REPLIES_COMBAT_PHASE5
+      : p === 4 ? REPLIES_COMBAT_PHASE4
+      : p === 3 ? REPLIES_COMBAT_PHASE3
+      : isVeteran ? REPLIES_COMBAT_VETERAN
+      : REPLIES_COMBAT_FIRST
+
+    normalQueue.current = shuffle(newNormalReplies)
+    combatQueue.current = shuffle(newCombatReplies)
+
+    if (phaseRef.current === 'combat') {
+      // Reset combat manuellement avec les nouvelles valeurs HP de la nouvelle phase
+      stopMusic(); clearAutoAttack()
+      parryActive.current = false
+      if (parryTimer.current) clearTimeout(parryTimer.current)
+      if (parryRAF.current) cancelAnimationFrame(parryRAF.current)
+      if (atkTimer.current) clearTimeout(atkTimer.current)
+      setParrySquare(null)
+      const newClippyHP = calcClippyMaxHP(effectiveP)
+      const newPlayerHP = calcPlayerMaxHP(effectiveP)
+      clippyHPRef.current = newClippyHP; playerHPRef.current = newPlayerHP
+      setClippyHP(newClippyHP); setPlayerHP(newPlayerHP)
+      setPhase('normal'); phaseRef.current = 'normal'
+      setMisses(0); setTired(false)
+      setSessionLosses(0); sessionLossesRef.current = 0
+      setPlayerDeaths(0); playerDeathsRef.current = 0
+      setShowAbandon(false); setShowDeathScreen(false); setHellPhase('idle')
+      dodge()
+    }
+
+    const newMsg = pickFrom(normalQueue, newNormalReplies)
+    setMessage(newMsg); setBubble(true)
     setActiveGodPhase(p)
     setShowGodModePanel(false)
-    if (phaseRef.current === 'combat') resetToNormal()
+  }
+
+  function revokeClipy() {
+    try { localStorage.removeItem(LS_ACTIVE) } catch {}
+    setShowGodModePanel(false)
+    onDismiss()
   }
 
   // ── Calculs HP / Timing basés sur effectivePhase ───────────────────────
@@ -1815,21 +1873,28 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
         </button>
       )}
       {showGodModePanel && (
-        <div style={{ position:'fixed', bottom:isMastered ? 148 : 44, left:10, zIndex:903, background:'rgba(10,0,20,.97)', border:'1px solid rgba(150,100,255,.5)', borderRadius:12, padding:'1rem', width:230, boxShadow:'0 4px 24px rgba(0,0,0,.8)' }}>
+        <div style={{ position:'fixed', bottom:isMastered ? 148 : 44, left:10, zIndex:903, background:'rgba(10,0,20,.97)', border:'1px solid rgba(150,100,255,.5)', borderRadius:12, padding:'1rem', width:240, boxShadow:'0 4px 24px rgba(0,0,0,.8)' }}>
           <div style={{ fontSize:'.78rem', color:'#c880ff', fontWeight:700, letterSpacing:2, marginBottom:'.8rem' }}>⚙️ GOD MODE CLIPPY</div>
           <div style={{ fontSize:'.65rem', color:'rgba(200,150,255,.5)', marginBottom:'.4rem', letterSpacing:1 }}>Phases de base</div>
           <div style={{ display:'flex', flexWrap:'wrap', gap:'.35rem', marginBottom:'.8rem' }}>
             {[1,2,3,4,5].map(p => (
-              <button key={p} onClick={() => applyGodPhase(p)} style={{ padding:'.3rem .55rem', borderRadius:6, background:activeGodPhase===p?'rgba(150,100,255,.35)':'rgba(255,255,255,.05)', border:`1px solid ${activeGodPhase===p?'#c880ff':'rgba(255,255,255,.12)'}`, color:activeGodPhase===p?'#c880ff':'#aaa', fontSize:'.72rem', cursor:'pointer', fontWeight:activeGodPhase===p?700:400 }}>P{p}</button>
+              <button key={p} onClick={() => applyGodPhase(p)} style={{ padding:'.3rem .55rem', borderRadius:6, background:activeGodPhase===p?'rgba(150,100,255,.35)':'rgba(255,255,255,.05)', border:`1px solid ${activeGodPhase===p?'#c880ff':'rgba(255,255,255,.12)'}`, color:activeGodPhase===p?'#c880ff':'#aaa', fontSize:'.72rem', cursor:'pointer', fontWeight:activeGodPhase===p?700:400 }}>
+                P{p}{p >= 5 ? ' 👑' : ''}
+              </button>
             ))}
           </div>
-          <div style={{ fontSize:'.65rem', color:'rgba(255,100,150,.5)', marginBottom:'.4rem', letterSpacing:1 }}>🔓 Phases débloquées</div>
+          <div style={{ fontSize:'.65rem', color:'rgba(255,100,150,.5)', marginBottom:'.4rem', letterSpacing:1 }}>🔓 Phases God Mode</div>
           <div style={{ display:'flex', flexWrap:'wrap', gap:'.35rem', marginBottom:'.8rem' }}>
             {[6,7,8,9].map(p => (
               <button key={p} onClick={() => applyGodPhase(p)} style={{ padding:'.3rem .55rem', borderRadius:6, background:activeGodPhase===p?'rgba(255,100,150,.35)':'rgba(255,255,255,.05)', border:`1px solid ${activeGodPhase===p?'#ff6699':'rgba(255,255,255,.12)'}`, color:activeGodPhase===p?'#ff6699':'#aaa', fontSize:'.72rem', cursor:'pointer', fontWeight:activeGodPhase===p?700:400 }}>P{p}</button>
             ))}
           </div>
-          <div style={{ display:'flex', gap:'.4rem' }}>
+          {!isMastered && (
+            <div style={{ fontSize:'.6rem', color:'rgba(255,215,0,.45)', marginBottom:'.6rem', letterSpacing:1, background:'rgba(255,215,0,.06)', border:'1px solid rgba(255,215,0,.15)', borderRadius:5, padding:'4px 7px', lineHeight:1.5 }}>
+              👑 Phase 5+ débloque <strong style={{ color:'rgba(255,215,0,.8)' }}>Maître de Clippy</strong>
+            </div>
+          )}
+          <div style={{ display:'flex', gap:'.4rem', marginBottom:'.4rem' }}>
             <button onClick={() => applyGodPhase(0)} style={{ flex:1, padding:'.3rem', borderRadius:6, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.1)', color:activeGodPhase===0?'#88ff88':'#777', fontSize:'.68rem', cursor:'pointer' }}>
               {activeGodPhase === 0 ? '✓ Normal' : '↺ Normal'}
             </button>
@@ -1837,6 +1902,9 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
               Fermer
             </button>
           </div>
+          <button onClick={revokeClipy} style={{ width:'100%', padding:'.3rem', borderRadius:6, background:'rgba(255,80,80,.08)', border:'1px solid rgba(255,80,80,.25)', color:'#ff6060', fontSize:'.68rem', cursor:'pointer', letterSpacing:1 }}>
+            📦 Révoquer dans le coffre
+          </button>
           {activeGodPhase > 0 && (
             <div style={{ marginTop:'.6rem', fontSize:'.6rem', color:'rgba(150,100,255,.5)', textAlign:'center', letterSpacing:1 }}>
               Phase {activeGodPhase} — HP:{calcClippyMaxHP(activeGodPhase)} • Parade:{calcParryWindow(activeGodPhase)}ms

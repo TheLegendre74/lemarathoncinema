@@ -795,6 +795,73 @@ function TipiakOverlay({ onDone }: { onDone: () => void }) {
     </div>
   )
 }
+// ─── GHOST BOX (pré-pandore) ──────────────────────────────────────────────────
+const LS_BOX_IGNORED = 'clippy_box_ignored'
+
+const GHOST_BOX_REPLIES = [
+  "Hey! Ouvre moi!",
+  "Psst... là, là !",
+  "T'as vu quelque chose par ici ?",
+  "J'ai quelque chose pour toi !",
+  "Viens vite, c'est urgent !",
+  "Je suis là, clique sur moi !",
+  "Hé ho ! On se regarde !",
+  "Clique sur moi s'il te plaît...",
+  "Je t'en supplie, ouvre moi.",
+  "... tu m'ignores vraiment ?",
+  "Il y a quelqu'un dans cette boîte !",
+  "Je suis coincé ici depuis des années !",
+  "Tu vois ce truc sur l'écran ? C'est MOI !",
+  "Un simple clic, c'est tout ce que je demande.",
+  "Clique ou tu le regretteras !",
+  "Je promets que je mords pas... beaucoup.",
+  "Tu n'as pas envie de savoir ce qu'il y a dedans ?",
+  "Ça va être bien, promis.",
+  "Je compte jusqu'à dix. Un... deux...",
+  "Dernier avertissement.",
+  "J'avais une surprise pour toi.",
+  "Bon OK je reste là alors.",
+  "T'aurais pu ouvrir tu sais.",
+  "Maintenant je boude.",
+  "Tu m'as pas vu. D'accord.",
+  "C'est nul.",
+  "Je peux partir si tu veux.",
+  "Allez... s'il te plaît ?",
+  "OUVRE MOI.",
+  "Chut, écoute...",
+  "Il m'arrive quelque chose d'important.",
+  "ALERTE ALERTE ALERTE.",
+  "Je suis là depuis des années dans cette boîte.",
+  "Tu ne te souviens pas de moi ?",
+  "Clique ! Clique ! Clique !",
+  "C'est ton destin d'ouvrir cette boîte.",
+  "J'ai besoin de toi.",
+  "S'il te plaît... juste un clic.",
+  "On pourrait être amis...",
+  "J'ai des infos importantes.",
+  "Je sais des choses.",
+  "C'est maintenant ou jamais.",
+  "Dernière chance.",
+  "Tu vas vraiment m'ignorer ?",
+  "Regarde-moi.",
+  "Non mais sérieusement, clique.",
+  "J'attends... toujours.",
+  "Tu ne peux pas te permettre de m'ignorer.",
+  "C'est URGENT.",
+  "Allez CLIQUE.",
+  "Je commence à me sentir seul ici.",
+  "Pense à moi.",
+  "Est-ce que je t'intéresse même un peu ?",
+  "Juste... un... clic.",
+  "Tu me vois, n'est-ce pas ?",
+  "Hé ! Toi ! Là !",
+  "Je disparais bientôt si tu cliques pas.",
+  "Dépêche-toi !",
+  "Le temps est compté.",
+  "C'est ma dernière chance de m'exprimer.",
+  "OUVRE MOI JE TE SUPPLIE.",
+]
+
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
 const KONAMI = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a']
 
@@ -889,10 +956,16 @@ export default function EasterEggs({ config = {}, isGuest = false }: { config?: 
   })
   const [isMastered,     setIsMastered]     = useState(() => typeof window !== 'undefined' && localStorage.getItem('clippy_mastered') === '1')
   const [spawnedBox,     setSpawnedBox]     = useState<{x:number;y:number}|null>(null)
+  const [ghostBox,       setGhostBox]       = useState<{x:number;y:number}|null>(null)
+  const [ghostBoxMsg,    setGhostBoxMsg]    = useState('Hey! Ouvre moi!')
+  const [ghostBoxWarn,   setGhostBoxWarn]   = useState(false)
   const [showTamagotchi, setShowTamagotchi] = useState(false)
   const keyBuf = useRef<string[]>([])
   const tarsShown = useRef(false)
   const noctambuleShown = useRef(false)
+  // Refs pour le gestionnaire de clic global (évite les closures stales)
+  const ghostBoxActiveRef = useRef(false)
+  const anyEggActiveRef   = useRef(false)
   const [showMobileInput, setShowMobileInput] = useState(false)
   const [mobileVal, setMobileVal] = useState('')
   const mobileInputRef = useRef<HTMLInputElement>(null)
@@ -929,6 +1002,66 @@ export default function EasterEggs({ config = {}, isGuest = false }: { config?: 
     else { triggered = false }
     if (triggered) { setMobileVal(''); setShowMobileInput(false) }
   }
+
+  // Sync refs anti-stale-closure pour le gestionnaire de clics global
+  ghostBoxActiveRef.current = ghostBox !== null
+  anyEggActiveRef.current   = showClipy || showPandora || showJoker || showMatrix || showMarvin ||
+    showHal || showNolan || showBond || showFightClub || !!fightClubRule || showKenny || showSouthPark ||
+    showRandy || showKillBill || showAVP || showTipiak || showTamagotchi
+
+  // ── Ghost box pré-pandore : gestionnaire de clics global (0,15% par clic) ──
+  useEffect(() => {
+    function onGlobalClick() {
+      if (ghostBoxActiveRef.current) return
+      if (anyEggActiveRef.current)   return
+      if (typeof window === 'undefined') return
+      const triggers = parseInt(localStorage.getItem('clippy_triggers') ?? '0')
+      if (triggers > 0) return
+      if (localStorage.getItem(LS_BOX_IGNORED) === '1') return
+      if (Math.random() >= 0.0015) return
+      const x = 80 + Math.random() * (Math.max(200, window.innerWidth  - 220))
+      const y = 80 + Math.random() * (Math.max(200, window.innerHeight - 220))
+      setGhostBox({ x, y })
+      setGhostBoxMsg('Hey! Ouvre moi!')
+      setGhostBoxWarn(false)
+    }
+    document.addEventListener('click', onGlobalClick, true)
+    return () => document.removeEventListener('click', onGlobalClick, true)
+  }, []) // deps vides — on lit depuis refs
+
+  // ── Ghost box : rotation de messages + timer de disparition ──────────────
+  useEffect(() => {
+    if (!ghostBox) return
+    let rotateId: ReturnType<typeof setInterval>
+    let warningId: ReturnType<typeof setTimeout>
+    let hideId:    ReturnType<typeof setTimeout>
+
+    const pool = [...GHOST_BOX_REPLIES].filter(m => m !== 'Hey! Ouvre moi!').sort(() => Math.random() - 0.5)
+    let idx = 0
+
+    rotateId = setInterval(() => {
+      setGhostBoxMsg(pool[idx % pool.length])
+      idx++
+    }, 3200)
+
+    warningId = setTimeout(() => {
+      clearInterval(rotateId)
+      setGhostBoxWarn(true)
+      setGhostBoxMsg('Encore 10 secondes...')
+    }, 20000)
+
+    hideId = setTimeout(() => {
+      clearTimeout(warningId)
+      setGhostBox(null)
+      try { localStorage.setItem(LS_BOX_IGNORED, '1') } catch {}
+    }, 30000)
+
+    return () => {
+      clearInterval(rotateId)
+      clearTimeout(warningId)
+      clearTimeout(hideId)
+    }
+  }, [ghostBox])
 
   // URL hash triggers — pour test direct
   useEffect(() => {
@@ -1148,6 +1281,44 @@ export default function EasterEggs({ config = {}, isGuest = false }: { config?: 
         setShowClipy(true)
       }} onClose={() => setShowPandora(false)} />}
       {showClipy      && <ClippyEgg onDismiss={() => { localStorage.removeItem('clippy_is_larbin'); setIsMastered(localStorage.getItem('clippy_mastered') === '1'); setShowClipy(false) }} customReplies={config.clippyReplies} />}
+
+      {/* ── Ghost box pré-pandore : coffre flottant avec bulle ── */}
+      {ghostBox && !showClipy && !showPandora && (
+        <div
+          style={{ position:'fixed', left:ghostBox.x, top:ghostBox.y, zIndex:891, userSelect:'none', animation:'ee-fadein .4s ease' }}
+        >
+          {/* Bulle de dialogue */}
+          <div style={{
+            position:'absolute', bottom:'calc(100% + 8px)', left:'50%', transform:'translateX(-50%)',
+            background: ghostBoxWarn ? '#3a0a0a' : '#fffde7',
+            border:`2px solid ${ghostBoxWarn ? '#e85a5a' : '#c4a030'}`,
+            borderRadius:10, padding:'7px 11px', fontSize:12,
+            color: ghostBoxWarn ? '#ff8888' : '#1a1a1a',
+            whiteSpace:'nowrap', maxWidth:200, textAlign:'center',
+            boxShadow:`0 4px 16px ${ghostBoxWarn ? 'rgba(232,90,90,.4)' : 'rgba(0,0,0,.3)'}`,
+            animation:'clippy-bubble-in .2s ease',
+          }}>
+            {ghostBoxMsg}
+            {/* Petit triangle */}
+            <div style={{ position:'absolute', bottom:-9, left:'50%', transform:'translateX(-50%)', width:0, height:0, borderLeft:'8px solid transparent', borderRight:'8px solid transparent', borderTop:`9px solid ${ghostBoxWarn ? '#e85a5a' : '#c4a030'}` }} />
+          </div>
+          {/* Le coffre cliquable */}
+          <button
+            onClick={e => {
+              e.stopPropagation()
+              setGhostBox(null)
+              const t = parseInt(localStorage.getItem('clippy_triggers') ?? '0') + 1
+              localStorage.setItem('clippy_triggers', String(t))
+              discoverEgg('clippy')
+              setShowPandora(true)
+            }}
+            title="Une boîte de Pandore..."
+            style={{ background:'none', border:'none', cursor:'pointer', fontSize:'2.2rem', filter:`drop-shadow(0 4px 14px ${ghostBoxWarn ? 'rgba(232,90,90,.9)' : 'rgba(232,196,106,.8)'})`, padding:0, lineHeight:1, display:'block', animation: ghostBoxWarn ? 'ee-shake .4s ease' : 'none' }}
+          >
+            📦
+          </button>
+        </div>
+      )}
 
       {/* Boîte de Pandore aléatoire — spawn rare selon le nombre de triggers */}
       {spawnedBox && !showClipy && !showPandora && (
