@@ -1589,7 +1589,10 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
         @keyframes death-skull-pulse  { 0%,100%{transform:scale(1)} 50%{transform:scale(1.12)} }
         .clippy-hpbar-clippy { position:fixed; top:max(14px,calc(env(safe-area-inset-top,0px) + 14px)); left:16px; z-index:99995; }
         .clippy-hpbar-player { position:fixed; top:max(14px,calc(env(safe-area-inset-top,0px) + 14px)); left:50%; transform:translateX(-50%); z-index:99995; }
-        @media(max-width:600px){ .clippy-hpbar-clippy,.clippy-hpbar-player{ top:max(48px,calc(env(safe-area-inset-top,0px) + 14px)); } }
+        @media(max-width:600px){
+          .clippy-hpbar-player { top:max(14px,calc(env(safe-area-inset-top,0px) + 14px)); left:50%; transform:translateX(-50%); }
+          .clippy-hpbar-clippy { top:max(62px,calc(env(safe-area-inset-top,0px) + 62px)); left:50%; transform:translateX(-50%); }
+        }
       `}</style>
 
       {/* ── Arène background (combat uniquement — bloque tout le site derrière) ── */}
