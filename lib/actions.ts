@@ -2208,29 +2208,39 @@ export async function feedTamagotchi(score: number = 5, perfect: boolean = false
   }
 
   const { pet: synced } = applyTamaDecay(pet)
+  if (synced.stage === 'dead') return { data: null, error: 'Ton alien est mort...' }
   if (synced.is_sleeping) return { data: null, error: "Ton alien dort… réveille-le d'abord ! 💤" }
   const now = new Date().toISOString()
   const today = now.slice(0, 10)
-  const hungerReduction = Math.max(20, score * 2)  // minimum 20 pts, +2 par humain attrapé
+  const hungerReduction = Math.max(20, score * 2)
   const xpGain = tamaXpGain(pet, 15 + (perfect ? 10 : 0))
-  const updates = {
+
+  // Colonnes toujours présentes
+  const updates: Record<string, any> = {
     hunger: Math.max(0, synced.hunger - hungerReduction),
-    happiness: synced.happiness, health: synced.health,
-    age_hours: synced.age_hours, stage: synced.stage,
-    energy: synced.energy, is_sleeping: synced.is_sleeping, is_sick: synced.is_sick,
-    last_fed: now, last_sync: now,
+    happiness: synced.happiness,
+    health: synced.health,
+    age_hours: synced.age_hours,
+    stage: synced.stage,
+    energy: synced.energy,
+    is_sleeping: synced.is_sleeping,
+    is_sick: synced.is_sick,
+    last_fed: now,
+    last_sync: now,
     poop_count: Math.min(5, (pet.poop_count ?? 0) + (Math.random() < 0.6 ? 1 : 0)),
     xp: Math.min(9999, (pet.xp ?? 0) + xpGain),
-    last_neglect_penalty_at: synced.last_neglect_penalty_at,
-    x2_exp_until: synced.x2_exp_until,
-    ...computeStreak(pet, today),
   }
-  const { data, error: dbError } = await (supabase as any).from('tamagotchi').update(updates).eq('user_id', user.id).select().single()
-  if (dbError) return { data: null, error: 'Erreur sauvegarde repas' }
-  if (!data) {
-    const { data: refreshed } = await (supabase as any).from('tamagotchi').select('*').eq('user_id', user.id).single()
-    return { data: refreshed, error: null }
-  }
+  // Colonnes optionnelles — incluses seulement si elles existent dans la DB
+  if ('care_streak' in pet)              Object.assign(updates, computeStreak(pet, today))
+  if ('last_neglect_penalty_at' in pet)  updates.last_neglect_penalty_at = synced.last_neglect_penalty_at ?? null
+  if ('x2_exp_until' in pet)             updates.x2_exp_until = synced.x2_exp_until ?? null
+
+  // Séparer update et select pour éviter les erreurs RLS sur le retour
+  const { error: dbError } = await (supabase as any)
+    .from('tamagotchi').update(updates).eq('user_id', user.id)
+  if (dbError) return { data: null, error: `Erreur sauvegarde repas (${dbError.code ?? dbError.message})` }
+  const { data } = await (supabase as any)
+    .from('tamagotchi').select('*').eq('user_id', user.id).single()
   return { data, error: null }
 }
 
@@ -2262,19 +2272,20 @@ export async function playWithTamagotchi(score: number = 5) {
   }
 
   const xpGain = tamaXpGain(pet, Math.max(10, Math.min(25, Math.round(score * 2)))) * x2Multiplier
-  const updates = {
+  const updates: Record<string, any> = {
     happiness: Math.min(100, synced.happiness + happinessGain),
     hunger: synced.hunger, health: synced.health,
     age_hours: synced.age_hours, stage: synced.stage,
     energy: synced.energy, is_sleeping: synced.is_sleeping, is_sick: synced.is_sick,
     last_played: now, last_sync: now,
     xp: Math.min(9999, (pet.xp ?? 0) + xpGain),
-    last_interacted_at: now,
-    x2_exp_until: x2ExpUpdate,
-    last_neglect_penalty_at: synced.last_neglect_penalty_at,
-    ...computeStreak(pet, today),
   }
-  const { data } = await (supabase as any).from('tamagotchi').update(updates).eq('user_id', user.id).select().single()
+  if ('last_interacted_at' in pet)       updates.last_interacted_at = now
+  if ('x2_exp_until' in pet)             updates.x2_exp_until = x2ExpUpdate
+  if ('last_neglect_penalty_at' in pet)  updates.last_neglect_penalty_at = synced.last_neglect_penalty_at ?? null
+  if ('care_streak' in pet)              Object.assign(updates, computeStreak(pet, today))
+  await (supabase as any).from('tamagotchi').update(updates).eq('user_id', user.id)
+  const { data } = await (supabase as any).from('tamagotchi').select('*').eq('user_id', user.id).single()
   return { data, error: null }
 }
 
