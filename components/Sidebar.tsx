@@ -54,6 +54,7 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
         { href: '/notes',          icon: '📊', label: 'Classements Films',   short: 'Notes'     },
         ...(hasRageuxEgg ? [{ href: '/notes?tab=pires', icon: '💀', label: 'Pires Films', short: 'Pires' }] : []),
         { href: '/rattrapage',     icon: '🎓', label: 'Rattrapages Cinéma',  short: 'Rattrapage'},
+        ...(profile ? [{ href: '/watchlist', icon: '📋', label: 'Mes Watchlists', short: 'Watch' }] : []),
       ],
     },
     {

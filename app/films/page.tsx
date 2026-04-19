@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
 import { CONFIG, isMarathonLive } from '@/lib/config'
 import FilmsClient from './FilmsClient'
+import { getUserWatchlists } from '@/lib/actions'
 
 export const revalidate = 30
 
@@ -24,19 +25,22 @@ export default async function FilmsPage() {
   let negativeRatings: any[] = []
   let hasRageuxEgg = false
 
+  let userWatchlists: any[] = []
   if (user) {
-    const [{ data: w }, { data: r }, { data: p }, { data: nr }, { data: eggs }] = await Promise.all([
+    const [{ data: w }, { data: r }, { data: p }, { data: nr }, { data: eggs }, wl] = await Promise.all([
       supabase.from('watched').select('film_id, pre').eq('user_id', user.id),
       supabase.from('ratings').select('film_id, score').eq('user_id', user.id),
       supabase.from('profiles').select('*').eq('id', user.id).single(),
       (supabase as any).from('negative_ratings').select('film_id, score').eq('user_id', user.id),
       supabase.from('discovered_eggs').select('egg_id').eq('user_id', user.id),
+      getUserWatchlists(),
     ])
     watched = w ?? []
     ratings = r ?? []
     profile = p
     negativeRatings = nr ?? []
     hasRageuxEgg = (eggs ?? []).some((e: any) => e.egg_id === 'rageux')
+    userWatchlists = wl ?? []
   }
 
   // Global watch counts per film
@@ -100,6 +104,7 @@ export default async function FilmsPage() {
       negativeRatingMap={negativeRatingMap}
       hasRageuxEgg={hasRageuxEgg}
       rattrapageMap={rattrapageMap}
+      userWatchlists={userWatchlists}
     />
   )
 }

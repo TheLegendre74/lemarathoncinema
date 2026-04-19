@@ -141,6 +141,17 @@ export default async function ProfilPage({ searchParams }: { searchParams: Promi
         ))}
       </div>
 
+      {/* Watchlist */}
+      <div className="section-title" style={{ marginTop: '1rem' }}>Mes Watchlists</div>
+      <a href="/watchlist" style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.9rem 1.1rem', marginBottom: '1.5rem', textDecoration: 'none', color: 'var(--text)', transition: 'border-color .2s' }}>
+        <span style={{ fontSize: '1.5rem' }}>📋</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '.9rem', fontWeight: 500 }}>Gérer mes watchlists</div>
+          <div style={{ fontSize: '.75rem', color: 'var(--text3)', marginTop: '.15rem' }}>Crée et partage tes listes de films à voir</div>
+        </div>
+        <span style={{ fontSize: '.8rem', color: 'var(--text3)' }}>→</span>
+      </a>
+
       {/* Messages privés */}
       <MessagesSection
         myId={user.id}

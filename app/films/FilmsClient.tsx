@@ -5,12 +5,18 @@ import Image from 'next/image'
 import Poster from '@/components/Poster'
 import Forum from '@/components/Forum'
 import { useToast } from '@/components/ToastProvider'
-import { toggleWatched, markWatched, upsertRating, upsertNegativeRating, addFilm, updateFilm, reportFilm, discoverEgg, getFilmWatchProviders, adminSetFilmCategory, setFilmRattrapage, submitMarathonWatchRequest } from '@/lib/actions'
+import { toggleWatched, markWatched, upsertRating, upsertNegativeRating, addFilm, updateFilm, reportFilm, discoverEgg, getFilmWatchProviders, adminSetFilmCategory, setFilmRattrapage, submitMarathonWatchRequest, addFilmToWatchlist, removeFilmFromWatchlist, createWatchlist } from '@/lib/actions'
 import type { TMDBSuggestion } from '@/lib/tmdb'
 import { CONFIG } from '@/lib/config'
 import { useRouter } from 'next/navigation'
 import JawsScrollOverlay from '@/components/JawsScrollOverlay'
 import type { Film, Profile } from '@/lib/supabase/types'
+
+interface WatchlistInfo {
+  id: string
+  name: string
+  watchlist_items: { film_id: number }[]
+}
 
 interface Props {
   films: Film[]
@@ -29,6 +35,7 @@ interface Props {
   age18confirmed: boolean
   hasRageuxEgg: boolean
   rattrapageMap: Record<number, string>
+  userWatchlists: WatchlistInfo[]
 }
 
 function avgRating(scores: number[] | undefined) {
@@ -58,10 +65,14 @@ function playGodfatherTheme() {
 
 
 // ─── FILM MODAL ──────────────────────────────────────────────────────────────
-function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeRating, watchPct, ratingScores, negativeRatingScores, isWeekFilm, isMarathonLive, hasRageuxEgg, onClose, onRefresh }: {
+function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeRating, watchPct, ratingScores, negativeRatingScores, isWeekFilm, isMarathonLive, hasRageuxEgg, watchlists, watchlistFilmMap, onWatchlistToggle, onWatchlistCreate, onClose, onRefresh }: {
   film: Film; profile: Profile | null; isWatched: boolean; watchedPre: boolean | null; myRating: number | undefined; myNegativeRating: number | undefined
   watchPct: number; ratingScores: number[]; negativeRatingScores: number[]; isWeekFilm: boolean
-  isMarathonLive: boolean; hasRageuxEgg: boolean; onClose: () => void; onRefresh: () => void
+  isMarathonLive: boolean; hasRageuxEgg: boolean
+  watchlists: WatchlistInfo[]; watchlistFilmMap: Record<number, string[]>
+  onWatchlistToggle: (watchlistId: string, filmId: number) => Promise<void>
+  onWatchlistCreate: (name: string, filmId: number) => Promise<void>
+  onClose: () => void; onRefresh: () => void
 }) {
   const [tab, setTab] = useState<'info' | 'streaming' | 'forum'>('info')
   const [hov, setHov] = useState(0)
@@ -73,6 +84,9 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
   const [genreVal, setGenreVal] = useState(film.genre)
   const [reporting, setReporting] = useState(false)
   const [reportReason, setReportReason] = useState('')
+  const [wlDropOpen, setWlDropOpen] = useState(false)
+  const [wlModalNewName, setWlModalNewName] = useState('')
+  const [wlModalCreating, setWlModalCreating] = useState(false)
   // Limite quotidienne marathon
   const [marathonLimitState, setMarathonLimitState] = useState<null | 'limit_reached' | 'pending' | 'blocked'>(null)
   const [requestMsg, setRequestMsg] = useState('')
@@ -380,6 +394,52 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
                       ? '✓ Vu pendant le marathon — Retirer'
                       : `🏆 J'ai vu ce film pendant le marathon (+${CONFIG.EXP_FILM} EXP)`}
                   </button>
+                )}
+              </div>
+
+              {/* Watchlist button */}
+              <div style={{ position: 'relative', marginTop: '.5rem' }}>
+                <button
+                  onClick={() => { setWlDropOpen(o => !o); setWlModalNewName('') }}
+                  className="btn btn-outline btn-full"
+                  style={{ fontSize: '.83rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.5rem', color: watchlistFilmMap[film.id]?.length ? '#c084fc' : 'var(--text2)', borderColor: watchlistFilmMap[film.id]?.length ? 'rgba(160,90,232,.35)' : undefined, background: watchlistFilmMap[film.id]?.length ? 'rgba(160,90,232,.06)' : undefined }}
+                >
+                  📋 {watchlistFilmMap[film.id]?.length
+                    ? `Dans ${watchlistFilmMap[film.id].length} watchlist${watchlistFilmMap[film.id].length > 1 ? 's' : ''}`
+                    : 'Ajouter à une watchlist'}
+                </button>
+                {wlDropOpen && (
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.5rem', marginTop: '.3rem', boxShadow: '0 8px 24px rgba(0,0,0,.6)' }}>
+                    {watchlists.length === 0 && (
+                      <div style={{ fontSize: '.75rem', color: 'var(--text3)', padding: '.3rem .4rem', marginBottom: '.4rem' }}>Aucune watchlist — crée-en une ci-dessous</div>
+                    )}
+                    {watchlists.map(wl => {
+                      const inList = watchlistFilmMap[film.id]?.includes(wl.id)
+                      return (
+                        <button key={wl.id} onClick={() => onWatchlistToggle(wl.id, film.id)}
+                          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '.5rem', background: inList ? 'rgba(160,90,232,.1)' : 'transparent', border: 'none', borderRadius: 6, padding: '.4rem .6rem', fontSize: '.8rem', color: inList ? '#c084fc' : 'var(--text2)', cursor: 'pointer', textAlign: 'left', transition: 'background .1s', marginBottom: '.2rem' }}>
+                          <span style={{ fontSize: '.9rem', width: 18 }}>{inList ? '✓' : '+'}</span>
+                          <span>{wl.name}</span>
+                        </button>
+                      )
+                    })}
+                    <div style={{ borderTop: watchlists.length > 0 ? '1px solid var(--border)' : 'none', marginTop: watchlists.length > 0 ? '.4rem' : 0, paddingTop: watchlists.length > 0 ? '.4rem' : 0, display: 'flex', gap: '.4rem' }}>
+                      <input
+                        value={wlModalNewName}
+                        onChange={e => setWlModalNewName(e.target.value.slice(0, 40))}
+                        onKeyDown={e => { if (e.key === 'Enter' && wlModalNewName.trim()) { setWlModalCreating(true); onWatchlistCreate(wlModalNewName, film.id).then(() => { setWlModalCreating(false); setWlModalNewName('') }) } }}
+                        placeholder="Nouvelle liste…"
+                        style={{ flex: 1, background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 6, padding: '.4rem .6rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.8rem', outline: 'none' }}
+                      />
+                      <button
+                        onClick={() => { if (!wlModalNewName.trim()) return; setWlModalCreating(true); onWatchlistCreate(wlModalNewName, film.id).then(() => { setWlModalCreating(false); setWlModalNewName('') }) }}
+                        disabled={wlModalCreating || !wlModalNewName.trim()}
+                        style={{ background: 'var(--gold)', border: 'none', borderRadius: 6, padding: '.4rem .75rem', fontSize: '.8rem', color: '#0a0a0f', cursor: 'pointer', fontWeight: 700, flexShrink: 0 }}
+                      >
+                        {wlModalCreating ? '…' : '+'}
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             </>
@@ -934,7 +994,7 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
 
 
 // ─── MAIN FILMS CLIENT ───────────────────────────────────────────────────────
-export default function FilmsClient({ films, profile, watchedIds, watchedPreMap, myRatings, myNegativeRatings, watchCountMap, ratingMap, negativeRatingMap, totalUsers, weekFilmId, isMarathonLive, saisonNumero, age18confirmed, hasRageuxEgg, rattrapageMap: initialRattrapageMap }: Props) {
+export default function FilmsClient({ films, profile, watchedIds, watchedPreMap, myRatings, myNegativeRatings, watchCountMap, ratingMap, negativeRatingMap, totalUsers, weekFilmId, isMarathonLive, saisonNumero, age18confirmed, hasRageuxEgg, rattrapageMap: initialRattrapageMap, userWatchlists: initialWatchlists }: Props) {
   const router = useRouter()
   const { addToast } = useToast()
   const [search, setSearch] = useState('')
@@ -952,6 +1012,67 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
   const [localWatchedIds, setLocalWatchedIds] = useState<number[]>(watchedIds)
   useEffect(() => { setLocalWatchedIds(watchedIds) }, [watchedIds])
   const watchedSet = useMemo(() => new Set(localWatchedIds), [localWatchedIds])
+
+  // ── Watchlist state ─────────────────────���──────────────────
+  const [watchlists, setWatchlists] = useState<WatchlistInfo[]>(initialWatchlists ?? [])
+  const [watchlistDropOpen, setWatchlistDropOpen] = useState<number | null>(null)
+  const [wlNewName, setWlNewName] = useState('')
+  const [wlCreating, setWlCreating] = useState(false)
+
+  const watchlistFilmMap = useMemo(() => {
+    const map: Record<number, string[]> = {}
+    watchlists.forEach(wl => {
+      wl.watchlist_items.forEach(item => {
+        if (!map[item.film_id]) map[item.film_id] = []
+        map[item.film_id].push(wl.id)
+      })
+    })
+    return map
+  }, [watchlists])
+
+  async function handleWatchlistToggle(e: React.MouseEvent, filmId: number, watchlistId: string) {
+    e.stopPropagation()
+    const inList = watchlistFilmMap[filmId]?.includes(watchlistId)
+    if (inList) {
+      await removeFilmFromWatchlist(watchlistId, filmId)
+      setWatchlists(prev => prev.map(wl => wl.id === watchlistId
+        ? { ...wl, watchlist_items: wl.watchlist_items.filter(i => i.film_id !== filmId) }
+        : wl
+      ))
+    } else {
+      await addFilmToWatchlist(watchlistId, filmId)
+      setWatchlists(prev => prev.map(wl => wl.id === watchlistId
+        ? { ...wl, watchlist_items: [...wl.watchlist_items, { film_id: filmId }] }
+        : wl
+      ))
+    }
+  }
+
+  async function handleWlCreate(e: React.MouseEvent, filmId: number) {
+    e.stopPropagation()
+    if (!wlNewName.trim()) return
+    setWlCreating(true)
+    const res = await createWatchlist(wlNewName)
+    setWlCreating(false)
+    if (res.error) { addToast(res.error, 'error'); return }
+    const newWl: WatchlistInfo = { id: res.data.id, name: wlNewName.trim(), watchlist_items: [] }
+    setWatchlists(prev => [...prev, newWl])
+    setWlNewName('')
+    await addFilmToWatchlist(res.data.id, filmId)
+    setWatchlists(prev => prev.map(wl => wl.id === res.data.id
+      ? { ...wl, watchlist_items: [{ film_id: filmId }] }
+      : wl
+    ))
+    addToast(`Ajouté à "${wlNewName.trim()}"`, 'success')
+  }
+
+  // Fermer le dropdown watchlist sur clic extérieur
+  useEffect(() => {
+    if (watchlistDropOpen === null) return
+    function handle() { setWatchlistDropOpen(null) }
+    document.addEventListener('click', handle)
+    return () => document.removeEventListener('click', handle)
+  }, [watchlistDropOpen])
 
   // ── Shark easter egg ───────────────────────────────────────
   const [sharkVisible, setSharkVisible] = useState(false)
@@ -1293,6 +1414,70 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                     {isWatched ? '✓ Vu' : '+ J\'ai vu'}
                   </button>
                 )}
+
+                {/* Bouton watchlist */}
+                {profile && (
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      onClick={e => { e.stopPropagation(); setWatchlistDropOpen(watchlistDropOpen === film.id ? null : film.id); setWlNewName('') }}
+                      style={{
+                        marginTop: '.3rem',
+                        width: '100%',
+                        background: watchlistFilmMap[film.id]?.length ? 'rgba(160,90,232,.12)' : 'rgba(255,255,255,.03)',
+                        border: `1px solid ${watchlistFilmMap[film.id]?.length ? 'rgba(160,90,232,.35)' : 'rgba(255,255,255,.08)'}`,
+                        borderRadius: 6,
+                        padding: '.28rem .4rem',
+                        fontSize: '.65rem',
+                        color: watchlistFilmMap[film.id]?.length ? '#c084fc' : 'var(--text3)',
+                        cursor: 'pointer',
+                        transition: 'background .15s, border-color .15s',
+                        lineHeight: 1.3,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '.3rem',
+                      }}
+                    >
+                      {watchlistFilmMap[film.id]?.length ? `📋 ${watchlistFilmMap[film.id].length} liste${watchlistFilmMap[film.id].length > 1 ? 's' : ''}` : '📋 Watchlist'}
+                    </button>
+
+                    {watchlistDropOpen === film.id && (
+                      <div
+                        onClick={e => e.stopPropagation()}
+                        style={{ position: 'absolute', bottom: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.4rem', marginBottom: '.3rem', boxShadow: '0 8px 24px rgba(0,0,0,.6)', minWidth: 160 }}
+                      >
+                        {watchlists.length === 0 && (
+                          <div style={{ fontSize: '.68rem', color: 'var(--text3)', padding: '.3rem .4rem', marginBottom: '.3rem' }}>Aucune watchlist</div>
+                        )}
+                        {watchlists.map(wl => {
+                          const inList = watchlistFilmMap[film.id]?.includes(wl.id)
+                          return (
+                            <button key={wl.id} onClick={e => handleWatchlistToggle(e, film.id, wl.id)}
+                              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '.4rem', background: inList ? 'rgba(160,90,232,.1)' : 'transparent', border: 'none', borderRadius: 4, padding: '.3rem .5rem', fontSize: '.7rem', color: inList ? '#c084fc' : 'var(--text2)', cursor: 'pointer', textAlign: 'left', transition: 'background .1s' }}>
+                              <span style={{ fontSize: '.75rem' }}>{inList ? '✓' : '+'}</span>
+                              <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{wl.name}</span>
+                            </button>
+                          )
+                        })}
+                        <div style={{ borderTop: watchlists.length > 0 ? '1px solid var(--border)' : 'none', marginTop: watchlists.length > 0 ? '.3rem' : 0, paddingTop: watchlists.length > 0 ? '.3rem' : 0 }}>
+                          <div style={{ display: 'flex', gap: '.3rem' }}>
+                            <input
+                              value={wlNewName}
+                              onChange={e => setWlNewName(e.target.value.slice(0, 40))}
+                              onKeyDown={e => { if (e.key === 'Enter') handleWlCreate(e as any, film.id) }}
+                              placeholder="Nouvelle liste…"
+                              style={{ flex: 1, minWidth: 0, background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 4, padding: '.25rem .4rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.68rem', outline: 'none' }}
+                            />
+                            <button onClick={e => handleWlCreate(e, film.id)} disabled={wlCreating || !wlNewName.trim()}
+                              style={{ background: 'var(--gold)', border: 'none', borderRadius: 4, padding: '.25rem .5rem', fontSize: '.68rem', color: '#0a0a0f', cursor: 'pointer', fontWeight: 600, flexShrink: 0 }}>
+                              {wlCreating ? '…' : '+'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )
@@ -1317,6 +1502,27 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
           isWeekFilm={weekFilmId === modal.id}
           isMarathonLive={isMarathonLive}
           hasRageuxEgg={hasRageuxEgg}
+          watchlists={watchlists}
+          watchlistFilmMap={watchlistFilmMap}
+          onWatchlistToggle={async (wlId, filmId) => {
+            const inList = watchlistFilmMap[filmId]?.includes(wlId)
+            if (inList) {
+              await removeFilmFromWatchlist(wlId, filmId)
+              setWatchlists(prev => prev.map(wl => wl.id === wlId ? { ...wl, watchlist_items: wl.watchlist_items.filter(i => i.film_id !== filmId) } : wl))
+            } else {
+              await addFilmToWatchlist(wlId, filmId)
+              setWatchlists(prev => prev.map(wl => wl.id === wlId ? { ...wl, watchlist_items: [...wl.watchlist_items, { film_id: filmId }] } : wl))
+            }
+          }}
+          onWatchlistCreate={async (name, filmId) => {
+            const res = await createWatchlist(name)
+            if (res.error) { addToast(res.error, 'error'); return }
+            const newWl: WatchlistInfo = { id: res.data.id, name: name.trim(), watchlist_items: [] }
+            setWatchlists(prev => [...prev, newWl])
+            await addFilmToWatchlist(res.data.id, filmId)
+            setWatchlists(prev => prev.map(wl => wl.id === res.data.id ? { ...wl, watchlist_items: [{ film_id: filmId }] } : wl))
+            addToast(`Ajouté à "${name.trim()}"`, 'success')
+          }}
           onClose={() => setModal(null)}
           onRefresh={() => router.refresh()}
         />

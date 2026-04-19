@@ -2989,3 +2989,137 @@ export async function getUnreadMessageCount(): Promise<number> {
 
   return count ?? 0
 }
+
+// ── WATCHLIST ─────────────────────────────────────────────────────────────────
+
+export async function getUserWatchlists() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+  const { data } = await (supabase as any)
+    .from('watchlists')
+    .select('*, watchlist_items(film_id, films(id, titre, annee, realisateur, poster, genre))')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: true })
+  return data ?? []
+}
+
+export async function getPublicWatchlists() {
+  const supabase = await createClient()
+  const { data } = await (supabase as any)
+    .from('watchlists')
+    .select('*, watchlist_items(film_id, films(id, titre, annee, realisateur, poster, genre)), profiles(pseudo, avatar_url)')
+    .eq('is_public', true)
+    .order('updated_at', { ascending: false })
+  return data ?? []
+}
+
+export async function createWatchlist(name: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { data: null, error: 'Non connecté' }
+  const trimmed = name.trim().slice(0, 60)
+  if (!trimmed) return { data: null, error: 'Nom invalide' }
+  const { data, error } = await (supabase as any)
+    .from('watchlists')
+    .insert({ user_id: user.id, name: trimmed })
+    .select()
+    .single()
+  if (error) return { data: null, error: 'Erreur création' }
+  revalidatePath('/watchlist')
+  return { data, error: null }
+}
+
+export async function deleteWatchlist(id: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  const { error } = await (supabase as any)
+    .from('watchlists')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', user.id)
+  if (error) return { error: 'Erreur suppression' }
+  revalidatePath('/watchlist')
+  return { error: null }
+}
+
+export async function renameWatchlist(id: string, name: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  const trimmed = name.trim().slice(0, 60)
+  if (!trimmed) return { error: 'Nom invalide' }
+  const { error } = await (supabase as any)
+    .from('watchlists')
+    .update({ name: trimmed, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('user_id', user.id)
+  if (error) return { error: 'Erreur renommage' }
+  revalidatePath('/watchlist')
+  return { error: null }
+}
+
+export async function toggleWatchlistVisibility(id: string, isPublic: boolean, isAnonymous: boolean) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  const { error } = await (supabase as any)
+    .from('watchlists')
+    .update({ is_public: isPublic, is_anonymous: isAnonymous, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('user_id', user.id)
+  if (error) return { error: 'Erreur mise à jour' }
+  revalidatePath('/watchlist')
+  revalidatePath('/watchlist/public')
+  return { error: null }
+}
+
+export async function addFilmToWatchlist(watchlistId: string, filmId: number) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  const { data: wl } = await (supabase as any)
+    .from('watchlists').select('id').eq('id', watchlistId).eq('user_id', user.id).single()
+  if (!wl) return { error: 'Watchlist introuvable' }
+  const { error } = await (supabase as any)
+    .from('watchlist_items')
+    .insert({ watchlist_id: watchlistId, film_id: filmId })
+  if (error && error.code !== '23505') return { error: 'Erreur ajout' }
+  revalidatePath('/watchlist')
+  revalidatePath('/films')
+  return { error: null }
+}
+
+export async function removeFilmFromWatchlist(watchlistId: string, filmId: number) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  const { data: wl } = await (supabase as any)
+    .from('watchlists').select('id').eq('id', watchlistId).eq('user_id', user.id).single()
+  if (!wl) return { error: 'Watchlist introuvable' }
+  await (supabase as any)
+    .from('watchlist_items')
+    .delete()
+    .eq('watchlist_id', watchlistId)
+    .eq('film_id', filmId)
+  revalidatePath('/watchlist')
+  revalidatePath('/films')
+  return { error: null }
+}
+
+export async function getUserWatchlistFilmIds() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return {}
+  const { data } = await (supabase as any)
+    .from('watchlist_items')
+    .select('film_id, watchlist_id, watchlists!inner(user_id)')
+    .eq('watchlists.user_id', user.id)
+  const map: Record<number, string[]> = {}
+  ;(data ?? []).forEach((item: any) => {
+    if (!map[item.film_id]) map[item.film_id] = []
+    map[item.film_id].push(item.watchlist_id)
+  })
+  return map
+}
