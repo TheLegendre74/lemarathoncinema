@@ -165,7 +165,7 @@ html, body {
 /* ── FILM CARDS ── */
 .film-card {
   background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--rl); overflow: hidden; cursor: pointer;
+  border-radius: var(--rl); overflow: visible; cursor: pointer;
   transition: transform .2s, border-color .2s, box-shadow .2s; position: relative;
 }
 .film-card:hover { transform: translateY(-4px); border-color: var(--border2); box-shadow: 0 16px 40px rgba(0,0,0,.5); }

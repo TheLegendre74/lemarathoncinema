@@ -1300,7 +1300,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
               onClick={() => { if (menuOpen) { setAdminCategoryOpen(null); return } if (rattrapageOpen === film.id) { setRattrapageOpen(null); return } setModal(film) }}
               style={cardGlow}
             >
-              <div style={{ width: '100%', aspectRatio: '2/3', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: '100%', aspectRatio: '2/3', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--rl) var(--rl) 0 0' }}>
                 <Poster film={film} fill style={{ objectFit: 'cover' }} />
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(8,8,14,.92) 0%, transparent 55%)', opacity: 0, transition: 'opacity .2s', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '.8rem' }} className="poster-hover-overlay">
                   <div style={{ fontSize: '.82rem', fontWeight: 600, color: 'var(--text)', lineHeight: 1.2, marginBottom: '.15rem' }}>{film.titre}</div>
