@@ -3048,7 +3048,13 @@ export async function createWatchlist(name: string) {
     .insert({ user_id: user.id, name: trimmed })
     .select()
     .single()
-  if (error) return { data: null, error: 'Erreur création' }
+  if (error) return { data: null, error: `Erreur création: ${error.message ?? error.code ?? JSON.stringify(error)}` }
+  if (!data) {
+    const { data: refreshed } = await (supabase as any).from('watchlists').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(1).single()
+    if (!refreshed) return { data: null, error: 'Watchlist créée mais introuvable' }
+    revalidatePath('/watchlist')
+    return { data: refreshed, error: null }
+  }
   revalidatePath('/watchlist')
   return { data, error: null }
 }
