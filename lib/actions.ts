@@ -2505,7 +2505,7 @@ export async function huntTamagotchi(score: number, caught: boolean) {
   if (!achievements.includes('le_cycle')) achievements.push('le_cycle')
 
   // Le xénomorphe pond un œuf et le cycle recommence
-  const cycleUpdates = {
+  const cycleUpdates: Record<string, any> = {
     stage: 'egg',
     age_hours: 0,
     hunger: 0,
@@ -2516,24 +2516,22 @@ export async function huntTamagotchi(score: number, caught: boolean) {
     is_sick: false,
     last_fed: null,
     last_healed: null,
-    last_interacted_at: now,
-    last_neglect_penalty_at: null,
     poop_count: 0,
-    hunt_count: huntCount,
-    last_hunted: now,
     last_sync: now,
     xp: Math.min(9999, (pet.xp ?? 0) + xpGain),
-    achievements,
-    ...computeStreak(pet, today),
   }
+  // Colonnes optionnelles — seulement si elles existent dans la DB
+  if ('last_interacted_at'      in pet) cycleUpdates.last_interacted_at      = now
+  if ('last_neglect_penalty_at' in pet) cycleUpdates.last_neglect_penalty_at = null
+  if ('hunt_count'              in pet) cycleUpdates.hunt_count               = huntCount
+  if ('last_hunted'             in pet) cycleUpdates.last_hunted              = now
+  if ('achievements'            in pet) cycleUpdates.achievements             = achievements
+  if ('care_streak'             in pet) Object.assign(cycleUpdates, computeStreak(pet, today))
 
-  const { data, error: dbError } = await (supabase as any)
-    .from('tamagotchi').update(cycleUpdates).eq('user_id', user.id).select().single()
-  if (dbError) return { data: null, error: 'Erreur sauvegarde', cycleRestarted: false }
-  if (!data) {
-    const { data: refreshed } = await (supabase as any).from('tamagotchi').select('*').eq('user_id', user.id).single()
-    return { data: refreshed, error: null, cycleRestarted: true }
-  }
+  const { error: dbError } = await (supabase as any)
+    .from('tamagotchi').update(cycleUpdates).eq('user_id', user.id)
+  if (dbError) return { data: null, error: `Erreur sauvegarde (${dbError.code ?? dbError.message})`, cycleRestarted: false }
+  const { data } = await (supabase as any).from('tamagotchi').select('*').eq('user_id', user.id).single()
   return { data, error: null, cycleRestarted: true }
 }
 
