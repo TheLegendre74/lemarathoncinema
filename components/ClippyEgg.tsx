@@ -765,15 +765,15 @@ const H_SWORD  = 365
 const TIRED_AT_TABLE: Record<number, number> = { 1: 4, 2: 7, 3: 11, 4: 14, 5: 19, 6: 24, 7: 29, 8: 34, 9: 39 }
 const TIRED_AT = 4 // valeur par défaut (remplacée dynamiquement dans le composant)
 // HP joueur : 15 (P1-2), 10 (P3-5), 8/7/6/5 (P6-9)
-const PARRY_WINDOW_P1    = 2500
-const PARRY_WINDOW_P2    = 1900
-const PARRY_WINDOW_P3    = 1300
-const PARRY_WINDOW_P4    = 1000
-const PARRY_WINDOW_P5    = 700
-const PARRY_WINDOW_P6    = 550
-const PARRY_WINDOW_P7    = 450
-const PARRY_WINDOW_P8    = 350
-const PARRY_WINDOW_P9    = 280
+const PARRY_WINDOW_P1    = 2400
+const PARRY_WINDOW_P2    = 1800
+const PARRY_WINDOW_P3    = 1200
+const PARRY_WINDOW_P4    = 850
+const PARRY_WINDOW_P5    = 550
+const PARRY_WINDOW_P6    = 400
+const PARRY_WINDOW_P7    = 300
+const PARRY_WINDOW_P8    = 200
+const PARRY_WINDOW_P9    = 130
 const PARRY_SQ           = 150
 const MG_TARGET          = 100
 const BASE_HP            = 50
@@ -880,7 +880,7 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
       setMisses(0); setTired(false)
       setSessionLosses(0); sessionLossesRef.current = 0
       setPlayerDeaths(0); playerDeathsRef.current = 0
-      setShowAbandon(false); setShowDeathScreen(false); setHellPhase('idle')
+      setShowAbandon(false); setShowDeathScreen(false); setDeathReason('hp'); setHellPhase('idle')
       dodge()
     }
 
@@ -922,7 +922,9 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
     if (p === 8) return 6
     if (p === 7) return 7
     if (p === 6) return 8
-    if (p >= 3) return 10
+    if (p === 5) return 5
+    if (p === 4) return 5
+    if (p === 3) return 10
     return 15
   }
 
@@ -1004,6 +1006,7 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
   const playerDeathsRef    = useRef(0)
   const [showAbandon,      setShowAbandon]     = useState(false)   // conservé pour compat mini-jeu
   const [showDeathScreen,  setShowDeathScreen] = useState(false)
+  const [deathReason,      setDeathReason]     = useState<'hp'|'duel'>('hp')
   const [showLarbinMsg,    setShowLarbinMsg]   = useState(false)
   const [showLarbinModal,  setShowLarbinModal] = useState(false)
   const [hellPhase,        setHellPhase]       = useState<'idle'|'flames'|'grab'|'dialog'|'drag'|'scream'|'fade'>('idle')
@@ -1216,24 +1219,9 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
       if (nextHP <= 0) {
         clearAutoAttack()
         if (atkTimer.current) clearTimeout(atkTimer.current)
-        const newDeaths = playerDeathsRef.current + 1
-        playerDeathsRef.current = newDeaths; setPlayerDeaths(newDeaths)
-        if (newDeaths >= 3) {
-          // 3ème mort → écran de mort avec le choix
-          stopMusic()
-          setTimeout(() => setShowDeathScreen(true), 800)
-        } else {
-          // Morts 1 ou 2 : taunt + restore HP joueur, on reste en combat
-          const deathMsg = isLarbin
-            ? larbinMsg(`HAHAHA [NAME] ! Mort n°${newDeaths}/3. Continue d'essayer, c'est divertissant.`)
-            : `💀 ${newDeaths}/3 — Tu t'es relevé. Je t'attendais. Encore deux fois et c'est l'écran de mort.`
-          setMessage(deathMsg); setBubble(true)
-          playerHPRef.current = PLAYER_MAX_HP; setPlayerHP(PLAYER_MAX_HP)
-          setTimeout(() => {
-            scheduleAutoAttack()
-            atkTimer.current = setTimeout(() => triggerAttack(), 2000)
-          }, 1800)
-        }
+        stopMusic()
+        setDeathReason('hp')
+        setTimeout(() => setShowDeathScreen(true), 800)
       } else {
         setMessage(isLarbin
           ? larbinMsg(`Touché [NAME] ! Il te reste ${nextHP} HP. Pitoyable.`)
@@ -1318,23 +1306,9 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
         setMgPhase('win')
         setTimeout(() => { setMgPhase('idle'); startHellSequence() }, 800)
       } else {
-        const newLosses = sessionLossesRef.current + 1
-        sessionLossesRef.current = newLosses; setSessionLosses(newLosses)
         setMgPhase('lose')
-        if (newLosses >= 3) {
-          // Écran de mort après 1.5s
-          setTimeout(() => { setMgPhase('idle'); setShowDeathScreen(true) }, 1500)
-        } else {
-          setTimeout(() => {
-            setMgPhase('idle')
-            const newHP = Math.min(CLIPPY_MAX_HP, clippyHPRef.current + 10)
-            clippyHPRef.current = newHP; setClippyHP(newHP)
-            setMessage(isLarbin ? larbinMsg("HAHAHA [NAME] ! +10 HP pour moi. Recommençons !") : "HAHAHA ! Trop lent ! +10 HP pour moi. Recommençons !")
-            setBubble(true)
-            scheduleAutoAttack()
-            atkTimer.current = setTimeout(() => triggerAttack(), 1000)
-          }, 2000)
-        }
+        setDeathReason('duel')
+        setTimeout(() => { setMgPhase('idle'); setShowDeathScreen(true) }, 1500)
       }
     }
     return () => { window.removeEventListener('keydown', onKey); clearInterval(clippyInt) }
@@ -1346,9 +1320,12 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
     setShowDeathScreen(false)
     sessionLossesRef.current = 0; setSessionLosses(0)
     playerDeathsRef.current = 0; setPlayerDeaths(0)
-    playerHPRef.current = PLAYER_MAX_HP; setPlayerHP(PLAYER_MAX_HP)
-    const newHP = Math.min(CLIPPY_MAX_HP, clippyHPRef.current + 10)
-    clippyHPRef.current = newHP; setClippyHP(newHP)
+    const resumeHP = deathReason === 'duel' ? 10 : PLAYER_MAX_HP
+    playerHPRef.current = resumeHP; setPlayerHP(resumeHP)
+    if (deathReason === 'duel') {
+      const newClippyHP = Math.min(CLIPPY_MAX_HP, clippyHPRef.current + 10)
+      clippyHPRef.current = newClippyHP; setClippyHP(newClippyHP)
+    }
     setMessage(isLarbin
       ? larbinMsg("Tu refuses d'abandonner, [NAME] ? Parfait. Continue à souffrir.")
       : "Tu refuses d'abandonner ? Bien. Continue à souffrir.")
@@ -1645,7 +1622,7 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
         </>
       )}
 
-      {/* ══════════════ ÉCRAN DE MORT (3 défaites mini-jeu) ══════════════ */}
+      {/* ══════════════ ÉCRAN DE MORT ══════════════ */}
       {showDeathScreen && (
         <div style={{ position:'fixed', inset:0, zIndex:99999, background:'rgba(4,0,0,.97)', backdropFilter:'blur(6px)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'1.6rem', animation:'death-in .4s ease' }}>
           <div style={{ fontSize:'5rem', animation:'death-skull-pulse 1s ease-in-out infinite' }}>💀</div>
@@ -1656,8 +1633,10 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
             <div style={{ fontSize:'3rem', marginBottom:'0.8rem' }}>📎</div>
             <div style={{ fontFamily:'var(--font-display)', fontSize:'clamp(.9rem,2vw,1.1rem)', color:'#ffaaaa', lineHeight:1.7 }}>
               {isLarbin
-                ? larbinMsg('"HAHAHAHA ! Tu as encore échoué, [NAME] ! Tu veux vraiment continuer cette mascarade ou t\'avoues-tu enfin vaincu ?"')
-                : '"HAHAHAHA ! Tu as échoué 3 fois. Tu veux vraiment continuer ou t\'avoues-tu vaincu, petite chose ?"'}
+                ? larbinMsg(deathReason === 'duel' ? '"HAHAHAHA ! Tu as perdu le duel, [NAME] ! Tu veux vraiment continuer avec 10 PV ou t\'avoues-tu vaincu ?"' : '"HAHAHAHA ! Tu es mort, [NAME] ! Tu veux vraiment continuer cette mascarade ou t\'avoues-tu enfin vaincu ?"')
+                : deathReason === 'duel'
+                  ? '"HAHAHAHA ! Tu as perdu le duel final. Tu peux réessayer avec 10 PV ou t\'avouer vaincu, petite chose."'
+                  : '"HAHAHAHA ! Tu es mort. Tu veux vraiment continuer ou t\'avoues-tu vaincu, petite chose ?"'}
             </div>
           </div>
           <div style={{ display:'flex', gap:'1rem', flexWrap:'wrap', justifyContent:'center' }}>
@@ -1721,7 +1700,7 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
                 ESPACE / Clique ici !
               </div>
               <div style={{ fontSize:'.7rem', color:'rgba(255,255,255,.2)', letterSpacing:1 }}>
-                Échec #{sessionLosses} — 3 = écran de mort
+                Perds le duel → écran de mort
               </div>
             </>
           )}
@@ -1737,7 +1716,7 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
               <div style={{ fontSize:'4rem', marginBottom:'1rem' }}>📎</div>
               <div style={{ fontFamily:'var(--font-display)', fontSize:'2rem', color:'#e85a5a', marginBottom:'.5rem' }}>TROP LENT !</div>
               <div style={{ color:'var(--text2)', marginBottom:'.5rem' }}>
-                {sessionLossesRef.current >= 3 ? 'Préparation de l\'écran de mort...' : 'Clippy reprend 10 HP.'}
+                Préparation de l&apos;écran de mort…
               </div>
             </div>
           )}
