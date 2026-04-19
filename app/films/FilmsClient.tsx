@@ -1275,7 +1275,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
       </div>
 
       {/* Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 155px))', gap: '1rem', justifyContent: 'center' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(185px, 1fr))', gap: '1rem' }}>
         {filtered.map(film => {
           const isWatched = watchedSet.has(film.id)
           const maj    = isMajority(film.id)
@@ -1444,32 +1444,39 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                     {watchlistDropOpen === film.id && (
                       <div
                         onClick={e => e.stopPropagation()}
-                        style={{ position: 'absolute', bottom: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.4rem', marginBottom: '.3rem', boxShadow: '0 8px 24px rgba(0,0,0,.6)', minWidth: 160 }}
+                        onMouseDown={e => e.stopPropagation()}
+                        style={{ position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.6rem', marginBottom: '.4rem', boxShadow: '0 8px 32px rgba(0,0,0,.8)', width: 240 }}
                       >
+                        <div style={{ fontSize: '.72rem', color: 'var(--text3)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '.5rem', padding: '0 .3rem' }}>📋 Ajouter à…</div>
                         {watchlists.length === 0 && (
-                          <div style={{ fontSize: '.68rem', color: 'var(--text3)', padding: '.3rem .4rem', marginBottom: '.3rem' }}>Aucune watchlist</div>
+                          <div style={{ fontSize: '.8rem', color: 'var(--text3)', padding: '.3rem .5rem', marginBottom: '.4rem' }}>Aucune watchlist</div>
                         )}
                         {watchlists.map(wl => {
                           const inList = watchlistFilmMap[film.id]?.includes(wl.id)
                           return (
                             <button key={wl.id} onClick={e => handleWatchlistToggle(e, film.id, wl.id)}
-                              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '.4rem', background: inList ? 'rgba(160,90,232,.1)' : 'transparent', border: 'none', borderRadius: 4, padding: '.3rem .5rem', fontSize: '.7rem', color: inList ? '#c084fc' : 'var(--text2)', cursor: 'pointer', textAlign: 'left', transition: 'background .1s' }}>
-                              <span style={{ fontSize: '.75rem' }}>{inList ? '✓' : '+'}</span>
+                              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '.5rem', background: inList ? 'rgba(160,90,232,.15)' : 'rgba(255,255,255,.03)', border: `1px solid ${inList ? 'rgba(160,90,232,.3)' : 'transparent'}`, borderRadius: 6, padding: '.45rem .6rem', fontSize: '.82rem', color: inList ? '#c084fc' : 'var(--text)', cursor: 'pointer', textAlign: 'left', transition: 'background .1s', marginBottom: '.25rem' }}>
+                              <span style={{ fontSize: '.9rem', flexShrink: 0 }}>{inList ? '✓' : '○'}</span>
                               <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{wl.name}</span>
                             </button>
                           )
                         })}
-                        <div style={{ borderTop: watchlists.length > 0 ? '1px solid var(--border)' : 'none', marginTop: watchlists.length > 0 ? '.3rem' : 0, paddingTop: watchlists.length > 0 ? '.3rem' : 0 }}>
-                          <div style={{ display: 'flex', gap: '.3rem' }}>
+                        <div style={{ borderTop: '1px solid var(--border)', marginTop: '.4rem', paddingTop: '.5rem' }}>
+                          <div style={{ fontSize: '.72rem', color: 'var(--text3)', marginBottom: '.35rem', padding: '0 .2rem' }}>Nouvelle liste</div>
+                          <div style={{ display: 'flex', gap: '.4rem' }}>
                             <input
                               value={wlNewName}
                               onChange={e => setWlNewName(e.target.value.slice(0, 40))}
-                              onKeyDown={e => { if (e.key === 'Enter') handleWlCreate(e as any, film.id) }}
-                              placeholder="Nouvelle liste…"
-                              style={{ flex: 1, minWidth: 0, background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 4, padding: '.25rem .4rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.68rem', outline: 'none' }}
+                              onKeyDown={e => { e.stopPropagation(); if (e.key === 'Enter') handleWlCreate(e as any, film.id) }}
+                              onClick={e => e.stopPropagation()}
+                              placeholder="Nom de la liste…"
+                              style={{ flex: 1, minWidth: 0, background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 6, padding: '.4rem .6rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.8rem', outline: 'none' }}
                             />
-                            <button onClick={e => handleWlCreate(e, film.id)} disabled={wlCreating || !wlNewName.trim()}
-                              style={{ background: 'var(--gold)', border: 'none', borderRadius: 4, padding: '.25rem .5rem', fontSize: '.68rem', color: '#0a0a0f', cursor: 'pointer', fontWeight: 600, flexShrink: 0 }}>
+                            <button
+                              onMouseDown={e => { e.stopPropagation(); e.preventDefault() }}
+                              onClick={e => handleWlCreate(e, film.id)}
+                              disabled={wlCreating || !wlNewName.trim()}
+                              style={{ background: 'var(--gold)', border: 'none', borderRadius: 6, padding: '.4rem .7rem', fontSize: '.82rem', color: '#0a0a0f', cursor: 'pointer', fontWeight: 700, flexShrink: 0 }}>
                               {wlCreating ? '…' : '+'}
                             </button>
                           </div>
