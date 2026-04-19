@@ -50,6 +50,7 @@ const ACHIEVEMENTS: Record<string, { icon: string; label: string; desc: string }
   hunter:        { icon: '🎯', label: 'Chasseur',            desc: '5 chasses terminées' },
   apex_hunter:   { icon: '👑', label: 'Apex Prédateur',      desc: '20 chasses terminées' },
   perfect_hunt:  { icon: '💯', label: 'Chasse parfaite',     desc: 'Score 100+ en une seule chasse' },
+  le_cycle:      { icon: '🥚', label: 'Le cycle continue',   desc: 'Le xénomorphe a pondu un œuf — le cycle recommence' },
   streak_week:   { icon: '🔥', label: 'Semaine de feu',      desc: '7 jours de streak consécutifs' },
   streak_month:  { icon: '🌟', label: 'Mois de dévotion',   desc: '30 jours de streak consécutifs' },
   max_level:     { icon: '⭐', label: 'Maître de l\'espace', desc: 'Niveau 10 atteint' },
@@ -230,6 +231,8 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
   const [showFeedGame, setShowFeedGame]     = useState(false)
   const [showPlayGame, setShowPlayGame]     = useState(false)
   const [showHuntGame, setShowHuntGame]     = useState(false)
+  const [huntConfirm,  setHuntConfirm]      = useState(false)
+  const [cycleOverlay, setCycleOverlay]     = useState(false)
   const [accessories,  setAccessories]      = useState<Accessory[]>([])
   const [showHearts,   setShowHearts]       = useState(false)
   const [caresseAnim,  setCaresseAnim]      = useState(false)
@@ -491,11 +494,12 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
     const res = await huntTamagotchi(score, caught)
     if (res.error) { addToast(res.error, 'error'); return }
     if (res.data) {
-      const prev = pet?.stage
       setPet(res.data)
-      if (res.data.stage !== prev && res.data.stage !== 'dead') setEvolveStage(res.data.stage)
-      if (caught) addToast(`🥚 Chasse réussie ! +${score >= 100 ? 'Score parfait ! ' : ''}XP`, 'success')
-      else addToast(`💨 L'humain s'est échappé… +${score} pts`, 'error')
+      // Cycle restart — xenomorph → egg
+      if (res.cycleRestarted) {
+        setCycleOverlay(true)
+        setTimeout(() => setCycleOverlay(false), 4000)
+      }
     }
   }
 
@@ -505,6 +509,52 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
     <div style={{ maxWidth: 420, margin: '0 auto', paddingBottom: '3rem' }}>
       {evolveStage && <EvolveOverlay stage={evolveStage} onClose={() => setEvolveStage(null)} />}
       {levelUpShow  && <LevelUpOverlay level={levelUpShow} onClose={() => setLevelUpShow(null)} />}
+
+      {/* ── Confirmation chasse ── */}
+      {huntConfirm && (
+        <div className="modal-wrap" onClick={() => setHuntConfirm(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 360, padding: '2rem', textAlign: 'center' }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: '.75rem' }}>🏹</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', marginBottom: '.75rem' }}>
+              Partir à la chasse ?
+            </div>
+            <div style={{ fontSize: '.85rem', color: 'var(--text2)', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+              Après la chasse, ton xénomorphe <strong style={{ color: '#c084fc' }}>pond un œuf</strong> et disparaît.<br />
+              Le cycle recommence depuis l'œuf — facehugger, chestburster, xénomorphe…<br />
+              <span style={{ fontSize: '.78rem', color: 'var(--text3)' }}>XP, niveau et succès sont conservés.</span>
+            </div>
+            <div style={{ display: 'flex', gap: '.75rem' }}>
+              <button className="btn btn-outline" style={{ flex: 1 }} onClick={() => setHuntConfirm(false)}>
+                Annuler
+              </button>
+              <button
+                className="btn btn-gold"
+                style={{ flex: 1, background: 'linear-gradient(135deg, #7c3aed, #a855f7)', borderColor: 'transparent', color: '#fff' }}
+                onClick={() => { setHuntConfirm(false); setShowHuntGame(true) }}
+              >
+                🏹 Chasser !
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Overlay cycle ── */}
+      {cycleOverlay && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,.85)', animation: 'tama-bubble-in .4s ease-out' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '5rem', marginBottom: '1rem', animation: 'tama-poop-warn 1s ease-in-out infinite' }}>🥚</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', color: '#c084fc', marginBottom: '.5rem', textShadow: '0 0 30px #a855f7' }}>
+              Le cycle continue
+            </div>
+            <div style={{ fontSize: '.9rem', color: 'var(--text2)', lineHeight: 1.7 }}>
+              Le xénomorphe a pondu un œuf.<br />
+              <span style={{ color: '#fbbf24' }}>Un nouveau-né attend…</span>
+            </div>
+            <div style={{ marginTop: '1rem', fontSize: '.75rem', color: 'var(--text3)' }}>🥚 Succès débloqué : <strong style={{ color: '#c084fc' }}>Le cycle continue</strong></div>
+          </div>
+        </div>
+      )}
 
       {/* ── Header ── */}
       <div style={{ marginBottom: '1.2rem', textAlign: 'center' }}>
@@ -823,7 +873,7 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
               {/* ── LA CHASSE (xenomorph uniquement) ── */}
               {pet.stage === 'xenomorph' && (
                 <button className="btn btn-outline" disabled={huntCd > 0 || isSleeping || loading === 'hunt'}
-                  onClick={() => !isSleeping && huntCd <= 0 && setShowHuntGame(true)}
+                  onClick={() => !isSleeping && huntCd <= 0 && setHuntConfirm(true)}
                   style={{
                     gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center',
                     gap: '.2rem', padding: '.9rem',

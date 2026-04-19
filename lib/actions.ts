@@ -2466,11 +2466,10 @@ export async function adminDrainEnergy() {
 export async function huntTamagotchi(score: number, caught: boolean) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { data: null, error: 'Non connecté' }
+  if (!user) return { data: null, error: 'Non connecté', cycleRestarted: false }
   const { data: pet } = await (supabase as any).from('tamagotchi').select('*').eq('user_id', user.id).single()
-  if (!pet) return { data: null, error: 'Pas de tamagotchi' }
-  if (pet.stage !== 'xenomorph') return { data: null, error: "Seul le xénomorphe peut chasser !" }
-  if (pet.stage === 'dead') return { data: null, error: 'Ton alien est mort...' }
+  if (!pet) return { data: null, error: 'Pas de tamagotchi', cycleRestarted: false }
+  if (pet.stage !== 'xenomorph') return { data: null, error: "Seul le xénomorphe peut chasser !", cycleRestarted: false }
 
   const now = new Date().toISOString()
   const today = now.slice(0, 10)
@@ -2480,12 +2479,10 @@ export async function huntTamagotchi(score: number, caught: boolean) {
     const remaining = cooldownMs - (Date.now() - lastHunted)
     const h = Math.floor(remaining / 3_600_000)
     const m = Math.ceil((remaining % 3_600_000) / 60_000)
-    return { data: pet, error: `Prochain chassé disponible dans ${h}h${m}m` }
+    return { data: pet, error: `Prochain chassé disponible dans ${h}h${m}m`, cycleRestarted: false }
   }
 
-  const { pet: synced } = applyTamaDecay(pet)
   const xpGain = tamaXpGain(pet, caught ? 40 + Math.round(score / 5) : 10 + Math.round(score / 10))
-  const happinessGain = caught ? 25 : 8
   const huntCount = (pet.hunt_count ?? 0) + 1
 
   // Achievements
@@ -2494,24 +2491,39 @@ export async function huntTamagotchi(score: number, caught: boolean) {
   if (huntCount >= 5  && !achievements.includes('hunter'))      achievements.push('hunter')
   if (huntCount >= 20 && !achievements.includes('apex_hunter')) achievements.push('apex_hunter')
   if (score >= 100 && !achievements.includes('perfect_hunt'))   achievements.push('perfect_hunt')
+  if (!achievements.includes('le_cycle')) achievements.push('le_cycle')
 
-  const { data } = await (supabase as any).from('tamagotchi').update({
+  // Le xénomorphe pond un œuf et le cycle recommence
+  const cycleUpdates = {
+    stage: 'egg',
+    age_hours: 0,
+    hunger: 0,
+    happiness: 80,
+    health: 100,
+    energy: 100,
+    is_sleeping: false,
+    is_sick: false,
+    last_fed: null,
+    last_healed: null,
+    last_interacted_at: now,
+    last_neglect_penalty_at: null,
+    poop_count: 0,
     hunt_count: huntCount,
     last_hunted: now,
-    happiness: Math.min(100, synced.happiness + happinessGain),
-    health: caught ? Math.min(100, synced.health + 10) : synced.health,
-    hunger: synced.hunger,
-    age_hours: synced.age_hours, stage: synced.stage,
-    energy: Math.max(0, synced.energy - 15),
-    is_sleeping: synced.is_sleeping, is_sick: synced.is_sick,
-    last_neglect_penalty_at: synced.last_neglect_penalty_at,
-    x2_exp_until: synced.x2_exp_until,
     last_sync: now,
     xp: Math.min(9999, (pet.xp ?? 0) + xpGain),
     achievements,
     ...computeStreak(pet, today),
-  }).eq('user_id', user.id).select().single()
-  return { data, error: null }
+  }
+
+  const { data, error: dbError } = await (supabase as any)
+    .from('tamagotchi').update(cycleUpdates).eq('user_id', user.id).select().single()
+  if (dbError) return { data: null, error: 'Erreur sauvegarde', cycleRestarted: false }
+  if (!data) {
+    const { data: refreshed } = await (supabase as any).from('tamagotchi').select('*').eq('user_id', user.id).single()
+    return { data: refreshed, error: null, cycleRestarted: true }
+  }
+  return { data, error: null, cycleRestarted: true }
 }
 
 export async function checkInTamagotchi() {
