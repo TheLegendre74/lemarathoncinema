@@ -151,7 +151,7 @@ export default function MiniGame({ stage, onFinish, onClose, feedMode = false }:
           )}
           <button className="btn btn-gold" onClick={() => onFinish(s, missed)} style={{ width: '100%' }}>
             {feedMode
-              ? `Nourrir +${s * 2} satiété${missed === 0 && s > 0 ? ' · 🌟 +10 EXP' : ''}`
+              ? `Nourrir +${Math.max(20, s * 2)} satiété${missed === 0 && s > 0 ? ' · 🌟 +10 EXP' : ''}`
               : `Continuer +${Math.max(10, Math.min(40, Math.round(s * 4)))} humeur`
             }
           </button>

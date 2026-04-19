@@ -2211,7 +2211,7 @@ export async function feedTamagotchi(score: number = 5, perfect: boolean = false
   if (synced.is_sleeping) return { data: null, error: "Ton alien dort… réveille-le d'abord ! 💤" }
   const now = new Date().toISOString()
   const today = now.slice(0, 10)
-  const hungerReduction = score * 2  // +2 nourriture par humain attrapé
+  const hungerReduction = Math.max(20, score * 2)  // minimum 20 pts, +2 par humain attrapé
   const xpGain = tamaXpGain(pet, 15 + (perfect ? 10 : 0))
   const updates = {
     hunger: Math.max(0, synced.hunger - hungerReduction),
@@ -2225,7 +2225,12 @@ export async function feedTamagotchi(score: number = 5, perfect: boolean = false
     x2_exp_until: synced.x2_exp_until,
     ...computeStreak(pet, today),
   }
-  const { data } = await (supabase as any).from('tamagotchi').update(updates).eq('user_id', user.id).select().single()
+  const { data, error: dbError } = await (supabase as any).from('tamagotchi').update(updates).eq('user_id', user.id).select().single()
+  if (dbError) return { data: null, error: 'Erreur sauvegarde repas' }
+  if (!data) {
+    const { data: refreshed } = await (supabase as any).from('tamagotchi').select('*').eq('user_id', user.id).single()
+    return { data: refreshed, error: null }
+  }
   return { data, error: null }
 }
 
