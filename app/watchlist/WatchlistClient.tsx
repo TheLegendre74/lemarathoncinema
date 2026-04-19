@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/ToastProvider'
@@ -40,6 +40,7 @@ interface Props {
 
 export default function WatchlistClient({ watchlists: initial }: Props) {
   const [watchlists, setWatchlists] = useState<Watchlist[]>(initial)
+  useEffect(() => { setWatchlists(initial) }, [initial])
   const [newName, setNewName] = useState('')
   const [creating, setCreating] = useState(false)
   const [selected, setSelected] = useState<string | null>(initial[0]?.id ?? null)
@@ -58,7 +59,18 @@ export default function WatchlistClient({ watchlists: initial }: Props) {
     const res = await createWatchlist(newName)
     setCreating(false)
     if (res.error) { addToast(res.error, 'error'); return }
-    addToast(`Watchlist "${newName.trim()}" créée !`, 'success')
+    const trimmed = newName.trim()
+    const optimistic: Watchlist = {
+      id: res.data.id,
+      name: trimmed,
+      is_public: false,
+      is_anonymous: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      watchlist_items: [],
+    }
+    setWatchlists(prev => [...prev, optimistic])
+    addToast(`Watchlist "${trimmed}" créée !`, 'success')
     setNewName('')
     setSelected(res.data.id)
     startTransition(() => router.refresh())
@@ -67,15 +79,20 @@ export default function WatchlistClient({ watchlists: initial }: Props) {
   async function handleDelete(id: string) {
     const res = await deleteWatchlist(id)
     if (res.error) { addToast(res.error, 'error'); return }
-    if (selected === id) setSelected(watchlists.find(w => w.id !== id)?.id ?? null)
+    const remaining = watchlists.filter(w => w.id !== id)
+    setWatchlists(remaining)
+    if (selected === id) setSelected(remaining[0]?.id ?? null)
     setConfirmDelete(null)
     addToast('Watchlist supprimée', 'success')
     startTransition(() => router.refresh())
   }
 
   async function handleRename(id: string) {
-    const res = await renameWatchlist(id, renameVal)
+    const trimmed = renameVal.trim().slice(0, 60)
+    if (!trimmed) return
+    const res = await renameWatchlist(id, trimmed)
     if (res.error) { addToast(res.error, 'error'); return }
+    setWatchlists(prev => prev.map(w => w.id === id ? { ...w, name: trimmed } : w))
     setRenameId(null)
     addToast('Watchlist renommée', 'success')
     startTransition(() => router.refresh())
@@ -84,6 +101,7 @@ export default function WatchlistClient({ watchlists: initial }: Props) {
   async function handleTogglePublic(wl: Watchlist, newPublic: boolean, newAnon: boolean) {
     const res = await toggleWatchlistVisibility(wl.id, newPublic, newAnon)
     if (res.error) { addToast(res.error, 'error'); return }
+    setWatchlists(prev => prev.map(w => w.id === wl.id ? { ...w, is_public: newPublic, is_anonymous: newAnon } : w))
     addToast(newPublic ? 'Watchlist rendue publique !' : 'Watchlist rendue privée', 'success')
     startTransition(() => router.refresh())
   }
@@ -91,6 +109,10 @@ export default function WatchlistClient({ watchlists: initial }: Props) {
   async function handleRemoveFilm(watchlistId: string, filmId: number, titre: string) {
     const res = await removeFilmFromWatchlist(watchlistId, filmId)
     if (res.error) { addToast(res.error, 'error'); return }
+    setWatchlists(prev => prev.map(w => w.id === watchlistId
+      ? { ...w, watchlist_items: w.watchlist_items.filter(i => i.film_id !== filmId) }
+      : w
+    ))
     addToast(`"${titre}" retiré`, 'success')
     startTransition(() => router.refresh())
   }
