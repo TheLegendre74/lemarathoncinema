@@ -43,10 +43,7 @@ export default async function PublicWatchlistsPage() {
             const author = wl.is_anonymous ? null : wl.profiles
             const previewFilms = items.slice(0, 4)
             return (
-              <div key={wl.id} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--rl)', overflow: 'hidden', transition: 'border-color .2s, transform .2s, box-shadow .2s' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border2)'; (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(0,0,0,.35)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = '' }}
-              >
+              <div key={wl.id} className="wl-public-card">
                 {/* Poster grid preview */}
                 <div style={{ height: 110, background: 'var(--bg3)', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', overflow: 'hidden' }}>
                   {previewFilms.length > 0
