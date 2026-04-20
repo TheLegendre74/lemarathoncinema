@@ -162,6 +162,10 @@ html, body {
 }
 .field input:focus, .field textarea:focus, .field select:focus { outline: none; border-color: var(--gold); }
 
+/* ── FILMS GRID ── */
+.films-grid { grid-template-columns: repeat(auto-fill, minmax(185px, 1fr)); }
+.films-grid .film-card { min-width: 0; }
+
 /* ── FILM CARDS ── */
 .film-card {
   background: var(--bg2); border: 1px solid var(--border);
@@ -377,7 +381,8 @@ html, body {
   .btn { min-height: 44px; }
 
   /* Films — 4 colonnes sur mobile */
-  .films-grid { grid-template-columns: repeat(4, 1fr) !important; gap: .4rem !important; }
+  .films-grid { grid-template-columns: repeat(4, 1fr) !important; gap: .4rem !important; padding: 0 !important; }
+  .films-grid .film-card { min-width: 0; }
   .film-card:hover { transform: none; }
 
   /* Stats */
