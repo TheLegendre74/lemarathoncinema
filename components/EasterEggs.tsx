@@ -950,7 +950,10 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
   const predSoundRef = useRef<HTMLAudioElement | null>(null)
   const [showTipiak,     setShowTipiak]     = useState(false)
   const [showPandora,    setShowPandora]    = useState(false)
-  const [showClipy,      setShowClipy]      = useState(false)
+  const [showClipy,      setShowClipy]      = useState(() => {
+    if (typeof window === 'undefined') return false
+    return localStorage.getItem('clippy_active') === '1' || localStorage.getItem('clippy_is_larbin') === '1'
+  })
   const [isMastered,     setIsMastered]     = useState(() => typeof window !== 'undefined' && localStorage.getItem('clippy_mastered') === '1')
   const [spawnedBox,     setSpawnedBox]     = useState<{x:number;y:number}|null>(null)
   const [ghostBox,       setGhostBox]       = useState<{x:number;y:number}|null>(null)
