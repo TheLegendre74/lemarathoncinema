@@ -909,7 +909,7 @@ function TamagotchiKeyOverlay({ onClose, isGuest }: { onClose: () => void; isGue
   )
 }
 
-export default function EasterEggs({ config = {}, isGuest = false, watchedCount = 0 }: { config?: EasterEggsConfig; isGuest?: boolean; watchedCount?: number }) {
+export default function EasterEggs({ config = {}, isGuest = false, watchedCount = 0, hasClippyEgg = false }: { config?: EasterEggsConfig; isGuest?: boolean; watchedCount?: number; hasClippyEgg?: boolean }) {
   const ee = {
     matrixLine1:     config.matrixLine1     ?? 'Wake up, Neo...',
     matrixLine2:     config.matrixLine2     ?? 'The Matrix has you.',
@@ -964,8 +964,10 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
   const tarsShown = useRef(false)
   const noctambuleShown = useRef(false)
   // Refs pour le gestionnaire de clic global (évite les closures stales)
-  const ghostBoxActiveRef = useRef(false)
-  const anyEggActiveRef   = useRef(false)
+  const ghostBoxActiveRef  = useRef(false)
+  const anyEggActiveRef    = useRef(false)
+  const hasClippyEggRef    = useRef(hasClippyEgg)
+  hasClippyEggRef.current  = hasClippyEgg
   const [showMobileInput, setShowMobileInput] = useState(false)
   const [mobileVal, setMobileVal] = useState('')
   const mobileInputRef = useRef<HTMLInputElement>(null)
@@ -1015,6 +1017,7 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
       if (ghostBoxActiveRef.current) return
       if (anyEggActiveRef.current)   return
       if (typeof window === 'undefined') return
+      if (hasClippyEggRef.current) return
       const triggers = parseInt(localStorage.getItem('clippy_triggers') ?? '0')
       if (triggers > 0) return
       if (localStorage.getItem(LS_BOX_IGNORED) === '1') return
@@ -1033,6 +1036,7 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
   useEffect(() => {
     if (watchedCount < 100) return
     if (typeof window === 'undefined') return
+    if (hasClippyEgg) return
     if (parseInt(localStorage.getItem('clippy_triggers') ?? '0') > 0) return
     if (localStorage.getItem(LS_BOX_IGNORED) === '1') return
     if (localStorage.getItem('clippy_100films_shown') === '1') return

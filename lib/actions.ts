@@ -3026,7 +3026,7 @@ export async function getUserWatchlists() {
 }
 
 export async function getPublicWatchlists() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data } = await (supabase as any)
     .from('watchlists')
     .select('*, watchlist_items(film_id, films(id, titre, annee, realisateur, poster, genre)), profiles(pseudo, avatar_url)')
