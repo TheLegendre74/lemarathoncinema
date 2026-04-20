@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
-import { CONFIG, isMarathonLive } from '@/lib/config'
+import { getServerConfig, isMarathonLiveFromConfig } from '@/lib/serverConfig'
 import FilmsClient from './FilmsClient'
 import { getUserWatchlists } from '@/lib/actions'
 
@@ -10,6 +10,7 @@ export default async function FilmsPage() {
   const cookieStore = await cookies()
   const age18confirmed = cookieStore.get('age18confirmed')?.value === 'true'
   const supabase = await createClient()
+  const cfg = await getServerConfig()
   const { data: { user } } = await supabase.auth.getUser()
 
   const [{ data: films }, { data: userCount }, { data: weekFilm }] = await Promise.all([
@@ -97,8 +98,8 @@ export default async function FilmsPage() {
       ratingMap={ratingMap}
       totalUsers={totalUsers}
       weekFilmId={weekFilmId}
-      isMarathonLive={isMarathonLive()}
-      saisonNumero={CONFIG.SAISON_NUMERO}
+      isMarathonLive={isMarathonLiveFromConfig(cfg)}
+      saisonNumero={cfg.SAISON_NUMERO}
       age18confirmed={age18confirmed}
       myNegativeRatings={myNegativeRatings}
       negativeRatingMap={negativeRatingMap}

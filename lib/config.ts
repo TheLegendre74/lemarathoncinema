@@ -5,7 +5,7 @@
 // ══════════════════════════════════════════════════════════════
 
 export const CONFIG = {
-  MARATHON_START:  new Date(process.env.NEXT_PUBLIC_MARATHON_START ?? '2026-04-20T00:00:00'),
+  MARATHON_START:  new Date(process.env.NEXT_PUBLIC_MARATHON_START ?? '2026-05-01T00:00:00'),
   SAISON_NUMERO:   parseInt(process.env.NEXT_PUBLIC_SAISON_NUMERO  ?? '1'),
   SAISON_LABEL:    process.env.NEXT_PUBLIC_SAISON_LABEL            ?? 'Saison 1 · 2026',
   SEANCE_JOUR:     process.env.NEXT_PUBLIC_SEANCE_JOUR             ?? 'Mercredi',

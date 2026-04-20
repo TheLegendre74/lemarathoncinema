@@ -376,7 +376,8 @@ html, body {
   /* Boutons touch-friendly */
   .btn { min-height: 44px; }
 
-  /* Films — 2 colonnes sur mobile */
+  /* Films — 4 colonnes sur mobile */
+  .films-grid { grid-template-columns: repeat(4, 1fr) !important; gap: .4rem !important; }
   .film-card:hover { transform: none; }
 
   /* Stats */

@@ -1275,7 +1275,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
       </div>
 
       {/* Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(185px, 1fr))', gap: '1rem' }}>
+      <div className="films-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(185px, 1fr))', gap: '1rem' }}>
         {filtered.map(film => {
           const isWatched = watchedSet.has(film.id)
           const maj    = isMajority(film.id)
