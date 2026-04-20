@@ -808,9 +808,9 @@ function getPhaseFromDefeats(d: number): 1|2|3|4|5 {
 }
 
 // ── Interface ─────────────────────────────────────────────────────────────────
-interface ClippyProps { onDismiss: () => void; customReplies?: string[] }
+interface ClippyProps { onDismiss: () => void; customReplies?: string[]; forcedMessage?: string }
 
-export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
+export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: ClippyProps) {
 
   // ── Données persistantes ───────────────────────────────────────────────────
   const defeatsRef    = useRef(getDefeats())
@@ -1900,12 +1900,12 @@ export default function ClippyEgg({ onDismiss, customReplies }: ClippyProps) {
         style={{ position:'fixed', left:pos.x, top:pos.y, zIndex:99993, cursor:phase==='combat'?'none':(tired?'crosshair':'pointer'), transition:'left .3s cubic-bezier(.34,1.56,.64,1),top .3s cubic-bezier(.34,1.56,.64,1)', userSelect:'none', display:(hellPhase!=='idle'||mgPhase!=='idle'||showLarbinMsg||showLarbinModal||showDeathScreen)?'none':'block' }}
         onClick={phase==='normal' ? handleNormalClick : handleCombatClick}
       >
-        {bubble && (
-          <div style={{ position:'absolute', bottom:phase==='combat'?W_COMBAT*1.4+20:W_NORMAL*.7+16, [bubbleLeft?'right':'left']:0, width:230, background:phase==='combat'?'#120505':'#fffde7', border:`2px solid ${phase==='combat'?'#e85a5a':'#c4a030'}`, borderRadius:10, padding:'9px 12px', fontSize:12, color:phase==='combat'?'#ffaaaa':'#1a1a1a', lineHeight:1.5, boxShadow:`0 4px 20px ${phase==='combat'?'rgba(232,90,90,.3)':'rgba(0,0,0,.3)'}`, animation:'clippy-bubble-in .2s ease', zIndex:10000 }}
-            onClick={e => { e.stopPropagation(); setBubble(false) }}>
-            {message}
-            {isLarbin && phase === 'normal' && <span style={{ display:'block', marginTop:4, fontSize:10, color:'rgba(0,0,0,.25)', fontStyle:'italic' }}>— Clippy, ton maître</span>}
-            <span style={{ position:'absolute', top:4, right:7, fontSize:10, color:phase==='combat'?'#e85a5a':'#bbb', cursor:'pointer' }} onClick={e => { e.stopPropagation(); setBubble(false) }}>✕</span>
+        {(bubble || forcedMessage) && (
+          <div style={{ position:'absolute', bottom:phase==='combat'?W_COMBAT*1.4+20:W_NORMAL*.7+16, [bubbleLeft?'right':'left']:0, width:230, background: forcedMessage ? '#1a0a2e' : phase==='combat'?'#120505':'#fffde7', border:`2px solid ${forcedMessage ? '#a855f7' : phase==='combat'?'#e85a5a':'#c4a030'}`, borderRadius:10, padding:'9px 12px', fontSize:12, color: forcedMessage ? '#e9d5ff' : phase==='combat'?'#ffaaaa':'#1a1a1a', lineHeight:1.5, boxShadow:`0 4px 20px ${forcedMessage ? 'rgba(168,85,247,.35)' : phase==='combat'?'rgba(232,90,90,.3)':'rgba(0,0,0,.3)'}`, animation:'clippy-bubble-in .2s ease', zIndex:10000 }}
+            onClick={e => { e.stopPropagation(); if (!forcedMessage) setBubble(false) }}>
+            {forcedMessage ?? message}
+            {!forcedMessage && isLarbin && phase === 'normal' && <span style={{ display:'block', marginTop:4, fontSize:10, color:'rgba(0,0,0,.25)', fontStyle:'italic' }}>— Clippy, ton maître</span>}
+            {!forcedMessage && <span style={{ position:'absolute', top:4, right:7, fontSize:10, color:phase==='combat'?'#e85a5a':'#bbb', cursor:'pointer' }} onClick={e => { e.stopPropagation(); setBubble(false) }}>✕</span>}
           </div>
         )}
 
