@@ -171,6 +171,7 @@ html, body {
   background: var(--bg2); border: 1px solid var(--border);
   border-radius: var(--rl); overflow: visible; cursor: pointer;
   transition: transform .2s, border-color .2s, box-shadow .2s; position: relative;
+  display: flex; flex-direction: column;
 }
 .film-card:hover { transform: translateY(-4px); border-color: var(--border2); box-shadow: 0 16px 40px rgba(0,0,0,.5); }
 .film-card.watched { border-color: rgba(79,217,138,.25); }

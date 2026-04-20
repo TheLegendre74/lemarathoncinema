@@ -1394,20 +1394,22 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                   </div>
                 </div>
               )}
-              <div style={{ padding: '.65rem .75rem .5rem' }}>
-                <div style={{ fontSize: '.82rem', fontWeight: 500, lineHeight: 1.3, marginBottom: '.15rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{film.titre}</div>
-                <div style={{ fontSize: '.68rem', color: 'var(--text3)' }}>
-                  {film.annee} · <span className="chip">{film.genre}</span>
-                  {film.sousgenre && <span className="chip" style={{ marginLeft: 3, opacity: .7 }}>{film.sousgenre}</span>}
-                </div>
-                <div style={{ minHeight: '1.2rem', marginTop: '.2rem' }}>
-                  {rat && <div style={{ fontSize: '.7rem', color: 'var(--gold)' }}>⭐ {rat}/10</div>}
+              <div style={{ padding: '.65rem .75rem .5rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '.82rem', fontWeight: 500, lineHeight: 1.3, marginBottom: '.15rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{film.titre}</div>
+                  <div style={{ fontSize: '.68rem', color: 'var(--text3)' }}>
+                    {film.annee} · <span className="chip">{film.genre}</span>
+                    {film.sousgenre && <span className="chip" style={{ marginLeft: 3, opacity: .7 }}>{film.sousgenre}</span>}
+                  </div>
+                  <div style={{ minHeight: '1.1rem', marginTop: '.2rem' }}>
+                    {rat && <div style={{ fontSize: '.7rem', color: 'var(--gold)' }}>⭐ {rat}/10</div>}
+                  </div>
                 </div>
                 {profile && (
+                  <div style={{ marginTop: 'auto', paddingTop: '.35rem' }}>
                   <button
                     onClick={e => handleQuickToggle(e, film.id, film.titre)}
                     style={{
-                      marginTop: '.45rem',
                       width: '100%',
                       background: isWatched ? 'rgba(79,217,138,.12)' : 'rgba(255,255,255,.04)',
                       border: `1px solid ${isWatched ? 'rgba(79,217,138,.35)' : 'rgba(255,255,255,.1)'}`,
@@ -1425,10 +1427,8 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                       ? `✓ Vu · ${watchedPreMap[film.id] === false ? '🏁 marathon' : '⏳ avant'}`
                       : '+ J\'ai vu'}
                   </button>
-                )}
 
                 {/* Bouton watchlist */}
-                {profile && (
                   <div style={{ position: 'relative' }}>
                     <button
                       onClick={e => { e.stopPropagation(); setWatchlistDropOpen(watchlistDropOpen === film.id ? null : film.id); setWlNewName('') }}
@@ -1495,6 +1495,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                         </div>
                       </div>
                     )}
+                  </div>
                   </div>
                 )}
               </div>
