@@ -3027,12 +3027,31 @@ export async function getUserWatchlists() {
 
 export async function getPublicWatchlists() {
   const supabase = createAdminClient()
-  const { data } = await (supabase as any)
+  const { data: watchlists, error } = await (supabase as any)
     .from('watchlists')
-    .select('*, watchlist_items(film_id, films(id, titre, annee, realisateur, poster, genre)), profiles(pseudo, avatar_url)')
+    .select('*, watchlist_items(film_id, films(id, titre, annee, realisateur, poster, genre))')
     .eq('is_public', true)
     .order('updated_at', { ascending: false })
-  return data ?? []
+  if (error || !watchlists) return []
+
+  const userIds = [...new Set(
+    (watchlists as any[]).filter((w: any) => !w.is_anonymous).map((w: any) => w.user_id)
+  )]
+  let profilesMap: Record<string, { pseudo: string; avatar_url: string | null }> = {}
+  if (userIds.length > 0) {
+    const { data: profiles } = await (supabase as any)
+      .from('profiles')
+      .select('id, pseudo, avatar_url')
+      .in('id', userIds)
+    if (profiles) {
+      for (const p of profiles) profilesMap[p.id] = p
+    }
+  }
+
+  return (watchlists as any[]).map((w: any) => ({
+    ...w,
+    profiles: w.is_anonymous ? null : (profilesMap[w.user_id] ?? null),
+  }))
 }
 
 export async function createWatchlist(name: string) {

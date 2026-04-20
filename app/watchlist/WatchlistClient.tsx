@@ -10,6 +10,18 @@ import {
 } from '@/lib/actions'
 import Link from 'next/link'
 
+const mobileStyles = `
+  @media (max-width: 640px) {
+    .wl-grid { grid-template-columns: 1fr !important; }
+    .wl-sidebar-hidden { display: none !important; }
+    .wl-detail-hidden { display: none !important; }
+    .wl-back-btn { display: flex !important; }
+  }
+  @media (min-width: 641px) {
+    .wl-back-btn { display: none !important; }
+  }
+`
+
 interface Film {
   id: number
   titre: string
@@ -47,6 +59,7 @@ export default function WatchlistClient({ watchlists: initial }: Props) {
   const [renameId, setRenameId] = useState<string | null>(null)
   const [renameVal, setRenameVal] = useState('')
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const [mobileView, setMobileView] = useState<'list' | 'detail'>('list')
   const [isPending, startTransition] = useTransition()
   const { addToast } = useToast()
   const router = useRouter()
@@ -123,6 +136,7 @@ export default function WatchlistClient({ watchlists: initial }: Props) {
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto' }}>
+      <style>{mobileStyles}</style>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
@@ -134,10 +148,10 @@ export default function WatchlistClient({ watchlists: initial }: Props) {
         </Link>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: '1.5rem', alignItems: 'start' }}>
+      <div className="wl-grid" style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: '1.5rem', alignItems: 'start' }}>
 
         {/* Sidebar — liste des watchlists */}
-        <div>
+        <div className={mobileView === 'detail' ? 'wl-sidebar-hidden' : ''}>
           {/* Créer une nouvelle watchlist */}
           <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--rl)', padding: '1rem', marginBottom: '1rem' }}>
             <div style={{ fontSize: '.72rem', color: 'var(--text3)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '.6rem' }}>Nouvelle watchlist</div>
@@ -170,7 +184,7 @@ export default function WatchlistClient({ watchlists: initial }: Props) {
             {watchlists.map(wl => (
               <div
                 key={wl.id}
-                onClick={() => { setSelected(wl.id); setRenameId(null); setConfirmDelete(null) }}
+                onClick={() => { setSelected(wl.id); setRenameId(null); setConfirmDelete(null); setMobileView('detail') }}
                 style={{
                   background: selected === wl.id ? 'rgba(232,196,106,.08)' : 'var(--bg2)',
                   border: `1px solid ${selected === wl.id ? 'rgba(232,196,106,.3)' : 'var(--border)'}`,
@@ -197,7 +211,14 @@ export default function WatchlistClient({ watchlists: initial }: Props) {
         </div>
 
         {/* Main — contenu de la watchlist sélectionnée */}
-        <div>
+        <div className={mobileView === 'list' ? 'wl-detail-hidden' : ''}>
+          <button
+            className="wl-back-btn btn btn-outline"
+            onClick={() => setMobileView('list')}
+            style={{ display: 'none', alignItems: 'center', gap: '.4rem', fontSize: '.82rem', padding: '.5rem .9rem', marginBottom: '1rem' }}
+          >
+            ← Mes listes
+          </button>
           {!current ? (
             <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--rl)', padding: '3rem', textAlign: 'center', color: 'var(--text3)' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📋</div>

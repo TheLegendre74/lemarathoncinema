@@ -380,8 +380,8 @@ html, body {
   /* Boutons touch-friendly */
   .btn { min-height: 44px; }
 
-  /* Films — 4 colonnes sur mobile */
-  .films-grid { grid-template-columns: repeat(4, 1fr) !important; gap: .4rem !important; padding: 0 !important; }
+  /* Films — 3 colonnes sur mobile */
+  .films-grid { grid-template-columns: repeat(3, 1fr) !important; gap: .4rem !important; padding: 0 !important; }
   .films-grid .film-card { min-width: 0; }
   .film-card:hover { transform: none; }
 

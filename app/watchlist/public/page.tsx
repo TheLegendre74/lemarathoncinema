@@ -37,7 +37,7 @@ export default async function PublicWatchlistsPage() {
           }
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.2rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))', gap: '1.2rem' }}>
           {watchlists.map((wl: any) => {
             const items: any[] = wl.watchlist_items ?? []
             const author = wl.is_anonymous ? null : wl.profiles

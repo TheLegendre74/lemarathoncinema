@@ -1400,7 +1400,9 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                   {film.annee} · <span className="chip">{film.genre}</span>
                   {film.sousgenre && <span className="chip" style={{ marginLeft: 3, opacity: .7 }}>{film.sousgenre}</span>}
                 </div>
-                {rat && <div style={{ fontSize: '.7rem', color: 'var(--gold)', marginTop: '.25rem' }}>⭐ {rat}/10</div>}
+                <div style={{ minHeight: '1.2rem', marginTop: '.2rem' }}>
+                  {rat && <div style={{ fontSize: '.7rem', color: 'var(--gold)' }}>⭐ {rat}/10</div>}
+                </div>
                 {profile && (
                   <button
                     onClick={e => handleQuickToggle(e, film.id, film.titre)}
