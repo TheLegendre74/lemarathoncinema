@@ -154,8 +154,91 @@ export default function PublicWatchlistsClient({
     startTransition(() => router.refresh())
   }
 
+  const popularSorted = [...initial]
+    .map(w => ({ wl: w, likes: reactions[w.id]?.likes ?? w.likes }))
+    .filter(x => x.likes >= 5)
+    .sort((a, b) => b.likes - a.likes)
+
   return (
     <>
+      {/* ── Watchlists populaires ── */}
+      {popularSorted.length > 0 && (
+        <div style={{ marginBottom: '2.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem', marginBottom: '1rem' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem' }}>🔥 Watchlists populaires</div>
+            <div style={{ fontSize: '.72rem', color: 'var(--text3)', background: 'rgba(232,196,106,.08)', border: '1px solid rgba(232,196,106,.2)', borderRadius: 99, padding: '2px 8px' }}>
+              ≥ 5 👍
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '.6rem' }}>
+            {popularSorted.map(({ wl, likes }, idx) => {
+              const r = reactions[wl.id] ?? { likes: wl.likes, dislikes: wl.dislikes }
+              const author = wl.is_anonymous ? null : wl.profiles
+              const items = wl.watchlist_items ?? []
+              const isFav = favorites.includes(wl.id)
+              const userR = userReactions[wl.id]
+              return (
+                <div
+                  key={wl.id}
+                  className="wl-popular-row"
+                  onClick={() => setSelected(wl)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '.85rem', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.75rem 1rem', cursor: 'pointer' }}
+                >
+                  {/* Rang */}
+                  <div style={{ width: 28, textAlign: 'center', flexShrink: 0 }}>
+                    {idx === 0
+                      ? <span style={{ fontSize: '1.2rem' }}>🥇</span>
+                      : idx === 1
+                      ? <span style={{ fontSize: '1.1rem' }}>🥈</span>
+                      : idx === 2
+                      ? <span style={{ fontSize: '1.1rem' }}>🥉</span>
+                      : <span style={{ fontSize: '.8rem', color: 'var(--text3)', fontWeight: 600 }}>#{idx + 1}</span>
+                    }
+                  </div>
+                  {/* Mini posters */}
+                  <div style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
+                    {items.slice(0, 3).map(item => (
+                      <div key={item.film_id} style={{ width: 28, height: 42, borderRadius: 3, overflow: 'hidden', background: 'var(--bg3)', position: 'relative', flexShrink: 0 }}>
+                        {item.films?.poster
+                          ? <Image src={item.films.poster} alt={item.films.titre} fill style={{ objectFit: 'cover' }} sizes="28px" />
+                          : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.5rem' }}>🎬</div>
+                        }
+                      </div>
+                    ))}
+                  </div>
+                  {/* Info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '.9rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{wl.name}</div>
+                    <div style={{ fontSize: '.7rem', color: 'var(--text3)', marginTop: '.1rem' }}>
+                      {items.length} film{items.length !== 1 ? 's' : ''}
+                      {author && <span> · {author.pseudo}</span>}
+                    </div>
+                  </div>
+                  {/* Score */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                    <button
+                      onClick={() => handleReaction(wl.id, 'like')}
+                      style={{ display: 'flex', alignItems: 'center', gap: '.3rem', background: userR === 'like' ? 'rgba(79,217,138,.15)' : 'var(--bg3)', border: `1px solid ${userR === 'like' ? 'rgba(79,217,138,.4)' : 'var(--border2)'}`, borderRadius: 6, padding: '.25rem .55rem', fontSize: '.78rem', color: userR === 'like' ? 'var(--green)' : 'var(--text2)', cursor: 'pointer', fontWeight: 700 }}
+                    >
+                      👍 {r.likes}
+                    </button>
+                    <button
+                      onClick={() => handleFavorite(wl)}
+                      style={{ background: isFav ? 'rgba(232,90,90,.12)' : 'var(--bg3)', border: `1px solid ${isFav ? 'rgba(232,90,90,.35)' : 'var(--border2)'}`, borderRadius: 6, padding: '.25rem .45rem', fontSize: '.85rem', cursor: 'pointer', lineHeight: 1 }}
+                    >
+                      {isFav ? '❤️' : '🤍'}
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          <div style={{ height: '1px', background: 'var(--border)', margin: '2rem 0' }} />
+        </div>
+      )}
+
+      {/* ── Toutes les watchlists ── */}
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', marginBottom: '1rem', color: 'var(--text2)' }}>Toutes les watchlists</div>
       {/* Grille des cartes */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))', gap: '1.2rem' }}>
         {initial.map(wl => {
