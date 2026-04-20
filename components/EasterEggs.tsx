@@ -955,7 +955,7 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
     return localStorage.getItem('clippy_active') === '1' || localStorage.getItem('clippy_is_larbin') === '1'
   })
   const [isMastered,     setIsMastered]     = useState(() => typeof window !== 'undefined' && localStorage.getItem('clippy_mastered') === '1')
-  const [spawnedBox,     setSpawnedBox]     = useState<{x:number;y:number}|null>(null)
+
   const [ghostBox,       setGhostBox]       = useState<{x:number;y:number}|null>(null)
   const [ghostBoxMsg,    setGhostBoxMsg]    = useState('Hey! Ouvre moi!')
   const [ghostBoxWarn,   setGhostBoxWarn]   = useState(false)
@@ -1104,25 +1104,6 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
     return () => window.removeEventListener('clippy:invoke', onInvoke)
   }, [])
 
-  // Spawn aléatoire de la boîte de Pandore (seulement si Clippy a déjà été déclenché ≥1 fois, et pas encore maîtrisé)
-  useEffect(() => {
-    const PROB: Record<number, number> = { 1: 0.002, 2: 0.01, 3: 0.02, 4: 0.05 }
-    let autoHide: ReturnType<typeof setTimeout> | null = null
-    const interval = setInterval(() => {
-      if (showClipy || showPandora) return
-      if (localStorage.getItem('clippy_mastered') === '1') return
-      const triggers = parseInt(localStorage.getItem('clippy_triggers') ?? '0')
-      if (triggers < 1) return
-      const prob = triggers >= 5 ? 0.08 : (PROB[triggers] ?? 0)
-      if (Math.random() >= prob) return
-      const x = 60 + Math.random() * (window.innerWidth - 130)
-      const y = 80 + Math.random() * (window.innerHeight - 160)
-      setSpawnedBox({ x, y })
-      autoHide = setTimeout(() => setSpawnedBox(null), 20000)
-    }, 30000)
-    return () => { clearInterval(interval); if (autoHide) clearTimeout(autoHide) }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showClipy, showPandora])
 
   // Keyboard easter eggs
   useEffect(() => {
@@ -1349,22 +1330,6 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
         </div>
       )}
 
-      {/* Boîte de Pandore aléatoire — spawn rare selon le nombre de triggers */}
-      {spawnedBox && !showClipy && !showPandora && (
-        <button
-          onClick={() => {
-            setSpawnedBox(null)
-            const t = parseInt(localStorage.getItem('clippy_triggers') ?? '0') + 1
-            localStorage.setItem('clippy_triggers', String(t))
-            discoverEgg('clippy')
-            setShowClipy(true)
-          }}
-          title="Une boîte de Pandore..."
-          style={{ position:'fixed', left:spawnedBox.x, top:spawnedBox.y, zIndex:890, background:'none', border:'none', cursor:'pointer', fontSize:'2rem', filter:'drop-shadow(0 4px 12px rgba(232,196,106,.8))', animation:'ee-fadein .5s ease', padding:0, lineHeight:1 }}
-        >
-          📦
-        </button>
-      )}
 
       {/* Bouton flottant mobile — accès barre easter egg */}
       <button
