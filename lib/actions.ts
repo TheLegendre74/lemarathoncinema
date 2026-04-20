@@ -3048,9 +3048,26 @@ export async function getPublicWatchlists() {
     }
   }
 
+  // Réactions
+  const ids = (watchlists as any[]).map((w: any) => w.id)
+  let reactionsMap: Record<string, { likes: number; dislikes: number }> = {}
+  if (ids.length > 0) {
+    const { data: reactions } = await (supabase as any)
+      .from('watchlist_reactions')
+      .select('watchlist_id, type')
+      .in('watchlist_id', ids)
+    ;(reactions ?? []).forEach((r: any) => {
+      if (!reactionsMap[r.watchlist_id]) reactionsMap[r.watchlist_id] = { likes: 0, dislikes: 0 }
+      if (r.type === 'like') reactionsMap[r.watchlist_id].likes++
+      else reactionsMap[r.watchlist_id].dislikes++
+    })
+  }
+
   return (watchlists as any[]).map((w: any) => ({
     ...w,
     profiles: w.is_anonymous ? null : (profilesMap[w.user_id] ?? null),
+    likes: reactionsMap[w.id]?.likes ?? 0,
+    dislikes: reactionsMap[w.id]?.dislikes ?? 0,
   }))
 }
 
@@ -3152,6 +3169,149 @@ export async function removeFilmFromWatchlist(watchlistId: string, filmId: numbe
   revalidatePath('/watchlist')
   revalidatePath('/films')
   return { error: null }
+}
+
+// ── WATCHLIST REACTIONS (like / dislike) ──────────────────────────────────────
+
+export async function toggleWatchlistReaction(watchlistId: string, type: 'like' | 'dislike') {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+
+  const { data: existing } = await (supabase as any)
+    .from('watchlist_reactions')
+    .select('id, type')
+    .eq('watchlist_id', watchlistId)
+    .eq('user_id', user.id)
+    .single()
+
+  if (existing) {
+    if (existing.type === type) {
+      // Même réaction → on retire
+      await (supabase as any).from('watchlist_reactions').delete().eq('id', existing.id)
+      return { error: null, action: 'removed' }
+    } else {
+      // Réaction différente → on change
+      await (supabase as any).from('watchlist_reactions').update({ type }).eq('id', existing.id)
+      return { error: null, action: 'changed' }
+    }
+  }
+  await (supabase as any).from('watchlist_reactions').insert({ watchlist_id: watchlistId, user_id: user.id, type })
+  return { error: null, action: 'added' }
+}
+
+export async function getWatchlistReactions(watchlistId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data } = await (supabase as any)
+    .from('watchlist_reactions')
+    .select('type, user_id')
+    .eq('watchlist_id', watchlistId)
+  const reactions = (data ?? []) as { type: string; user_id: string }[]
+  return {
+    likes: reactions.filter(r => r.type === 'like').length,
+    dislikes: reactions.filter(r => r.type === 'dislike').length,
+    userReaction: user ? (reactions.find(r => r.user_id === user.id)?.type ?? null) : null,
+  }
+}
+
+export async function getUserReactionsForWatchlists(watchlistIds: string[]) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user || watchlistIds.length === 0) return {}
+  const { data } = await (supabase as any)
+    .from('watchlist_reactions')
+    .select('watchlist_id, type')
+    .eq('user_id', user.id)
+    .in('watchlist_id', watchlistIds)
+  const map: Record<string, string> = {}
+  ;(data ?? []).forEach((r: any) => { map[r.watchlist_id] = r.type })
+  return map
+}
+
+export async function getReactionCountsForWatchlists(watchlistIds: string[]) {
+  if (watchlistIds.length === 0) return {}
+  const supabase = createAdminClient()
+  const { data } = await (supabase as any)
+    .from('watchlist_reactions')
+    .select('watchlist_id, type')
+    .in('watchlist_id', watchlistIds)
+  const map: Record<string, { likes: number; dislikes: number }> = {}
+  ;(data ?? []).forEach((r: any) => {
+    if (!map[r.watchlist_id]) map[r.watchlist_id] = { likes: 0, dislikes: 0 }
+    if (r.type === 'like') map[r.watchlist_id].likes++
+    else map[r.watchlist_id].dislikes++
+  })
+  return map
+}
+
+// ── WATCHLIST FAVORIS (coup de coeur = copie dans mes watchlists) ─────────────
+
+export async function favoriteWatchlist(sourceId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+
+  // Vérifie si déjà en favori
+  const { data: existing } = await (supabase as any)
+    .from('watchlists')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('source_watchlist_id', sourceId)
+    .single()
+  if (existing) return { error: null, alreadyExists: true, id: existing.id }
+
+  // Récupère la watchlist source
+  const { data: source } = await (supabase as any)
+    .from('watchlists')
+    .select('name, watchlist_items(film_id)')
+    .eq('id', sourceId)
+    .single()
+  if (!source) return { error: 'Watchlist introuvable' }
+
+  // Crée la copie
+  const { data: copy, error: copyErr } = await (supabase as any)
+    .from('watchlists')
+    .insert({ user_id: user.id, name: `💛 ${source.name}`, is_public: false, source_watchlist_id: sourceId })
+    .select('id')
+    .single()
+  if (copyErr || !copy) return { error: 'Erreur création' }
+
+  // Copie les films
+  const items = (source.watchlist_items ?? []).map((i: any) => ({ watchlist_id: copy.id, film_id: i.film_id }))
+  if (items.length > 0) {
+    await (supabase as any).from('watchlist_items').insert(items)
+  }
+
+  revalidatePath('/watchlist')
+  return { error: null, alreadyExists: false, id: copy.id }
+}
+
+export async function unfavoriteWatchlist(sourceId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+
+  await (supabase as any)
+    .from('watchlists')
+    .delete()
+    .eq('user_id', user.id)
+    .eq('source_watchlist_id', sourceId)
+
+  revalidatePath('/watchlist')
+  return { error: null }
+}
+
+export async function getUserFavoriteWatchlistIds() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+  const { data } = await (supabase as any)
+    .from('watchlists')
+    .select('source_watchlist_id')
+    .eq('user_id', user.id)
+    .not('source_watchlist_id', 'is', null)
+  return (data ?? []).map((r: any) => r.source_watchlist_id as string)
 }
 
 export async function getUserWatchlistFilmIds() {

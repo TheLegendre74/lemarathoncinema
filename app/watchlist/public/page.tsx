@@ -1,7 +1,7 @@
-import { getPublicWatchlists } from '@/lib/actions'
+import { getPublicWatchlists, getUserReactionsForWatchlists, getUserFavoriteWatchlistIds } from '@/lib/actions'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import Image from 'next/image'
+import PublicWatchlistsClient from './PublicWatchlistsClient'
 
 export const revalidate = 0
 
@@ -9,6 +9,12 @@ export default async function PublicWatchlistsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const watchlists = await getPublicWatchlists()
+
+  const ids = watchlists.map((w: any) => w.id)
+  const [userReactions, favorites] = await Promise.all([
+    getUserReactionsForWatchlists(ids),
+    getUserFavoriteWatchlistIds(),
+  ])
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto' }}>
@@ -37,73 +43,12 @@ export default async function PublicWatchlistsPage() {
           }
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))', gap: '1.2rem' }}>
-          {watchlists.map((wl: any) => {
-            const items: any[] = wl.watchlist_items ?? []
-            const author = wl.is_anonymous ? null : wl.profiles
-            const previewFilms = items.slice(0, 4)
-            return (
-              <div key={wl.id} className="wl-public-card">
-                {/* Poster grid preview */}
-                <div style={{ height: 110, background: 'var(--bg3)', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', overflow: 'hidden' }}>
-                  {previewFilms.length > 0
-                    ? previewFilms.map((item: any) => (
-                        <div key={item.film_id} style={{ position: 'relative', overflow: 'hidden' }}>
-                          {item.films?.poster
-                            ? <Image src={item.films.poster} alt={item.films.titre} fill style={{ objectFit: 'cover' }} sizes="80px" />
-                            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>🎬</div>
-                          }
-                        </div>
-                      ))
-                    : (
-                      <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)', fontSize: '2rem' }}>📋</div>
-                    )
-                  }
-                  {/* Overlay gradient */}
-                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 50%, rgba(15,15,26,.9))', gridColumn: '1/-1', pointerEvents: 'none' }} />
-                </div>
-
-                <div style={{ padding: '1rem' }}>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.05rem', marginBottom: '.3rem', lineHeight: 1.2 }}>{wl.name}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ fontSize: '.72rem', color: 'var(--text3)' }}>
-                      {items.length} film{items.length !== 1 ? 's' : ''}
-                    </div>
-                    <div style={{ fontSize: '.72rem', color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: '.3rem' }}>
-                      {author ? (
-                        <>
-                          <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'var(--bg3)', border: '1px solid var(--border2)', overflow: 'hidden', flexShrink: 0 }}>
-                            {author.avatar_url
-                              ? <Image src={author.avatar_url} alt={author.pseudo} width={18} height={18} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
-                              : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.55rem' }}>{author.pseudo?.[0]?.toUpperCase()}</div>
-                            }
-                          </div>
-                          {author.pseudo}
-                        </>
-                      ) : (
-                        <>👤 Anonyme</>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Films list preview */}
-                  {items.length > 0 && (
-                    <div style={{ marginTop: '.75rem', display: 'flex', flexDirection: 'column', gap: '.3rem' }}>
-                      {items.slice(0, 5).map((item: any) => (
-                        <div key={item.film_id} style={{ fontSize: '.75rem', color: 'var(--text2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          🎬 {item.films?.titre}
-                        </div>
-                      ))}
-                      {items.length > 5 && (
-                        <div style={{ fontSize: '.7rem', color: 'var(--text3)' }}>+ {items.length - 5} autre{items.length - 5 !== 1 ? 's' : ''}…</div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )
-          })}
-        </div>
+        <PublicWatchlistsClient
+          watchlists={watchlists as any}
+          userId={user?.id ?? null}
+          initialUserReactions={userReactions}
+          initialFavorites={favorites}
+        />
       )}
     </div>
   )

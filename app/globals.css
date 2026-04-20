@@ -186,6 +186,7 @@ html, body {
   transition: border-color .2s, transform .2s, box-shadow .2s;
 }
 .wl-public-card:hover { border-color: var(--border2); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+@keyframes wl-modal-in { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
 /* ── COUNTDOWN ── */
 .hero-countdown {
