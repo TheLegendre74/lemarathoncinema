@@ -1306,7 +1306,14 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                   <div style={{ fontSize: '.82rem', fontWeight: 600, color: 'var(--text)', lineHeight: 1.2, marginBottom: '.15rem' }}>{film.titre}</div>
                   <div style={{ fontSize: '.68rem', color: 'var(--text2)' }}>{film.annee} · {film.realisateur}</div>
                 </div>
-                {isWatched && <div style={{ position: 'absolute', top: 7, right: 7, background: 'var(--green)', color: '#041a0e', fontSize: '.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: 99, letterSpacing: '.5px' }}>VU ✓</div>}
+                {isWatched && (
+                  <div style={{ position: 'absolute', top: 7, right: 7, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '3px' }}>
+                    <div style={{ background: 'var(--green)', color: '#041a0e', fontSize: '.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: 99, letterSpacing: '.5px' }}>VU ✓</div>
+                    <div style={{ background: 'rgba(0,0,0,.72)', color: watchedPreMap[film.id] === false ? '#f9c74f' : 'rgba(255,255,255,.7)', fontSize: '.52rem', fontWeight: 600, padding: '2px 6px', borderRadius: 99, letterSpacing: '.3px', whiteSpace: 'nowrap' }}>
+                      {watchedPreMap[film.id] === false ? '🏁 marathon' : '⏳ avant'}
+                    </div>
+                  </div>
+                )}
                 {!isWatched && s2 && <div style={{ position: 'absolute', top: 7, left: 7, background: 'var(--red)', color: '#fff', fontSize: '.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: 99 }}>S2</div>}
                 {!isWatched && maj && <div style={{ position: 'absolute', top: 7, right: 7, background: 'rgba(255,255,255,.12)', color: '#aaa', fontSize: '.58rem', padding: '2px 7px', borderRadius: 99 }}>60%+</div>}
                 {isWeek && <div style={{ position: 'absolute', bottom: 7, left: 7, background: 'var(--gold)', color: '#0a0a0f', fontSize: '.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: 99 }}>⭐ SEMAINE</div>}
