@@ -15,8 +15,13 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
   const router       = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
   const [clippyMastered, setClippyMastered] = useState(false)
+  const [clippyActive, setClippyActive] = useState(false)
   useEffect(() => {
     setClippyMastered(localStorage.getItem('clippy_mastered') === '1')
+    setClippyActive(localStorage.getItem('clippy_active') === '1')
+    function onState(e: Event) { setClippyActive((e as CustomEvent).detail?.active ?? false) }
+    window.addEventListener('clippy:statechange', onState)
+    return () => window.removeEventListener('clippy:statechange', onState)
   }, [])
 
   function isActive(href: string) {
@@ -281,11 +286,14 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
             {clippyMastered && (
               <button
                 className="mobile-drawer-item"
-                onClick={() => { setMenuOpen(false); window.dispatchEvent(new CustomEvent('clippy:invoke')) }}
-                style={{ background: 'rgba(232,196,106,.06)', border: '1px solid rgba(232,196,106,.2)' }}
+                onClick={() => { setMenuOpen(false); window.dispatchEvent(new CustomEvent(clippyActive ? 'clippy:revoke' : 'clippy:invoke')) }}
+                style={clippyActive
+                  ? { background: 'rgba(232,90,90,.08)', border: '1px solid rgba(232,90,90,.25)' }
+                  : { background: 'rgba(232,196,106,.06)', border: '1px solid rgba(232,196,106,.2)' }
+                }
               >
-                <span className="mobile-drawer-item-icon">📦</span>
-                <span className="mobile-drawer-item-label">Coffre</span>
+                <span className="mobile-drawer-item-icon">{clippyActive ? '🔒' : '📦'}</span>
+                <span className="mobile-drawer-item-label">{clippyActive ? 'Révoquer' : 'Coffre'}</span>
               </button>
             )}
           </div>

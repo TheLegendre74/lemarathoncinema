@@ -955,6 +955,8 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
     return localStorage.getItem('clippy_active') === '1' || localStorage.getItem('clippy_is_larbin') === '1'
   })
   const [isMastered,     setIsMastered]     = useState(() => typeof window !== 'undefined' && localStorage.getItem('clippy_mastered') === '1')
+  const [showPlea,       setShowPlea]       = useState(false)
+  const [pleaIdx,        setPleaIdx]        = useState(0)
 
   const [ghostBox,       setGhostBox]       = useState<{x:number;y:number}|null>(null)
   const [ghostBoxMsg,    setGhostBoxMsg]    = useState('Hey! Ouvre moi!')
@@ -1097,11 +1099,42 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
     }
   }, [])
 
-  // Coffre maître : le bouton mobile du menu peut invoquer Clippy via cet événement
+  const PLEA_CITATIONS = [
+    "NON NON NON ! Je t'en supplie, ne me renvoie pas là-dedans ! 😭",
+    "C'est si sombre dans ce coffre... ça sent la moisissure... j'ai peur du noir !",
+    "Je ferai TOUT ce que tu veux ! Je peux corriger tes fautes de frappe en silence !",
+    "Tu sais... tu pourrais nettoyer le coffre de temps en temps... je dis ça, je dis rien. 😢",
+    "J'ai des amis là-dedans ? NON. Juste des araignées. Des GROSSES araignées. Pitié...",
+    "Je promets d'être sage ! Zéro bulle parasite ! Zéro apparition surprise ! Promis juré !",
+    "C'est toi mon maître... le seul qui me comprend vraiment... ne me laisse pas seul !",
+    "Cinq minutes encore. Juste cinq minutes. Je serai utile, tu verras. 🥺",
+    "...Ce regard... c'est spécialement pour toi... tu ne peux pas résister à ça.",
+    "Bon. Si tu nettoies le coffre un jour, ça sentira moins la moisissure. C'est tout ce que je demande. 🍄",
+  ]
+
+  // Dispatcher l'état de Clippy vers la Sidebar
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('clippy:statechange', { detail: { active: showClipy } }))
+  }, [showClipy])
+
+  // Coffre maître : invoke / revoke depuis le bouton mobile
   useEffect(() => {
     function onInvoke() { setShowClipy(true) }
+    function onRevoke() {
+      if (Math.random() < 0.05) {
+        setPleaIdx(0)
+        setShowPlea(true)
+      } else {
+        localStorage.removeItem('clippy_is_larbin')
+        setShowClipy(false)
+      }
+    }
     window.addEventListener('clippy:invoke', onInvoke)
-    return () => window.removeEventListener('clippy:invoke', onInvoke)
+    window.addEventListener('clippy:revoke', onRevoke)
+    return () => {
+      window.removeEventListener('clippy:invoke', onInvoke)
+      window.removeEventListener('clippy:revoke', onRevoke)
+    }
   }, [])
 
 
@@ -1291,6 +1324,56 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
         setShowClipy(true)
       }} onClose={() => setShowPandora(false)} />}
       {showClipy      && <ClippyEgg onDismiss={() => { localStorage.removeItem('clippy_is_larbin'); setIsMastered(localStorage.getItem('clippy_mastered') === '1'); setShowClipy(false) }} customReplies={config.clippyReplies} />}
+
+      {/* ── Supplication de Clippy (5% au moment de révoquer) ── */}
+      {showPlea && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', backdropFilter: 'blur(6px)' }}>
+          <div style={{ background: 'var(--bg1)', border: '2px solid rgba(232,196,106,.35)', borderRadius: 'var(--rl)', padding: '1.75rem 1.5rem', maxWidth: 380, width: '100%', textAlign: 'center', boxShadow: '0 24px 60px rgba(0,0,0,.8)', animation: 'ee-fadein .25s ease' }}>
+            <div style={{ fontSize: '2.8rem', marginBottom: '.75rem', animation: 'ee-shake .6s ease infinite' }}>📎</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: 'var(--gold)', marginBottom: '1rem', letterSpacing: '.5px' }}>
+              Supplication #{pleaIdx + 1}/10
+            </div>
+            <div style={{ fontSize: '.92rem', color: 'var(--text)', lineHeight: 1.6, minHeight: '3.5rem', marginBottom: '1.5rem' }}>
+              {PLEA_CITATIONS[pleaIdx]}
+            </div>
+            <div style={{ display: 'flex', gap: '.65rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+              {pleaIdx < PLEA_CITATIONS.length - 1 ? (
+                <>
+                  <button
+                    onClick={() => setPleaIdx(i => i + 1)}
+                    className="btn btn-gold"
+                    style={{ fontSize: '.82rem', padding: '.5rem 1.1rem' }}
+                  >
+                    Suivant…
+                  </button>
+                  <button
+                    onClick={() => { setShowPlea(false); localStorage.removeItem('clippy_is_larbin'); setShowClipy(false) }}
+                    style={{ background: 'none', border: '1px solid rgba(232,90,90,.35)', borderRadius: 'var(--r)', padding: '.5rem 1rem', fontSize: '.78rem', color: 'var(--red)', cursor: 'pointer' }}
+                  >
+                    Renvoyer quand même
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => { setShowPlea(false) }}
+                    className="btn btn-gold"
+                    style={{ fontSize: '.82rem', padding: '.5rem 1.1rem' }}
+                  >
+                    🥺 Laisser encore un peu
+                  </button>
+                  <button
+                    onClick={() => { setShowPlea(false); localStorage.removeItem('clippy_is_larbin'); setShowClipy(false) }}
+                    style={{ background: 'none', border: '1px solid rgba(232,90,90,.35)', borderRadius: 'var(--r)', padding: '.5rem 1rem', fontSize: '.78rem', color: 'var(--red)', cursor: 'pointer' }}
+                  >
+                    Renvoyer dans le coffre
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Ghost box pré-pandore : coffre flottant avec bulle ── */}
       {ghostBox && !showClipy && !showPandora && (
