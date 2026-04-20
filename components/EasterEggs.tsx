@@ -950,10 +950,7 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
   const predSoundRef = useRef<HTMLAudioElement | null>(null)
   const [showTipiak,     setShowTipiak]     = useState(false)
   const [showPandora,    setShowPandora]    = useState(false)
-  const [showClipy,      setShowClipy]      = useState(() => {
-    if (typeof window === 'undefined') return false
-    return localStorage.getItem('clippy_active') === '1' || localStorage.getItem('clippy_is_larbin') === '1'
-  })
+  const [showClipy,      setShowClipy]      = useState(false)
   const [isMastered,     setIsMastered]     = useState(() => typeof window !== 'undefined' && localStorage.getItem('clippy_mastered') === '1')
   const [spawnedBox,     setSpawnedBox]     = useState<{x:number;y:number}|null>(null)
   const [ghostBox,       setGhostBox]       = useState<{x:number;y:number}|null>(null)
@@ -1097,12 +1094,20 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
     }
   }, [])
 
-  // Spawn aléatoire de la boîte de Pandore (seulement si Clippy a déjà été déclenché ≥1 fois)
+  // Coffre maître : le bouton mobile du menu peut invoquer Clippy via cet événement
+  useEffect(() => {
+    function onInvoke() { setShowClipy(true) }
+    window.addEventListener('clippy:invoke', onInvoke)
+    return () => window.removeEventListener('clippy:invoke', onInvoke)
+  }, [])
+
+  // Spawn aléatoire de la boîte de Pandore (seulement si Clippy a déjà été déclenché ≥1 fois, et pas encore maîtrisé)
   useEffect(() => {
     const PROB: Record<number, number> = { 1: 0.002, 2: 0.01, 3: 0.02, 4: 0.05 }
     let autoHide: ReturnType<typeof setTimeout> | null = null
     const interval = setInterval(() => {
       if (showClipy || showPandora) return
+      if (localStorage.getItem('clippy_mastered') === '1') return
       const triggers = parseInt(localStorage.getItem('clippy_triggers') ?? '0')
       if (triggers < 1) return
       const prob = triggers >= 5 ? 0.08 : (PROB[triggers] ?? 0)
@@ -1353,26 +1358,6 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
           }}
           title="Une boîte de Pandore..."
           style={{ position:'fixed', left:spawnedBox.x, top:spawnedBox.y, zIndex:890, background:'none', border:'none', cursor:'pointer', fontSize:'2rem', filter:'drop-shadow(0 4px 12px rgba(232,196,106,.8))', animation:'ee-fadein .5s ease', padding:0, lineHeight:1 }}
-        >
-          📦
-        </button>
-      )}
-
-      {/* Coffre maître — visible uniquement si Clippy a été dompté */}
-      {isMastered && !showClipy && (
-        <button
-          onClick={() => setShowClipy(true)}
-          title="Invoquer Clippy"
-          style={{ position:'fixed', bottom:78, left:10, zIndex:900, background:'rgba(18,14,4,.92)', border:'1px solid rgba(232,196,106,.4)', borderRadius:8, padding:'6px 10px', fontSize:'1.2rem', cursor:'pointer', boxShadow:'0 2px 10px rgba(0,0,0,.4)', color:'#e8c46a', lineHeight:1 }}
-        >
-          📦
-        </button>
-      )}
-      {isMastered && showClipy && (
-        <button
-          onClick={() => { localStorage.removeItem('clippy_is_larbin'); setShowClipy(false) }}
-          title="Révoquer Clippy"
-          style={{ position:'fixed', bottom:78, left:10, zIndex:900, background:'rgba(18,4,4,.92)', border:'1px solid rgba(232,90,90,.4)', borderRadius:8, padding:'6px 10px', fontSize:'1.2rem', cursor:'pointer', boxShadow:'0 2px 10px rgba(0,0,0,.4)', color:'#e85a5a', lineHeight:1 }}
         >
           📦
         </button>

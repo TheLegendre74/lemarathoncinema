@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { signOut } from '@/lib/actions'
 import { levelFromExp, getActiveBadge, CONFIG } from '@/lib/config'
 import type { Profile } from '@/lib/supabase/types'
@@ -14,6 +14,10 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
   const searchParams = useSearchParams()
   const router       = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [clippyMastered, setClippyMastered] = useState(false)
+  useEffect(() => {
+    setClippyMastered(localStorage.getItem('clippy_mastered') === '1')
+  }, [])
 
   function isActive(href: string) {
     if (href.includes('?')) {
@@ -274,6 +278,16 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
                 )}
               </Link>
             ))}
+            {clippyMastered && (
+              <button
+                className="mobile-drawer-item"
+                onClick={() => { setMenuOpen(false); window.dispatchEvent(new CustomEvent('clippy:invoke')) }}
+                style={{ background: 'rgba(232,196,106,.06)', border: '1px solid rgba(232,196,106,.2)' }}
+              >
+                <span className="mobile-drawer-item-icon">📦</span>
+                <span className="mobile-drawer-item-label">Coffre</span>
+              </button>
+            )}
           </div>
 
           <div className="sep" />
