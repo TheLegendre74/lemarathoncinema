@@ -2644,7 +2644,7 @@ export async function caresserTamagotchi() {
 
   const { pet: synced } = applyTamaDecay(pet)
   const now = new Date().toISOString()
-  const updates = {
+  const updates: Record<string, any> = {
     happiness: Math.min(100, synced.happiness + 8),
     hunger: synced.hunger, health: synced.health,
     age_hours: synced.age_hours, stage: synced.stage,
@@ -2652,13 +2652,15 @@ export async function caresserTamagotchi() {
     last_sync: now,
     caresses_today: caressesToday + 1,
     last_caresse_date: today,
-    last_interacted_at: now,
     xp: Math.min(9999, (pet.xp ?? 0) + tamaXpGain(pet, 3)),
-    last_neglect_penalty_at: synced.last_neglect_penalty_at,
-    x2_exp_until: synced.x2_exp_until,
-    ...computeStreak(pet, today),
   }
-  const { data } = await (supabase as any).from('tamagotchi').update(updates).eq('user_id', user.id).select().single()
+  if ('last_interacted_at'      in pet) updates.last_interacted_at      = now
+  if ('last_neglect_penalty_at' in pet) updates.last_neglect_penalty_at = synced.last_neglect_penalty_at
+  if ('x2_exp_until'            in pet) updates.x2_exp_until            = synced.x2_exp_until
+  if ('care_streak'             in pet) Object.assign(updates, computeStreak(pet, today))
+  const { error: dbError } = await (supabase as any).from('tamagotchi').update(updates).eq('user_id', user.id)
+  if (dbError) return { data: null, error: `Erreur câlin (${dbError.code ?? dbError.message})` }
+  const { data } = await (supabase as any).from('tamagotchi').select('*').eq('user_id', user.id).single()
   return { data, error: null }
 }
 
@@ -2674,7 +2676,7 @@ export async function nettoyerTamagotchi() {
   const { pet: synced } = applyTamaDecay(pet)
   const now = new Date().toISOString()
   const today = now.slice(0, 10)
-  const updates = {
+  const updates: Record<string, any> = {
     poop_count: 0,
     happiness: Math.min(100, synced.happiness + 5),
     hunger: synced.hunger, health: synced.health,
@@ -2682,9 +2684,13 @@ export async function nettoyerTamagotchi() {
     energy: synced.energy, is_sleeping: synced.is_sleeping, is_sick: synced.is_sick,
     last_sync: now,
     xp: Math.min(9999, (pet.xp ?? 0) + tamaXpGain(pet, 8)),
-    ...computeStreak(pet, today),
   }
-  const { data } = await (supabase as any).from('tamagotchi').update(updates).eq('user_id', user.id).select().single()
+  if ('care_streak'             in pet) Object.assign(updates, computeStreak(pet, today))
+  if ('last_neglect_penalty_at' in pet) updates.last_neglect_penalty_at = synced.last_neglect_penalty_at
+  if ('x2_exp_until'            in pet) updates.x2_exp_until            = synced.x2_exp_until
+  const { error: dbError } = await (supabase as any).from('tamagotchi').update(updates).eq('user_id', user.id)
+  if (dbError) return { data: null, error: `Erreur nettoyage (${dbError.code ?? dbError.message})` }
+  const { data } = await (supabase as any).from('tamagotchi').select('*').eq('user_id', user.id).single()
   return { data, error: null }
 }
 
