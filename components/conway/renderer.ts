@@ -29,7 +29,7 @@ export class ConwayRenderer {
 
   render(state: SimState): void {
     const { ctx, canvas } = this
-    const { energy, complexity, width, height } = state.grid
+    const { energy, complexity, corpse, width, height } = state.grid
     const size = width * height
     const T    = ECO.ALIVE_THRESHOLD
 
@@ -55,7 +55,21 @@ export class ConwayRenderer {
     ctx.fillStyle = COLORS.background
     ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-    // 2. Trail — empreintes de cellules mourantes
+    // 2. Restes — corps de cellules complexes mortes (brun-ambre persistant)
+    ctx.fillStyle = COLORS.cellCorpse
+    for (let y = 0; y < height; y++) {
+      const row = y * width
+      for (let x = 0; x < width; x++) {
+        const corp = corpse[row + x]
+        if (corp > 0.05) {
+          ctx.globalAlpha = corp * 0.80
+          ctx.fillRect(x * CS + 1, y * CS + 1, CS - 2, CS - 2)
+        }
+      }
+    }
+    ctx.globalAlpha = 1
+
+    // 3. Trail — empreintes de cellules mourantes
     ctx.fillStyle = COLORS.cellTrail
     for (let y = 0; y < height; y++) {
       const row = y * width
@@ -69,7 +83,7 @@ export class ConwayRenderer {
     }
     ctx.globalAlpha = 1
 
-    // 3. Cellules vivantes
+    // 5. Cellules vivantes
     for (let y = 0; y < height; y++) {
       const row = y * width
       for (let x = 0; x < width; x++) {

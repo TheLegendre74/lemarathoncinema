@@ -193,19 +193,24 @@ export interface EcoGrid {
   readonly energy:     Float32Array
   readonly complexity: Uint8Array   // 0 = simple, 1-7 = complexe
   readonly cooldown:   Uint8Array   // 0 = éligible à la fusion
+  readonly corpse:     Float32Array // restes de cellules complexes mortes [0..1]
   readonly width:      number
   readonly height:     number
 }
 
 export interface EcoConfig {
-  readonly ALIVE_THRESHOLD:      number
-  readonly BIRTH_GAIN:           number
-  readonly SURVIVE_GAIN:         number
-  readonly ISOLATION_COST:       number
-  readonly OVERPOP_COST:         number
-  readonly METABOLISM:           number
-  readonly ENERGY_DECAY:         number
-  readonly RESILIENCE_PER_LEVEL: number  // bonus de résilience par niveau de complexité
+  readonly ALIVE_THRESHOLD:           number
+  readonly BIRTH_GAIN:                number
+  readonly SURVIVE_GAIN:              number
+  readonly ISOLATION_COST:            number
+  readonly OVERPOP_COST:              number
+  readonly METABOLISM:                number
+  readonly ENERGY_DECAY:              number
+  readonly RESILIENCE_PER_LEVEL:      number
+  readonly CORPSE_DECAY:              number
+  readonly CORPSE_DEPOSIT_PER_LEVEL:  number
+  readonly CORPSE_ABSORPTION_RATE:    number
+  readonly CORPSE_ABSORPTION_MAX:     number
 }
 
 // Formes utilisées pour le seed structuré
@@ -225,6 +230,7 @@ export function createEcoGrid(width: number, height: number): EcoGrid {
     energy:     new Float32Array(width * height),
     complexity: new Uint8Array(width * height),
     cooldown:   new Uint8Array(width * height),
+    corpse:     new Float32Array(width * height),
     width, height,
   }
 }
@@ -261,21 +267,24 @@ export function seedIslands(
     }
   }
 
-  return { energy, complexity, cooldown, width, height }
+  return { energy, complexity, cooldown, corpse: new Float32Array(total), width, height }
 }
 
-// Un tick du moteur énergétique avec résilience par complexité
+// Un tick du moteur énergétique avec résilience, restes et boucle écologique
 export function stepEco(eco: EcoGrid, cfg: EcoConfig): EcoGrid {
-  const { energy, complexity, cooldown, width, height } = eco
+  const { energy, complexity, cooldown, corpse, width, height } = eco
   const nextEnergy     = new Float32Array(energy.length)
-  const nextComplexity = new Uint8Array(complexity)  // copie — modifiée si mort
-  const nextCooldown   = new Uint8Array(cooldown)    // copie — décrémentée chaque tick
-  const T = cfg.ALIVE_THRESHOLD
+  const nextComplexity = new Uint8Array(complexity)
+  const nextCooldown   = new Uint8Array(cooldown)
+  const nextCorpse     = new Float32Array(corpse)
+  const T   = cfg.ALIVE_THRESHOLD
   const RPL = cfg.RESILIENCE_PER_LEVEL
 
-  // Décrémenter les cooldowns de fusion
-  for (let i = 0; i < nextCooldown.length; i++)
+  // Décrémenter cooldowns de fusion + décroissance des restes
+  for (let i = 0; i < nextCooldown.length; i++) {
     if (nextCooldown[i] > 0) nextCooldown[i]--
+    if (nextCorpse[i]   > 0) nextCorpse[i] = Math.max(0, nextCorpse[i] - cfg.CORPSE_DECAY)
+  }
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
@@ -284,7 +293,6 @@ export function stepEco(eco: EcoGrid, cfg: EcoConfig): EcoGrid {
       const c = complexity[i]
       const alive = e > T
 
-      // Facteur de résilience : [0..1] selon complexité
       const r = Math.min(1.0, c * RPL)
 
       // Compter voisins vivants (toroïdal)
@@ -298,7 +306,6 @@ export function stepEco(eco: EcoGrid, cfg: EcoConfig): EcoGrid {
         }
 
       if (alive) {
-        // Résilience : gains amplifiés, coûts réduits
         const sg = cfg.SURVIVE_GAIN    * (1 + r)
         const ic = cfg.ISOLATION_COST  * (1 - r * 0.80)
         const oc = cfg.OVERPOP_COST    * (1 - r * 0.55)
@@ -311,26 +318,47 @@ export function stepEco(eco: EcoGrid, cfg: EcoConfig): EcoGrid {
         } else {
           nextEnergy[i] = Math.max(0, e - oc - mt)
         }
+
+        // Absorption des restes adjacents — boucle écologique
+        let adjacentCorpse = 0
+        for (let dy = -1; dy <= 1; dy++)
+          for (let dx = -1; dx <= 1; dx++) {
+            if (dx === 0 && dy === 0) continue
+            const nx = (x + dx + width) % width
+            const ny = (y + dy + height) % height
+            adjacentCorpse += corpse[ny * width + nx]
+          }
+        if (adjacentCorpse > 0) {
+          const absorbed = Math.min(cfg.CORPSE_ABSORPTION_MAX, adjacentCorpse * cfg.CORPSE_ABSORPTION_RATE)
+          nextEnergy[i] = Math.min(1, nextEnergy[i] + absorbed)
+        }
       } else {
         if (n === 3) {
-          // Naissance — énergie fixée juste au-dessus du seuil, complexité 0
-          nextEnergy[i]     = T + cfg.BIRTH_GAIN
+          // Naissance — si sur un reste, énergie de départ légèrement supérieure
+          const bonus = corpse[i] > 0.2 ? corpse[i] * 0.25 : 0
+          nextEnergy[i]     = Math.min(1, T + cfg.BIRTH_GAIN + bonus)
           nextComplexity[i] = 0
+          if (bonus > 0) nextCorpse[i] = 0  // reste consommé à la naissance
         } else {
-          // Décroissance post-mort — trail naturel
           nextEnergy[i] = Math.max(0, e - cfg.ENERGY_DECAY)
         }
       }
 
-      // Cellule qui vient de mourir : réinitialiser complexité
-      if (nextEnergy[i] <= T && c > 0) {
+      // Cellule qui vient de mourir ce tick
+      if (e > T && nextEnergy[i] <= T) {
+        if (c >= 2) {
+          nextCorpse[i] = Math.min(1, nextCorpse[i] + c * cfg.CORPSE_DEPOSIT_PER_LEVEL)
+        }
+        nextComplexity[i] = 0
+        nextCooldown[i]   = 0
+      } else if (nextEnergy[i] <= T && c > 0) {
         nextComplexity[i] = 0
         nextCooldown[i]   = 0
       }
     }
   }
 
-  return { energy: nextEnergy, complexity: nextComplexity, cooldown: nextCooldown, width, height }
+  return { energy: nextEnergy, complexity: nextComplexity, cooldown: nextCooldown, corpse: nextCorpse, width, height }
 }
 
 export function countAliveEco(eco: EcoGrid, threshold: number): number {
@@ -366,11 +394,12 @@ export function placePatternEco(
   return { ...eco, energy }
 }
 
-// Pinceau : dessiner (énergie haute) ou effacer (énergie 0 + reset complexité)
+// Pinceau : dessiner (énergie haute) ou effacer (énergie 0 + reset complexité + efface restes)
 export function applyBrushEco(eco: EcoGrid, cx: number, cy: number, radius: number, add: boolean): EcoGrid {
   const energy     = new Float32Array(eco.energy)
   const complexity = add ? eco.complexity : new Uint8Array(eco.complexity)
   const cooldown   = add ? eco.cooldown   : new Uint8Array(eco.cooldown)
+  const corpse     = add ? eco.corpse     : new Float32Array(eco.corpse)
   const r2 = radius * radius
   const { width, height } = eco
   for (let dy = -radius; dy <= radius; dy++)
@@ -385,9 +414,10 @@ export function applyBrushEco(eco: EcoGrid, cx: number, cy: number, radius: numb
         energy[i]     = 0
         complexity[i] = 0
         cooldown[i]   = 0
+        corpse[i]     = 0
       }
     }
-  return { ...eco, energy, complexity, cooldown }
+  return { ...eco, energy, complexity, cooldown, corpse }
 }
 
 export function sparkAtEco(eco: EcoGrid, cx: number, cy: number, radius: number, density: number): EcoGrid {
@@ -411,6 +441,7 @@ export function resizeEcoGrid(eco: EcoGrid, newCols: number, newRows: number): E
   const newEnergy     = new Float32Array(newCols * newRows)
   const newComplexity = new Uint8Array(newCols * newRows)
   const newCooldown   = new Uint8Array(newCols * newRows)
+  const newCorpse     = new Float32Array(newCols * newRows)
   const copyW = Math.min(eco.width, newCols)
   const copyH = Math.min(eco.height, newRows)
   for (let y = 0; y < copyH; y++)
@@ -420,6 +451,7 @@ export function resizeEcoGrid(eco: EcoGrid, newCols: number, newRows: number): E
       newEnergy[dst]     = eco.energy[src]
       newComplexity[dst] = eco.complexity[src]
       newCooldown[dst]   = eco.cooldown[src]
+      newCorpse[dst]     = eco.corpse[src]
     }
-  return { energy: newEnergy, complexity: newComplexity, cooldown: newCooldown, width: newCols, height: newRows }
+  return { energy: newEnergy, complexity: newComplexity, cooldown: newCooldown, corpse: newCorpse, width: newCols, height: newRows }
 }

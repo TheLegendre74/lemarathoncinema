@@ -11,6 +11,7 @@ export const CONWAY_CONFIG = {
     cellOld:     '#22c55e',
     cellAncient: '#15803d', // haute énergie — vert sombre, cellule ancrée
     cellTrail:   '#4ade80',
+    cellCorpse:  '#78350f', // restes de cellules complexes mortes — brun-ambre
   },
 
   SPEEDS: {
@@ -25,14 +26,18 @@ export const CONWAY_CONFIG = {
   // Chaque cellule porte une énergie ∈ [0, 1].
   // Vivant si energy > ALIVE_THRESHOLD. Mort progressif visible dans le trail.
   ECO: {
-    ALIVE_THRESHOLD:      0.35,
-    BIRTH_GAIN:           0.07,   // born à T + 0.07 = 0.42 → couleur "new"
-    SURVIVE_GAIN:         0.02,   // gain/tick si 2-3 voisins
-    ISOLATION_COST:       0.04,   // perte/tick si 0-1 voisins
-    OVERPOP_COST:         0.07,   // perte/tick si 4+ voisins
-    METABOLISM:           0.002,  // perte basale
-    ENERGY_DECAY:         0.03,   // décroissance post-mort (trail)
-    RESILIENCE_PER_LEVEL: 0.18,   // bonus de résilience par niveau de complexité
+    ALIVE_THRESHOLD:           0.35,
+    BIRTH_GAIN:                0.07,   // born à T + 0.07 = 0.42 → couleur "new"
+    SURVIVE_GAIN:              0.02,   // gain/tick si 2-3 voisins
+    ISOLATION_COST:            0.04,   // perte/tick si 0-1 voisins
+    OVERPOP_COST:              0.07,   // perte/tick si 4+ voisins
+    METABOLISM:                0.002,  // perte basale
+    ENERGY_DECAY:              0.03,   // décroissance post-mort (trail)
+    RESILIENCE_PER_LEVEL:      0.18,   // bonus de résilience par niveau de complexité
+    CORPSE_DECAY:              0.004,  // décroissance des restes par tick
+    CORPSE_DEPOSIT_PER_LEVEL:  0.15,   // corpse déposé = complexity × this
+    CORPSE_ABSORPTION_RATE:    0.06,   // fraction de restes adjacents absorbée
+    CORPSE_ABSORPTION_MAX:     0.05,   // plafond d'énergie absorbée par tick
   },
 
   // ─── Fusion ─────────────────────────────────────────────────────────────────
@@ -52,16 +57,16 @@ export const CONWAY_CONFIG = {
   // ─── Anti-stagnation ────────────────────────────────────────────────────────
   ANTI_STAGNATION: {
     ACTIVITY_THRESHOLD: 0.0012, // variation d'énergie moyenne/cellule/tick
-    QUIET_TICKS:        22,     // patient avant d'intervenir
-    MIN_ALIVE_RATIO:    0.005,
+    QUIET_TICKS:        35,     // patient avant d'intervenir
+    MIN_ALIVE_RATIO:    0.002,
     SPARKS_COUNT:       1,      // une seule injection à la fois
   },
 
   // ─── Seed structuré ─────────────────────────────────────────────────────────
   SEED: {
-    ISLAND_FACTOR: 0.80, // N îlots ≈ (cols*rows / 250) * factor
-    MIN_DIST:      14,   // distance min entre centres d'îlots
-    BASE_DENSITY:  0.06, // bruit de fond sparse sous les îlots
+    ISLAND_FACTOR: 0.35, // N îlots ≈ (cols*rows / 250) * factor
+    MIN_DIST:      22,   // distance min entre centres d'îlots
+    BASE_DENSITY:  0.02, // bruit de fond sparse sous les îlots
   },
 
   // ─── Mobilité (spaceship factory) ───────────────────────────────────────────
