@@ -1,9 +1,6 @@
 // Conway's Game of Life — moteur de simulation pur
 // Fonctions pures, sans effets de bord, sans état global.
 // Toutes les mutations retournent un nouveau Grid (pas de mise à jour destructrice en place).
-//
-// Extension future : CellState peut prendre des valeurs > 1 pour des états enrichis
-// (ex: âge, type, appartenance à un cluster). Les règles sont paramétrables.
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -17,10 +14,9 @@ export interface Grid {
 }
 
 // Règles paramétrables — actuellement les règles classiques de Conway B3/S23
-// Passer un ConwayRules différent suffit pour expérimenter d'autres automates.
 export interface ConwayRules {
-  readonly survives: ReadonlySet<number> // nbre voisins pour survivre
-  readonly births: ReadonlySet<number>   // nbre voisins pour naître
+  readonly survives: ReadonlySet<number>
+  readonly births: ReadonlySet<number>
 }
 
 export const CLASSIC_RULES: ConwayRules = {
@@ -28,27 +24,37 @@ export const CLASSIC_RULES: ConwayRules = {
   births: new Set([3]),
 }
 
-// Patterns de test connus
+// ─── Patterns classiques ─────────────────────────────────────────────────────
+
 export type PatternName = 'block' | 'blinker' | 'glider'
 
-// ─── Patterns statiques ──────────────────────────────────────────────────────
-
 const PATTERNS: Readonly<Record<PatternName, ReadonlyArray<readonly [number, number]>>> = {
-  // Still life — ne change jamais
-  block: [[0, 0], [1, 0], [0, 1], [1, 1]],
-  // Oscillateur période 2 — alterne horizontal/vertical
-  blinker: [[0, 0], [1, 0], [2, 0]],
-  // Vaisseau — se déplace en diagonale
-  glider: [[1, 0], [2, 1], [0, 2], [1, 2], [2, 2]],
+  block:   [[0,0],[1,0],[0,1],[1,1]],
+  blinker: [[0,0],[1,0],[2,0]],
+  glider:  [[1,0],[2,1],[0,2],[1,2],[2,2]],
 }
 
-// ─── Fonctions utilitaires internes ─────────────────────────────────────────
+// ─── Méthuselahs — petits seeds qui génèrent beaucoup de chaos ───────────────
+// Utilisés par l'anti-stagnation pour relancer la simulation discrètement.
+
+export type MethuselahName = 'rpentomino' | 'acorn' | 'diehard'
+
+const METHUSELAHS: Readonly<Record<MethuselahName, ReadonlyArray<readonly [number, number]>>> = {
+  // r-pentomino : 5 cellules → 1103 générations de chaos
+  rpentomino: [[1,0],[2,0],[0,1],[1,1],[1,2]],
+  // Acorn : 7 cellules → 5206 générations
+  acorn: [[1,0],[3,1],[0,2],[1,2],[4,2],[5,2],[6,2]],
+  // Diehard : 8 cellules → 130 générations puis disparaît
+  diehard: [[6,0],[0,1],[1,1],[1,2],[5,2],[6,2],[7,2]],
+}
+
+// ─── Utilitaires internes ────────────────────────────────────────────────────
 
 function cellIndex(grid: Grid, x: number, y: number): number {
   return y * grid.width + x
 }
 
-// Compte les voisins vivants avec bords toroïdaux (la grille se wrappe)
+// Bords toroïdaux
 function countNeighbors(cells: Uint8Array, width: number, height: number, x: number, y: number): number {
   let n = 0
   for (let dy = -1; dy <= 1; dy++) {
@@ -62,7 +68,7 @@ function countNeighbors(cells: Uint8Array, width: number, height: number, x: num
   return n
 }
 
-// ─── API publique ────────────────────────────────────────────────────────────
+// ─── API de base ─────────────────────────────────────────────────────────────
 
 export function createGrid(width: number, height: number): Grid {
   return { cells: new Uint8Array(width * height), width, height }
@@ -73,7 +79,6 @@ export function getCellAt(grid: Grid, x: number, y: number): CellState {
   return grid.cells[cellIndex(grid, x, y)]
 }
 
-// Retourne un nouveau Grid avec la cellule modifiée
 export function setCellAt(grid: Grid, x: number, y: number, state: CellState): Grid {
   if (x < 0 || x >= grid.width || y < 0 || y >= grid.height) return grid
   const cells = new Uint8Array(grid.cells)
@@ -81,25 +86,19 @@ export function setCellAt(grid: Grid, x: number, y: number, state: CellState): G
   return { ...grid, cells }
 }
 
-// Avance d'une génération selon les règles données
-// Retourne un nouveau Grid — l'ancien n'est jamais modifié.
+// Avance d'une génération — retourne un nouveau Grid, l'ancien est intact
 export function stepGrid(grid: Grid, rules: ConwayRules = CLASSIC_RULES): Grid {
   const { cells, width, height } = grid
   const next = new Uint8Array(width * height)
-
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const i = y * width + x
       const alive = cells[i] > 0
-      const neighbors = countNeighbors(cells, width, height, x, y)
-      if (alive) {
-        next[i] = rules.survives.has(neighbors) ? cells[i] : 0
-      } else {
-        next[i] = rules.births.has(neighbors) ? 1 : 0
-      }
+      const n = countNeighbors(cells, width, height, x, y)
+      if (alive) next[i] = rules.survives.has(n) ? cells[i] : 0
+      else       next[i] = rules.births.has(n) ? 1 : 0
     }
   }
-
   return { cells: next, width, height }
 }
 
@@ -111,7 +110,7 @@ export function countAlive(grid: Grid): number {
   return n
 }
 
-// Remplissage aléatoire selon une densité [0, 1]
+// Remplissage aléatoire
 export function seedRandom(grid: Grid, density: number): Grid {
   const cells = new Uint8Array(grid.cells.length)
   for (let i = 0; i < cells.length; i++) {
@@ -120,15 +119,67 @@ export function seedRandom(grid: Grid, density: number): Grid {
   return { ...grid, cells }
 }
 
-// Place un pattern connu à la position (ox, oy) dans la grille
+// Place un pattern connu à la position (ox, oy)
 export function placePattern(grid: Grid, pattern: PatternName, ox: number, oy: number): Grid {
   const cells = new Uint8Array(grid.cells)
   for (const [dx, dy] of PATTERNS[pattern]) {
-    const x = ox + dx
-    const y = oy + dy
-    if (x >= 0 && x < grid.width && y >= 0 && y < grid.height) {
+    const x = ox + dx, y = oy + dy
+    if (x >= 0 && x < grid.width && y >= 0 && y < grid.height)
       cells[cellIndex(grid, x, y)] = 1
+  }
+  return { ...grid, cells }
+}
+
+// ─── Outils V2 ───────────────────────────────────────────────────────────────
+
+// Applique un pinceau circulaire (peindre ou effacer) centré en (cx, cy)
+export function applyBrush(grid: Grid, cx: number, cy: number, radius: number, state: CellState): Grid {
+  const cells = new Uint8Array(grid.cells)
+  const r2 = radius * radius
+  for (let dy = -radius; dy <= radius; dy++) {
+    for (let dx = -radius; dx <= radius; dx++) {
+      if (dx * dx + dy * dy > r2) continue
+      const x = cx + dx, y = cy + dy
+      if (x >= 0 && x < grid.width && y >= 0 && y < grid.height)
+        cells[y * grid.width + x] = state
     }
   }
   return { ...grid, cells }
+}
+
+// Injecte de la vie aléatoire dans un carré — pour sparks manuels et anti-stagnation
+export function sparkAt(grid: Grid, cx: number, cy: number, radius: number, density: number): Grid {
+  const cells = new Uint8Array(grid.cells)
+  for (let dy = -radius; dy <= radius; dy++) {
+    for (let dx = -radius; dx <= radius; dx++) {
+      const x = cx + dx, y = cy + dy
+      if (x >= 0 && x < grid.width && y >= 0 && y < grid.height) {
+        if (Math.random() < density) cells[y * grid.width + x] = 1
+      }
+    }
+  }
+  return { ...grid, cells }
+}
+
+// Place un Méthuselah — seed minuscule qui génère beaucoup de chaos
+export function placeMethuselah(grid: Grid, name: MethuselahName, ox: number, oy: number): Grid {
+  const cells = new Uint8Array(grid.cells)
+  for (const [dx, dy] of METHUSELAHS[name]) {
+    const x = ox + dx, y = oy + dy
+    if (x >= 0 && x < grid.width && y >= 0 && y < grid.height)
+      cells[y * grid.width + x] = 1
+  }
+  return { ...grid, cells }
+}
+
+// Compte les cellules vivantes dans une zone (pour trouver les zones calmes)
+export function countAliveInZone(grid: Grid, x0: number, y0: number, w: number, h: number): number {
+  let n = 0
+  const { cells, width, height } = grid
+  for (let y = y0; y < Math.min(y0 + h, height); y++) {
+    for (let x = x0; x < Math.min(x0 + w, width); x++) {
+      if (cells[y * width + x] > 0) n++
+    }
+  }
+  return n
 }

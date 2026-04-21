@@ -1,6 +1,6 @@
 'use client'
 
-import type { SpeedKey } from './config'
+import type { SpeedKey, DrawTool } from './config'
 import type { SimStatus } from './simulationState'
 
 interface ConwayControlsProps {
@@ -8,106 +8,117 @@ interface ConwayControlsProps {
   speed: SpeedKey
   generation: number
   aliveCount: number
+  activeTool: DrawTool
   onPlayPause: () => void
   onReset: () => void
   onRandom: () => void
   onSpeed: (s: SpeedKey) => void
+  onToolChange: (t: DrawTool) => void
   onClose: () => void
 }
 
 const BTN: React.CSSProperties = {
-  padding: '6px 14px',
+  padding: '5px 12px',
   borderRadius: 6,
   border: '1px solid rgba(74,222,128,0.25)',
-  background: 'rgba(74,222,128,0.08)',
+  background: 'rgba(74,222,128,0.07)',
   color: '#4ade80',
-  fontSize: 13,
+  fontSize: 12,
   fontFamily: 'monospace',
   cursor: 'pointer',
   lineHeight: 1.4,
-  transition: 'background 0.15s, border-color 0.15s',
+  transition: 'background 0.12s, border-color 0.12s',
+  whiteSpace: 'nowrap' as const,
 }
 
 const BTN_ACTIVE: React.CSSProperties = {
   ...BTN,
   background: 'rgba(74,222,128,0.22)',
-  borderColor: 'rgba(74,222,128,0.6)',
+  borderColor: 'rgba(74,222,128,0.65)',
 }
 
-const SPEEDS: Array<{ key: SpeedKey; label: string }> = [
-  { key: 'slow', label: '🐢' },
-  { key: 'normal', label: '▷▷' },
-  { key: 'fast', label: '⚡' },
+const BTN_CLOSE: React.CSSProperties = {
+  ...BTN,
+  color: 'rgba(255,255,255,0.4)',
+  borderColor: 'rgba(255,255,255,0.12)',
+  background: 'transparent',
+}
+
+const SPEEDS: Array<{ key: SpeedKey; label: string; title: string }> = [
+  { key: 'slow',   label: '🐢', title: 'Lente' },
+  { key: 'normal', label: '▷▷', title: 'Normale' },
+  { key: 'fast',   label: '⚡', title: 'Rapide' },
 ]
 
+const TOOLS: Array<{ key: DrawTool; label: string; title: string }> = [
+  { key: 'draw',  label: '✏️',  title: 'Dessiner (clic gauche)' },
+  { key: 'erase', label: '⬛', title: 'Effacer (clic droit)' },
+  { key: 'spark', label: '✨',  title: 'Étincelle — injecte un burst de vie' },
+]
+
+const SEP: React.CSSProperties = {
+  width: 1, height: 20, background: 'rgba(74,222,128,0.12)', flexShrink: 0,
+}
+
 export default function ConwayControls({
-  status,
-  speed,
-  generation,
-  aliveCount,
-  onPlayPause,
-  onReset,
-  onRandom,
-  onSpeed,
-  onClose,
+  status, speed, generation, aliveCount, activeTool,
+  onPlayPause, onReset, onRandom, onSpeed, onToolChange, onClose,
 }: ConwayControlsProps) {
   return (
     <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      flexWrap: 'wrap',
-      gap: 8,
-      padding: '10px 16px',
+      display: 'flex', alignItems: 'center', flexWrap: 'wrap',
+      gap: 6, padding: '9px 14px',
       background: 'rgba(5,5,10,0.97)',
       borderTop: '1px solid rgba(74,222,128,0.12)',
     }}>
-      {/* Gauche : play/pause + reset + random */}
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-        <button style={BTN} onClick={onPlayPause} title={status === 'playing' ? 'Pause' : 'Play'}>
-          {status === 'playing' ? '⏸ Pause' : '▶ Play'}
-        </button>
-        <button style={BTN} onClick={onReset} title="Effacer la grille">
-          ↺ Reset
-        </button>
-        <button style={BTN} onClick={onRandom} title="Seed aléatoire">
-          🎲 Aléatoire
-        </button>
-      </div>
+      {/* Simulation */}
+      <button style={BTN} onClick={onPlayPause} title={status === 'playing' ? 'Pause' : 'Play'}>
+        {status === 'playing' ? '⏸ Pause' : '▶ Play'}
+      </button>
+      <button style={BTN} onClick={onReset}  title="Effacer la grille">↺ Reset</button>
+      <button style={BTN} onClick={onRandom} title="Seed aléatoire">🎲 Aléatoire</button>
 
-      {/* Centre : compteurs */}
-      <div style={{
-        fontSize: 12,
-        fontFamily: 'monospace',
-        color: 'rgba(74,222,128,0.6)',
-        display: 'flex',
-        gap: 16,
-        userSelect: 'none',
-      }}>
-        <span>Gén. <strong style={{ color: '#4ade80' }}>{generation.toLocaleString()}</strong></span>
-        <span>Vivantes <strong style={{ color: '#4ade80' }}>{aliveCount.toLocaleString()}</strong></span>
-      </div>
+      <div style={SEP} />
 
-      {/* Droite : vitesse + fermer */}
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-        {SPEEDS.map(({ key, label }) => (
-          <button
-            key={key}
-            style={speed === key ? BTN_ACTIVE : BTN}
-            onClick={() => onSpeed(key)}
-            title={`Vitesse : ${key}`}
-          >
-            {label}
-          </button>
-        ))}
+      {/* Outils */}
+      {TOOLS.map(({ key, label, title }) => (
         <button
-          style={{ ...BTN, marginLeft: 8, color: 'rgba(255,255,255,0.5)', borderColor: 'rgba(255,255,255,0.15)' }}
-          onClick={onClose}
-          title="Fermer (Échap)"
+          key={key}
+          style={activeTool === key ? BTN_ACTIVE : BTN}
+          onClick={() => onToolChange(key)}
+          title={title}
         >
-          ✕
+          {label}
         </button>
-      </div>
+      ))}
+
+      <div style={SEP} />
+
+      {/* Compteurs */}
+      <span style={{
+        fontSize: 11, fontFamily: 'monospace',
+        color: 'rgba(74,222,128,0.55)', userSelect: 'none', whiteSpace: 'nowrap',
+      }}>
+        G<strong style={{ color: '#4ade80' }}>{generation.toLocaleString()}</strong>
+        {' · '}
+        <strong style={{ color: '#4ade80' }}>{aliveCount.toLocaleString()}</strong> ◼
+      </span>
+
+      <div style={{ flex: 1 }} />
+
+      {/* Vitesse */}
+      {SPEEDS.map(({ key, label, title }) => (
+        <button
+          key={key}
+          style={speed === key ? BTN_ACTIVE : BTN}
+          onClick={() => onSpeed(key)}
+          title={`Vitesse ${title}`}
+        >
+          {label}
+        </button>
+      ))}
+
+      <button style={BTN_CLOSE} onClick={onClose} title="Fermer (Échap)">✕</button>
     </div>
   )
 }

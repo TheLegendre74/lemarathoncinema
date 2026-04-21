@@ -1,19 +1,15 @@
-// Conway's Game of Life — contrôleur de simulation
-// Gère le cycle de vie de la simulation : tick loop, play/pause, vitesse, reset.
-// Séparé du rendu et de l'UI pour permettre des tests unitaires et des extensions futures.
+// Conway V2 — contrôleur de simulation
+// Gère le cycle de vie : tick loop, play/pause, vitesse, anti-stagnation, interaction souris.
 
 import {
-  Grid,
-  ConwayRules,
-  CLASSIC_RULES,
-  createGrid,
-  stepGrid,
-  countAlive,
-  seedRandom,
-  placePattern,
-  PatternName,
+  Grid, ConwayRules, CLASSIC_RULES,
+  createGrid, stepGrid, countAlive, seedRandom,
+  placePattern, PatternName,
+  applyBrush, sparkAt,
+  CellState,
 } from './gameOfLifeEngine'
-import { CONWAY_CONFIG, SpeedKey } from './config'
+import { CONWAY_CONFIG, SpeedKey, DrawTool } from './config'
+import { AntiStagnationModule } from './antistagnation'
 
 // ─── Types publics ───────────────────────────────────────────────────────────
 
@@ -31,19 +27,17 @@ export interface SimState {
 
 export class SimulationController {
   private _state: SimState
+  private _prevGrid: Grid
   private _intervalId: ReturnType<typeof setInterval> | null = null
   private _rules: ConwayRules = CLASSIC_RULES
+  private _antiStag = new AntiStagnationModule()
 
-  // Callback déclenché après chaque tick (simulation + rendu)
+  // Callback déclenché après chaque tick
   onTick: ((state: SimState) => void) | null = null
-
-  // ── Points d'extension v2+ (non implémentés, déclarés pour la roadmap) ────
-  // onClusterDetected?: (clusters: import('./extensibility/hooks').ClusterInfo[]) => void
-  // onCellInteraction?: (event: import('./extensibility/hooks').CellInteractionEvent) => void
-  // ─────────────────────────────────────────────────────────────────────────
 
   constructor(width: number, height: number) {
     const grid = seedRandom(createGrid(width, height), CONWAY_CONFIG.RANDOM_DENSITY)
+    this._prevGrid = grid
     this._state = {
       grid,
       generation: 0,
@@ -53,11 +47,9 @@ export class SimulationController {
     }
   }
 
-  get state(): SimState {
-    return this._state
-  }
+  get state(): SimState { return this._state }
 
-  // ── Contrôles ──────────────────────────────────────────────────────────────
+  // ── Contrôles de simulation ───────────────────────────────────────────────
 
   play(): void {
     if (this._state.status === 'playing') return
@@ -83,12 +75,11 @@ export class SimulationController {
     this._stopLoop()
     const { width, height } = this._state.grid
     const grid = createGrid(width, height)
+    this._prevGrid = grid
+    this._antiStag.reset()
     this._state = {
-      grid,
-      generation: 0,
-      status: 'paused',
-      speed: this._state.speed,
-      aliveCount: 0,
+      grid, generation: 0, status: 'paused',
+      speed: this._state.speed, aliveCount: 0,
     }
     this.onTick?.(this._state)
     if (wasPlaying) this.play()
@@ -99,12 +90,11 @@ export class SimulationController {
     this._stopLoop()
     const { width, height } = this._state.grid
     const grid = seedRandom(createGrid(width, height), CONWAY_CONFIG.RANDOM_DENSITY)
+    this._prevGrid = grid
+    this._antiStag.reset()
     this._state = {
-      ...this._state,
-      grid,
-      generation: 0,
-      status: 'paused',
-      aliveCount: countAlive(grid),
+      ...this._state, grid, generation: 0,
+      status: 'paused', aliveCount: countAlive(grid),
     }
     this.onTick?.(this._state)
     if (wasPlaying) this.play()
@@ -117,36 +107,60 @@ export class SimulationController {
     if (wasPlaying) this._startLoop()
   }
 
-  // Place un pattern de test dans la grille (centré par défaut)
-  placeTestPattern(pattern: PatternName, ox?: number, oy?: number): void {
-    const { width, height } = this._state.grid
-    const x = ox ?? Math.floor(width / 2)
-    const y = oy ?? Math.floor(height / 2)
-    const grid = placePattern(this._state.grid, pattern, x, y)
-    this._state = { ...this._state, grid, aliveCount: countAlive(grid) }
-    this.onTick?.(this._state)
-  }
-
-  // Extension : remplace les règles Conway sans redémarrer la simulation
   setRules(rules: ConwayRules): void {
     this._rules = rules
   }
 
-  // Nettoyage complet (appelé à la fermeture de l'overlay)
+  placeTestPattern(pattern: PatternName, ox?: number, oy?: number): void {
+    const { width, height } = this._state.grid
+    const grid = placePattern(this._state.grid, pattern, ox ?? Math.floor(width / 2), oy ?? Math.floor(height / 2))
+    this._state = { ...this._state, grid, aliveCount: countAlive(grid) }
+    this.onTick?.(this._state)
+  }
+
+  // ── Interaction souris / touch ────────────────────────────────────────────
+
+  // Applique un pinceau à la position grille (cx, cy) selon l'outil actif
+  applyTool(cx: number, cy: number, tool: DrawTool): void {
+    let grid: Grid
+    if (tool === 'draw') {
+      grid = applyBrush(this._state.grid, cx, cy, CONWAY_CONFIG.BRUSH.DRAW_RADIUS, 1)
+    } else if (tool === 'erase') {
+      grid = applyBrush(this._state.grid, cx, cy, CONWAY_CONFIG.BRUSH.ERASE_RADIUS, 0)
+    } else {
+      // spark : cluster aléatoire dense
+      grid = sparkAt(this._state.grid, cx, cy, CONWAY_CONFIG.BRUSH.SPARK_RADIUS, CONWAY_CONFIG.BRUSH.SPARK_DENSITY)
+    }
+    this._state = { ...this._state, grid, aliveCount: countAlive(grid) }
+    this.onTick?.(this._state)
+  }
+
+  // Nettoyage complet
   destroy(): void {
     this._stopLoop()
     this.onTick = null
   }
 
-  // ── Boucle interne ─────────────────────────────────────────────────────────
+  // ── Boucle interne ────────────────────────────────────────────────────────
 
   private _tick(): void {
-    const grid = stepGrid(this._state.grid, this._rules)
+    const prevGrid = this._state.grid
+    let grid = stepGrid(prevGrid, this._rules)
+    let aliveCount = countAlive(grid)
+
+    // Anti-stagnation : injecte un spark si le monde se fige
+    const spark = this._antiStag.check(grid, prevGrid, aliveCount)
+    if (spark) {
+      grid = spark.grid
+      aliveCount = countAlive(grid)
+    }
+
+    this._prevGrid = prevGrid
     this._state = {
       ...this._state,
       grid,
       generation: this._state.generation + 1,
-      aliveCount: countAlive(grid),
+      aliveCount,
     }
     this.onTick?.(this._state)
   }
