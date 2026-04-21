@@ -143,6 +143,22 @@ export class SimulationController {
     this.onTick?.(this._state)
   }
 
+  // Redimensionne la grille en préservant les cellules existantes (coin supérieur gauche)
+  resizeGrid(newCols: number, newRows: number): void {
+    const { cells, width, height } = this._state.grid
+    const newCells = new Uint8Array(newCols * newRows)
+    const copyW = Math.min(width, newCols)
+    const copyH = Math.min(height, newRows)
+    for (let y = 0; y < copyH; y++) {
+      for (let x = 0; x < copyW; x++) {
+        newCells[y * newCols + x] = cells[y * width + x]
+      }
+    }
+    const newGrid = { cells: newCells, width: newCols, height: newRows }
+    this._prevGrid = newGrid
+    this._state = { ...this._state, grid: newGrid, aliveCount: countAlive(newGrid) }
+  }
+
   // Nettoyage complet
   destroy(): void {
     this._stopLoop()

@@ -67,6 +67,32 @@ export default function ConwayOverlay({ onClose, startMini = false }: ConwayOver
     return () => { ctrl.destroy(); rend.destroy() }
   }, [])
 
+  // ── Resize canvas buffer quand on restaure en plein écran ────────────────
+  // Nécessaire si Conway a été ouvert en mode mini (buffer initialisé en petit)
+  useEffect(() => {
+    if (isMini) return
+    const container = containerRef.current
+    const canvas    = canvasRef.current
+    const ctrl      = ctrlRef.current
+    const rend      = rendRef.current
+    if (!container || !canvas || !ctrl || !rend) return
+
+    // rAF : laisser le DOM se mettre à jour avant de lire les dimensions
+    const raf = requestAnimationFrame(() => {
+      const w = container.clientWidth
+      const h = container.clientHeight
+      if (!w || !h) return
+      canvas.width  = w
+      canvas.height = h
+      rend.resize(w, h)
+      const newCols = Math.max(1, Math.floor(w / CONWAY_CONFIG.CELL_SIZE))
+      const newRows = Math.max(1, Math.floor(h / CONWAY_CONFIG.CELL_SIZE))
+      ctrl.resizeGrid(newCols, newRows)
+      rend.render(ctrl.state)
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [isMini])
+
   // ── Échap (seulement en mode plein écran) ─────────────────────────────────
   useEffect(() => {
     if (isMini) return
