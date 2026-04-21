@@ -2171,17 +2171,31 @@ export async function initOrGetTamagotchi() {
 
   const { pet: updated, evolved, evolvedTo } = applyTamaDecay(existing)
 
+  // Auto-cycle : si le xénomorphe est atteint ET que le joueur a déjà chassé, repasser en œuf directement
+  let cycleRestarted = false
+  if (updated.stage === 'xenomorph' && (existing.hunt_count ?? 0) > 0) {
+    const cycleNow = new Date().toISOString()
+    Object.assign(updated, {
+      stage: 'egg', age_hours: 0, hunger: 0, happiness: 80, health: 100, energy: 100,
+      is_sleeping: false, is_sick: false, poop_count: 0,
+      last_fed: null, last_healed: null, last_sync: cycleNow,
+    })
+    cycleRestarted = true
+  }
+
   if (updated.last_sync !== existing.last_sync) {
-    await (supabase as any).from('tamagotchi').update({
+    const dbPayload: Record<string, any> = {
       hunger: updated.hunger, happiness: updated.happiness, health: updated.health,
       age_hours: updated.age_hours, stage: updated.stage, last_sync: updated.last_sync,
       energy: updated.energy, is_sleeping: updated.is_sleeping, is_sick: updated.is_sick,
       last_neglect_penalty_at: updated.last_neglect_penalty_at,
       x2_exp_until: updated.x2_exp_until,
-    }).eq('user_id', user.id)
+    }
+    if (cycleRestarted) Object.assign(dbPayload, { poop_count: 0, last_fed: null, last_healed: null })
+    await (supabase as any).from('tamagotchi').update(dbPayload).eq('user_id', user.id)
   }
 
-  return { data: updated, error: null, isNew: false, evolved, evolvedTo }
+  return { data: updated, error: null, isNew: false, evolved: cycleRestarted ? false : evolved, evolvedTo: cycleRestarted ? null : evolvedTo, cycleRestarted }
 }
 
 // Niveau 9+ : XP × 1.5 sur toutes les actions tamagotchi
@@ -2329,9 +2343,12 @@ export async function reviveTamagotchi() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { data: null, error: 'Non connecté' }
 
-  const { data: pet } = await (supabase as any).from('tamagotchi').select('*').eq('user_id', user.id).single()
-  if (!pet) return { data: null, error: 'Pas de tamagotchi' }
-  if (pet.stage !== 'dead') return { data: null, error: 'Ton alien est encore en vie !' }
+  const { data: petRaw } = await (supabase as any).from('tamagotchi').select('*').eq('user_id', user.id).single()
+  if (!petRaw) return { data: null, error: 'Pas de tamagotchi' }
+
+  // Appliquer le decay pour avoir l'état réel (le sync DB peut avoir échoué silencieusement)
+  const { pet: petDecayed } = applyTamaDecay(petRaw)
+  if (petDecayed.stage !== 'dead') return { data: null, error: 'Ton alien est encore en vie !' }
 
   const now = new Date().toISOString()
   const { data } = await (supabase as any).from('tamagotchi').update({
@@ -2341,7 +2358,7 @@ export async function reviveTamagotchi() {
     caresses_today: 0, last_caresse_date: null,
     xp: 0, care_streak: 0, last_care_date: null,
     last_interacted_at: null, last_neglect_penalty_at: null, x2_exp_until: null,
-    last_sync: now, deaths: pet.deaths + 1,
+    last_sync: now, deaths: (petRaw.deaths ?? 0) + 1,
   }).eq('user_id', user.id).select().single()
   return { data, error: null }
 }
@@ -2690,7 +2707,9 @@ export async function reveillerTamagotchi() {
   const { data } = await (supabase as any).from('tamagotchi').update({
     is_sleeping: false,
     hunger: synced.hunger, happiness: synced.happiness, health: synced.health,
-    age_hours: synced.age_hours, stage: synced.stage, energy: synced.energy, is_sick: synced.is_sick,
+    age_hours: synced.age_hours, stage: synced.stage,
+    energy: Math.max(20, synced.energy), // minimum 20 pour éviter le re-dodo immédiat
+    is_sick: synced.is_sick,
     last_neglect_penalty_at: synced.last_neglect_penalty_at,
     x2_exp_until: synced.x2_exp_until,
     last_sync: now,

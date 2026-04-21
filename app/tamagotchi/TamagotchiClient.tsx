@@ -216,10 +216,10 @@ function FloatingHearts({ visible }: { visible: boolean }) {
 
 // ── Composant principal ───────────────────────────────────────────────────────
 interface Props {
-  initialPet: any; evolved: boolean; evolvedTo: string | null; isNew: boolean; isAdmin?: boolean
+  initialPet: any; evolved: boolean; evolvedTo: string | null; isNew: boolean; isAdmin?: boolean; cycleRestartedOnLoad?: boolean
 }
 
-export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew, isAdmin = false }: Props) {
+export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew, isAdmin = false, cycleRestartedOnLoad = false }: Props) {
   const [pet, setPet]                       = useState(initialPet)
   const [tick, setTick]                     = useState(0)
   const [now, setNow]                       = useState(Date.now())
@@ -232,7 +232,7 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
   const [showPlayGame, setShowPlayGame]     = useState(false)
   const [showHuntGame, setShowHuntGame]     = useState(false)
   const [huntConfirm,  setHuntConfirm]      = useState(false)
-  const [cycleOverlay, setCycleOverlay]     = useState(false)
+  const [cycleOverlay, setCycleOverlay]     = useState(cycleRestartedOnLoad)
   const [accessories,  setAccessories]      = useState<Accessory[]>([])
   const [showHearts,   setShowHearts]       = useState(false)
   const [caresseAnim,  setCaresseAnim]      = useState(false)
@@ -872,20 +872,18 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
 
               {/* ── LA CHASSE (xenomorph uniquement) ── */}
               {pet.stage === 'xenomorph' && (
-                <button className="btn btn-outline" disabled={huntCd > 0 || isSleeping || loading === 'hunt'}
-                  onClick={() => !isSleeping && huntCd <= 0 && setHuntConfirm(true)}
+                <button className="btn btn-outline" disabled={huntCd > 0 || loading === 'hunt'}
+                  onClick={() => huntCd <= 0 && setHuntConfirm(true)}
                   style={{
                     gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center',
                     gap: '.2rem', padding: '.9rem',
                     background: 'rgba(167,139,250,.08)', borderColor: '#a78bfa66', color: '#a78bfa',
-                    opacity: huntCd > 0 || isSleeping ? 0.55 : 1,
+                    opacity: huntCd > 0 ? 0.55 : 1,
                   }}>
                   <span style={{ fontSize: '1.6rem' }}>🏹</span>
                   <span style={{ fontSize: '.8rem', fontWeight: 600 }}>La Chasse</span>
                   {huntCd > 0
                     ? <span style={{ fontSize: '.65rem', color: 'var(--text3)' }}>Disponible dans {fmtCooldown(huntCd)}</span>
-                    : isSleeping
-                    ? <span style={{ fontSize: '.62rem', color: '#8888aa' }}>dort…</span>
                     : <span style={{ fontSize: '.65rem', color: '#c4b5fd' }}>Course-poursuite · +XP · +Humeur</span>
                   }
                 </button>
