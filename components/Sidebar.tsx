@@ -14,14 +14,21 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
   const searchParams = useSearchParams()
   const router       = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
-  const [clippyMastered, setClippyMastered] = useState(false)
-  const [clippyActive, setClippyActive] = useState(false)
+  const [clippyMastered,  setClippyMastered]  = useState(false)
+  const [clippyActive,    setClippyActive]    = useState(false)
+  const [conwayUnlocked,  setConwayUnlocked]  = useState(false)
   useEffect(() => {
     setClippyMastered(localStorage.getItem('clippy_mastered') === '1')
     setClippyActive(localStorage.getItem('clippy_active') === '1')
+    setConwayUnlocked(localStorage.getItem('conway_unlocked') === '1')
     function onState(e: Event) { setClippyActive((e as CustomEvent).detail?.active ?? false) }
+    function onConwayUnlock() { setConwayUnlocked(true) }
     window.addEventListener('clippy:statechange', onState)
-    return () => window.removeEventListener('clippy:statechange', onState)
+    window.addEventListener('conway:unlocked', onConwayUnlock)
+    return () => {
+      window.removeEventListener('clippy:statechange', onState)
+      window.removeEventListener('conway:unlocked', onConwayUnlock)
+    }
   }, [])
 
   function isActive(href: string) {
@@ -81,11 +88,12 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
       icon: '🔮',
       label: 'Secret',
       items: [
-        ...(hasTamagotchiEgg ? [{ href: '/tamagotchi', icon: '🤍', label: 'Mon Alien',   short: 'Alien'  }] : []),
+        ...(hasTamagotchiEgg  ? [{ href: '/tamagotchi', icon: '🤍', label: 'Mon Alien',       short: 'Alien'  }] : []),
+        ...(conwayUnlocked    ? [{ href: '/conway',     icon: '◼',  label: 'Jeu de la Vie',   short: 'Conway' }] : []),
         { href: '/easter-eggs', icon: '🥚', label: 'Easter Eggs', short: 'Easter' },
       ],
     },
-  ], [hasRageuxEgg, hasTamagotchiEgg])
+  ], [hasRageuxEgg, hasTamagotchiEgg, conwayUnlocked])
 
   /* groupe actif selon la page courante */
   const activeGroup = useCallback(() => {

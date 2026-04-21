@@ -150,6 +150,13 @@ const EGGS = [
     condition: 'Taper "boîte de pandore" au clavier — un coffre mystérieux apparaît. Si tu oses l\'ouvrir, le mal le plus ancien de l\'univers en sort…',
   },
   {
+    id: 'conway',
+    icon: '◼',
+    name: 'La Guerre des Mondes',
+    category: 'Clavier',
+    condition: 'Taper "la guerre des mondes" au clavier, ou triple-cliquer rapidement sur l\'affiche du film. Le Jeu de la Vie de Conway se réveille — et il reste accessible en section Secret.',
+  },
+  {
     id: 'watcher',
     icon: '🎬',
     name: 'Cinéphile Confirmé',

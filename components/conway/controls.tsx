@@ -14,55 +14,50 @@ interface ConwayControlsProps {
   onRandom: () => void
   onSpeed: (s: SpeedKey) => void
   onToolChange: (t: DrawTool) => void
+  onMini: () => void   // miniaturiser ou passer en mode flottant
   onClose: () => void
 }
 
 const BTN: React.CSSProperties = {
-  padding: '5px 12px',
-  borderRadius: 6,
+  padding: '5px 12px', borderRadius: 6,
   border: '1px solid rgba(74,222,128,0.25)',
   background: 'rgba(74,222,128,0.07)',
-  color: '#4ade80',
-  fontSize: 12,
-  fontFamily: 'monospace',
-  cursor: 'pointer',
-  lineHeight: 1.4,
-  transition: 'background 0.12s, border-color 0.12s',
-  whiteSpace: 'nowrap' as const,
+  color: '#4ade80', fontSize: 12,
+  fontFamily: 'monospace', cursor: 'pointer',
+  lineHeight: 1.4, whiteSpace: 'nowrap' as const,
+  transition: 'background 0.12s',
 }
 
 const BTN_ACTIVE: React.CSSProperties = {
-  ...BTN,
-  background: 'rgba(74,222,128,0.22)',
+  ...BTN, background: 'rgba(74,222,128,0.22)',
   borderColor: 'rgba(74,222,128,0.65)',
 }
 
-const BTN_CLOSE: React.CSSProperties = {
-  ...BTN,
-  color: 'rgba(255,255,255,0.4)',
-  borderColor: 'rgba(255,255,255,0.12)',
+const BTN_GHOST: React.CSSProperties = {
+  ...BTN, color: 'rgba(255,255,255,0.38)',
+  borderColor: 'rgba(255,255,255,0.1)',
   background: 'transparent',
 }
-
-const SPEEDS: Array<{ key: SpeedKey; label: string; title: string }> = [
-  { key: 'slow',   label: '🐢', title: 'Lente' },
-  { key: 'normal', label: '▷▷', title: 'Normale' },
-  { key: 'fast',   label: '⚡', title: 'Rapide' },
-]
-
-const TOOLS: Array<{ key: DrawTool; label: string; title: string }> = [
-  { key: 'draw',  label: '✏️',  title: 'Dessiner (clic gauche)' },
-  { key: 'erase', label: '⬛', title: 'Effacer (clic droit)' },
-  { key: 'spark', label: '✨',  title: 'Étincelle — injecte un burst de vie' },
-]
 
 const SEP: React.CSSProperties = {
   width: 1, height: 20, background: 'rgba(74,222,128,0.12)', flexShrink: 0,
 }
 
+const SPEEDS: Array<{ key: SpeedKey; label: string; title: string }> = [
+  { key: 'slow',   label: '🐢', title: 'Lente'   },
+  { key: 'normal', label: '▷▷', title: 'Normale' },
+  { key: 'fast',   label: '⚡', title: 'Rapide'  },
+]
+
+const TOOLS: Array<{ key: DrawTool; label: string; title: string }> = [
+  { key: 'draw',  label: '✏️', title: 'Dessiner (clic gauche / glissé)'   },
+  { key: 'erase', label: '⬛', title: 'Effacer (clic droit / glissé)'     },
+  { key: 'spark', label: '✨', title: 'Étincelle — injecte un burst de vie' },
+]
+
 export default function ConwayControls({
   status, speed, generation, aliveCount, activeTool,
-  onPlayPause, onReset, onRandom, onSpeed, onToolChange, onClose,
+  onPlayPause, onReset, onRandom, onSpeed, onToolChange, onMini, onClose,
 }: ConwayControlsProps) {
   return (
     <div style={{
@@ -118,7 +113,11 @@ export default function ConwayControls({
         </button>
       ))}
 
-      <button style={BTN_CLOSE} onClick={onClose} title="Fermer (Échap)">✕</button>
+      <div style={SEP} />
+
+      {/* Mini + Fermer */}
+      <button style={BTN} onClick={onMini} title="Miniaturiser — continuer à naviguer">↘ Mini</button>
+      <button style={BTN_GHOST} onClick={onClose} title="Fermer (Échap)">✕</button>
     </div>
   )
 }
