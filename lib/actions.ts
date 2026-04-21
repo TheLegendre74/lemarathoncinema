@@ -2353,16 +2353,25 @@ export async function reviveTamagotchi() {
   if (!effectivelyDead) return { data: null, error: 'Ton alien est encore en vie !' }
 
   const now = new Date().toISOString()
-  // Séparer update et select — le chaînage .update().select() peut échouer silencieusement avec RLS
-  const { error: dbError } = await (supabase as any).from('tamagotchi').update({
+  // Colonnes toujours présentes dans le schéma de base
+  const revivePayload: Record<string, any> = {
     stage: 'egg', hunger: 20, happiness: 80, health: 100, energy: 100,
-    age_hours: 0, last_fed: null, last_played: null, last_healed: null,
+    age_hours: 0, last_fed: null, last_healed: null,
     is_sleeping: false, is_sick: false, poop_count: 0,
-    caresses_today: 0, last_caresse_date: null,
-    xp: 0, care_streak: 0, last_care_date: null,
-    last_interacted_at: null, last_neglect_penalty_at: null, x2_exp_until: null,
-    last_sync: now, deaths: (petRaw.deaths ?? 0) + 1,
-  }).eq('user_id', user.id)
+    xp: 0, last_sync: now,
+  }
+  // Colonnes optionnelles — inclure seulement si elles existent dans la DB (pattern identique aux autres actions)
+  if ('last_played'            in petRaw) revivePayload.last_played            = null
+  if ('caresses_today'         in petRaw) revivePayload.caresses_today         = 0
+  if ('last_caresse_date'      in petRaw) revivePayload.last_caresse_date      = null
+  if ('care_streak'            in petRaw) revivePayload.care_streak            = 0
+  if ('last_care_date'         in petRaw) revivePayload.last_care_date         = null
+  if ('last_interacted_at'     in petRaw) revivePayload.last_interacted_at     = null
+  if ('last_neglect_penalty_at' in petRaw) revivePayload.last_neglect_penalty_at = null
+  if ('x2_exp_until'           in petRaw) revivePayload.x2_exp_until           = null
+  if ('deaths'                 in petRaw) revivePayload.deaths                 = (petRaw.deaths ?? 0) + 1
+
+  const { error: dbError } = await (supabase as any).from('tamagotchi').update(revivePayload).eq('user_id', user.id)
   if (dbError) return { data: null, error: `Erreur réincarnation (${dbError.code ?? dbError.message})` }
   const { data } = await (supabase as any).from('tamagotchi').select('*').eq('user_id', user.id).single()
   return { data, error: null }
