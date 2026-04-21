@@ -1,82 +1,73 @@
-// Conway V2 — module anti-stagnation
-// Surveille l'activité de la simulation et injecte un spark quand le monde se fige.
-// Complètement découplé du reste : reçoit des données, rend une décision, ne modifie rien.
+// Conway V4 — anti-stagnation pour EcoGrid
+// Détecte la stagnation par variation d'énergie moyenne (pas de flip binaire).
+// Injecte des patterns connus propres plutôt que du bruit aléatoire.
 
-import { Grid, MethuselahName, placeMethuselah, sparkAt, countAliveInZone } from './gameOfLifeEngine'
+import { EcoGrid, placePatternEco, energyInZone } from './gameOfLifeEngine'
 import { CONWAY_CONFIG } from './config'
-
-// ─── Types ───────────────────────────────────────────────────────────────────
 
 export type StagnationReason = 'dying' | 'static'
 
 export interface SparkResult {
-  grid: Grid
+  grid:   EcoGrid
   reason: StagnationReason
 }
 
-// ─── Choix du Méthuselah ─────────────────────────────────────────────────────
+// Patterns d'injection calibrés — comportements Conway prévisibles
+const GLIDER:     ReadonlyArray<readonly [number,number]> = [[1,0],[2,1],[0,2],[1,2],[2,2]]
+const BLINKER:    ReadonlyArray<readonly [number,number]> = [[0,1],[1,1],[2,1]]
+const RPENTOMINO: ReadonlyArray<readonly [number,number]> = [[1,0],[2,0],[0,1],[1,1],[1,2]]
+const BEACON:     ReadonlyArray<readonly [number,number]> = [[0,0],[1,0],[0,1],[3,2],[2,3],[3,3]]
 
-const METHUSELAH_POOL: MethuselahName[] = ['rpentomino', 'acorn', 'diehard']
+const INJECTION_PATTERNS = [GLIDER, BLINKER, RPENTOMINO, BEACON]
 
-function pickMethuselah(): MethuselahName {
-  return METHUSELAH_POOL[Math.floor(Math.random() * METHUSELAH_POOL.length)]
-}
-
-// Trouve la zone la plus calme de la grille pour y placer le spark
-// Découpe en secteurs 16×16 et retourne le centre du secteur le moins peuplé
-function findQuietZone(grid: Grid): { x: number; y: number } {
+// Trouve la zone avec le moins d'énergie — cible pour l'injection
+function findQuietZone(eco: EcoGrid): { x: number; y: number } {
   const SECTOR = 16
-  const { width, height } = grid
-  let minCount = Infinity
-  let bestX = Math.floor(width / 2)
+  const { width, height } = eco
+  let minEnergy = Infinity
+  let bestX = Math.floor(width  / 2)
   let bestY = Math.floor(height / 2)
 
   for (let sy = 0; sy + SECTOR <= height; sy += SECTOR) {
     for (let sx = 0; sx + SECTOR <= width; sx += SECTOR) {
-      const count = countAliveInZone(grid, sx, sy, SECTOR, SECTOR)
-      if (count < minCount) {
-        minCount = count
+      const e = energyInZone(eco, sx, sy, SECTOR, SECTOR)
+      if (e < minEnergy) {
+        minEnergy = e
         bestX = sx + Math.floor(SECTOR / 2)
         bestY = sy + Math.floor(SECTOR / 2)
       }
     }
   }
 
-  // Légère variation aléatoire pour éviter de toujours sparker au même endroit
-  const jitter = 4
+  const jitter = 5
   return {
-    x: Math.max(8, Math.min(width  - 8, bestX + Math.floor((Math.random() - 0.5) * jitter * 2))),
-    y: Math.max(8, Math.min(height - 8, bestY + Math.floor((Math.random() - 0.5) * jitter * 2))),
+    x: Math.max(6, Math.min(width  - 6, bestX + Math.round((Math.random() - 0.5) * jitter * 2))),
+    y: Math.max(6, Math.min(height - 6, bestY + Math.round((Math.random() - 0.5) * jitter * 2))),
   }
 }
 
-// ─── Classe principale ───────────────────────────────────────────────────────
-
 export class AntiStagnationModule {
-  private quietTicks = 0
-  private readonly threshold = CONWAY_CONFIG.ANTI_STAGNATION.ACTIVITY_THRESHOLD
-  private readonly quietLimit = CONWAY_CONFIG.ANTI_STAGNATION.QUIET_TICKS
+  private quietTicks         = 0
+  private readonly threshold     = CONWAY_CONFIG.ANTI_STAGNATION.ACTIVITY_THRESHOLD
+  private readonly quietLimit    = CONWAY_CONFIG.ANTI_STAGNATION.QUIET_TICKS
   private readonly minAliveRatio = CONWAY_CONFIG.ANTI_STAGNATION.MIN_ALIVE_RATIO
 
-  // Appelé après chaque tick avec la grille courante, la précédente, et le compte de vivants.
-  // Retourne null si tout va bien, ou un SparkResult avec la grille augmentée.
-  check(currentGrid: Grid, prevGrid: Grid, aliveCount: number): SparkResult | null {
-    const totalCells = currentGrid.width * currentGrid.height
+  check(eco: EcoGrid, prevEco: EcoGrid, aliveCount: number): SparkResult | null {
+    const totalCells = eco.width * eco.height
 
-    // Urgence : monde presque vide
+    // Urgence : quasi-extinction
     if (aliveCount < totalCells * this.minAliveRatio) {
-      return this._injectSpark(currentGrid, 'dying')
+      return this._inject(eco, 'dying')
     }
 
-    // Détection activité faible
-    const changeCount = this._countChanges(currentGrid.cells, prevGrid.cells)
-    const changeRatio = changeCount / totalCells
+    // Activité = variation d'énergie moyenne par cellule
+    const activity = this._activity(eco.energy, prevEco.energy)
 
-    if (changeRatio < this.threshold) {
+    if (activity < this.threshold) {
       this.quietTicks++
       if (this.quietTicks >= this.quietLimit) {
         this.quietTicks = 0
-        return this._injectSpark(currentGrid, 'static')
+        return this._inject(eco, 'static')
       }
     } else {
       this.quietTicks = 0
@@ -85,32 +76,18 @@ export class AntiStagnationModule {
     return null
   }
 
-  reset(): void {
-    this.quietTicks = 0
+  reset(): void { this.quietTicks = 0 }
+
+  private _activity(a: Float32Array, b: Float32Array): number {
+    let diff = 0
+    for (let i = 0; i < a.length; i++) diff += Math.abs(a[i] - b[i])
+    return diff / a.length
   }
 
-  // ── Privé ─────────────────────────────────────────────────────────────────
-
-  private _countChanges(a: Uint8Array, b: Uint8Array): number {
-    let n = 0
-    for (let i = 0; i < a.length; i++) {
-      if ((a[i] > 0) !== (b[i] > 0)) n++
-    }
-    return n
-  }
-
-  private _injectSpark(grid: Grid, reason: StagnationReason): SparkResult {
-    const sparksCount = CONWAY_CONFIG.ANTI_STAGNATION.SPARKS_COUNT
-    let g = grid
-
-    // Scatter sparksCount sparks dispersés sur la grille
-    for (let i = 0; i < sparksCount; i++) {
-      const { x, y } = findQuietZone(g)
-      g = Math.random() < 0.6
-        ? placeMethuselah(g, pickMethuselah(), x, y)
-        : sparkAt(g, x, y, 5, 0.45)
-    }
-
-    return { grid: g, reason }
+  private _inject(eco: EcoGrid, reason: StagnationReason): SparkResult {
+    const { x, y } = findQuietZone(eco)
+    const pattern  = INJECTION_PATTERNS[Math.floor(Math.random() * INJECTION_PATTERNS.length)]
+    const grid     = placePatternEco(eco, pattern, x, y, 0.65)
+    return { grid, reason }
   }
 }

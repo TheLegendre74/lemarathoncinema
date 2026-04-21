@@ -1,7 +1,7 @@
-// Conway V3 — système de mobilité (Spaceship Factory)
-// Lance des vaisseaux dans des directions aléatoires à intervalles réguliers.
+// Conway V4 — spaceship factory sur EcoGrid
+// Lance des vaisseaux (gliders / LWSS) à intervalles contrôlés.
 
-import { Grid, ShipDir, spawnShip } from './gameOfLifeEngine'
+import { EcoGrid, ShipDir, spawnShipEco } from './gameOfLifeEngine'
 import { CONWAY_CONFIG } from './config'
 
 const DIRS: ShipDir[] = ['E', 'W', 'SE', 'SW', 'NE', 'NW']
@@ -13,19 +13,18 @@ export class MobilitySystem {
     this._ticksUntilSpawn = this._nextInterval()
   }
 
-  update(grid: Grid): Grid {
+  updateEco(grid: EcoGrid): EcoGrid {
     this._ticksUntilSpawn--
     if (this._ticksUntilSpawn > 0) return grid
 
     this._ticksUntilSpawn = this._nextInterval()
     let g = grid
-    const { SHIPS_PER_SPAWN } = CONWAY_CONFIG.MOBILITY
 
-    for (let i = 0; i < SHIPS_PER_SPAWN; i++) {
+    for (let i = 0; i < CONWAY_CONFIG.MOBILITY.SHIPS_PER_SPAWN; i++) {
       const dir = DIRS[Math.floor(Math.random() * DIRS.length)]
-      const ox = 5 + Math.floor(Math.random() * (grid.width  - 15))
-      const oy = 5 + Math.floor(Math.random() * (grid.height - 15))
-      g = spawnShip(g, dir, ox, oy)
+      const ox  = 5 + Math.floor(Math.random() * (grid.width  - 15))
+      const oy  = 5 + Math.floor(Math.random() * (grid.height - 15))
+      g = spawnShipEco(g, dir, ox, oy)
     }
     return g
   }

@@ -1,82 +1,79 @@
-// Conway V3 — configuration centrale
+// Conway V4 — configuration centrale
 
 export const CONWAY_CONFIG = {
   CELL_SIZE: 8,
 
   COLORS: {
     background: '#05050a',
-    cellNew:    '#c4fce0', // flash à la naissance
-    cellYoung:  '#6ee7b7',
-    cellAdult:  '#4ade80',
-    cellOld:    '#22c55e',
-    cellAncient:'#15803d',
-    cellTrail:  '#4ade80',
+    cellNew:     '#c4fce0', // naissance (faible énergie) — blanc-vert vif
+    cellYoung:   '#6ee7b7',
+    cellAdult:   '#4ade80',
+    cellOld:     '#22c55e',
+    cellAncient: '#15803d', // haute énergie — vert sombre, cellule ancrée
+    cellTrail:   '#4ade80',
   },
 
   SPEEDS: {
-    slow: 220,
-    normal: 80,
-    fast: 16,
+    slow:   180,
+    normal:  70,
+    fast:    16,
   } as const,
 
   DEFAULT_SPEED: 'normal' as const,
 
-  RANDOM_DENSITY: 0.28,
+  // ─── Moteur énergétique ─────────────────────────────────────────────────────
+  // Chaque cellule porte une énergie ∈ [0, 1].
+  // Vivant si energy > ALIVE_THRESHOLD. Mort progressif visible dans le trail.
+  ECO: {
+    ALIVE_THRESHOLD: 0.35,  // seuil vivant/mort
+    BIRTH_GAIN:      0.07,  // born à T + 0.07 = 0.42 → couleur "new"
+    SURVIVE_GAIN:    0.02,  // gain/tick si 2-3 voisins (net : +0.018)
+    ISOLATION_COST:  0.04,  // perte/tick si 0-1 voisins (net : −0.042)
+    OVERPOP_COST:    0.07,  // perte/tick si 4+ voisins (net : −0.068)
+    METABOLISM:      0.002, // perte basale — coût d'existence
+    ENERGY_DECAY:    0.03,  // décroissance post-mort — crée le trail naturel
+  },
 
-  // ─── Anti-stagnation ─────────────────────────────────────────────────────
+  // ─── Anti-stagnation ────────────────────────────────────────────────────────
   ANTI_STAGNATION: {
-    ACTIVITY_THRESHOLD: 0.003,
-    QUIET_TICKS: 6,           // réduit de 10 → 6 (réaction plus rapide)
-    MIN_ALIVE_RATIO: 0.008,
-    SPARKS_COUNT: 3,          // sparks simultanés dispersés sur la grille
+    ACTIVITY_THRESHOLD: 0.0012, // variation d'énergie moyenne/cellule/tick
+    QUIET_TICKS:        22,     // patient avant d'intervenir
+    MIN_ALIVE_RATIO:    0.005,
+    SPARKS_COUNT:       1,      // une seule injection à la fois
   },
 
-  // ─── Noise thermique — bruit de fond invisible ────────────────────────────
-  // Empêche la stabilisation totale. 4 flips sur ~32K cellules = 0.012%
-  NOISE: {
-    FLIPS_PER_TICK: 4,
+  // ─── Seed structuré ─────────────────────────────────────────────────────────
+  SEED: {
+    ISLAND_FACTOR: 0.80, // N îlots ≈ (cols*rows / 250) * factor
+    MIN_DIST:      14,   // distance min entre centres d'îlots
+    BASE_DENSITY:  0.06, // bruit de fond sparse sous les îlots
   },
 
-  // ─── Spaceship factory — mouvement littéral ───────────────────────────────
+  // ─── Mobilité (spaceship factory) ───────────────────────────────────────────
   MOBILITY: {
-    SPAWN_INTERVAL_MIN: 12,  // ticks minimum entre deux lancements
-    SPAWN_INTERVAL_MAX: 24,
-    SHIPS_PER_SPAWN: 2,      // vaisseaux lancés par événement
+    SPAWN_INTERVAL_MIN: 35,
+    SPAWN_INTERVAL_MAX: 70,
+    SHIPS_PER_SPAWN:    1,
   },
 
-  // ─── Cycle de règles ─────────────────────────────────────────────────────
-  // Conway (55 ticks) → HighLife B36/S23 (15 ticks) → Conway...
-  // Le passage de règle détruit les structures stables — relance garantie
-  RULE_CYCLE: {
-    CONWAY_TICKS: 55,
-    HIGHLIFE_TICKS: 15,
-  },
-
-  // ─── Bridge / fusion guidée ──────────────────────────────────────────────
-  // Toutes les N ticks, seed le point médian entre deux cellules vivantes distantes
-  BRIDGE: {
-    INTERVAL: 7,
-    MIN_DIST: 8,
-    MAX_DIST: 40,
-  },
-
-  // ─── Rendu visuel ────────────────────────────────────────────────────────
+  // ─── Rendu — seuils énergie pour la palette ──────────────────────────────────
   RENDER: {
-    TRAIL_INITIAL: 0.75,
-    TRAIL_DECAY:   0.14,
-    AGE_YOUNG:   3,
-    AGE_ADULT:  12,
-    AGE_OLD:    35,
+    TRAIL_DECAY: 0.10,
+    E_NEW:   0.48, // [T..E_NEW]    → cellNew   (blanc-vert, naissances)
+    E_YOUNG: 0.62, // [E_NEW..YOUNG] → cellYoung
+    E_ADULT: 0.78, // [YOUNG..ADULT] → cellAdult
+    E_OLD:   0.92, // [ADULT..OLD]   → cellOld
+                   // [OLD..1.0]     → cellAncient
   },
 
-  // ─── Pinceau souris ──────────────────────────────────────────────────────
+  // ─── Pinceau souris ──────────────────────────────────────────────────────────
   BRUSH: {
-    DRAW_RADIUS:  2,
-    ERASE_RADIUS: 2,
-    SPARK_RADIUS: 5,
-    SPARK_DENSITY: 0.5,
+    DRAW_RADIUS:   2,
+    ERASE_RADIUS:  2,
+    SPARK_RADIUS:  5,
+    SPARK_DENSITY: 0.40,
   },
 } as const
 
-export type SpeedKey  = keyof typeof CONWAY_CONFIG.SPEEDS
-export type DrawTool  = 'draw' | 'erase' | 'spark'
+export type SpeedKey = keyof typeof CONWAY_CONFIG.SPEEDS
+export type DrawTool = 'draw' | 'erase' | 'spark'
