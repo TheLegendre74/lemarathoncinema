@@ -7,20 +7,21 @@ import { signOut } from '@/lib/actions'
 import { levelFromExp, getActiveBadge, CONFIG } from '@/lib/config'
 import type { Profile } from '@/lib/supabase/types'
 
-interface SidebarProps { profile: Profile | null; hasRageuxEgg?: boolean; hasTamagotchiEgg?: boolean; unreadMessages?: number }
+interface SidebarProps { profile: Profile | null; hasRageuxEgg?: boolean; hasTamagotchiEgg?: boolean; hasConwayEgg?: boolean; unreadMessages?: number }
 
-export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEgg = false, unreadMessages = 0 }: SidebarProps) {
+export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEgg = false, hasConwayEgg = false, unreadMessages = 0 }: SidebarProps) {
   const pathname     = usePathname()
   const searchParams = useSearchParams()
   const router       = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
   const [clippyMastered,  setClippyMastered]  = useState(false)
   const [clippyActive,    setClippyActive]    = useState(false)
-  const [conwayUnlocked,  setConwayUnlocked]  = useState(false)
+  const [conwayUnlocked,  setConwayUnlocked]  = useState(hasConwayEgg)
   useEffect(() => {
     setClippyMastered(localStorage.getItem('clippy_mastered') === '1')
     setClippyActive(localStorage.getItem('clippy_active') === '1')
-    setConwayUnlocked(localStorage.getItem('conway_unlocked') === '1')
+    // Fallback localStorage pour affichage immédiat si egg déclenché dans cette session
+    if (!hasConwayEgg && localStorage.getItem('conway_unlocked') === '1') setConwayUnlocked(true)
     function onState(e: Event) { setClippyActive((e as CustomEvent).detail?.active ?? false) }
     function onConwayUnlock() { setConwayUnlocked(true) }
     window.addEventListener('clippy:statechange', onState)
