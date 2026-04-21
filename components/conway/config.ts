@@ -25,13 +25,28 @@ export const CONWAY_CONFIG = {
   // Chaque cellule porte une énergie ∈ [0, 1].
   // Vivant si energy > ALIVE_THRESHOLD. Mort progressif visible dans le trail.
   ECO: {
-    ALIVE_THRESHOLD: 0.35,  // seuil vivant/mort
-    BIRTH_GAIN:      0.07,  // born à T + 0.07 = 0.42 → couleur "new"
-    SURVIVE_GAIN:    0.02,  // gain/tick si 2-3 voisins (net : +0.018)
-    ISOLATION_COST:  0.04,  // perte/tick si 0-1 voisins (net : −0.042)
-    OVERPOP_COST:    0.07,  // perte/tick si 4+ voisins (net : −0.068)
-    METABOLISM:      0.002, // perte basale — coût d'existence
-    ENERGY_DECAY:    0.03,  // décroissance post-mort — crée le trail naturel
+    ALIVE_THRESHOLD:      0.35,
+    BIRTH_GAIN:           0.07,   // born à T + 0.07 = 0.42 → couleur "new"
+    SURVIVE_GAIN:         0.02,   // gain/tick si 2-3 voisins
+    ISOLATION_COST:       0.04,   // perte/tick si 0-1 voisins
+    OVERPOP_COST:         0.07,   // perte/tick si 4+ voisins
+    METABOLISM:           0.002,  // perte basale
+    ENERGY_DECAY:         0.03,   // décroissance post-mort (trail)
+    RESILIENCE_PER_LEVEL: 0.18,   // bonus de résilience par niveau de complexité
+  },
+
+  // ─── Fusion ─────────────────────────────────────────────────────────────────
+  // Une fusion est possible entre deux amas vivants proches qui réunissent
+  // des conditions de compatibilité. Contact ≠ fusion.
+  FUSION: {
+    ENERGY_MIN:      0.62,  // énergie minimale des deux cellules
+    NEIGHBOR_MIN:    3,     // min de voisins vivants (confirmation d'amas)
+    PROB_BASE:       0.004, // proba de base par paire éligible/tick
+    MAX_COMPLEXITY:  7,     // niveau max de complexité
+    MAX_DIFF:        2,     // écart max de complexité autorisé
+    COOLDOWN_BASE:   30,    // ticks de cooldown = niveau × COOLDOWN_BASE
+    ENERGY_BOOST:    0.12,  // boost d'énergie au moment de la fusion
+    PASS_INTERVAL:   1,     // appliquer la passe de fusion tous les N ticks
   },
 
   // ─── Anti-stagnation ────────────────────────────────────────────────────────

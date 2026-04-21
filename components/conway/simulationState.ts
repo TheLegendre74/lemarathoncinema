@@ -8,6 +8,7 @@ import {
 import { CONWAY_CONFIG, SpeedKey, DrawTool } from './config'
 import { AntiStagnationModule } from './antistagnation'
 import { MobilitySystem } from './mobility'
+import { FusionSystem } from './fusion'
 
 export type SimStatus = 'playing' | 'paused'
 
@@ -27,6 +28,7 @@ export class SimulationController {
   private _intervalId: ReturnType<typeof setInterval> | null = null
   private _antiStag  = new AntiStagnationModule()
   private _mobility  = new MobilitySystem()
+  private _fusion    = new FusionSystem()
 
   onTick: ((state: SimState) => void) | null = null
 
@@ -76,6 +78,7 @@ export class SimulationController {
     this._prevGrid = grid
     this._antiStag.reset()
     this._mobility.reset()
+    this._fusion.reset()
     this._state = {
       grid, generation: 0, status: 'paused',
       speed: this._state.speed, aliveCount: 0,
@@ -97,6 +100,7 @@ export class SimulationController {
     this._prevGrid = grid
     this._antiStag.reset()
     this._mobility.reset()
+    this._fusion.reset()
     this._state = {
       ...this._state, grid, generation: 0,
       status: 'paused', aliveCount: countAliveEco(grid, ECO_CFG.ALIVE_THRESHOLD),
@@ -139,6 +143,9 @@ export class SimulationController {
   private _tick(): void {
     const prevGrid = this._state.grid
     let grid       = stepEco(prevGrid, ECO_CFG)
+
+    // Fusion sélective — formes complexes émergent du contact entre amas
+    grid = this._fusion.update(grid)
 
     // Spaceship factory — gliders injectés à intervalle contrôlé
     grid = this._mobility.updateEco(grid)
