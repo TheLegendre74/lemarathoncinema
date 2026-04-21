@@ -24,6 +24,12 @@ export const CLASSIC_RULES: ConwayRules = {
   births: new Set([3]),
 }
 
+// HighLife B36/S23 — naissance aussi avec 6 voisins, beaucoup plus dynamique
+export const HIGHLIFE_RULES: ConwayRules = {
+  survives: new Set([2, 3]),
+  births: new Set([3, 6]),
+}
+
 // ─── Patterns classiques ─────────────────────────────────────────────────────
 
 export type PatternName = 'block' | 'blinker' | 'glider'
@@ -168,6 +174,72 @@ export function placeMethuselah(grid: Grid, name: MethuselahName, ox: number, oy
     const x = ox + dx, y = oy + dy
     if (x >= 0 && x < grid.width && y >= 0 && y < grid.height)
       cells[y * grid.width + x] = 1
+  }
+  return { ...grid, cells }
+}
+
+// ─── V3 — Bruit thermique, vaisseaux, pont ──────────────────────────────────
+
+// Flip aléatoire de numFlips cellules — empêche la stabilisation totale
+export function noisePass(grid: Grid, numFlips: number): Grid {
+  const cells = new Uint8Array(grid.cells)
+  const total = cells.length
+  for (let i = 0; i < numFlips; i++) {
+    const idx = Math.floor(Math.random() * total)
+    cells[idx] = cells[idx] > 0 ? 0 : 1
+  }
+  return { ...grid, cells }
+}
+
+// Seed le point médian entre deux cellules vivantes distantes — crée des ponts de fusion
+export function bridgePass(grid: Grid, minDist: number, maxDist: number): Grid {
+  const { cells, width, height } = grid
+  const total = cells.length
+  const tries = 25
+
+  for (let t = 0; t < tries; t++) {
+    const idx1 = Math.floor(Math.random() * total)
+    if (cells[idx1] === 0) continue
+    const x1 = idx1 % width
+    const y1 = Math.floor(idx1 / width)
+
+    const angle = Math.random() * Math.PI * 2
+    const dist = minDist + Math.random() * (maxDist - minDist)
+    const x2 = Math.round(x1 + Math.cos(angle) * dist)
+    const y2 = Math.round(y1 + Math.sin(angle) * dist)
+
+    if (x2 < 0 || x2 >= width || y2 < 0 || y2 >= height) continue
+    if (cells[y2 * width + x2] === 0) continue
+
+    const mx = Math.round((x1 + x2) / 2)
+    const my = Math.round((y1 + y2) / 2)
+    const newCells = new Uint8Array(cells)
+    newCells[my * width + mx] = 1
+    return { ...grid, cells: newCells }
+  }
+
+  return grid
+}
+
+export type ShipDir = 'E' | 'W' | 'SE' | 'SW' | 'NE' | 'NW'
+
+// Gliders (5 cells, 4 ticks/step) et LWSS (9 cells, 4 ticks/step × 2 cols)
+const SHIP_PATTERNS: Record<ShipDir, ReadonlyArray<readonly [number, number]>> = {
+  SE: [[1,0],[2,1],[0,2],[1,2],[2,2]],
+  SW: [[1,0],[0,1],[2,2],[0,2],[1,2]],
+  NE: [[2,0],[0,0],[1,0],[2,1],[1,2]],
+  NW: [[0,0],[1,0],[2,0],[0,1],[1,2]],
+  E:  [[1,0],[4,0],[0,1],[0,2],[4,2],[0,3],[1,3],[2,3],[3,3]],
+  W:  [[0,0],[3,0],[4,1],[4,2],[0,2],[1,3],[2,3],[3,3],[4,3]],
+}
+
+export function spawnShip(grid: Grid, dir: ShipDir, ox: number, oy: number): Grid {
+  const cells = new Uint8Array(grid.cells)
+  const { width, height } = grid
+  for (const [dx, dy] of SHIP_PATTERNS[dir]) {
+    const x = ox + dx, y = oy + dy
+    if (x >= 0 && x < width && y >= 0 && y < height)
+      cells[y * width + x] = 1
   }
   return { ...grid, cells }
 }

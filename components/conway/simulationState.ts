@@ -2,14 +2,16 @@
 // Gère le cycle de vie : tick loop, play/pause, vitesse, anti-stagnation, interaction souris.
 
 import {
-  Grid, ConwayRules, CLASSIC_RULES,
+  Grid, ConwayRules, CLASSIC_RULES, HIGHLIFE_RULES,
   createGrid, stepGrid, countAlive, seedRandom,
   placePattern, PatternName,
   applyBrush, sparkAt,
+  noisePass, bridgePass,
   CellState,
 } from './gameOfLifeEngine'
 import { CONWAY_CONFIG, SpeedKey, DrawTool } from './config'
 import { AntiStagnationModule } from './antistagnation'
+import { MobilitySystem } from './mobility'
 
 // ─── Types publics ───────────────────────────────────────────────────────────
 
@@ -31,6 +33,8 @@ export class SimulationController {
   private _intervalId: ReturnType<typeof setInterval> | null = null
   private _rules: ConwayRules = CLASSIC_RULES
   private _antiStag = new AntiStagnationModule()
+  private _mobility = new MobilitySystem()
+  private _ruleTick = 0
 
   // Callback déclenché après chaque tick
   onTick: ((state: SimState) => void) | null = null
@@ -77,6 +81,8 @@ export class SimulationController {
     const grid = createGrid(width, height)
     this._prevGrid = grid
     this._antiStag.reset()
+    this._mobility.reset()
+    this._ruleTick = 0
     this._state = {
       grid, generation: 0, status: 'paused',
       speed: this._state.speed, aliveCount: 0,
@@ -92,6 +98,8 @@ export class SimulationController {
     const grid = seedRandom(createGrid(width, height), CONWAY_CONFIG.RANDOM_DENSITY)
     this._prevGrid = grid
     this._antiStag.reset()
+    this._mobility.reset()
+    this._ruleTick = 0
     this._state = {
       ...this._state, grid, generation: 0,
       status: 'paused', aliveCount: countAlive(grid),
@@ -143,23 +151,43 @@ export class SimulationController {
 
   // ── Boucle interne ────────────────────────────────────────────────────────
 
+  private _getRules(): ConwayRules {
+    const { CONWAY_TICKS, HIGHLIFE_TICKS } = CONWAY_CONFIG.RULE_CYCLE
+    const cycle = CONWAY_TICKS + HIGHLIFE_TICKS
+    return (this._ruleTick % cycle) < CONWAY_TICKS ? CLASSIC_RULES : HIGHLIFE_RULES
+  }
+
   private _tick(): void {
     const prevGrid = this._state.grid
-    let grid = stepGrid(prevGrid, this._rules)
+    let grid = stepGrid(prevGrid, this._getRules())
+
+    // Bruit thermique — empêche stabilisation totale
+    grid = noisePass(grid, CONWAY_CONFIG.NOISE.FLIPS_PER_TICK)
+
+    // Ponts de fusion entre groupes distants
+    const gen = this._state.generation + 1
+    if (gen % CONWAY_CONFIG.BRIDGE.INTERVAL === 0) {
+      grid = bridgePass(grid, CONWAY_CONFIG.BRIDGE.MIN_DIST, CONWAY_CONFIG.BRIDGE.MAX_DIST)
+    }
+
+    // Spaceship factory — mouvement littéral
+    grid = this._mobility.update(grid)
+
     let aliveCount = countAlive(grid)
 
-    // Anti-stagnation : injecte un spark si le monde se fige
+    // Anti-stagnation : injecte des sparks si le monde se fige
     const spark = this._antiStag.check(grid, prevGrid, aliveCount)
     if (spark) {
       grid = spark.grid
       aliveCount = countAlive(grid)
     }
 
+    this._ruleTick++
     this._prevGrid = prevGrid
     this._state = {
       ...this._state,
       grid,
-      generation: this._state.generation + 1,
+      generation: gen,
       aliveCount,
     }
     this.onTick?.(this._state)

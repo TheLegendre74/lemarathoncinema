@@ -100,13 +100,17 @@ export class AntiStagnationModule {
   }
 
   private _injectSpark(grid: Grid, reason: StagnationReason): SparkResult {
-    const { x, y } = findQuietZone(grid)
+    const sparksCount = CONWAY_CONFIG.ANTI_STAGNATION.SPARKS_COUNT
+    let g = grid
 
-    // 60% chance Méthuselah, 40% chance cluster aléatoire
-    const newGrid = Math.random() < 0.6
-      ? placeMethuselah(grid, pickMethuselah(), x, y)
-      : sparkAt(grid, x, y, 5, 0.45)
+    // Scatter sparksCount sparks dispersés sur la grille
+    for (let i = 0; i < sparksCount; i++) {
+      const { x, y } = findQuietZone(g)
+      g = Math.random() < 0.6
+        ? placeMethuselah(g, pickMethuselah(), x, y)
+        : sparkAt(g, x, y, 5, 0.45)
+    }
 
-    return { grid: newGrid, reason }
+    return { grid: g, reason }
   }
 }

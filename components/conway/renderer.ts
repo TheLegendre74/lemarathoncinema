@@ -73,18 +73,24 @@ export class ConwayRenderer {
     }
     ctx.globalAlpha = 1
 
-    // 3. Cellules vivantes avec coloration par âge
+    // 3. Cellules vivantes avec coloration par âge + flash de naissance
     for (let y = 0; y < height; y++) {
       const row = y * width
       for (let x = 0; x < width; x++) {
         const i = row + x
         if (cells[i] === 0) continue
         const a = age[i]
-        ctx.fillStyle = a <= RENDER.AGE_YOUNG  ? COLORS.cellNew
-                      : a <= RENDER.AGE_ADULT  ? COLORS.cellYoung
-                      : a <= RENDER.AGE_OLD    ? COLORS.cellAdult
-                      : COLORS.cellOld
-        ctx.fillRect(x * CS + 1, y * CS + 1, CS - 2, CS - 2)
+        if (a === 1) {
+          // Flash de naissance — carré légèrement plus grand
+          ctx.fillStyle = COLORS.cellNew
+          ctx.fillRect(x * CS, y * CS, CS, CS)
+        } else {
+          ctx.fillStyle = a <= RENDER.AGE_YOUNG ? COLORS.cellYoung
+                        : a <= RENDER.AGE_ADULT ? COLORS.cellAdult
+                        : a <= RENDER.AGE_OLD   ? COLORS.cellOld
+                        : COLORS.cellAncient
+          ctx.fillRect(x * CS + 1, y * CS + 1, CS - 2, CS - 2)
+        }
       }
     }
 
