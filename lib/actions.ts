@@ -2346,12 +2346,15 @@ export async function reviveTamagotchi() {
   const { data: petRaw } = await (supabase as any).from('tamagotchi').select('*').eq('user_id', user.id).single()
   if (!petRaw) return { data: null, error: 'Pas de tamagotchi' }
 
-  // Appliquer le decay pour avoir l'état réel (le sync DB peut avoir échoué silencieusement)
+  // Appliquer le decay pour avoir l'état réel (sync DB peut avoir échoué silencieusement)
   const { pet: petDecayed } = applyTamaDecay(petRaw)
-  if (petDecayed.stage !== 'dead') return { data: null, error: 'Ton alien est encore en vie !' }
+  // Considéré mort si stage='dead' OU health<=0 (évite le bug d'early-return du decay)
+  const effectivelyDead = petDecayed.stage === 'dead' || petDecayed.health <= 0
+  if (!effectivelyDead) return { data: null, error: 'Ton alien est encore en vie !' }
 
   const now = new Date().toISOString()
-  const { data } = await (supabase as any).from('tamagotchi').update({
+  // Séparer update et select — le chaînage .update().select() peut échouer silencieusement avec RLS
+  const { error: dbError } = await (supabase as any).from('tamagotchi').update({
     stage: 'egg', hunger: 20, happiness: 80, health: 100, energy: 100,
     age_hours: 0, last_fed: null, last_played: null, last_healed: null,
     is_sleeping: false, is_sick: false, poop_count: 0,
@@ -2359,7 +2362,9 @@ export async function reviveTamagotchi() {
     xp: 0, care_streak: 0, last_care_date: null,
     last_interacted_at: null, last_neglect_penalty_at: null, x2_exp_until: null,
     last_sync: now, deaths: (petRaw.deaths ?? 0) + 1,
-  }).eq('user_id', user.id).select().single()
+  }).eq('user_id', user.id)
+  if (dbError) return { data: null, error: `Erreur réincarnation (${dbError.code ?? dbError.message})` }
+  const { data } = await (supabase as any).from('tamagotchi').select('*').eq('user_id', user.id).single()
   return { data, error: null }
 }
 
