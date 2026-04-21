@@ -12,6 +12,7 @@ const SouthParkEggs  = dynamic(() => import('./SouthParkEggs').then(m => ({ defa
 const SouthParkBus_  = dynamic(() => import('./SouthParkEggs').then(m => ({ default: m.SouthParkBus })), { ssr: false })
 const RandyMarsh_    = dynamic(() => import('./SouthParkEggs').then(m => ({ default: m.RandyMarsh   })), { ssr: false })
 const JokerCardEgg_  = dynamic(() => import('./JokerCardEgg').then(m => ({ default: m.JokerCardEgg  })), { ssr: false })
+const ConwayOverlay  = dynamic(() => import('./conway/overlay'),                                         { ssr: false })
 
 // ─── ANIMATIONS (partagées avec Forum et FilmsClient) ───────────────────────
 const EE_STYLES = `
@@ -963,6 +964,7 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
   const [ghostBoxMsg,    setGhostBoxMsg]    = useState('Hey! Ouvre moi!')
   const [ghostBoxWarn,   setGhostBoxWarn]   = useState(false)
   const [showTamagotchi, setShowTamagotchi] = useState(false)
+  const [showConway,     setShowConway]     = useState(false)
   const keyBuf = useRef<string[]>([])
   const tarsShown = useRef(false)
   const noctambuleShown = useRef(false)
@@ -1005,6 +1007,7 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
     }
     else if (t.endsWith('gomu gomu no tipiak!')) { setShowTipiak(true) }
     else if (t.endsWith('boîte de pandore') || t.endsWith('boite de pandore') || t.endsWith('pandore')) { discoverEgg('clippy'); setShowPandora(true) }
+    else if (t.endsWith('la guerre des mondes')) { discoverEgg('conway'); setShowConway(true) }
     else { triggered = false }
     if (triggered) { setMobileVal(''); setShowMobileInput(false) }
   }
@@ -1014,7 +1017,7 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
   ghostBoxActiveRef.current = ghostBox !== null
   anyEggActiveRef.current   = showClipy || showPandora || showJoker || showMatrix || showMarvin ||
     showHal || showNolan || showBond || showFightClub || !!fightClubRule || showKenny || showSouthPark ||
-    showRandy || showKillBill || showAVP || showTipiak || showTamagotchi
+    showRandy || showKillBill || showAVP || showTipiak || showTamagotchi || showConway
 
   // ── Ghost box pré-pandore : gestionnaire de clics global (0,15% par clic) ──
   useEffect(() => {
@@ -1154,6 +1157,14 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
   }, [])
 
 
+  // Événement custom pour déclencher Conway depuis une affiche (triple clic poster, etc.)
+  // Dispatcher : window.dispatchEvent(new CustomEvent('conway:invoke'))
+  useEffect(() => {
+    function onConwayInvoke() { discoverEgg('conway'); setShowConway(true) }
+    window.addEventListener('conway:invoke', onConwayInvoke)
+    return () => window.removeEventListener('conway:invoke', onConwayInvoke)
+  }, [])
+
   // Keyboard easter eggs
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -1283,6 +1294,13 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
         keyBuf.current = []
         return
       }
+      // "la guerre des mondes" (20 chars) → Jeu de la Vie de Conway
+      if (buf.slice(-20).join('').toLowerCase() === 'la guerre des mondes') {
+        discoverEgg('conway')
+        setShowConway(true)
+        keyBuf.current = []
+        return
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -1332,6 +1350,7 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
       {showKillBill   && <KillBillGame    onDone={() => setShowKillBill(false)}  endText={ee.killBillEnd} />}
       {showAVP        && <AVPEgg          onDone={() => { predSoundRef.current?.pause(); predSoundRef.current = null; setShowAVP(false) }} predSound={predSoundRef} />}
       {showTipiak     && <TipiakOverlay  onDone={() => setShowTipiak(false)} />}
+      {showConway     && <ConwayOverlay  onClose={() => setShowConway(false)} />}
       {showTamagotchi && <TamagotchiKeyOverlay onClose={() => setShowTamagotchi(false)} isGuest={isGuest} />}
       {showPandora    && <PandoraBox onOpen={() => {
         setShowPandora(false)
