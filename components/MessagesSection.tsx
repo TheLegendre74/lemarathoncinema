@@ -3,9 +3,10 @@
 import { useState, useTransition, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
+import { createClient } from '@/lib/supabase/client'
 import {
   sendMessage, deleteMessage, blockUser, unblockUser,
-  markMessagesAsRead, getConversationMessages,
+  markMessagesAsRead,
 } from '@/lib/actions'
 
 interface Profile {
@@ -94,19 +95,24 @@ export default function MessagesSection({
     })
   }, [activeId])
 
-  // Polling : rafraîchit les messages toutes les 5s pour afficher les messages reçus
+  // Polling : rafraîchit les messages toutes les 5s en direct vers Supabase
   useEffect(() => {
     if (!activeId) return
+    const supabase = createClient()
     const interval = setInterval(async () => {
-      const fresh = await getConversationMessages(activeId)
-      setMessages(prev => {
-        // Pas de re-render inutile si rien de nouveau
-        if (fresh.length === prev.length) return prev
-        return fresh
-      })
+      const { data } = await (supabase as any)
+        .from('private_messages')
+        .select('id, sender_id, recipient_id, content, read_at, created_at, deleted_by_sender, deleted_by_recipient')
+        .or(`and(sender_id.eq.${myId},recipient_id.eq.${activeId}),and(sender_id.eq.${activeId},recipient_id.eq.${myId})`)
+        .order('created_at', { ascending: true })
+        .limit(60)
+      const fresh = (data ?? []).filter((m: any) =>
+        m.sender_id === myId ? !m.deleted_by_sender : !m.deleted_by_recipient
+      )
+      setMessages(prev => fresh.length === prev.length ? prev : fresh)
     }, 5000)
     return () => clearInterval(interval)
-  }, [activeId])
+  }, [activeId, myId])
 
   function openConversation(otherId: string, profile: Profile | null) {
     setActiveId(otherId)

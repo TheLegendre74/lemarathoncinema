@@ -2,9 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import {
-  getMyConversations, getConversationMessages,
-} from '@/lib/actions'
 import { createClient } from '@/lib/supabase/client'
 import MessagesSection from '@/components/MessagesSection'
 
@@ -36,31 +33,58 @@ export default function MessagesLoader({ myId, initialWithId }: { myId: string; 
   const withUserId = searchParams.get('with') ?? initialWithId
 
   useEffect(() => {
-    async function load() {
-      const supabase = createClient()
+    const supabase = createClient()
 
-      const [convs, blocked, thread] = await Promise.all([
-        getMyConversations(),
+    async function load() {
+      // Tout en direct vers Supabase — pas de server action, pas de hop Vercel
+      const [rpcRes, blockedRes, threadRes] = await Promise.all([
+        (supabase as any).rpc('get_my_conversations'),
         (supabase as any).from('blocked_users').select('blocked_id').eq('blocker_id', myId),
-        withUserId ? getConversationMessages(withUserId) : Promise.resolve([]),
+        withUserId
+          ? (supabase as any)
+              .from('private_messages')
+              .select('id, sender_id, recipient_id, content, read_at, created_at, deleted_by_sender, deleted_by_recipient')
+              .or(`and(sender_id.eq.${myId},recipient_id.eq.${withUserId}),and(sender_id.eq.${withUserId},recipient_id.eq.${myId})`)
+              .order('created_at', { ascending: true })
+              .limit(60)
+          : Promise.resolve({ data: [] }),
       ])
 
+      const convs = (rpcRes.data ?? []).map((row: any) => ({
+        otherId: row.other_id,
+        unread: Number(row.unread_count),
+        lastMessage: {
+          id: row.last_message_id,
+          sender_id: row.last_sender_id,
+          recipient_id: row.last_recipient_id,
+          content: row.last_content,
+          read_at: row.last_read_at,
+          created_at: row.last_created_at,
+        },
+        profile: row.pseudo ? { id: row.other_id, pseudo: row.pseudo, avatar_url: row.avatar_url ?? null } : null,
+      }))
+
       setConversations(convs)
-      setBlockedIds((blocked.data ?? []).map((b: any) => b.blocked_id))
-      setThreadMessages(Array.isArray(thread) ? thread : [])
+      setBlockedIds((blockedRes.data ?? []).map((b: any) => b.blocked_id))
+
+      const thread = (threadRes.data ?? []).filter((m: any) =>
+        m.sender_id === myId ? !m.deleted_by_sender : !m.deleted_by_recipient
+      )
+      setThreadMessages(thread)
 
       if (withUserId) {
         const fromConv = convs.find((c: any) => c.otherId === withUserId)
         if (fromConv?.profile) {
           setOtherProfile(fromConv.profile)
         } else {
-          const { data } = await supabase.from('profiles').select('id, pseudo, avatar_url').eq('id', withUserId).single()
+          const { data } = await (supabase as any).from('profiles').select('id, pseudo, avatar_url').eq('id', withUserId).single()
           if (data) setOtherProfile(data)
         }
       }
 
       setReady(true)
     }
+
     load()
   }, []) // eslint-disable-line
 
