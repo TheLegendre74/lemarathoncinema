@@ -2901,6 +2901,7 @@ export async function sendMessage(recipientId: string, content: string) {
   if (error) return { error: error.message }
 
   revalidatePath('/profil')
+  revalidatePath('/messages')
   return { success: true }
 }
 
@@ -2984,6 +2985,7 @@ export async function markMessagesAsRead(fromUserId: string) {
     .is('read_at', null)
 
   revalidatePath('/profil')
+  revalidatePath('/messages')
 }
 
 export async function deleteMessage(messageId: string) {
@@ -3007,6 +3009,7 @@ export async function deleteMessage(messageId: string) {
   }
 
   revalidatePath('/profil')
+  revalidatePath('/messages')
   return { success: true }
 }
 
@@ -3020,6 +3023,7 @@ export async function blockUser(targetId: string) {
     .upsert({ blocker_id: user.id, blocked_id: targetId }, { onConflict: 'blocker_id,blocked_id', ignoreDuplicates: true })
 
   revalidatePath('/profil')
+  revalidatePath('/messages')
   return { success: true }
 }
 
@@ -3035,6 +3039,7 @@ export async function unblockUser(targetId: string) {
     .eq('blocked_id', targetId)
 
   revalidatePath('/profil')
+  revalidatePath('/messages')
   return { success: true }
 }
 

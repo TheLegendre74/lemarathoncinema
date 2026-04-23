@@ -37,6 +37,7 @@ interface Props {
   initialMessages?: Message[]
   initialOtherProfile?: Profile | null
   blockedIds: string[]
+  basePath?: string
 }
 
 function Avatar({ profile, size = 32 }: { profile: Profile | null; size?: number }) {
@@ -53,6 +54,7 @@ function Avatar({ profile, size = 32 }: { profile: Profile | null; size?: number
 export default function MessagesSection({
   myId, conversations: initialConvs, initialWithId,
   initialMessages, initialOtherProfile, blockedIds: initialBlockedIds,
+  basePath = '/profil',
 }: Props) {
   const router = useRouter()
   const [convs, setConvs] = useState<Conversation[]>(initialConvs)
@@ -111,14 +113,14 @@ export default function MessagesSection({
     setOtherProfile(profile)
     setConfirmBlock(false)
     setMobileView('thread')
-    router.push(`/profil?with=${otherId}`, { scroll: false })
+    router.push(`${basePath}?with=${otherId}`, { scroll: false })
   }
 
   function goBackToList() {
     setActiveId(null)
     setMessages([])
     setMobileView('list')
-    router.push('/profil', { scroll: false })
+    router.push(basePath, { scroll: false })
   }
 
   function handleSend() {
