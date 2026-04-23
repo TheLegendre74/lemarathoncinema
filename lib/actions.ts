@@ -2910,45 +2910,21 @@ export async function getMyConversations() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
 
-  // Récupère les derniers messages de chaque conversation
-  const { data: messages } = await (supabase as any)
-    .from('private_messages')
-    .select('id, sender_id, recipient_id, content, read_at, created_at')
-    .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
-    .order('created_at', { ascending: false })
-    .limit(200)
+  const { data } = await (supabase as any).rpc('get_my_conversations')
 
-  if (!messages?.length) return []
-
-  // Groupe par interlocuteur
-  const convMap: Record<string, any> = {}
-  for (const msg of messages) {
-    const otherId = msg.sender_id === user.id ? msg.recipient_id : msg.sender_id
-    const deletedForMe = msg.sender_id === user.id ? msg.deleted_by_sender : msg.deleted_by_recipient
-    if (deletedForMe) continue
-    if (!convMap[otherId]) {
-      convMap[otherId] = { otherId, lastMessage: msg, unread: 0 }
-    }
-    if (msg.recipient_id === user.id && !msg.read_at) {
-      convMap[otherId].unread++
-    }
-  }
-
-  // Récupère les profils des interlocuteurs
-  const otherIds = Object.keys(convMap)
-  if (!otherIds.length) return []
-
-  const { data: profiles } = await supabase
-    .from('profiles')
-    .select('id, pseudo, avatar_url')
-    .in('id', otherIds)
-
-  const profileMap: Record<string, any> = {}
-  for (const p of (profiles ?? [])) profileMap[p.id] = p
-
-  return Object.values(convMap)
-    .map((c: any) => ({ ...c, profile: profileMap[c.otherId] ?? null }))
-    .sort((a: any, b: any) => new Date(b.lastMessage.created_at).getTime() - new Date(a.lastMessage.created_at).getTime())
+  return (data ?? []).map((row: any) => ({
+    otherId: row.other_id,
+    unread: Number(row.unread_count),
+    lastMessage: {
+      id: row.last_message_id,
+      sender_id: row.last_sender_id,
+      recipient_id: row.last_recipient_id,
+      content: row.last_content,
+      read_at: row.last_read_at,
+      created_at: row.last_created_at,
+    },
+    profile: row.pseudo ? { id: row.other_id, pseudo: row.pseudo, avatar_url: row.avatar_url ?? null } : null,
+  }))
 }
 
 export async function getConversationMessages(withUserId: string) {
