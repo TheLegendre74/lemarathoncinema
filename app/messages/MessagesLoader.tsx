@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import MessagesSection from '@/components/MessagesSection'
 
@@ -23,28 +23,37 @@ function Skeleton() {
   )
 }
 
-export default function MessagesLoader({ myId, initialWithId }: { myId: string; initialWithId: string | null }) {
+export default function MessagesLoader() {
+  const [myId, setMyId] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
   const [conversations, setConversations] = useState<any[]>([])
   const [threadMessages, setThreadMessages] = useState<any[]>([])
   const [otherProfile, setOtherProfile] = useState<Profile | null>(null)
   const [blockedIds, setBlockedIds] = useState<string[]>([])
   const searchParams = useSearchParams()
-  const withUserId = searchParams.get('with') ?? initialWithId
+  const router = useRouter()
+  const withUserId = searchParams.get('with')
 
   useEffect(() => {
     const supabase = createClient()
 
     async function load() {
-      // Tout en direct vers Supabase — pas de server action, pas de hop Vercel
+      // Auth depuis le cookie — pas d'appel réseau
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) { router.replace('/auth'); return }
+
+      const uid = session.user.id
+      setMyId(uid)
+
+      // Tout en parallèle, directement vers Supabase
       const [rpcRes, blockedRes, threadRes] = await Promise.all([
         (supabase as any).rpc('get_my_conversations'),
-        (supabase as any).from('blocked_users').select('blocked_id').eq('blocker_id', myId),
+        (supabase as any).from('blocked_users').select('blocked_id').eq('blocker_id', uid),
         withUserId
           ? (supabase as any)
               .from('private_messages')
               .select('id, sender_id, recipient_id, content, read_at, created_at, deleted_by_sender, deleted_by_recipient')
-              .or(`and(sender_id.eq.${myId},recipient_id.eq.${withUserId}),and(sender_id.eq.${withUserId},recipient_id.eq.${myId})`)
+              .or(`and(sender_id.eq.${uid},recipient_id.eq.${withUserId}),and(sender_id.eq.${withUserId},recipient_id.eq.${uid})`)
               .order('created_at', { ascending: true })
               .limit(60)
           : Promise.resolve({ data: [] }),
@@ -68,7 +77,7 @@ export default function MessagesLoader({ myId, initialWithId }: { myId: string; 
       setBlockedIds((blockedRes.data ?? []).map((b: any) => b.blocked_id))
 
       const thread = (threadRes.data ?? []).filter((m: any) =>
-        m.sender_id === myId ? !m.deleted_by_sender : !m.deleted_by_recipient
+        m.sender_id === uid ? !m.deleted_by_sender : !m.deleted_by_recipient
       )
       setThreadMessages(thread)
 
@@ -88,7 +97,7 @@ export default function MessagesLoader({ myId, initialWithId }: { myId: string; 
     load()
   }, []) // eslint-disable-line
 
-  if (!ready) return <Skeleton />
+  if (!myId || !ready) return <Skeleton />
 
   return (
     <MessagesSection

@@ -1,17 +1,9 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
 import MessagesLoader from './MessagesLoader'
 
-export const revalidate = 0
+// Page statique — servie depuis le CDN Vercel, zéro cold start serverless
+export const dynamic = 'force-static'
 
-export default async function MessagesPage({ searchParams }: { searchParams: Promise<{ with?: string }> }) {
-  const supabase = await createClient()
-  // getSession lit depuis le cookie — pas d'appel réseau Auth
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.user) redirect('/auth')
-
-  const { with: withUserId } = await searchParams
-
+export default function MessagesPage() {
   return (
     <div>
       <div style={{ marginBottom: '2rem' }}>
@@ -20,7 +12,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
           Tes conversations avec les autres marathoniens
         </div>
       </div>
-      <MessagesLoader myId={session.user.id} initialWithId={withUserId ?? null} />
+      <MessagesLoader />
     </div>
   )
 }
