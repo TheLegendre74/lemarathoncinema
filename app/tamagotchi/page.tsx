@@ -22,7 +22,7 @@ export default async function TamagotchiPage() {
   if (!egg) redirect('/easter-eggs')
 
   const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
-  const { data: pet, evolved, evolvedTo, isNew, cycleRestarted } = await initOrGetTamagotchi()
+  const { data: pet, evolved, evolvedTo, isNew, cycleRestarted, neglectPenalty } = await initOrGetTamagotchi()
 
   return (
     <TamagotchiClient
@@ -32,6 +32,7 @@ export default async function TamagotchiPage() {
       isNew={isNew}
       isAdmin={!!profile?.is_admin}
       cycleRestartedOnLoad={!!cycleRestarted}
+      neglectPenalty={!!neglectPenalty}
     />
   )
 }

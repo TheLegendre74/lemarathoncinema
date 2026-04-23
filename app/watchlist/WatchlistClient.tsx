@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/ToastProvider'
 import {
   createWatchlist, deleteWatchlist, renameWatchlist,
-  toggleWatchlistVisibility, removeFilmFromWatchlist,
+  toggleWatchlistVisibility, removeFilmFromWatchlist, toggleWatched,
 } from '@/lib/actions'
 import Link from 'next/link'
 
@@ -48,11 +48,15 @@ interface Watchlist {
 
 interface Props {
   watchlists: Watchlist[]
+  watchedFilmIds: Set<number>
 }
 
-export default function WatchlistClient({ watchlists: initial }: Props) {
+export default function WatchlistClient({ watchlists: initial, watchedFilmIds: initialWatched }: Props) {
   const [watchlists, setWatchlists] = useState<Watchlist[]>(initial)
   useEffect(() => { setWatchlists(initial) }, [initial])
+  const [watchedIds, setWatchedIds] = useState<Set<number>>(initialWatched)
+  useEffect(() => { setWatchedIds(initialWatched) }, [initialWatched])
+  const [watchingFilm, setWatchingFilm] = useState<number | null>(null)
   const [newName, setNewName] = useState('')
   const [creating, setCreating] = useState(false)
   const [selected, setSelected] = useState<string | null>(initial[0]?.id ?? null)
@@ -127,6 +131,26 @@ export default function WatchlistClient({ watchlists: initial }: Props) {
       : w
     ))
     addToast(`"${titre}" retiré`, 'success')
+    startTransition(() => router.refresh())
+  }
+
+  async function handleToggleWatched(filmId: number, titre: string) {
+    setWatchingFilm(filmId)
+    const res = await toggleWatched(filmId, titre)
+    setWatchingFilm(null)
+    if (res.error) {
+      if (res.error === 'LIMIT_REACHED') { addToast('Limite journalière atteinte !', 'error'); return }
+      if (res.error === 'PENDING_REQUEST') { addToast('Demande de dépassement déjà en cours.', 'error'); return }
+      if (res.error === 'BLOCKED') { addToast('Tu es bloqué temporairement.', 'error'); return }
+      addToast(res.error, 'error'); return
+    }
+    if (res.action === 'added') {
+      setWatchedIds(prev => new Set([...prev, filmId]))
+      addToast(`✓ "${titre}" marqué comme vu !`, 'success')
+    } else {
+      setWatchedIds(prev => { const s = new Set(prev); s.delete(filmId); return s })
+      addToast(`"${titre}" retiré des vus`, 'success')
+    }
     startTransition(() => router.refresh())
   }
 
@@ -324,18 +348,42 @@ export default function WatchlistClient({ watchlists: initial }: Props) {
                     {current.watchlist_items.map(item => {
                       const film = item.films
                       if (!film) return null
+                      const isWatched = watchedIds.has(item.film_id)
+                      const isLoading = watchingFilm === item.film_id
                       return (
-                        <div key={item.film_id} style={{ display: 'flex', alignItems: 'center', gap: '.9rem', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.65rem .9rem', transition: 'border-color .15s' }}>
-                          <div style={{ width: 32, height: 48, borderRadius: 4, overflow: 'hidden', flexShrink: 0, background: 'var(--bg2)' }}>
+                        <div key={item.film_id} style={{ display: 'flex', alignItems: 'center', gap: '.9rem', background: isWatched ? 'rgba(74,222,128,.04)' : 'var(--bg3)', border: `1px solid ${isWatched ? 'rgba(74,222,128,.2)' : 'var(--border)'}`, borderRadius: 'var(--r)', padding: '.65rem .9rem', transition: 'all .15s' }}>
+                          <div style={{ width: 32, height: 48, borderRadius: 4, overflow: 'hidden', flexShrink: 0, background: 'var(--bg2)', position: 'relative' }}>
                             {film.poster
-                              ? <Image src={film.poster} alt={film.titre} width={32} height={48} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
+                              ? <Image src={film.poster} alt={film.titre} width={32} height={48} style={{ objectFit: 'cover', width: '100%', height: '100%', opacity: isWatched ? 0.5 : 1, transition: 'opacity .2s' }} />
                               : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.75rem' }}>🎬</div>
                             }
+                            {isWatched && (
+                              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,.35)', borderRadius: 4 }}>
+                                <span style={{ fontSize: '.9rem' }}>✓</span>
+                              </div>
+                            )}
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: '.87rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{film.titre}</div>
+                            <div style={{ fontSize: '.87rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: isWatched ? 'line-through' : 'none', color: isWatched ? 'var(--text3)' : 'var(--text)' }}>{film.titre}</div>
                             <div style={{ fontSize: '.7rem', color: 'var(--text3)' }}>{film.annee} · {film.realisateur}</div>
                           </div>
+                          <button
+                            onClick={() => !isLoading && handleToggleWatched(item.film_id, film.titre)}
+                            disabled={isLoading}
+                            title={isWatched ? 'Marquer comme non vu' : 'Marquer comme vu'}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: '.3rem',
+                              background: isWatched ? 'rgba(74,222,128,.12)' : 'var(--bg2)',
+                              border: `1px solid ${isWatched ? 'rgba(74,222,128,.35)' : 'var(--border2)'}`,
+                              color: isWatched ? '#4ade80' : 'var(--text3)',
+                              borderRadius: 'var(--r)', cursor: isLoading ? 'wait' : 'pointer',
+                              fontSize: '.72rem', padding: '.3rem .6rem', flexShrink: 0,
+                              transition: 'all .15s', fontFamily: 'var(--font-body)',
+                              opacity: isLoading ? 0.6 : 1,
+                            }}
+                          >
+                            {isLoading ? '…' : isWatched ? '✓ Vu' : '👁 Vu ?'}
+                          </button>
                           <button
                             onClick={() => handleRemoveFilm(current.id, item.film_id, film.titre)}
                             style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: '1rem', padding: '.25rem', borderRadius: 4, transition: 'color .15s', flexShrink: 0 }}

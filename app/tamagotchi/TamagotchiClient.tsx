@@ -216,10 +216,10 @@ function FloatingHearts({ visible }: { visible: boolean }) {
 
 // ── Composant principal ───────────────────────────────────────────────────────
 interface Props {
-  initialPet: any; evolved: boolean; evolvedTo: string | null; isNew: boolean; isAdmin?: boolean; cycleRestartedOnLoad?: boolean
+  initialPet: any; evolved: boolean; evolvedTo: string | null; isNew: boolean; isAdmin?: boolean; cycleRestartedOnLoad?: boolean; neglectPenalty?: boolean
 }
 
-export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew, isAdmin = false, cycleRestartedOnLoad = false }: Props) {
+export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew, isAdmin = false, cycleRestartedOnLoad = false, neglectPenalty = false }: Props) {
   const [pet, setPet]                       = useState(initialPet)
   const [tick, setTick]                     = useState(0)
   const [now, setNow]                       = useState(Date.now())
@@ -282,6 +282,7 @@ export default function TamagotchiClient({ initialPet, evolved, evolvedTo, isNew
   useEffect(() => { const id = setInterval(() => setTick(t => 1 - t), 800); return () => clearInterval(id) }, [])
   useEffect(() => { const id = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(id) }, [])
   useEffect(() => { if (isNew) addToast('Ton facehugger est né ! Prends-en soin. 🤍', 'success') }, []) // eslint-disable-line
+  useEffect(() => { if (neglectPenalty) addToast('😤 Ton alien s\'ennuie ! -40 humeur (pas joué depuis 24h) — mais bonus ×2 EXP activé !', 'error') }, []) // eslint-disable-line
 
   // ── Check-in quotidien automatique ────────────────────────────────────────
   useEffect(() => {

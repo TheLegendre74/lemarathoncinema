@@ -10,7 +10,12 @@ export default async function WatchlistPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth')
 
-  const watchlists = await getUserWatchlists()
+  const [watchlists, { data: watchedData }] = await Promise.all([
+    getUserWatchlists(),
+    supabase.from('watched').select('film_id').eq('user_id', user.id),
+  ])
 
-  return <WatchlistClient watchlists={watchlists} />
+  const watchedFilmIds = new Set<number>((watchedData ?? []).map((w: any) => w.film_id))
+
+  return <WatchlistClient watchlists={watchlists} watchedFilmIds={watchedFilmIds} />
 }

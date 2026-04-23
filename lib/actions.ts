@@ -2137,7 +2137,8 @@ function applyTamaDecay(pet: any): { pet: any; evolved: boolean; evolvedTo: stri
     if ((now - lastPlayed) >= H24 && (now - lastNeglect) >= H24) {
       happiness = Math.max(0, happiness - 40)
       lastNeglectPenaltyAt = new Date().toISOString()
-      if (!x2ExpUntil) x2ExpUntil = X2_PENDING
+      const x2Expired = x2ExpUntil && x2ExpUntil !== X2_PENDING && new Date(x2ExpUntil).getTime() <= now
+      if (!x2ExpUntil || x2Expired) x2ExpUntil = X2_PENDING
     }
   }
 
@@ -2183,6 +2184,8 @@ export async function initOrGetTamagotchi() {
     cycleRestarted = true
   }
 
+  const neglectPenalty = updated.last_neglect_penalty_at !== existing.last_neglect_penalty_at
+
   if (updated.last_sync !== existing.last_sync) {
     const dbPayload: Record<string, any> = {
       hunger: updated.hunger, happiness: updated.happiness, health: updated.health,
@@ -2195,7 +2198,7 @@ export async function initOrGetTamagotchi() {
     await (supabase as any).from('tamagotchi').update(dbPayload).eq('user_id', user.id)
   }
 
-  return { data: updated, error: null, isNew: false, evolved: cycleRestarted ? false : evolved, evolvedTo: cycleRestarted ? null : evolvedTo, cycleRestarted }
+  return { data: updated, error: null, isNew: false, evolved: cycleRestarted ? false : evolved, evolvedTo: cycleRestarted ? null : evolvedTo, cycleRestarted, neglectPenalty }
 }
 
 // Niveau 9+ : XP × 1.5 sur toutes les actions tamagotchi

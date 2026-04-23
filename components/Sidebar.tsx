@@ -82,6 +82,7 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
         { href: '/forum',        icon: '💬', label: 'Forum',              short: 'Forum'      },
         { href: '/marathoniens', icon: '🎖️', label: 'Marathoniens',       short: 'Joueurs'    },
         { href: '/classement',   icon: '🏆', label: 'Classement Joueurs', short: 'Classement' },
+        { href: '/messages',     icon: '✉️', label: 'Messages',           short: 'Messages',  badge: unreadMessages > 0 ? unreadMessages : null },
       ],
     },
     {
@@ -94,7 +95,7 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
         { href: '/easter-eggs', icon: '🥚', label: 'Easter Eggs', short: 'Easter' },
       ],
     },
-  ], [hasRageuxEgg, hasTamagotchiEgg, conwayUnlocked])
+  ], [hasRageuxEgg, hasTamagotchiEgg, conwayUnlocked, unreadMessages])
 
   /* groupe actif selon la page courante */
   const activeGroup = useCallback(() => {
@@ -170,8 +171,13 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
               </div>
               <div className={`nav-submenu ${isOpen ? 'open' : ''}`}>
                 {g.items.map(item => (
-                  <Link key={item.href} href={item.href} className={`nav-subitem ${isActive(item.href) ? 'active' : ''}`}>
-                    {item.label}
+                  <Link key={item.href} href={item.href} className={`nav-subitem ${isActive(item.href) ? 'active' : ''}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span>{item.label}</span>
+                    {(item as any).badge && (
+                      <span style={{ background: 'var(--red)', color: '#fff', borderRadius: 99, fontSize: '.6rem', fontWeight: 700, padding: '1px 6px', minWidth: 18, textAlign: 'center', flexShrink: 0 }}>
+                        {(item as any).badge > 99 ? '99+' : (item as any).badge}
+                      </span>
+                    )}
                   </Link>
                 ))}
               </div>
@@ -285,7 +291,7 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
               >
                 <span className="mobile-drawer-item-icon">{n.icon}</span>
                 <span className="mobile-drawer-item-label">{n.short}</span>
-                {n.href === '/profil' && unreadMessages > 0 && (
+                {(n.href === '/profil' || n.href === '/messages') && unreadMessages > 0 && (
                   <span style={{ position: 'absolute', top: 4, right: 4, background: 'var(--red)', color: '#fff', borderRadius: 99, fontSize: '.55rem', fontWeight: 700, padding: '1px 5px', minWidth: 16, textAlign: 'center' }}>
                     {unreadMessages > 99 ? '99+' : unreadMessages}
                   </span>
