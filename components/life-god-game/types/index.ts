@@ -5,7 +5,6 @@ export type LifeGodPhase = 'conwayEmergence' | 'firstAmHiddenForming' | 'amExpan
 export type LifeGodTimeScale = 0.25 | 0.5 | 1 | 2 | 4 | 8
 export type LifeGodAmRole = 'builder' | 'gatherer' | 'explorer'
 export type LifeGodInfluenceMode = 'attract' | 'repel'
-export type LifeGodMatterType = 'none' | 'frozen' | 'soil' | 'vegetation' | 'water' | 'rock' | 'decor'
 
 export interface LifeGodRelativeCell {
   x: number
@@ -109,12 +108,9 @@ export interface LifeGodSimulationState {
   activePatternIds: string[]
   maxActivePatternsPerSeed: number
   frozenMatterCount: number
-  terraformableMatterCount: number
-  terraformedMatterCount: number
   gridWidth: number
   gridHeight: number
   cells: Uint8Array
-  matter: Uint8Array
   amLineages: LifeGodAmLineage[]
   protoEntities: LifeGodProtoEntity[]
   amEntities: LifeGodAmEntity[]

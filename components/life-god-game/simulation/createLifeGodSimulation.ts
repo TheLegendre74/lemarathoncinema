@@ -30,7 +30,6 @@ const SEARCH_RADIUS = 12
 const MIN_FORMATION_CYCLES = Math.round((3 * 60 * 1000) / TICK_MS)
 const MAX_FORMATION_CYCLES = Math.round((10 * 60 * 1000) / TICK_MS)
 const MAX_ACTIVE_PATTERNS_PER_SEED = 3
-const TERRAFORM_RADIUS = 7
 const TIME_SCALES: LifeGodTimeScale[] = [0.25, 0.5, 1, 2, 4, 8]
 const LINEAGE_COLORS = ['#69f0c1', '#ff8ad8', '#7ab6ff']
 const ROLE_CONFIG: Record<
@@ -44,7 +43,6 @@ const ROLE_CONFIG: Record<
     reproductionDistanceMin: number
     movementInterval: number
     movementReach: number
-    terraformInterval: number
   }
 > = {
   builder: {
@@ -56,7 +54,6 @@ const ROLE_CONFIG: Record<
     reproductionDistanceMin: 4,
     movementInterval: 42,
     movementReach: 1,
-    terraformInterval: 10,
   },
   gatherer: {
     energyGain: 0.28,
@@ -67,7 +64,6 @@ const ROLE_CONFIG: Record<
     reproductionDistanceMin: 4,
     movementInterval: 26,
     movementReach: 1,
-    terraformInterval: 8,
   },
   explorer: {
     energyGain: 0.2,
@@ -78,7 +74,6 @@ const ROLE_CONFIG: Record<
     reproductionDistanceMin: 8,
     movementInterval: 14,
     movementReach: 2,
-    terraformInterval: 7,
   },
 }
 
@@ -96,7 +91,6 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   let phase: LifeGodSimulationState['phase'] = 'conwayEmergence'
   let conwayActive = true
   let matterFrozen = false
-  let matter = createGrid()
   let amLineages: LifeGodAmLineage[] = []
   let activePatternIds: string[] = []
   let protoEntities: LifeGodProtoEntity[] = []
@@ -118,12 +112,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     const completeAmCount = amEntities.filter((am) => am.state === 'alive').length
     const adaptingAmCount = amEntities.filter((am) => am.state === 'adapting').length
     const formingAmCount = amEntities.filter((am) => am.state === 'forming').length
-    let frozenMatterCount = 0
-    let terraformedMatterCount = 0
-    for (let i = 0; i < matter.length; i += 1) {
-      if (matter[i] === 1) frozenMatterCount += 1
-      if (matter[i] >= 2) terraformedMatterCount += 1
-    }
+    const frozenMatterCount = current.reduce((total, cell) => total + cell, 0) - amEntities.reduce((total, am) => total + am.absoluteCells.length, 0)
     const amPopulationStable =
       completeAmCount === MAX_TOTAL_AMS &&
       constructionSites.length === 0 &&
@@ -149,13 +138,10 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       visibleAmCount: amEntities.length,
       activePatternIds,
       maxActivePatternsPerSeed: MAX_ACTIVE_PATTERNS_PER_SEED,
-      frozenMatterCount,
-      terraformableMatterCount: frozenMatterCount,
-      terraformedMatterCount,
+      frozenMatterCount: Math.max(0, frozenMatterCount),
       gridWidth: GRID_WIDTH,
       gridHeight: GRID_HEIGHT,
       cells: current,
-      matter,
       amLineages,
       protoEntities,
       amEntities,
@@ -181,33 +167,6 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
 
   function clearGrid(grid: Uint8Array) {
     grid.fill(0)
-  }
-
-  function freezeMatterFromCurrent() {
-    matter.fill(0)
-    const reserved = new Set(amEntities.flatMap((am) => am.absoluteCells.map((cell) => cellKey(cell.x, cell.y))))
-    for (let y = 0; y < GRID_HEIGHT; y += 1) {
-      for (let x = 0; x < GRID_WIDTH; x += 1) {
-        if (current[indexAt(x, y)] !== 1) continue
-        if (reserved.has(cellKey(x, y))) continue
-        matter[indexAt(x, y)] = 1
-      }
-    }
-  }
-
-  function isMatterAt(x: number, y: number, value?: number) {
-    const cell = matter[indexAt(x, y)]
-    return value === undefined ? cell !== 0 : cell === value
-  }
-
-  function getRoleMatterTarget(role: LifeGodAmRole) {
-    if (role === 'builder') {
-      return randomItem([2, 4, 6] as const)
-    }
-    if (role === 'gatherer') {
-      return 3 as const
-    }
-    return randomItem([2, 5] as const)
   }
 
   function computeAbsoluteCells(cells: LifeGodRelativeCell[], origin: { x: number; y: number }) {
@@ -808,39 +767,6 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     return influencePoint.mode === 'attract' ? clamped * 7 : -clamped * 7
   }
 
-  function tickTerraforming() {
-    if (!matterFrozen) return
-    if (!getState().amPopulationStable) return
-
-    for (const am of amEntities) {
-      if (am.state !== 'alive') continue
-      const roleConfig = ROLE_CONFIG[am.role]
-      if (generation % roleConfig.terraformInterval !== 0) continue
-
-      const center = averagePosition(am.absoluteCells)
-      const candidates: { x: number; y: number; score: number }[] = []
-      for (let y = Math.max(1, Math.floor(center.y) - TERRAFORM_RADIUS); y <= Math.min(GRID_HEIGHT - 2, Math.floor(center.y) + TERRAFORM_RADIUS); y += 1) {
-        for (let x = Math.max(1, Math.floor(center.x) - TERRAFORM_RADIUS); x <= Math.min(GRID_WIDTH - 2, Math.floor(center.x) + TERRAFORM_RADIUS); x += 1) {
-          if (!isMatterAt(x, y, 1)) continue
-          if (am.absoluteCells.some((cell) => cell.x === x && cell.y === y)) continue
-          const distance = Math.abs(x - center.x) + Math.abs(y - center.y)
-          const score =
-            am.role === 'builder'
-              ? 18 - distance + countLivingNeighbors(x, y)
-              : am.role === 'gatherer'
-                ? 14 - distance + countLivingNeighbors(x, y) * 2
-                : 10 - distance + Math.abs(x - GRID_WIDTH / 2) + Math.abs(y - GRID_HEIGHT / 2)
-          candidates.push({ x, y, score })
-        }
-      }
-
-      candidates.sort((a, b) => b.score - a.score)
-      const target = candidates[0]
-      if (!target) continue
-      matter[indexAt(target.x, target.y)] = getRoleMatterTarget(am.role)
-    }
-  }
-
   function findNearbyConstructionOrigin(parent: LifeGodAmEntity, pattern: LifeGodAmPattern) {
     const roleConfig = ROLE_CONFIG[parent.role]
     const candidates: { x: number; y: number; score: number }[] = []
@@ -1071,7 +997,6 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
 
   function seedRandomGrid() {
     clearGrid(current)
-    clearGrid(matter)
     stepAccumulator = 0
     phase = 'conwayEmergence'
     conwayActive = true
@@ -1142,7 +1067,6 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     syncAmCells()
     tickConstructionSites()
     syncConstructionCells()
-    tickTerraforming()
     refreshAliveCount()
     tryStartReproduction()
     if (getCompleteAmCount() >= MAX_COMPLETE_AM_BEFORE_SCAN_STOPS) {
@@ -1150,7 +1074,6 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       matterFrozen = true
       phase = 'frozenMatter'
       constructionSites = []
-      freezeMatterFromCurrent()
     } else {
       updatePhase()
     }
@@ -1228,7 +1151,6 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       stopLoop()
       status = 'paused'
       clearGrid(current)
-      clearGrid(matter)
       next = createGrid()
       stepAccumulator = 0
       phase = 'conwayEmergence'
