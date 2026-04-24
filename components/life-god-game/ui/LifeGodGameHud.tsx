@@ -93,8 +93,12 @@ export function LifeGodGameHud({
               <div>Population stable : {simulationState.amPopulationStable ? 'oui' : 'non'}</div>
               <div>Conway : {simulationState.conwayActive ? 'actif' : 'arrete'}</div>
               <div>Matiere : {simulationState.matterFrozen ? 'figee' : 'mobile'}</div>
+              <div>Candidate AM : {simulationState.firstAmCandidateExists ? 'oui' : 'non'}</div>
+              <div>Premiere AM revelee : {simulationState.firstAmRevealed ? 'oui' : 'non'}</div>
+              <div>Reveal restant : {simulationState.firstAmRevealRemainingCycles}</div>
               <div>Scan AM : {simulationState.scanningActive ? 'actif' : 'arrete'}</div>
               <div>AM visibles : {simulationState.visibleAmCount}</div>
+              <div>AM alive : {simulationState.completeAmCount}</div>
               <div>Patterns actifs : {simulationState.activePatternIds.length}/{simulationState.maxActivePatternsPerSeed}</div>
               <div>Lignees actives : {simulationState.amLineages.length}/3</div>
               <div>AM completes : {simulationState.completeAmCount}/{simulationState.maxCompleteAmBeforeScanStops}</div>

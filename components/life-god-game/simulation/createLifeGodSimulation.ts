@@ -91,6 +91,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   let phase: LifeGodSimulationState['phase'] = 'conwayEmergence'
   let conwayActive = true
   let matterFrozen = false
+  let firstAmRevealed = false
   let amLineages: LifeGodAmLineage[] = []
   let activePatternIds: string[] = []
   let protoEntities: LifeGodProtoEntity[] = []
@@ -129,13 +130,16 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       timeScale,
       conwayActive,
       matterFrozen,
+      firstAmCandidateExists: firstAmCandidate !== null,
+      firstAmRevealed,
+      firstAmRevealRemainingCycles: firstAmCandidate ? Math.max(0, firstAmCandidate.revealAtCycle - generation) : 0,
       amPopulationStable,
       scanningActive: !amPopulationStable && completeAmCount < MAX_COMPLETE_AM_BEFORE_SCAN_STOPS,
       maxCompleteAmBeforeScanStops: MAX_COMPLETE_AM_BEFORE_SCAN_STOPS,
       completeAmCount,
       formingAmCount,
       adaptingAmCount,
-      visibleAmCount: amEntities.length,
+      visibleAmCount: completeAmCount,
       activePatternIds,
       maxActivePatternsPerSeed: MAX_ACTIVE_PATTERNS_PER_SEED,
       frozenMatterCount: Math.max(0, frozenMatterCount),
@@ -169,6 +173,16 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     grid.fill(0)
   }
 
+  function freezeMatterFromCurrent() {
+    const reserved = new Set(amEntities.flatMap((am) => am.absoluteCells.map((cell) => cellKey(cell.x, cell.y))))
+    for (let y = 0; y < GRID_HEIGHT; y += 1) {
+      for (let x = 0; x < GRID_WIDTH; x += 1) {
+        if (reserved.has(cellKey(x, y))) continue
+        current[indexAt(x, y)] = current[indexAt(x, y)] === 1 ? 1 : 0
+      }
+    }
+  }
+
   function computeAbsoluteCells(cells: LifeGodRelativeCell[], origin: { x: number; y: number }) {
     return cells.map((cell) => ({
       x: origin.x + cell.x,
@@ -197,11 +211,22 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       getCompleteAmCount() === MAX_TOTAL_AMS &&
       constructionSites.length === 0 &&
       firstAmCandidate === null &&
+      firstAmRevealed &&
       !conwayActive &&
       matterFrozen &&
       activePatternIds.length >= 1 &&
       activePatternIds.length <= MAX_ACTIVE_PATTERNS_PER_SEED
-    return !stable && getCompleteAmCount() < MAX_COMPLETE_AM_BEFORE_SCAN_STOPS && amEntities.length < MAX_TOTAL_AMS
+    return !stable && getCompleteAmCount() < MAX_COMPLETE_AM_BEFORE_SCAN_STOPS
+  }
+
+  function shouldFreezeMatter() {
+    return (
+      getCompleteAmCount() >= MAX_COMPLETE_AM_BEFORE_SCAN_STOPS &&
+      firstAmRevealed &&
+      conwayActive &&
+      !matterFrozen &&
+      phase === 'amExpansion'
+    )
   }
 
   function updatePhase() {
@@ -426,8 +451,9 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
 
     spawnAm(lineage, pattern, origin)
     forceAmAlive(selectedAmId ?? '')
+    firstAmRevealed = true
     firstAmCandidate = null
-    updatePhase()
+    phase = 'amExpansion'
   }
 
   function scanConnectedGroups() {
@@ -1001,6 +1027,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     phase = 'conwayEmergence'
     conwayActive = true
     matterFrozen = false
+    firstAmRevealed = false
     amLineages = []
     activePatternIds = []
     protoEntities = []
@@ -1069,11 +1096,12 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     syncConstructionCells()
     refreshAliveCount()
     tryStartReproduction()
-    if (getCompleteAmCount() >= MAX_COMPLETE_AM_BEFORE_SCAN_STOPS) {
+    if (shouldFreezeMatter()) {
       conwayActive = false
       matterFrozen = true
       phase = 'frozenMatter'
       constructionSites = []
+      freezeMatterFromCurrent()
     } else {
       updatePhase()
     }
@@ -1156,6 +1184,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       phase = 'conwayEmergence'
       conwayActive = true
       matterFrozen = false
+      firstAmRevealed = false
       generation = 0
       aliveCount = 0
       amLineages = []

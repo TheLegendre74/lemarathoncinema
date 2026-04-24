@@ -98,6 +98,9 @@ export interface LifeGodSimulationState {
   timeScale: LifeGodTimeScale
   conwayActive: boolean
   matterFrozen: boolean
+  firstAmCandidateExists: boolean
+  firstAmRevealed: boolean
+  firstAmRevealRemainingCycles: number
   amPopulationStable: boolean
   scanningActive: boolean
   maxCompleteAmBeforeScanStops: number
