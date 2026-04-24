@@ -121,6 +121,8 @@ export default function LifeGodGame() {
           onTogglePlay={() => runtimeRef.current?.simulation.toggle()}
           onReset={() => runtimeRef.current?.simulation.reset()}
           onRandomize={() => runtimeRef.current?.simulation.randomize()}
+          onDecreaseTimeScale={() => runtimeRef.current?.simulation.decreaseTimeScale()}
+          onIncreaseTimeScale={() => runtimeRef.current?.simulation.increaseTimeScale()}
         />
       </div>
     </div>

@@ -204,13 +204,23 @@ export async function createPixiViewport({
       const selected = state.selectedAmId === am.id
       const fillColor = lineage?.color ?? '#69f0c1'
       const colorValue = Number.parseInt(fillColor.replace('#', ''), 16)
+      const visibleRatio =
+        am.state === 'alive'
+          ? 1
+          : am.state === 'adapting'
+            ? 0.55 + Math.min(0.4, Math.max(0, (am.age - am.formationDurationCycles) / Math.max(am.adaptationDurationCycles, 1)) * 0.4)
+            : 0.2 + Math.min(0.35, Math.max(0, am.age / Math.max(am.formationDurationCycles, 1)) * 0.35)
+      const visibleCount = Math.max(1, Math.ceil(am.absoluteCells.length * visibleRatio))
+      const visibleCells = am.absoluteCells.slice(0, visibleCount)
+      const auraAlpha = am.state === 'alive' ? (selected ? 0.16 : 0.09) : am.state === 'adapting' ? 0.12 : 0.08
+      const outlineAlpha = am.state === 'alive' ? (selected ? 0.9 : 0.5) : am.state === 'adapting' ? 0.68 : 0.44
 
       let minX = Infinity
       let minY = Infinity
       let maxX = -Infinity
       let maxY = -Infinity
 
-      for (const cell of am.absoluteCells) {
+      for (const cell of visibleCells) {
         const px = metrics.x + cell.x * metrics.cellSize
         const py = metrics.y + cell.y * metrics.cellSize
         amCells.rect(px + 1, py + 1, Math.max(metrics.cellSize - 1, 1), Math.max(metrics.cellSize - 1, 1))
@@ -226,13 +236,13 @@ export async function createPixiViewport({
       const boxHeight = (maxY - minY + 1) * metrics.cellSize
 
       amAuras.roundRect(boxX - 3, boxY - 3, boxWidth + 6, boxHeight + 6, 10)
-      amAuras.fill({ color: colorValue, alpha: selected ? 0.16 : 0.09 })
+      amAuras.fill({ color: colorValue, alpha: auraAlpha })
 
       amOutlines.roundRect(boxX - 1, boxY - 1, boxWidth + 2, boxHeight + 2, 8)
       amOutlines.stroke({
         color: colorValue,
-        alpha: selected ? 0.9 : 0.5,
-        width: selected ? 2 : 1.4,
+        alpha: outlineAlpha,
+        width: am.state === 'alive' ? (selected ? 2 : 1.4) : am.state === 'adapting' ? 1.6 : 1.2,
       })
     }
 
@@ -240,14 +250,30 @@ export async function createPixiViewport({
       const lineage = state.amLineages.find((item) => item.id === am.lineageId)
       const colorValue = Number.parseInt((lineage?.color ?? '#69f0c1').replace('#', ''), 16)
       const selected = state.selectedAmId === am.id
+      const visibleRatio =
+        am.state === 'alive'
+          ? 1
+          : am.state === 'adapting'
+            ? 0.55 + Math.min(0.4, Math.max(0, (am.age - am.formationDurationCycles) / Math.max(am.adaptationDurationCycles, 1)) * 0.4)
+            : 0.2 + Math.min(0.35, Math.max(0, am.age / Math.max(am.formationDurationCycles, 1)) * 0.35)
+      const visibleCount = Math.max(1, Math.ceil(am.absoluteCells.length * visibleRatio))
+      const visibleCells = am.absoluteCells.slice(0, visibleCount)
+      const fillAlpha =
+        am.state === 'alive'
+          ? selected
+            ? pulse + 0.08
+            : pulse
+          : am.state === 'adapting'
+            ? 0.58 + Math.sin(performance.now() / 320) * 0.08
+            : 0.34 + Math.sin(performance.now() / 240) * 0.12
 
-      for (const cell of am.absoluteCells) {
+      for (const cell of visibleCells) {
         const px = metrics.x + cell.x * metrics.cellSize
         const py = metrics.y + cell.y * metrics.cellSize
         amCells.rect(px + 1, py + 1, Math.max(metrics.cellSize - 1, 1), Math.max(metrics.cellSize - 1, 1))
       }
 
-      amCells.fill({ color: colorValue, alpha: selected ? pulse + 0.08 : pulse })
+      amCells.fill({ color: colorValue, alpha: fillAlpha })
     }
   }
 

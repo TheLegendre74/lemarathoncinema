@@ -2,6 +2,7 @@ export type LifeGodBootstrapStatus = 'loading' | 'ready' | 'error'
 export type LifeGodSimStatus = 'playing' | 'paused'
 export type LifeGodPaintMode = 'draw' | 'erase'
 export type LifeGodPhase = 'cellule' | 'creature'
+export type LifeGodTimeScale = 0.25 | 0.5 | 1 | 2 | 4 | 8
 export type LifeGodAmRole = 'builder' | 'gatherer' | 'explorer'
 
 export interface LifeGodRelativeCell {
@@ -57,11 +58,13 @@ export interface LifeGodAmEntity {
   bodyParts: LifeGodBodyParts
   age: number
   energy: number
-  state: 'idle' | 'reproducing' | 'cooldown'
+  state: 'forming' | 'adapting' | 'alive'
   cells: LifeGodRelativeCell[]
   absoluteCells: LifeGodRelativeCell[]
   role: LifeGodAmRole
   reproductionCooldown: number
+  formationDurationCycles: number
+  adaptationDurationCycles: number
 }
 
 export interface LifeGodConstructionSite {
@@ -91,6 +94,11 @@ export interface LifeGodSimulationState {
   generation: number
   aliveCount: number
   status: LifeGodSimStatus
+  timeScale: LifeGodTimeScale
+  scanningActive: boolean
+  maxCompleteAmBeforeScanStops: number
+  completeAmCount: number
+  formingAmCount: number
   gridWidth: number
   gridHeight: number
   cells: Uint8Array
@@ -109,6 +117,8 @@ export interface LifeGodSimulationController {
   toggle(): void
   reset(): void
   randomize(): void
+  increaseTimeScale(): void
+  decreaseTimeScale(): void
   paintCell(x: number, y: number, mode: LifeGodPaintMode): void
   selectAm(amId: string | null): void
   destroy(): void

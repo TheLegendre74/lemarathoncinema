@@ -8,6 +8,8 @@ interface LifeGodGameHudProps {
   onTogglePlay: () => void
   onReset: () => void
   onRandomize: () => void
+  onDecreaseTimeScale: () => void
+  onIncreaseTimeScale: () => void
 }
 
 const controlButtonStyle: CSSProperties = {
@@ -29,6 +31,8 @@ export function LifeGodGameHud({
   onTogglePlay,
   onReset,
   onRandomize,
+  onDecreaseTimeScale,
+  onIncreaseTimeScale,
 }: LifeGodGameHudProps) {
   const selectedAm = simulationState?.amEntities.find((am) => am.id === simulationState.selectedAmId) ?? null
   const selectedLineage = selectedAm
@@ -85,8 +89,12 @@ export function LifeGodGameHud({
               <div>Phase actuelle : {simulationState.phase}</div>
               <div>Cellules vivantes : {simulationState.aliveCount}</div>
               <div>Generation : {simulationState.generation}</div>
+              <div>Temps : {simulationState.timeScale}x</div>
+              <div>Scan AM : {simulationState.scanningActive ? 'actif' : 'arrete'}</div>
               <div>Entites conscientes : {simulationState.protoEntities.length}</div>
               <div>Lignees actives : {simulationState.amLineages.length}/3</div>
+              <div>AM completes : {simulationState.completeAmCount}/{simulationState.maxCompleteAmBeforeScanStops}</div>
+              <div>AM en formation : {simulationState.formingAmCount}</div>
               <div>Population AM : {simulationState.amEntities.length}</div>
               {selectedAm && selectedLineage && (
                 <>
@@ -97,6 +105,7 @@ export function LifeGodGameHud({
                   <div>AM energie : {selectedAm.energy}</div>
                   <div>AM etat : {selectedAm.state}</div>
                   <div>AM role : {selectedAm.role}</div>
+                  <div>Cooldown repro : {selectedAm.reproductionCooldown}</div>
                   <div>AM phase : {simulationState.phase === 'creature' ? 'Creature' : 'Cellule'}</div>
                   <div>Lignee : {selectedLineage.name}</div>
                   <div>Pattern : {selectedAm.patternId}</div>
@@ -133,6 +142,12 @@ export function LifeGodGameHud({
           <button type="button" onClick={onRandomize} style={controlButtonStyle}>
             Random Seed
           </button>
+          <button type="button" onClick={onDecreaseTimeScale} style={controlButtonStyle}>
+            -
+          </button>
+          <button type="button" onClick={onIncreaseTimeScale} style={controlButtonStyle}>
+            +
+          </button>
         </div>
         <div
           style={{
@@ -146,7 +161,7 @@ export function LifeGodGameHud({
             textAlign: 'right',
           }}
         >
-          A 10 cellules connectees, une entite consciente emerge. Elle attire des cellules proches jusqu'a 15, puis se reforme en AM. Clique une AM pour la selectionner.
+          A 10 cellules connectees, une entite consciente emerge. Elle attire des cellules proches jusqu'a 15, puis forme une AM qui passe par forming, adapting puis alive. Le scan s'arrete quand 10 AM completes existent.
         </div>
       </div>
     </div>

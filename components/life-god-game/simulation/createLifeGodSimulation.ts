@@ -9,6 +9,7 @@ import type {
   LifeGodRelativeCell,
   LifeGodSimulationController,
   LifeGodSimulationState,
+  LifeGodTimeScale,
 } from '../types'
 
 const GRID_WIDTH = 160
@@ -19,11 +20,15 @@ const PROTO_SCAN_INTERVAL = 6
 const MAX_LINEAGES = 3
 const MAX_TOTAL_AMS = 12
 const MAX_AMS_PER_LINEAGE = 4
+const MAX_COMPLETE_AM_BEFORE_SCAN_STOPS = 10
 const PROTO_CONSCIOUSNESS_MIN = 10
 const PROTO_METAMORPHOSIS_MIN = 15
 const CONSTRUCTION_STEP_INTERVAL = 3
 const PROTO_GATHER_INTERVAL = 2
 const SEARCH_RADIUS = 12
+const MIN_FORMATION_CYCLES = Math.round((3 * 60 * 1000) / TICK_MS)
+const MAX_FORMATION_CYCLES = Math.round((10 * 60 * 1000) / TICK_MS)
+const TIME_SCALES: LifeGodTimeScale[] = [0.25, 0.5, 1, 2, 4, 8]
 const LINEAGE_COLORS = ['#69f0c1', '#ff8ad8', '#7ab6ff']
 const ROLE_CONFIG: Record<
   LifeGodAmRole,
@@ -71,6 +76,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   let next = createGrid()
   let generation = 0
   let aliveCount = 0
+  let timeScale: LifeGodTimeScale = 1
   let amLineages: LifeGodAmLineage[] = []
   let protoEntities: LifeGodProtoEntity[] = []
   let amEntities: LifeGodAmEntity[] = []
@@ -78,6 +84,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   let selectedAmId: string | null = null
   let status: LifeGodSimulationState['status'] = 'paused'
   let intervalId: ReturnType<typeof setInterval> | null = null
+  let stepAccumulator = 0
   const listeners = new Set<(state: LifeGodSimulationState) => void>()
 
   function createGrid() {
@@ -85,11 +92,18 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   }
 
   function getState(): LifeGodSimulationState {
+    const completeAmCount = amEntities.filter((am) => am.state === 'alive').length
+    const formingAmCount = amEntities.length - completeAmCount
     return {
       phase: amEntities.length > 0 || protoEntities.length > 0 || constructionSites.length > 0 ? 'creature' : 'cellule',
       generation,
       aliveCount,
       status,
+      timeScale,
+      scanningActive: completeAmCount < MAX_COMPLETE_AM_BEFORE_SCAN_STOPS,
+      maxCompleteAmBeforeScanStops: MAX_COMPLETE_AM_BEFORE_SCAN_STOPS,
+      completeAmCount,
+      formingAmCount,
       gridWidth: GRID_WIDTH,
       gridHeight: GRID_HEIGHT,
       cells: current,
@@ -133,6 +147,14 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
 
   function refreshAliveCount() {
     aliveCount = recountAlive(current)
+  }
+
+  function getCompleteAmCount() {
+    return amEntities.filter((am) => am.state === 'alive').length
+  }
+
+  function isScanningActive() {
+    return getCompleteAmCount() < MAX_COMPLETE_AM_BEFORE_SCAN_STOPS
   }
 
   function populationForLineage(lineageId: string) {
@@ -214,8 +236,18 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     return lineage
   }
 
+  function rollFormationDurations() {
+    const total = Math.round(MIN_FORMATION_CYCLES + Math.random() * (MAX_FORMATION_CYCLES - MIN_FORMATION_CYCLES))
+    const forming = Math.max(1, Math.round(total * 0.62))
+    return {
+      formationDurationCycles: forming,
+      adaptationDurationCycles: Math.max(1, total - forming),
+    }
+  }
+
   function spawnAm(lineage: LifeGodAmLineage, pattern: LifeGodAmPattern, origin: { x: number; y: number }) {
     const roleConfig = ROLE_CONFIG[lineage.role]
+    const { formationDurationCycles, adaptationDurationCycles } = rollFormationDurations()
     const am: LifeGodAmEntity = {
       id: `am-${lineage.id}-${populationForLineage(lineage.id) + 1}`,
       lineageId: lineage.id,
@@ -224,11 +256,13 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       bodyParts: pattern.bodyParts,
       age: 0,
       energy: 82,
-      state: 'cooldown',
+      state: 'forming',
       cells: pattern.cells,
       absoluteCells: computeAbsoluteCells(pattern.cells, origin),
       role: lineage.role,
       reproductionCooldown: roleConfig.reproductionCooldown,
+      formationDurationCycles,
+      adaptationDurationCycles,
     }
 
     amEntities = [...amEntities, am]
@@ -291,6 +325,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   }
 
   function tryCreateProtoEntities() {
+    if (!isScanningActive()) return
     if (generation % PROTO_SCAN_INTERVAL !== 0) return
 
     const existingSignatures = new Set(
@@ -439,6 +474,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     const pattern = choosePatternForProto(proto)
     let lineage = amLineages.find((item) => item.patternId === pattern.id) ?? null
     if (!lineage) {
+      if (!isScanningActive()) return
       if (amLineages.length >= MAX_LINEAGES) return
       lineage = createLineage(pattern)
     }
@@ -561,6 +597,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
 
     for (const am of amEntities) {
       const roleConfig = ROLE_CONFIG[am.role]
+      if (am.state !== 'alive') continue
       if (constructionSites.some((site) => site.builderAmId === am.id)) continue
       if (am.reproductionCooldown > 0 || am.energy < roleConfig.reproductionEnergyMin) continue
 
@@ -589,7 +626,6 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
           ? {
               ...entity,
               energy: Math.max(0, entity.energy - roleConfig.reproductionEnergyCost),
-              state: 'reproducing',
               reproductionCooldown: roleConfig.reproductionCooldown,
             }
           : entity
@@ -637,7 +673,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
 
     amEntities = amEntities.map((am) =>
       constructionSites.some((site) => site.builderAmId === am.id)
-        ? { ...am, state: 'reproducing' }
+        ? { ...am }
         : am
     )
   }
@@ -663,9 +699,10 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   function tickRoleBehavior() {
     amEntities = amEntities.map((am) => {
       if (am.role !== 'explorer') return am
+      if (am.state !== 'alive') return am
       const roleConfig = ROLE_CONFIG[am.role]
       if (roleConfig.movementInterval === null) return am
-      if (am.state === 'reproducing') return am
+      if (constructionSites.some((site) => site.builderAmId === am.id)) return am
       if (generation % roleConfig.movementInterval !== 0) return am
 
       const offsets = [
@@ -704,16 +741,23 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
 
   function tickAmState() {
     amEntities = amEntities.map((am) => {
-      const activeConstruction = constructionSites.some((site) => site.builderAmId === am.id)
-      const cooldown = Math.max(0, am.reproductionCooldown - 1)
       const roleConfig = ROLE_CONFIG[am.role]
-      const energy = Math.min(100, am.energy + roleConfig.energyGain)
+      const nextAge = am.age + 1
+      const nextState =
+        nextAge < am.formationDurationCycles
+          ? 'forming'
+          : nextAge < am.formationDurationCycles + am.adaptationDurationCycles
+            ? 'adapting'
+            : 'alive'
+      const cooldown = nextState === 'alive' ? Math.max(0, am.reproductionCooldown - 1) : am.reproductionCooldown
+      const energyGain = nextState === 'alive' ? roleConfig.energyGain : roleConfig.energyGain * 0.35
+      const energy = Math.min(100, am.energy + energyGain)
       return {
         ...am,
-        age: am.age + 1,
+        age: nextAge,
         energy,
         reproductionCooldown: cooldown,
-        state: activeConstruction ? 'reproducing' : cooldown > 0 ? 'cooldown' : 'idle',
+        state: nextState,
         absoluteCells: computeAbsoluteCells(am.cells, am.position),
       }
     })
@@ -721,6 +765,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
 
   function seedRandomGrid() {
     clearGrid(current)
+    stepAccumulator = 0
     amLineages = []
     protoEntities = []
     amEntities = []
@@ -741,7 +786,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     emit()
   }
 
-  function step() {
+  function stepSimulationCycle() {
     let nextAlive = 0
 
     for (let y = 0; y < GRID_HEIGHT; y += 1) {
@@ -785,7 +830,27 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     syncConstructionCells()
     refreshAliveCount()
     tryStartReproduction()
-    emit()
+  }
+
+  function step() {
+    stepAccumulator += timeScale
+    let executed = false
+
+    while (stepAccumulator >= 1) {
+      stepSimulationCycle()
+      stepAccumulator -= 1
+      executed = true
+    }
+
+    if (!executed && timeScale >= 1) {
+      stepSimulationCycle()
+      stepAccumulator = 0
+      executed = true
+    }
+
+    if (executed) {
+      emit()
+    }
   }
 
   function ensureLoop() {
@@ -840,6 +905,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       status = 'paused'
       clearGrid(current)
       next = createGrid()
+      stepAccumulator = 0
       generation = 0
       aliveCount = 0
       amLineages = []
@@ -853,7 +919,22 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       stopLoop()
       status = 'paused'
       next = createGrid()
+      stepAccumulator = 0
       seedRandomGrid()
+    },
+    increaseTimeScale() {
+      const currentIndex = TIME_SCALES.indexOf(timeScale)
+      if (currentIndex < TIME_SCALES.length - 1) {
+        timeScale = TIME_SCALES[currentIndex + 1]
+        emit()
+      }
+    },
+    decreaseTimeScale() {
+      const currentIndex = TIME_SCALES.indexOf(timeScale)
+      if (currentIndex > 0) {
+        timeScale = TIME_SCALES[currentIndex - 1]
+        emit()
+      }
     },
     paintCell(x, y, mode) {
       if (x < 0 || y < 0 || x >= GRID_WIDTH || y >= GRID_HEIGHT) return
