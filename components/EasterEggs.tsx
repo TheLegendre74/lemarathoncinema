@@ -1008,7 +1008,7 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
     }
     else if (t.endsWith('gomu gomu no tipiak!')) { setShowTipiak(true) }
     else if (t.endsWith('boîte de pandore') || t.endsWith('boite de pandore') || t.endsWith('pandore')) { discoverEgg('clippy'); setShowPandora(true) }
-    else if (t.endsWith('la guerre des mondes')) { discoverEgg('conway'); conwayMiniRef.current = false; localStorage.setItem('conway_unlocked', '1'); window.dispatchEvent(new CustomEvent('conway:unlocked')); setShowConway(true) }
+    else if (t.endsWith('la guerre des mondes') || t.endsWith('game of life')) { discoverEgg('conway'); conwayMiniRef.current = false; localStorage.setItem('conway_unlocked', '1'); window.dispatchEvent(new CustomEvent('conway:unlocked')); setShowConway(true) }
     else { triggered = false }
     if (triggered) { setMobileVal(''); setShowMobileInput(false) }
   }
@@ -1223,7 +1223,7 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
       }
       // "n4" ou "n°4" → lance direct le jeu
       // Filtre les touches multi-char (Shift, Control...) pour AZERTY où 4 = Shift+touche
-      const cleanBuf = buf.filter(k => k.length === 1)
+      const cleanBuf = buf.filter((k): k is string => typeof k === 'string' && k.length === 1)
       const cleanStr = cleanBuf.slice(-4).join('').toLowerCase()
       if (cleanStr.endsWith('n4') || cleanStr.endsWith('n°4')) {
         keyBuf.current = []
@@ -1303,8 +1303,10 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
         keyBuf.current = []
         return
       }
-      // "la guerre des mondes" (20 chars) → Jeu de la Vie de Conway
-      if (buf.slice(-20).join('').toLowerCase() === 'la guerre des mondes') {
+      // "la guerre des mondes" / "game of life" → Jeu de la Vie de Conway
+      const last20 = buf.slice(-20).join('').toLowerCase()
+      const last12 = buf.slice(-12).join('').toLowerCase()
+      if (last20 === 'la guerre des mondes' || last12 === 'game of life') {
         discoverEgg('conway')
         conwayMiniRef.current = false
         localStorage.setItem('conway_unlocked', '1')

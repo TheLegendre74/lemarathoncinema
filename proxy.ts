@@ -45,6 +45,6 @@ export async function proxy(request: NextRequest) {
   return NextResponse.redirect(new URL('/auth', request.url))
 }
 
-export const proxyConfig = {
+export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 }
