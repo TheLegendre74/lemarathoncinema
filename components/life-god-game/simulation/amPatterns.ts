@@ -61,7 +61,7 @@ export const LIFE_GOD_AM_PATTERNS: LifeGodAmPattern[] = [
       '..C..',
       '.X.Y.',
     ],
-    'scout'
+    'explorer'
   ),
   patternFromParts(
     'totem_thin',
@@ -73,7 +73,7 @@ export const LIFE_GOD_AM_PATTERNS: LifeGodAmPattern[] = [
       '..C..',
       '.X.Y.',
     ],
-    'keeper'
+    'builder'
   ),
   patternFromParts(
     'shaman_arms_up',
@@ -85,7 +85,7 @@ export const LIFE_GOD_AM_PATTERNS: LifeGodAmPattern[] = [
       '..C..',
       '.X.Y.',
     ],
-    'shaman'
+    'builder'
   ),
   patternFromParts(
     'insectoid_light',
@@ -97,7 +97,7 @@ export const LIFE_GOD_AM_PATTERNS: LifeGodAmPattern[] = [
       '.L.R.',
       'X...Y',
     ],
-    'skitter'
+    'explorer'
   ),
   patternFromParts(
     'alien_triangle',
@@ -109,7 +109,7 @@ export const LIFE_GOD_AM_PATTERNS: LifeGodAmPattern[] = [
       '..C..',
       '.X.Y.',
     ],
-    'seer'
+    'gatherer'
   ),
   patternFromParts(
     'lab_idol',
@@ -121,6 +121,6 @@ export const LIFE_GOD_AM_PATTERNS: LifeGodAmPattern[] = [
       '.LCR.',
       '.X.Y.',
     ],
-    'lab-born'
+    'gatherer'
   ),
 ]

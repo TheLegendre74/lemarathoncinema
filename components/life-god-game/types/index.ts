@@ -2,14 +2,7 @@ export type LifeGodBootstrapStatus = 'loading' | 'ready' | 'error'
 export type LifeGodSimStatus = 'playing' | 'paused'
 export type LifeGodPaintMode = 'draw' | 'erase'
 export type LifeGodPhase = 'cellule' | 'creature'
-export type LifeGodAmRole =
-  | 'scout'
-  | 'keeper'
-  | 'shaman'
-  | 'skitter'
-  | 'seer'
-  | 'lab-born'
-  | 'guardian'
+export type LifeGodAmRole = 'builder' | 'gatherer' | 'explorer'
 
 export interface LifeGodRelativeCell {
   x: number

@@ -92,6 +92,7 @@ export function LifeGodGameHud({
                 <>
                   <div>AM id : {selectedAm.id}</div>
                   <div>Lineage id : {selectedAm.lineageId}</div>
+                  <div>Lignee role : {selectedLineage.role}</div>
                   <div>AM age : {selectedAm.age}</div>
                   <div>AM energie : {selectedAm.energy}</div>
                   <div>AM etat : {selectedAm.state}</div>

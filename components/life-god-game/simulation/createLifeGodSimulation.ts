@@ -3,6 +3,7 @@ import type {
   LifeGodAmEntity,
   LifeGodAmLineage,
   LifeGodAmPattern,
+  LifeGodAmRole,
   LifeGodConstructionSite,
   LifeGodProtoEntity,
   LifeGodRelativeCell,
@@ -20,14 +21,50 @@ const MAX_TOTAL_AMS = 12
 const MAX_AMS_PER_LINEAGE = 4
 const PROTO_CONSCIOUSNESS_MIN = 10
 const PROTO_METAMORPHOSIS_MIN = 15
-const REPRODUCTION_ENERGY_COST = 18
-const REPRODUCTION_ENERGY_GAIN = 0.18
-const REPRODUCTION_ENERGY_MIN = 42
-const REPRODUCTION_COOLDOWN_CYCLES = 70
 const CONSTRUCTION_STEP_INTERVAL = 3
 const PROTO_GATHER_INTERVAL = 2
 const SEARCH_RADIUS = 12
 const LINEAGE_COLORS = ['#69f0c1', '#ff8ad8', '#7ab6ff']
+const ROLE_CONFIG: Record<
+  LifeGodAmRole,
+  {
+    energyGain: number
+    reproductionEnergyMin: number
+    reproductionEnergyCost: number
+    reproductionCooldown: number
+    searchRadius: number
+    reproductionDistanceMin: number
+    movementInterval: number | null
+  }
+> = {
+  builder: {
+    energyGain: 0.16,
+    reproductionEnergyMin: 52,
+    reproductionEnergyCost: 22,
+    reproductionCooldown: 96,
+    searchRadius: 10,
+    reproductionDistanceMin: 4,
+    movementInterval: null,
+  },
+  gatherer: {
+    energyGain: 0.28,
+    reproductionEnergyMin: 40,
+    reproductionEnergyCost: 16,
+    reproductionCooldown: 64,
+    searchRadius: 14,
+    reproductionDistanceMin: 4,
+    movementInterval: null,
+  },
+  explorer: {
+    energyGain: 0.2,
+    reproductionEnergyMin: 38,
+    reproductionEnergyCost: 18,
+    reproductionCooldown: 56,
+    searchRadius: 18,
+    reproductionDistanceMin: 8,
+    movementInterval: 18,
+  },
+}
 
 export function createLifeGodSimulation(): LifeGodSimulationController {
   let current = createGrid()
@@ -178,6 +215,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   }
 
   function spawnAm(lineage: LifeGodAmLineage, pattern: LifeGodAmPattern, origin: { x: number; y: number }) {
+    const roleConfig = ROLE_CONFIG[lineage.role]
     const am: LifeGodAmEntity = {
       id: `am-${lineage.id}-${populationForLineage(lineage.id) + 1}`,
       lineageId: lineage.id,
@@ -189,8 +227,8 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       state: 'cooldown',
       cells: pattern.cells,
       absoluteCells: computeAbsoluteCells(pattern.cells, origin),
-      role: pattern.suggestedRole,
-      reproductionCooldown: REPRODUCTION_COOLDOWN_CYCLES,
+      role: lineage.role,
+      reproductionCooldown: roleConfig.reproductionCooldown,
     }
 
     amEntities = [...amEntities, am]
@@ -468,8 +506,25 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     return true
   }
 
+  function countLivingNeighbors(x: number, y: number) {
+    let count = 0
+    for (let oy = -1; oy <= 1; oy += 1) {
+      for (let ox = -1; ox <= 1; ox += 1) {
+        if (ox === 0 && oy === 0) continue
+        const nx = x + ox
+        const ny = y + oy
+        if (nx <= 0 || ny <= 0 || nx >= GRID_WIDTH - 1 || ny >= GRID_HEIGHT - 1) continue
+        count += current[indexAt(nx, ny)]
+      }
+    }
+    return count
+  }
+
   function findNearbyConstructionOrigin(parent: LifeGodAmEntity, pattern: LifeGodAmPattern) {
-    for (let distance = 4; distance <= SEARCH_RADIUS; distance += 2) {
+    const roleConfig = ROLE_CONFIG[parent.role]
+    const candidates: { x: number; y: number; score: number }[] = []
+
+    for (let distance = roleConfig.reproductionDistanceMin; distance <= roleConfig.searchRadius; distance += 2) {
       for (let oy = -distance; oy <= distance; oy += 1) {
         for (let ox = -distance; ox <= distance; ox += 1) {
           if (Math.max(Math.abs(ox), Math.abs(oy)) !== distance) continue
@@ -477,19 +532,37 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
             x: parent.position.x + ox,
             y: parent.position.y + oy,
           }
-          if (canPlaceConstruction(pattern, origin)) return origin
+          if (!canPlaceConstruction(pattern, origin)) continue
+
+          let localDensity = 0
+          for (const cell of pattern.cells) {
+            localDensity += countLivingNeighbors(origin.x + cell.x, origin.y + cell.y)
+          }
+
+          const score =
+            parent.role === 'gatherer'
+              ? localDensity * 8 - distance
+              : parent.role === 'explorer'
+                ? distance * 6 - localDensity
+                : localDensity * 3 - distance * 2
+
+          candidates.push({ ...origin, score })
         }
       }
     }
-    return null
+
+    candidates.sort((a, b) => b.score - a.score)
+    if (candidates.length === 0) return null
+    return { x: candidates[0].x, y: candidates[0].y }
   }
 
   function tryStartReproduction() {
     if (amEntities.length >= MAX_TOTAL_AMS) return
 
     for (const am of amEntities) {
+      const roleConfig = ROLE_CONFIG[am.role]
       if (constructionSites.some((site) => site.builderAmId === am.id)) continue
-      if (am.reproductionCooldown > 0 || am.energy < REPRODUCTION_ENERGY_MIN) continue
+      if (am.reproductionCooldown > 0 || am.energy < roleConfig.reproductionEnergyMin) continue
 
       const lineage = amLineages.find((item) => item.id === am.lineageId)
       const pattern = LIFE_GOD_AM_PATTERNS.find((item) => item.id === am.patternId)
@@ -515,9 +588,9 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
         entity.id === am.id
           ? {
               ...entity,
-              energy: Math.max(0, entity.energy - REPRODUCTION_ENERGY_COST),
+              energy: Math.max(0, entity.energy - roleConfig.reproductionEnergyCost),
               state: 'reproducing',
-              reproductionCooldown: REPRODUCTION_COOLDOWN_CYCLES,
+              reproductionCooldown: roleConfig.reproductionCooldown,
             }
           : entity
       )
@@ -569,11 +642,72 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     )
   }
 
+  function canMoveAmTo(am: LifeGodAmEntity, position: { x: number; y: number }) {
+    for (const cell of am.cells) {
+      const x = position.x + cell.x
+      const y = position.y + cell.y
+      if (x <= 0 || y <= 0 || x >= GRID_WIDTH - 1 || y >= GRID_HEIGHT - 1) return false
+      if (constructionSites.some((site) => site.absoluteCells.some((item) => item.x === x && item.y === y))) return false
+      if (protoEntities.some((proto) => proto.cells.some((item) => item.x === x && item.y === y))) return false
+      if (
+        amEntities.some(
+          (other) => other.id !== am.id && other.absoluteCells.some((item) => item.x === x && item.y === y)
+        )
+      ) {
+        return false
+      }
+    }
+    return true
+  }
+
+  function tickRoleBehavior() {
+    amEntities = amEntities.map((am) => {
+      if (am.role !== 'explorer') return am
+      const roleConfig = ROLE_CONFIG[am.role]
+      if (roleConfig.movementInterval === null) return am
+      if (am.state === 'reproducing') return am
+      if (generation % roleConfig.movementInterval !== 0) return am
+
+      const offsets = [
+        { x: 1, y: 0 },
+        { x: -1, y: 0 },
+        { x: 0, y: 1 },
+        { x: 0, y: -1 },
+        { x: 1, y: 1 },
+        { x: -1, y: 1 },
+        { x: 1, y: -1 },
+        { x: -1, y: -1 },
+      ]
+
+      offsets.sort((a, b) => {
+        const da = Math.abs((am.position.x + a.x) - GRID_WIDTH / 2) + Math.abs((am.position.y + a.y) - GRID_HEIGHT / 2)
+        const db = Math.abs((am.position.x + b.x) - GRID_WIDTH / 2) + Math.abs((am.position.y + b.y) - GRID_HEIGHT / 2)
+        return db - da
+      })
+
+      for (const offset of offsets) {
+        const nextPosition = {
+          x: am.position.x + offset.x,
+          y: am.position.y + offset.y,
+        }
+        if (!canMoveAmTo(am, nextPosition)) continue
+        return {
+          ...am,
+          position: nextPosition,
+          absoluteCells: computeAbsoluteCells(am.cells, nextPosition),
+        }
+      }
+
+      return am
+    })
+  }
+
   function tickAmState() {
     amEntities = amEntities.map((am) => {
       const activeConstruction = constructionSites.some((site) => site.builderAmId === am.id)
       const cooldown = Math.max(0, am.reproductionCooldown - 1)
-      const energy = Math.min(100, am.energy + REPRODUCTION_ENERGY_GAIN)
+      const roleConfig = ROLE_CONFIG[am.role]
+      const energy = Math.min(100, am.energy + roleConfig.energyGain)
       return {
         ...am,
         age: am.age + 1,
@@ -645,6 +779,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     tickProtoEntities()
     syncProtoCells()
     tickAmState()
+    tickRoleBehavior()
     syncAmCells()
     tickConstructionSites()
     syncConstructionCells()
