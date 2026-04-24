@@ -30,7 +30,7 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
       window.removeEventListener('clippy:statechange', onState)
       window.removeEventListener('conway:unlocked', onConwayUnlock)
     }
-  }, [])
+  }, [hasConwayEgg])
 
   function isActive(href: string) {
     if (href.includes('?')) {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { addPost, deletePost, editPost } from '@/lib/actions'
 import { useToast } from './ToastProvider'
@@ -433,6 +433,7 @@ function ShiningEffect({ onClose }: { onClose: () => void }) {
 
 // ─── MAIN FORUM COMPONENT ────────────────────────────────────────────────────
 export default function Forum({ topic, profile, initialPosts = [], filmTitle }: ForumProps) {
+  const supabase = useMemo(() => createClient(), [])
   const [posts, setPosts] = useState(initialPosts)
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(false)
@@ -486,7 +487,6 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
 
   // Initial fetch on mount (initialPosts is always [] when called from a client component)
   useEffect(() => {
-    const supabase = createClient()
     supabase
       .from('posts')
       .select('id, topic, user_id, content, created_at, profiles(pseudo, exp, active_badge)')
@@ -495,11 +495,10 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
       .then(({ data }) => {
         if (data) setPosts(data as any)
       })
-  }, [topic])
+  }, [topic, supabase])
 
   // Realtime subscription (for other users' messages)
   useEffect(() => {
-    const supabase = createClient()
     const channel = supabase
       .channel(`forum:${topic}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts', filter: `topic=eq.${topic}` },
@@ -526,7 +525,7 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
         })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [topic])
+  }, [topic, supabase])
 
   async function submit() {
     if (!text.trim() || loading || !profile) return

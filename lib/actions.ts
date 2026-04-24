@@ -609,20 +609,10 @@ export async function toggleWatched(filmId: number, filmTitre: string) {
     const pre = !isMarathonLive()
     await supabase.from('watched').insert({ user_id: user.id, film_id: filmId, pre })
     if (!pre) {
-      // Calculate EXP (week film = more EXP)
-      const { data: wf } = await supabase
-        .from('week_films')
-        .select('film_id')
-        .eq('active', true)
-        .eq('film_id', filmId)
-        .single()
-      const { data: duel } = await supabase
-        .from('duels')
-        .select('winner_id')
-        .eq('winner_id', filmId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single()
+      const [{ data: wf }, { data: duel }] = await Promise.all([
+        supabase.from('week_films').select('film_id').eq('active', true).eq('film_id', filmId).single(),
+        supabase.from('duels').select('winner_id').eq('winner_id', filmId).order('created_at', { ascending: false }).limit(1).single(),
+      ])
       const exp = wf ? CONFIG.EXP_FDLS : (duel ? CONFIG.EXP_DUEL_WIN : CONFIG.EXP_FILM)
       await supabase.rpc('increment_exp', { user_id: user.id, amount: exp })
     }
