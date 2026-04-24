@@ -4,6 +4,7 @@ export type LifeGodPaintMode = 'draw' | 'erase'
 export type LifeGodPhase = 'cellule' | 'creature'
 export type LifeGodTimeScale = 0.25 | 0.5 | 1 | 2 | 4 | 8
 export type LifeGodAmRole = 'builder' | 'gatherer' | 'explorer'
+export type LifeGodInfluenceMode = 'attract' | 'repel'
 
 export interface LifeGodRelativeCell {
   x: number
@@ -119,6 +120,8 @@ export interface LifeGodSimulationController {
   randomize(): void
   increaseTimeScale(): void
   decreaseTimeScale(): void
+  setInfluence(x: number, y: number, mode: LifeGodInfluenceMode): void
+  clearInfluence(): void
   paintCell(x: number, y: number, mode: LifeGodPaintMode): void
   selectAm(amId: string | null): void
   destroy(): void

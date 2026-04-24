@@ -161,7 +161,7 @@ export function LifeGodGameHud({
             textAlign: 'right',
           }}
         >
-          A 10 cellules connectees, une entite consciente emerge. Elle attire des cellules proches jusqu'a 15, puis forme une AM qui passe par forming, adapting puis alive. Le scan s'arrete quand 10 AM completes existent.
+          A 10 cellules connectees, une entite consciente emerge. Elle attire des cellules proches jusqu'a 15, puis forme une AM qui passe par forming, adapting puis alive. Maintiens Shift pour attirer les AM vivantes, Alt pour les repousser. Le scan s'arrete quand 10 AM completes existent.
         </div>
       </div>
     </div>

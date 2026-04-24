@@ -3,6 +3,7 @@ import type {
   LifeGodAmEntity,
   LifeGodAmLineage,
   LifeGodAmPattern,
+  LifeGodInfluenceMode,
   LifeGodAmRole,
   LifeGodConstructionSite,
   LifeGodProtoEntity,
@@ -39,7 +40,8 @@ const ROLE_CONFIG: Record<
     reproductionCooldown: number
     searchRadius: number
     reproductionDistanceMin: number
-    movementInterval: number | null
+    movementInterval: number
+    movementReach: number
   }
 > = {
   builder: {
@@ -49,7 +51,8 @@ const ROLE_CONFIG: Record<
     reproductionCooldown: 96,
     searchRadius: 10,
     reproductionDistanceMin: 4,
-    movementInterval: null,
+    movementInterval: 42,
+    movementReach: 1,
   },
   gatherer: {
     energyGain: 0.28,
@@ -58,7 +61,8 @@ const ROLE_CONFIG: Record<
     reproductionCooldown: 64,
     searchRadius: 14,
     reproductionDistanceMin: 4,
-    movementInterval: null,
+    movementInterval: 26,
+    movementReach: 1,
   },
   explorer: {
     energyGain: 0.2,
@@ -67,7 +71,8 @@ const ROLE_CONFIG: Record<
     reproductionCooldown: 56,
     searchRadius: 18,
     reproductionDistanceMin: 8,
-    movementInterval: 18,
+    movementInterval: 14,
+    movementReach: 2,
   },
 }
 
@@ -82,6 +87,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   let amEntities: LifeGodAmEntity[] = []
   let constructionSites: LifeGodConstructionSite[] = []
   let selectedAmId: string | null = null
+  let influencePoint: { x: number; y: number; mode: LifeGodInfluenceMode } | null = null
   let status: LifeGodSimulationState['status'] = 'paused'
   let intervalId: ReturnType<typeof setInterval> | null = null
   let stepAccumulator = 0
@@ -556,6 +562,59 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     return count
   }
 
+  function averagePosition(cells: LifeGodRelativeCell[]) {
+    let totalX = 0
+    let totalY = 0
+    for (const cell of cells) {
+      totalX += cell.x
+      totalY += cell.y
+    }
+    return {
+      x: totalX / Math.max(cells.length, 1),
+      y: totalY / Math.max(cells.length, 1),
+    }
+  }
+
+  function getLineageAnchor(lineageId: string, excludeAmId: string) {
+    const cells = amEntities
+      .filter((am) => am.id !== excludeAmId && am.lineageId === lineageId)
+      .flatMap((am) => am.absoluteCells)
+
+    if (cells.length === 0) return { x: GRID_WIDTH / 2, y: GRID_HEIGHT / 2 }
+    return averagePosition(cells)
+  }
+
+  function getLivingDensityAt(position: { x: number; y: number }, am: LifeGodAmEntity) {
+    let density = 0
+    for (const cell of am.cells) {
+      density += countLivingNeighbors(position.x + cell.x, position.y + cell.y)
+    }
+    return density
+  }
+
+  function getMinDistanceToOtherAms(position: { x: number; y: number }, am: LifeGodAmEntity) {
+    let minDistance = Infinity
+    const candidateCenter = averagePosition(computeAbsoluteCells(am.cells, position))
+
+    for (const other of amEntities) {
+      if (other.id === am.id) continue
+      const otherCenter = averagePosition(other.absoluteCells)
+      const distance = Math.abs(candidateCenter.x - otherCenter.x) + Math.abs(candidateCenter.y - otherCenter.y)
+      if (distance < minDistance) minDistance = distance
+    }
+
+    return Number.isFinite(minDistance) ? minDistance : 999
+  }
+
+  function getInfluenceScore(position: { x: number; y: number }, am: LifeGodAmEntity) {
+    if (!influencePoint) return 0
+    const center = averagePosition(computeAbsoluteCells(am.cells, position))
+    const distance = Math.abs(center.x - influencePoint.x) + Math.abs(center.y - influencePoint.y)
+    const clamped = Math.max(0, 18 - distance)
+    if (clamped === 0) return 0
+    return influencePoint.mode === 'attract' ? clamped * 7 : -clamped * 7
+  }
+
   function findNearbyConstructionOrigin(parent: LifeGodAmEntity, pattern: LifeGodAmPattern) {
     const roleConfig = ROLE_CONFIG[parent.role]
     const candidates: { x: number; y: number; score: number }[] = []
@@ -696,46 +755,64 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     return true
   }
 
+  function getMovementCandidates(am: LifeGodAmEntity) {
+    const roleConfig = ROLE_CONFIG[am.role]
+    const candidates = [{ x: am.position.x, y: am.position.y }]
+
+    for (let oy = -roleConfig.movementReach; oy <= roleConfig.movementReach; oy += 1) {
+      for (let ox = -roleConfig.movementReach; ox <= roleConfig.movementReach; ox += 1) {
+        if (ox === 0 && oy === 0) continue
+        const position = {
+          x: am.position.x + ox,
+          y: am.position.y + oy,
+        }
+        candidates.push(position)
+      }
+    }
+
+    return candidates
+  }
+
+  function scoreMovement(am: LifeGodAmEntity, position: { x: number; y: number }) {
+    const density = getLivingDensityAt(position, am)
+    const otherDistance = getMinDistanceToOtherAms(position, am)
+    const lineageAnchor = getLineageAnchor(am.lineageId, am.id)
+    const center = averagePosition(computeAbsoluteCells(am.cells, position))
+    const lineageDistance = Math.abs(center.x - lineageAnchor.x) + Math.abs(center.y - lineageAnchor.y)
+    const influenceScore = getInfluenceScore(position, am)
+
+    if (am.role === 'explorer') {
+      return lineageDistance * 4 + otherDistance * 3 - density * 1.5 + influenceScore
+    }
+    if (am.role === 'gatherer') {
+      return density * 7 + otherDistance * 1.2 - lineageDistance * 1.6 + influenceScore
+    }
+    return density * 2.5 + otherDistance * 0.8 - lineageDistance * 4 + influenceScore
+  }
+
   function tickRoleBehavior() {
     amEntities = amEntities.map((am) => {
-      if (am.role !== 'explorer') return am
       if (am.state !== 'alive') return am
       const roleConfig = ROLE_CONFIG[am.role]
-      if (roleConfig.movementInterval === null) return am
       if (constructionSites.some((site) => site.builderAmId === am.id)) return am
       if (generation % roleConfig.movementInterval !== 0) return am
+      const candidates = getMovementCandidates(am)
+        .filter((position) => canMoveAmTo(am, position))
+        .map((position) => ({
+          position,
+          score: scoreMovement(am, position),
+        }))
+        .sort((a, b) => b.score - a.score)
 
-      const offsets = [
-        { x: 1, y: 0 },
-        { x: -1, y: 0 },
-        { x: 0, y: 1 },
-        { x: 0, y: -1 },
-        { x: 1, y: 1 },
-        { x: -1, y: 1 },
-        { x: 1, y: -1 },
-        { x: -1, y: -1 },
-      ]
+      const best = candidates[0]
+      if (!best) return am
+      if (best.position.x === am.position.x && best.position.y === am.position.y) return am
 
-      offsets.sort((a, b) => {
-        const da = Math.abs((am.position.x + a.x) - GRID_WIDTH / 2) + Math.abs((am.position.y + a.y) - GRID_HEIGHT / 2)
-        const db = Math.abs((am.position.x + b.x) - GRID_WIDTH / 2) + Math.abs((am.position.y + b.y) - GRID_HEIGHT / 2)
-        return db - da
-      })
-
-      for (const offset of offsets) {
-        const nextPosition = {
-          x: am.position.x + offset.x,
-          y: am.position.y + offset.y,
-        }
-        if (!canMoveAmTo(am, nextPosition)) continue
-        return {
-          ...am,
-          position: nextPosition,
-          absoluteCells: computeAbsoluteCells(am.cells, nextPosition),
-        }
+      return {
+        ...am,
+        position: best.position,
+        absoluteCells: computeAbsoluteCells(am.cells, best.position),
       }
-
-      return am
     })
   }
 
@@ -935,6 +1012,12 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
         timeScale = TIME_SCALES[currentIndex - 1]
         emit()
       }
+    },
+    setInfluence(x, y, mode) {
+      influencePoint = { x, y, mode }
+    },
+    clearInfluence() {
+      influencePoint = null
     },
     paintCell(x, y, mode) {
       if (x < 0 || y < 0 || x >= GRID_WIDTH || y >= GRID_HEIGHT) return

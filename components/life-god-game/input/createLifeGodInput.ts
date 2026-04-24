@@ -1,4 +1,10 @@
-import type { LifeGodInputController, LifeGodPaintMode, LifeGodRenderer, LifeGodSimulationController } from '../types'
+import type {
+  LifeGodInfluenceMode,
+  LifeGodInputController,
+  LifeGodPaintMode,
+  LifeGodRenderer,
+  LifeGodSimulationController,
+} from '../types'
 
 interface CreateLifeGodInputParams {
   target: HTMLDivElement
@@ -14,6 +20,7 @@ export function createLifeGodInput({
   let pointerActive = false
   let activeMode: LifeGodPaintMode = 'draw'
   let selectionLock = false
+  let influenceMode: LifeGodInfluenceMode | null = null
 
   function paintFromPointer(event: PointerEvent) {
     const cell = renderer.getCellAtClientPoint(event.clientX, event.clientY)
@@ -21,7 +28,23 @@ export function createLifeGodInput({
     simulation.paintCell(cell.x, cell.y, activeMode)
   }
 
+  function influenceFromPointer(event: PointerEvent) {
+    const cell = renderer.getCellAtClientPoint(event.clientX, event.clientY)
+    if (!cell || !influenceMode) return
+    simulation.setInfluence(cell.x, cell.y, influenceMode)
+  }
+
   function handlePointerDown(event: PointerEvent) {
+    influenceMode = event.shiftKey ? 'attract' : event.altKey ? 'repel' : null
+
+    if (influenceMode) {
+      pointerActive = true
+      selectionLock = false
+      influenceFromPointer(event)
+      target.setPointerCapture(event.pointerId)
+      return
+    }
+
     const amId = renderer.getAmAtClientPoint(event.clientX, event.clientY, simulation.getState())
     if (amId) {
       selectionLock = true
@@ -38,6 +61,10 @@ export function createLifeGodInput({
   }
 
   function handlePointerMove(event: PointerEvent) {
+    if (influenceMode && pointerActive) {
+      influenceFromPointer(event)
+      return
+    }
     if (selectionLock || !pointerActive) return
     paintFromPointer(event)
   }
@@ -45,6 +72,8 @@ export function createLifeGodInput({
   function handlePointerUp(event: PointerEvent) {
     pointerActive = false
     selectionLock = false
+    influenceMode = null
+    simulation.clearInfluence()
     if (target.hasPointerCapture(event.pointerId)) {
       target.releasePointerCapture(event.pointerId)
     }
