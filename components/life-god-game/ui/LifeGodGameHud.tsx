@@ -100,7 +100,8 @@ export function LifeGodGameHud({
               <div>AM completes : {simulationState.completeAmCount}/{simulationState.maxCompleteAmBeforeScanStops}</div>
               <div>AM forming : {simulationState.formingAmCount}</div>
               <div>AM adapting : {simulationState.adaptingAmCount}</div>
-              <div>Matiere figee : {simulationState.frozenMatterCount}</div>
+              <div>Matiere restante : {simulationState.terraformableMatterCount}</div>
+              <div>Matiere terraformee : {simulationState.terraformedMatterCount}</div>
               <div>Population AM : {simulationState.amEntities.length}</div>
               {selectedAm && selectedLineage && (
                 <>
@@ -167,7 +168,7 @@ export function LifeGodGameHud({
             textAlign: 'right',
           }}
         >
-          Au debut, aucune AM visible n'apparait. Une premiere AM se forme en secret dans Conway, puis se revele. Maintiens Shift pour attirer les AM vivantes, Alt pour les repousser. A 10 AM alive, Conway s'arrete et la matiere restante se fige.
+          Au debut, aucune AM visible n'apparait. Une premiere AM se forme en secret dans Conway, puis se revele. Maintiens Shift pour attirer les AM vivantes, Alt pour les repousser. Quand la population est stable, les AM terraformment progressivement la matiere figee.
         </div>
       </div>
     </div>

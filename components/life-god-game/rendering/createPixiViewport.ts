@@ -28,6 +28,7 @@ export async function createPixiViewport({
   const backdrop = new PIXI.Graphics()
   const frame = new PIXI.Graphics()
   const gridLines = new PIXI.Graphics()
+  const matterCells = new PIXI.Graphics()
   const liveCells = new PIXI.Graphics()
   const constructionGhosts = new PIXI.Graphics()
   const constructionBuilt = new PIXI.Graphics()
@@ -41,6 +42,7 @@ export async function createPixiViewport({
     backdrop,
     frame,
     gridLines,
+    matterCells,
     liveCells,
     constructionGhosts,
     constructionBuilt,
@@ -120,6 +122,7 @@ export async function createPixiViewport({
     drawGridFrame()
 
     liveCells.clear()
+    matterCells.clear()
     constructionGhosts.clear()
     constructionBuilt.clear()
     protoAuras.clear()
@@ -134,10 +137,34 @@ export async function createPixiViewport({
       ...state.amEntities.flatMap((am) => am.absoluteCells.map((cell) => `${cell.x}:${cell.y}`)),
     ])
 
+    const matterColors: Record<number, { color: number; alpha: number }> = {
+      1: { color: 0x6d7a89, alpha: 0.5 },
+      2: { color: 0x5d4631, alpha: 0.82 },
+      3: { color: 0x3f7f4b, alpha: 0.88 },
+      4: { color: 0x4d74a8, alpha: 0.88 },
+      5: { color: 0x70757f, alpha: 0.9 },
+      6: { color: 0x8a7e61, alpha: 0.84 },
+    }
+
     for (let y = 0; y < state.gridHeight; y += 1) {
-        const rowOffset = y * state.gridWidth
+      const rowOffset = y * state.gridWidth
+      for (let x = 0; x < state.gridWidth; x += 1) {
+        const matterValue = state.matter[rowOffset + x]
+        if (matterValue === 0) continue
+        const style = matterColors[matterValue]
+        if (!style) continue
+        const px = metrics.x + x * metrics.cellSize
+        const py = metrics.y + y * metrics.cellSize
+        matterCells.rect(px + 1, py + 1, Math.max(metrics.cellSize - 1, 1), Math.max(metrics.cellSize - 1, 1))
+        matterCells.fill({ color: style.color, alpha: style.alpha })
+      }
+    }
+
+    for (let y = 0; y < state.gridHeight; y += 1) {
+      const rowOffset = y * state.gridWidth
       for (let x = 0; x < state.gridWidth; x += 1) {
         if (state.cells[rowOffset + x] !== 1) continue
+        if (state.matter[rowOffset + x] !== 0) continue
         if (reservedCells.has(`${x}:${y}`)) continue
 
         const px = metrics.x + x * metrics.cellSize
