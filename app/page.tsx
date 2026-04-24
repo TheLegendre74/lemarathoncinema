@@ -13,8 +13,10 @@ export const revalidate = 60
 
 export default async function HomePage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  const cfg = await getServerConfig()
+  const [{ data: { user } }, cfg] = await Promise.all([
+    supabase.auth.getUser(),
+    getServerConfig(),
+  ])
   const live = new Date() >= cfg.MARATHON_START
 
   // News (public)

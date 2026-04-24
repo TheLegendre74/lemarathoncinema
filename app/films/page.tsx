@@ -10,23 +10,22 @@ export default async function FilmsPage() {
   const cookieStore = await cookies()
   const age18confirmed = cookieStore.get('age18confirmed')?.value === 'true'
   const supabase = await createClient()
-  const cfg = await getServerConfig()
-  const { data: { user } } = await supabase.auth.getUser()
+  const [cfg, { data: { user } }] = await Promise.all([
+    getServerConfig(),
+    supabase.auth.getUser(),
+  ])
 
   const [
     { data: films },
     { count: profileCount },
     { data: weekFilm },
-    { data: allWatched },
-    { data: allRatings },
-    { data: allNegRatings },
+    { data: statsRows, error: statsError },
   ] = await Promise.all([
     supabase.from('films').select('*').eq('pending_admin_approval', false).order('titre'),
     supabase.from('profiles').select('*', { count: 'exact', head: true }),
     supabase.from('week_films').select('film_id').eq('active', true).single(),
-    supabase.from('watched').select('film_id'),
-    supabase.from('ratings').select('film_id, score'),
-    (supabase as any).from('negative_ratings').select('film_id, score'),
+    // RPC get_film_stats remplace 3 requêtes globales — exécuter supabase/rpc_film_stats.sql d'abord
+    (supabase as any).rpc('get_film_stats'),
   ])
 
   // User-specific data (empty for guests)
@@ -54,22 +53,38 @@ export default async function FilmsPage() {
     userWatchlists = wl ?? []
   }
 
-  // Global watch counts per film
+  // Global stats per film — built from RPC (1 query) or fallback (3 queries)
   const totalUsers = profileCount ?? 1
   const watchCountMap: Record<number, number> = {}
-  allWatched?.forEach((w: { film_id: number }) => {
-    watchCountMap[w.film_id] = (watchCountMap[w.film_id] ?? 0) + 1
-  })
   const ratingMap: Record<number, number[]> = {}
-  allRatings?.forEach((r: { film_id: number; score: number }) => {
-    if (!ratingMap[r.film_id]) ratingMap[r.film_id] = []
-    ratingMap[r.film_id].push(r.score)
-  })
   const negativeRatingMap: Record<number, number[]> = {}
-  ;(allNegRatings ?? []).forEach((r: { film_id: number; score: number }) => {
-    if (!negativeRatingMap[r.film_id]) negativeRatingMap[r.film_id] = []
-    negativeRatingMap[r.film_id].push(r.score)
-  })
+
+  if (!statsError && statsRows) {
+    // RPC path — pre-aggregated in SQL
+    ;(statsRows as any[]).forEach((s) => {
+      if (s.watch_count > 0) watchCountMap[s.film_id] = Number(s.watch_count)
+      if (s.pos_scores?.length) ratingMap[s.film_id] = s.pos_scores
+      if (s.neg_scores?.length) negativeRatingMap[s.film_id] = s.neg_scores
+    })
+  } else {
+    // Fallback si la fonction SQL n'a pas encore été créée (voir supabase/rpc_film_stats.sql)
+    const [{ data: allWatched }, { data: allRatings }, { data: allNegRatings }] = await Promise.all([
+      supabase.from('watched').select('film_id'),
+      supabase.from('ratings').select('film_id, score'),
+      (supabase as any).from('negative_ratings').select('film_id, score'),
+    ])
+    allWatched?.forEach((w: { film_id: number }) => {
+      watchCountMap[w.film_id] = (watchCountMap[w.film_id] ?? 0) + 1
+    })
+    allRatings?.forEach((r: { film_id: number; score: number }) => {
+      if (!ratingMap[r.film_id]) ratingMap[r.film_id] = []
+      ratingMap[r.film_id].push(r.score)
+    })
+    ;(allNegRatings ?? []).forEach((r: { film_id: number; score: number }) => {
+      if (!negativeRatingMap[r.film_id]) negativeRatingMap[r.film_id] = []
+      negativeRatingMap[r.film_id].push(r.score)
+    })
+  }
 
   const watchedIds = new Set((watched.map((w: { film_id: number }) => w.film_id)) as number[])
   const watchedPreMap: Record<number, boolean> = {}
