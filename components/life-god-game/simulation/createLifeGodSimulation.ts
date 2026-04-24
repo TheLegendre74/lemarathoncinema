@@ -113,6 +113,14 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     const adaptingAmCount = amEntities.filter((am) => am.state === 'adapting').length
     const formingAmCount = amEntities.filter((am) => am.state === 'forming').length
     const frozenMatterCount = current.reduce((total, cell) => total + cell, 0) - amEntities.reduce((total, am) => total + am.absoluteCells.length, 0)
+    const amPopulationStable =
+      completeAmCount === MAX_TOTAL_AMS &&
+      constructionSites.length === 0 &&
+      firstAmCandidate === null &&
+      !conwayActive &&
+      matterFrozen &&
+      activePatternIds.length >= 1 &&
+      activePatternIds.length <= MAX_ACTIVE_PATTERNS_PER_SEED
     return {
       phase,
       generation,
@@ -121,7 +129,8 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       timeScale,
       conwayActive,
       matterFrozen,
-      scanningActive: completeAmCount < MAX_COMPLETE_AM_BEFORE_SCAN_STOPS,
+      amPopulationStable,
+      scanningActive: !amPopulationStable && completeAmCount < MAX_COMPLETE_AM_BEFORE_SCAN_STOPS,
       maxCompleteAmBeforeScanStops: MAX_COMPLETE_AM_BEFORE_SCAN_STOPS,
       completeAmCount,
       formingAmCount,
@@ -184,7 +193,15 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   }
 
   function canCreateMoreVisibleAms() {
-    return getCompleteAmCount() < MAX_COMPLETE_AM_BEFORE_SCAN_STOPS && amEntities.length < MAX_TOTAL_AMS
+    const stable =
+      getCompleteAmCount() === MAX_TOTAL_AMS &&
+      constructionSites.length === 0 &&
+      firstAmCandidate === null &&
+      !conwayActive &&
+      matterFrozen &&
+      activePatternIds.length >= 1 &&
+      activePatternIds.length <= MAX_ACTIVE_PATTERNS_PER_SEED
+    return !stable && getCompleteAmCount() < MAX_COMPLETE_AM_BEFORE_SCAN_STOPS && amEntities.length < MAX_TOTAL_AMS
   }
 
   function updatePhase() {

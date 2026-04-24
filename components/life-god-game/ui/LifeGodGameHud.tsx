@@ -90,6 +90,7 @@ export function LifeGodGameHud({
               <div>Cellules vivantes : {simulationState.aliveCount}</div>
               <div>Generation : {simulationState.generation}</div>
               <div>Temps : {simulationState.timeScale}x</div>
+              <div>Population stable : {simulationState.amPopulationStable ? 'oui' : 'non'}</div>
               <div>Conway : {simulationState.conwayActive ? 'actif' : 'arrete'}</div>
               <div>Matiere : {simulationState.matterFrozen ? 'figee' : 'mobile'}</div>
               <div>Scan AM : {simulationState.scanningActive ? 'actif' : 'arrete'}</div>
