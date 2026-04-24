@@ -30,6 +30,11 @@ export function LifeGodGameHud({
   onReset,
   onRandomize,
 }: LifeGodGameHudProps) {
+  const selectedAm = simulationState?.amEntities.find((am) => am.id === simulationState.selectedAmId) ?? null
+  const selectedLineage = selectedAm
+    ? simulationState?.amLineages.find((lineage) => lineage.id === selectedAm.lineageId) ?? null
+    : null
+
   return (
     <div
       style={{
@@ -45,7 +50,7 @@ export function LifeGodGameHud({
         flexWrap: 'wrap',
       }}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 360 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 380 }}>
         <div
           style={{
             padding: '0.45rem 0.7rem',
@@ -80,13 +85,16 @@ export function LifeGodGameHud({
               <div>Phase actuelle : {simulationState.phase}</div>
               <div>Cellules vivantes : {simulationState.aliveCount}</div>
               <div>Generation : {simulationState.generation}</div>
-              <div>Pattern fondateur : {simulationState.founderPattern ? simulationState.founderPattern.id : 'aucun'}</div>
-              {simulationState.amEntity && simulationState.selectedAmId === simulationState.amEntity.id && (
+              <div>Lignees actives : {simulationState.amLineages.length}/3</div>
+              <div>Population AM : {simulationState.amEntities.length}</div>
+              {selectedAm && selectedLineage && (
                 <>
-                  <div>AM id : {simulationState.amEntity.id}</div>
-                  <div>AM age : {simulationState.amEntity.age}</div>
-                  <div>AM energie : {simulationState.amEntity.energy}</div>
+                  <div>AM id : {selectedAm.id}</div>
+                  <div>AM age : {selectedAm.age}</div>
+                  <div>AM energie : {selectedAm.energy}</div>
                   <div>AM phase : {simulationState.phase === 'creature' ? 'Creature' : 'Cellule'}</div>
+                  <div>Lignee : {selectedLineage.name}</div>
+                  <div>Pattern : {selectedAm.patternId}</div>
                 </>
               )}
             </>
@@ -129,11 +137,11 @@ export function LifeGodGameHud({
             background: 'rgba(4,6,12,0.7)',
             color: 'var(--text3)',
             fontSize: 12,
-            maxWidth: 280,
+            maxWidth: 300,
             textAlign: 'right',
           }}
         >
-          Clic gauche pour ajouter, clic droit pour effacer, maintien pour peindre.
+          Clic gauche pour ajouter, clic droit pour effacer, maintien pour peindre. Clique une AM pour la selectionner.
         </div>
       </div>
     </div>

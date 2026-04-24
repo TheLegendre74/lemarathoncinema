@@ -1,44 +1,80 @@
 export type LifeGodBootstrapStatus = 'loading' | 'ready' | 'error'
 export type LifeGodSimStatus = 'playing' | 'paused'
 export type LifeGodPaintMode = 'draw' | 'erase'
+export type LifeGodPhase = 'cellule' | 'creature'
+export type LifeGodAmRole =
+  | 'scout'
+  | 'keeper'
+  | 'shaman'
+  | 'skitter'
+  | 'seer'
+  | 'lab-born'
+  | 'guardian'
 
 export interface LifeGodRelativeCell {
   x: number
   y: number
 }
 
-export interface LifeGodFounderPattern {
+export interface LifeGodBodyParts {
+  head: LifeGodRelativeCell[]
+  body: LifeGodRelativeCell[]
+  leftArm: LifeGodRelativeCell[]
+  rightArm: LifeGodRelativeCell[]
+  leftLeg: LifeGodRelativeCell[]
+  rightLeg: LifeGodRelativeCell[]
+}
+
+export interface LifeGodAmPattern {
   id: string
-  size: 10
+  name: string
   cells: LifeGodRelativeCell[]
-  absoluteCells: LifeGodRelativeCell[]
-  center: {
-    x: number
-    y: number
-  }
-  boundingBox: {
-    minX: number
-    minY: number
-    maxX: number
-    maxY: number
-    width: number
-    height: number
-  }
-  detectedAtGeneration: number
+  bodyParts: LifeGodBodyParts
+  width: number
+  height: number
+  suggestedRole: LifeGodAmRole
+}
+
+export interface LifeGodAmLineage {
+  id: string
+  patternId: string
+  name: string
+  color: string
+  role: LifeGodAmRole
+  population: number
+  createdAtCycle: number
 }
 
 export interface LifeGodAmEntity {
   id: string
+  lineageId: string
+  patternId: string
   position: {
     x: number
     y: number
   }
-  shape: LifeGodRelativeCell[]
-  absoluteCells: LifeGodRelativeCell[]
+  bodyParts: LifeGodBodyParts
   age: number
   energy: number
-  state: 'idle'
-  bornAtGeneration: number
+  state: 'idle' | 'reproducing' | 'cooldown'
+  cells: LifeGodRelativeCell[]
+  absoluteCells: LifeGodRelativeCell[]
+  role: LifeGodAmRole
+  reproductionCooldown: number
+}
+
+export interface LifeGodConstructionSite {
+  id: string
+  lineageId: string
+  patternId: string
+  origin: {
+    x: number
+    y: number
+  }
+  cells: LifeGodRelativeCell[]
+  absoluteCells: LifeGodRelativeCell[]
+  createdAtCycle: number
+  builderAmId: string
 }
 
 export interface LifeGodViewportMetrics {
@@ -50,15 +86,16 @@ export interface LifeGodViewportMetrics {
 }
 
 export interface LifeGodSimulationState {
-  phase: 'cellule' | 'creature'
+  phase: LifeGodPhase
   generation: number
   aliveCount: number
   status: LifeGodSimStatus
   gridWidth: number
   gridHeight: number
   cells: Uint8Array
-  founderPattern: LifeGodFounderPattern | null
-  amEntity: LifeGodAmEntity | null
+  amLineages: LifeGodAmLineage[]
+  amEntities: LifeGodAmEntity[]
+  constructionSites: LifeGodConstructionSite[]
   selectedAmId: string | null
 }
 

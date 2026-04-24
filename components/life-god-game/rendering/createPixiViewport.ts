@@ -29,9 +29,12 @@ export async function createPixiViewport({
   const frame = new PIXI.Graphics()
   const gridLines = new PIXI.Graphics()
   const liveCells = new PIXI.Graphics()
+  const constructionGhosts = new PIXI.Graphics()
+  const constructionBuilt = new PIXI.Graphics()
+  const amAuras = new PIXI.Graphics()
   const amCells = new PIXI.Graphics()
-  const amOutline = new PIXI.Graphics()
-  app.stage.addChild(backdrop, frame, gridLines, liveCells, amCells, amOutline)
+  const amOutlines = new PIXI.Graphics()
+  app.stage.addChild(backdrop, frame, gridLines, liveCells, constructionGhosts, constructionBuilt, amAuras, amCells, amOutlines)
 
   let latestState = initialState
   let metrics: LifeGodViewportMetrics = {
@@ -46,14 +49,14 @@ export async function createPixiViewport({
     const width = app.renderer.width
     const height = app.renderer.height
     const padding = 24
-    const usableWidth = Math.max(width - padding * 2, initialState.gridWidth)
-    const usableHeight = Math.max(height - padding * 2, initialState.gridHeight)
+    const usableWidth = Math.max(width - padding * 2, latestState.gridWidth)
+    const usableHeight = Math.max(height - padding * 2, latestState.gridHeight)
     const cellSize = Math.max(
       3,
-      Math.floor(Math.min(usableWidth / initialState.gridWidth, usableHeight / initialState.gridHeight))
+      Math.floor(Math.min(usableWidth / latestState.gridWidth, usableHeight / latestState.gridHeight))
     )
-    const gridWidthPx = cellSize * initialState.gridWidth
-    const gridHeightPx = cellSize * initialState.gridHeight
+    const gridWidthPx = cellSize * latestState.gridWidth
+    const gridHeightPx = cellSize * latestState.gridHeight
 
     metrics = {
       x: Math.floor((width - gridWidthPx) / 2),
@@ -82,12 +85,12 @@ export async function createPixiViewport({
     if (metrics.cellSize < 4) return
 
     const lineStep = metrics.cellSize >= 7 ? 1 : 2
-    for (let x = 0; x <= initialState.gridWidth; x += lineStep) {
+    for (let x = 0; x <= latestState.gridWidth; x += lineStep) {
       const px = metrics.x + x * metrics.cellSize
       gridLines.moveTo(px, metrics.y)
       gridLines.lineTo(px, metrics.y + metrics.height)
     }
-    for (let y = 0; y <= initialState.gridHeight; y += lineStep) {
+    for (let y = 0; y <= latestState.gridHeight; y += lineStep) {
       const py = metrics.y + y * metrics.cellSize
       gridLines.moveTo(metrics.x, py)
       gridLines.lineTo(metrics.x + metrics.width, py)
@@ -95,49 +98,100 @@ export async function createPixiViewport({
     gridLines.stroke({ color: 0x7f8ba5, alpha: 0.12, width: 1 })
   }
 
-  const draw = (state: LifeGodSimulationState) => {
+  function draw(state: LifeGodSimulationState) {
     latestState = state
     computeMetrics()
     drawGridFrame()
 
     liveCells.clear()
+    constructionGhosts.clear()
+    constructionBuilt.clear()
+    amAuras.clear()
     amCells.clear()
-    amOutline.clear()
+    amOutlines.clear()
 
-    const amSet = state.amEntity
-      ? new Set(state.amEntity.absoluteCells.map((cell) => `${cell.x}:${cell.y}`))
-      : null
+    const amOccupied = new Set(state.amEntities.flatMap((am) => am.absoluteCells.map((cell) => `${cell.x}:${cell.y}`)))
 
     for (let y = 0; y < state.gridHeight; y += 1) {
       const rowOffset = y * state.gridWidth
       for (let x = 0; x < state.gridWidth; x += 1) {
         if (state.cells[rowOffset + x] !== 1) continue
+        if (amOccupied.has(`${x}:${y}`)) continue
+
         const px = metrics.x + x * metrics.cellSize
         const py = metrics.y + y * metrics.cellSize
-        const isAmCell = amSet?.has(`${x}:${y}`) === true
-
-        if (isAmCell) {
-          amCells.rect(px + 1, py + 1, Math.max(metrics.cellSize - 1, 1), Math.max(metrics.cellSize - 1, 1))
-        } else {
-          liveCells.rect(px + 1, py + 1, Math.max(metrics.cellSize - 1, 1), Math.max(metrics.cellSize - 1, 1))
-        }
+        liveCells.rect(px + 1, py + 1, Math.max(metrics.cellSize - 1, 1), Math.max(metrics.cellSize - 1, 1))
       }
     }
     liveCells.fill({ color: 0xb8d7ff, alpha: 0.92 })
 
-    if (state.amEntity && state.founderPattern) {
-      const pulse = 0.8 + Math.sin(performance.now() / 240) * 0.08
-      const selected = state.selectedAmId === state.amEntity.id
-      amCells.fill({ color: selected ? 0xff8ad8 : 0x69f0c1, alpha: pulse })
+    for (const site of state.constructionSites) {
+      const lineage = state.amLineages.find((item) => item.id === site.lineageId)
+      const colorValue = Number.parseInt((lineage?.color ?? '#69f0c1').replace('#', ''), 16)
 
-      const box = state.founderPattern.boundingBox
-      const boxX = metrics.x + box.minX * metrics.cellSize
-      const boxY = metrics.y + box.minY * metrics.cellSize
-      const boxWidth = box.width * metrics.cellSize
-      const boxHeight = box.height * metrics.cellSize
+      for (const cell of site.absoluteCells) {
+        const px = metrics.x + cell.x * metrics.cellSize
+        const py = metrics.y + cell.y * metrics.cellSize
+        constructionGhosts.rect(px + 1, py + 1, Math.max(metrics.cellSize - 1, 1), Math.max(metrics.cellSize - 1, 1))
+        if (state.cells[state.gridWidth * cell.y + cell.x] === 1) {
+          constructionBuilt.rect(px + 1, py + 1, Math.max(metrics.cellSize - 1, 1), Math.max(metrics.cellSize - 1, 1))
+        }
+      }
 
-      amOutline.roundRect(boxX - 1, boxY - 1, boxWidth + 2, boxHeight + 2, 8)
-      amOutline.stroke({ color: selected ? 0xffb1e6 : 0x9af9d7, alpha: selected ? 0.88 : 0.55, width: selected ? 2 : 1.5 })
+      constructionGhosts.fill({ color: colorValue, alpha: 0.12 })
+      constructionBuilt.fill({ color: colorValue, alpha: 0.42 })
+    }
+
+    const pulse = 0.76 + Math.sin(performance.now() / 260) * 0.08
+    for (const am of state.amEntities) {
+      const lineage = state.amLineages.find((item) => item.id === am.lineageId)
+      const selected = state.selectedAmId === am.id
+      const fillColor = lineage?.color ?? '#69f0c1'
+      const colorValue = Number.parseInt(fillColor.replace('#', ''), 16)
+
+      let minX = Infinity
+      let minY = Infinity
+      let maxX = -Infinity
+      let maxY = -Infinity
+
+      for (const cell of am.absoluteCells) {
+        const px = metrics.x + cell.x * metrics.cellSize
+        const py = metrics.y + cell.y * metrics.cellSize
+        amCells.rect(px + 1, py + 1, Math.max(metrics.cellSize - 1, 1), Math.max(metrics.cellSize - 1, 1))
+        if (cell.x < minX) minX = cell.x
+        if (cell.x > maxX) maxX = cell.x
+        if (cell.y < minY) minY = cell.y
+        if (cell.y > maxY) maxY = cell.y
+      }
+
+      const boxX = metrics.x + minX * metrics.cellSize
+      const boxY = metrics.y + minY * metrics.cellSize
+      const boxWidth = (maxX - minX + 1) * metrics.cellSize
+      const boxHeight = (maxY - minY + 1) * metrics.cellSize
+
+      amAuras.roundRect(boxX - 3, boxY - 3, boxWidth + 6, boxHeight + 6, 10)
+      amAuras.fill({ color: colorValue, alpha: selected ? 0.16 : 0.09 })
+
+      amOutlines.roundRect(boxX - 1, boxY - 1, boxWidth + 2, boxHeight + 2, 8)
+      amOutlines.stroke({
+        color: colorValue,
+        alpha: selected ? 0.9 : 0.5,
+        width: selected ? 2 : 1.4,
+      })
+    }
+
+    for (const am of state.amEntities) {
+      const lineage = state.amLineages.find((item) => item.id === am.lineageId)
+      const colorValue = Number.parseInt((lineage?.color ?? '#69f0c1').replace('#', ''), 16)
+      const selected = state.selectedAmId === am.id
+
+      for (const cell of am.absoluteCells) {
+        const px = metrics.x + cell.x * metrics.cellSize
+        const py = metrics.y + cell.y * metrics.cellSize
+        amCells.rect(px + 1, py + 1, Math.max(metrics.cellSize - 1, 1), Math.max(metrics.cellSize - 1, 1))
+      }
+
+      amCells.fill({ color: colorValue, alpha: selected ? pulse + 0.08 : pulse })
     }
   }
 
@@ -172,10 +226,13 @@ export async function createPixiViewport({
     getCellAtClientPoint,
     getAmAtClientPoint(clientX, clientY, state) {
       const cell = getCellAtClientPoint(clientX, clientY)
-      if (!cell || !state.amEntity) return null
-      return state.amEntity.absoluteCells.some((amCell) => amCell.x === cell.x && amCell.y === cell.y)
-        ? state.amEntity.id
-        : null
+      if (!cell) return null
+      for (const am of state.amEntities) {
+        if (am.absoluteCells.some((amCell) => amCell.x === cell.x && amCell.y === cell.y)) {
+          return am.id
+        }
+      }
+      return null
     },
     getViewportMetrics() {
       return metrics
