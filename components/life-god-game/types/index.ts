@@ -100,6 +100,7 @@ export interface LifeGodSimulationState {
   maxCompleteAmBeforeScanStops: number
   completeAmCount: number
   formingAmCount: number
+  adaptingAmCount: number
   gridWidth: number
   gridHeight: number
   cells: Uint8Array

@@ -99,7 +99,8 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
 
   function getState(): LifeGodSimulationState {
     const completeAmCount = amEntities.filter((am) => am.state === 'alive').length
-    const formingAmCount = amEntities.length - completeAmCount
+    const adaptingAmCount = amEntities.filter((am) => am.state === 'adapting').length
+    const formingAmCount = amEntities.filter((am) => am.state === 'forming').length
     return {
       phase: amEntities.length > 0 || protoEntities.length > 0 || constructionSites.length > 0 ? 'creature' : 'cellule',
       generation,
@@ -110,6 +111,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       maxCompleteAmBeforeScanStops: MAX_COMPLETE_AM_BEFORE_SCAN_STOPS,
       completeAmCount,
       formingAmCount,
+      adaptingAmCount,
       gridWidth: GRID_WIDTH,
       gridHeight: GRID_HEIGHT,
       cells: current,

@@ -94,7 +94,8 @@ export function LifeGodGameHud({
               <div>Entites conscientes : {simulationState.protoEntities.length}</div>
               <div>Lignees actives : {simulationState.amLineages.length}/3</div>
               <div>AM completes : {simulationState.completeAmCount}/{simulationState.maxCompleteAmBeforeScanStops}</div>
-              <div>AM en formation : {simulationState.formingAmCount}</div>
+              <div>AM forming : {simulationState.formingAmCount}</div>
+              <div>AM adapting : {simulationState.adaptingAmCount}</div>
               <div>Population AM : {simulationState.amEntities.length}</div>
               {selectedAm && selectedLineage && (
                 <>
