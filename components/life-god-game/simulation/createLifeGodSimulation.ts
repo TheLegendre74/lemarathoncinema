@@ -1,6 +1,7 @@
 import { LIFE_GOD_AM_PATTERNS } from './amPatterns'
 import type {
   LifeGodAmEntity,
+  LifeGodAmBehaviorState,
   LifeGodAmLineage,
   LifeGodAmPattern,
   LifeGodInfluenceMode,
@@ -112,7 +113,9 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   function getState(): LifeGodSimulationState {
     const completeAmCount = amEntities.filter((am) => am.state === 'alive').length
     const adaptingAmCount = amEntities.filter((am) => am.state === 'adapting').length
-    const formingAmCount = amEntities.filter((am) => am.state === 'forming').length
+    const formingAmCount = amEntities.filter((am) => am.state === 'forming' || am.state === 'hiddenForming').length
+    const movingAmCount = amEntities.filter((am) => am.state === 'alive' && am.behaviorState === 'wandering').length
+    const assemblingAmCount = amEntities.filter((am) => am.behaviorState === 'assemblingAm').length
     const frozenMatterCount = current.reduce((total, cell) => total + cell, 0) - amEntities.reduce((total, am) => total + am.absoluteCells.length, 0)
     const amPopulationStable =
       completeAmCount === MAX_TOTAL_AMS &&
@@ -140,6 +143,8 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       formingAmCount,
       adaptingAmCount,
       visibleAmCount: completeAmCount,
+      movingAmCount,
+      assemblingAmCount,
       activePatternIds,
       maxActivePatternsPerSeed: MAX_ACTIVE_PATTERNS_PER_SEED,
       frozenMatterCount: Math.max(0, frozenMatterCount),
@@ -173,11 +178,14 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     grid.fill(0)
   }
 
+  function shouldFreezeCell(x: number, y: number) {
+    return !amEntities.some((am) => am.absoluteCells.some((cell) => cell.x === x && cell.y === y))
+  }
+
   function freezeMatterFromCurrent() {
-    const reserved = new Set(amEntities.flatMap((am) => am.absoluteCells.map((cell) => cellKey(cell.x, cell.y))))
     for (let y = 0; y < GRID_HEIGHT; y += 1) {
       for (let x = 0; x < GRID_WIDTH; x += 1) {
-        if (reserved.has(cellKey(x, y))) continue
+        if (!shouldFreezeCell(x, y)) continue
         current[indexAt(x, y)] = current[indexAt(x, y)] === 1 ? 1 : 0
       }
     }
@@ -402,10 +410,15 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       age: 0,
       energy: 82,
       state: 'forming',
+      behaviorState: 'idle',
       cells: pattern.cells,
       absoluteCells: computeAbsoluteCells(pattern.cells, origin),
       role: lineage.role,
+      color: lineage.color,
+      targetPosition: null,
+      buildTarget: null,
       reproductionCooldown: roleConfig.reproductionCooldown,
+      behaviorCooldown: roleConfig.movementInterval,
       formationDurationCycles,
       adaptationDurationCycles,
     }
@@ -424,6 +437,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
             ...am,
             age: am.formationDurationCycles + am.adaptationDurationCycles,
             state: 'alive',
+            behaviorState: 'wandering',
             reproductionCooldown: ROLE_CONFIG[am.role].reproductionCooldown,
           }
         : am
@@ -793,6 +807,21 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     return influencePoint.mode === 'attract' ? clamped * 7 : -clamped * 7
   }
 
+  function findBehaviorTarget(am: LifeGodAmEntity) {
+    const roleConfig = ROLE_CONFIG[am.role]
+    const candidates = getMovementCandidates(am).filter((position) => canMoveAmTo(am, position))
+    if (candidates.length === 0) return null
+
+    const scored = candidates
+      .map((position) => ({
+        position,
+        score: scoreMovement(am, position),
+      }))
+      .sort((a, b) => b.score - a.score)
+
+    return scored[0]?.position ?? null
+  }
+
   function findNearbyConstructionOrigin(parent: LifeGodAmEntity, pattern: LifeGodAmPattern) {
     const roleConfig = ROLE_CONFIG[parent.role]
     const candidates: { x: number; y: number; score: number }[] = []
@@ -866,6 +895,8 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
           ? {
               ...entity,
               energy: Math.max(0, entity.energy - roleConfig.reproductionEnergyCost),
+              behaviorState: 'assemblingAm',
+              buildTarget: origin,
               reproductionCooldown: roleConfig.reproductionCooldown,
             }
           : entity
@@ -913,7 +944,9 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
 
     amEntities = amEntities.map((am) =>
       constructionSites.some((site) => site.builderAmId === am.id)
-        ? { ...am }
+        ? am
+        : am.behaviorState === 'assemblingAm'
+          ? { ...am, behaviorState: 'wandering', buildTarget: null }
         : am
     )
   }
@@ -975,24 +1008,56 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     amEntities = amEntities.map((am) => {
       if (am.state !== 'alive') return am
       const roleConfig = ROLE_CONFIG[am.role]
-      if (constructionSites.some((site) => site.builderAmId === am.id)) return am
-      if (generation % roleConfig.movementInterval !== 0) return am
-      const candidates = getMovementCandidates(am)
-        .filter((position) => canMoveAmTo(am, position))
-        .map((position) => ({
-          position,
-          score: scoreMovement(am, position),
-        }))
-        .sort((a, b) => b.score - a.score)
+      const activeConstruction = constructionSites.some((site) => site.builderAmId === am.id)
+      if (activeConstruction) {
+        return {
+          ...am,
+          behaviorState: 'assemblingAm',
+          buildTarget: constructionSites.find((site) => site.builderAmId === am.id)?.origin ?? am.buildTarget,
+          targetPosition: null,
+        }
+      }
 
-      const best = candidates[0]
-      if (!best) return am
-      if (best.position.x === am.position.x && best.position.y === am.position.y) return am
+      const nextBehaviorCooldown = Math.max(0, am.behaviorCooldown - 1)
+      if (nextBehaviorCooldown > 0) {
+        return {
+          ...am,
+          behaviorCooldown: nextBehaviorCooldown,
+          behaviorState: am.reproductionCooldown <= roleConfig.reproductionCooldown / 2 ? 'seekingCells' : am.behaviorState,
+        }
+      }
+
+      const target = findBehaviorTarget(am)
+      if (!target) {
+        return {
+          ...am,
+          behaviorCooldown: roleConfig.movementInterval,
+          behaviorState: 'idle',
+          targetPosition: null,
+        }
+      }
+
+      const nextBehaviorState: LifeGodAmBehaviorState =
+        canCreateMoreVisibleAms() && am.reproductionCooldown <= roleConfig.reproductionCooldown / 2
+          ? 'seekingCells'
+          : 'wandering'
+
+      if (target.x === am.position.x && target.y === am.position.y) {
+        return {
+          ...am,
+          behaviorCooldown: roleConfig.movementInterval,
+          behaviorState: 'resting',
+          targetPosition: target,
+        }
+      }
 
       return {
         ...am,
-        position: best.position,
-        absoluteCells: computeAbsoluteCells(am.cells, best.position),
+        position: target,
+        absoluteCells: computeAbsoluteCells(am.cells, target),
+        behaviorState: nextBehaviorState,
+        targetPosition: target,
+        behaviorCooldown: roleConfig.movementInterval,
       }
     })
   }
@@ -1016,6 +1081,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
         energy,
         reproductionCooldown: cooldown,
         state: nextState,
+        behaviorState: nextState === 'alive' ? am.behaviorState : 'idle',
         absoluteCells: computeAbsoluteCells(am.cells, am.position),
       }
     })

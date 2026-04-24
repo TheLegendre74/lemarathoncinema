@@ -99,6 +99,8 @@ export function LifeGodGameHud({
               <div>Scan AM : {simulationState.scanningActive ? 'actif' : 'arrete'}</div>
               <div>AM visibles : {simulationState.visibleAmCount}</div>
               <div>AM alive : {simulationState.completeAmCount}</div>
+              <div>AM en mouvement : {simulationState.movingAmCount}</div>
+              <div>AM en construction : {simulationState.assemblingAmCount}</div>
               <div>Patterns actifs : {simulationState.activePatternIds.length}/{simulationState.maxActivePatternsPerSeed}</div>
               <div>Lignees actives : {simulationState.amLineages.length}/3</div>
               <div>AM completes : {simulationState.completeAmCount}/{simulationState.maxCompleteAmBeforeScanStops}</div>
@@ -114,6 +116,7 @@ export function LifeGodGameHud({
                   <div>AM age : {selectedAm.age}</div>
                   <div>AM energie : {selectedAm.energy}</div>
                   <div>AM etat : {selectedAm.state}</div>
+                  <div>AM comportement : {selectedAm.behaviorState}</div>
                   <div>AM role : {selectedAm.role}</div>
                   <div>Cooldown repro : {selectedAm.reproductionCooldown}</div>
                   <div>AM phase : {selectedAm.state}</div>
