@@ -13,6 +13,7 @@ export function createLifeGodInput({
 }: CreateLifeGodInputParams): LifeGodInputController {
   let pointerActive = false
   let activeMode: LifeGodPaintMode = 'draw'
+  let selectionLock = false
 
   function paintFromPointer(event: PointerEvent) {
     const cell = renderer.getCellAtClientPoint(event.clientX, event.clientY)
@@ -21,19 +22,29 @@ export function createLifeGodInput({
   }
 
   function handlePointerDown(event: PointerEvent) {
+    const amId = renderer.getAmAtClientPoint(event.clientX, event.clientY, simulation.getState())
+    if (amId) {
+      selectionLock = true
+      simulation.selectAm(amId)
+      target.setPointerCapture(event.pointerId)
+      return
+    }
+
     pointerActive = true
+    selectionLock = false
     activeMode = event.button === 2 ? 'erase' : 'draw'
     paintFromPointer(event)
     target.setPointerCapture(event.pointerId)
   }
 
   function handlePointerMove(event: PointerEvent) {
-    if (!pointerActive) return
+    if (selectionLock || !pointerActive) return
     paintFromPointer(event)
   }
 
   function handlePointerUp(event: PointerEvent) {
     pointerActive = false
+    selectionLock = false
     if (target.hasPointerCapture(event.pointerId)) {
       target.releasePointerCapture(event.pointerId)
     }

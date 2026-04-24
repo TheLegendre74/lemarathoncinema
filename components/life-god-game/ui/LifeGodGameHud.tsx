@@ -45,7 +45,7 @@ export function LifeGodGameHud({
         flexWrap: 'wrap',
       }}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 320 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 360 }}>
         <div
           style={{
             padding: '0.45rem 0.7rem',
@@ -79,7 +79,16 @@ export function LifeGodGameHud({
             <>
               <div>Phase actuelle : {simulationState.phase}</div>
               <div>Cellules vivantes : {simulationState.aliveCount}</div>
-              <div>Génération : {simulationState.generation}</div>
+              <div>Generation : {simulationState.generation}</div>
+              <div>Pattern fondateur : {simulationState.founderPattern ? simulationState.founderPattern.id : 'aucun'}</div>
+              {simulationState.amEntity && simulationState.selectedAmId === simulationState.amEntity.id && (
+                <>
+                  <div>AM id : {simulationState.amEntity.id}</div>
+                  <div>AM age : {simulationState.amEntity.age}</div>
+                  <div>AM energie : {simulationState.amEntity.energy}</div>
+                  <div>AM phase : {simulationState.phase === 'creature' ? 'Creature' : 'Cellule'}</div>
+                </>
+              )}
             </>
           )}
           {status === 'error' && (errorMessage ?? 'Life God Game failed to start.')}
@@ -120,7 +129,7 @@ export function LifeGodGameHud({
             background: 'rgba(4,6,12,0.7)',
             color: 'var(--text3)',
             fontSize: 12,
-            maxWidth: 260,
+            maxWidth: 280,
             textAlign: 'right',
           }}
         >

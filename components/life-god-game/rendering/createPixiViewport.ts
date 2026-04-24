@@ -29,7 +29,9 @@ export async function createPixiViewport({
   const frame = new PIXI.Graphics()
   const gridLines = new PIXI.Graphics()
   const liveCells = new PIXI.Graphics()
-  app.stage.addChild(backdrop, frame, gridLines, liveCells)
+  const amCells = new PIXI.Graphics()
+  const amOutline = new PIXI.Graphics()
+  app.stage.addChild(backdrop, frame, gridLines, liveCells, amCells, amOutline)
 
   let latestState = initialState
   let metrics: LifeGodViewportMetrics = {
@@ -99,17 +101,44 @@ export async function createPixiViewport({
     drawGridFrame()
 
     liveCells.clear()
+    amCells.clear()
+    amOutline.clear()
+
+    const amSet = state.amEntity
+      ? new Set(state.amEntity.absoluteCells.map((cell) => `${cell.x}:${cell.y}`))
+      : null
+
     for (let y = 0; y < state.gridHeight; y += 1) {
       const rowOffset = y * state.gridWidth
       for (let x = 0; x < state.gridWidth; x += 1) {
         if (state.cells[rowOffset + x] !== 1) continue
         const px = metrics.x + x * metrics.cellSize
         const py = metrics.y + y * metrics.cellSize
+        const isAmCell = amSet?.has(`${x}:${y}`) === true
 
-        liveCells.rect(px + 1, py + 1, Math.max(metrics.cellSize - 1, 1), Math.max(metrics.cellSize - 1, 1))
+        if (isAmCell) {
+          amCells.rect(px + 1, py + 1, Math.max(metrics.cellSize - 1, 1), Math.max(metrics.cellSize - 1, 1))
+        } else {
+          liveCells.rect(px + 1, py + 1, Math.max(metrics.cellSize - 1, 1), Math.max(metrics.cellSize - 1, 1))
+        }
       }
     }
     liveCells.fill({ color: 0xb8d7ff, alpha: 0.92 })
+
+    if (state.amEntity && state.founderPattern) {
+      const pulse = 0.8 + Math.sin(performance.now() / 240) * 0.08
+      const selected = state.selectedAmId === state.amEntity.id
+      amCells.fill({ color: selected ? 0xff8ad8 : 0x69f0c1, alpha: pulse })
+
+      const box = state.founderPattern.boundingBox
+      const boxX = metrics.x + box.minX * metrics.cellSize
+      const boxY = metrics.y + box.minY * metrics.cellSize
+      const boxWidth = box.width * metrics.cellSize
+      const boxHeight = box.height * metrics.cellSize
+
+      amOutline.roundRect(boxX - 1, boxY - 1, boxWidth + 2, boxHeight + 2, 8)
+      amOutline.stroke({ color: selected ? 0xffb1e6 : 0x9af9d7, alpha: selected ? 0.88 : 0.55, width: selected ? 2 : 1.5 })
+    }
   }
 
   draw(initialState)
@@ -117,27 +146,36 @@ export async function createPixiViewport({
   const resize = () => draw(latestState)
   app.renderer.on('resize', resize)
 
+  function getCellAtClientPoint(clientX: number, clientY: number) {
+    const rect = app.canvas.getBoundingClientRect()
+    const canvasX = ((clientX - rect.left) / rect.width) * app.renderer.width
+    const canvasY = ((clientY - rect.top) / rect.height) * app.renderer.height
+    if (
+      canvasX < metrics.x ||
+      canvasY < metrics.y ||
+      canvasX >= metrics.x + metrics.width ||
+      canvasY >= metrics.y + metrics.height
+    ) {
+      return null
+    }
+
+    return {
+      x: Math.floor((canvasX - metrics.x) / metrics.cellSize),
+      y: Math.floor((canvasY - metrics.y) / metrics.cellSize),
+    }
+  }
+
   return {
     render(state) {
       draw(state)
     },
-    getCellAtClientPoint(clientX, clientY) {
-      const rect = app.canvas.getBoundingClientRect()
-      const canvasX = ((clientX - rect.left) / rect.width) * app.renderer.width
-      const canvasY = ((clientY - rect.top) / rect.height) * app.renderer.height
-      if (
-        canvasX < metrics.x ||
-        canvasY < metrics.y ||
-        canvasX >= metrics.x + metrics.width ||
-        canvasY >= metrics.y + metrics.height
-      ) {
-        return null
-      }
-
-      return {
-        x: Math.floor((canvasX - metrics.x) / metrics.cellSize),
-        y: Math.floor((canvasY - metrics.y) / metrics.cellSize),
-      }
+    getCellAtClientPoint,
+    getAmAtClientPoint(clientX, clientY, state) {
+      const cell = getCellAtClientPoint(clientX, clientY)
+      if (!cell || !state.amEntity) return null
+      return state.amEntity.absoluteCells.some((amCell) => amCell.x === cell.x && amCell.y === cell.y)
+        ? state.amEntity.id
+        : null
     },
     getViewportMetrics() {
       return metrics
