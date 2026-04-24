@@ -85,13 +85,17 @@ export function LifeGodGameHud({
               <div>Phase actuelle : {simulationState.phase}</div>
               <div>Cellules vivantes : {simulationState.aliveCount}</div>
               <div>Generation : {simulationState.generation}</div>
+              <div>Entites conscientes : {simulationState.protoEntities.length}</div>
               <div>Lignees actives : {simulationState.amLineages.length}/3</div>
               <div>Population AM : {simulationState.amEntities.length}</div>
               {selectedAm && selectedLineage && (
                 <>
                   <div>AM id : {selectedAm.id}</div>
+                  <div>Lineage id : {selectedAm.lineageId}</div>
                   <div>AM age : {selectedAm.age}</div>
                   <div>AM energie : {selectedAm.energy}</div>
+                  <div>AM etat : {selectedAm.state}</div>
+                  <div>AM role : {selectedAm.role}</div>
                   <div>AM phase : {simulationState.phase === 'creature' ? 'Creature' : 'Cellule'}</div>
                   <div>Lignee : {selectedLineage.name}</div>
                   <div>Pattern : {selectedAm.patternId}</div>
@@ -141,7 +145,7 @@ export function LifeGodGameHud({
             textAlign: 'right',
           }}
         >
-          Clic gauche pour ajouter, clic droit pour effacer, maintien pour peindre. Clique une AM pour la selectionner.
+          A 10 cellules connectees, une entite consciente emerge. Elle attire des cellules proches jusqu'a 15, puis se reforme en AM. Clique une AM pour la selectionner.
         </div>
       </div>
     </div>

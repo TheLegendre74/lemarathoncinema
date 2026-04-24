@@ -45,6 +45,14 @@ export interface LifeGodAmLineage {
   createdAtCycle: number
 }
 
+export interface LifeGodProtoEntity {
+  id: string
+  cells: LifeGodRelativeCell[]
+  targetCellCount: number
+  createdAtCycle: number
+  state: 'awakening' | 'gathering' | 'metamorphosing'
+}
+
 export interface LifeGodAmEntity {
   id: string
   lineageId: string
@@ -94,6 +102,7 @@ export interface LifeGodSimulationState {
   gridHeight: number
   cells: Uint8Array
   amLineages: LifeGodAmLineage[]
+  protoEntities: LifeGodProtoEntity[]
   amEntities: LifeGodAmEntity[]
   constructionSites: LifeGodConstructionSite[]
   selectedAmId: string | null

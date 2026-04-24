@@ -4,6 +4,7 @@ import type {
   LifeGodAmLineage,
   LifeGodAmPattern,
   LifeGodConstructionSite,
+  LifeGodProtoEntity,
   LifeGodRelativeCell,
   LifeGodSimulationController,
   LifeGodSimulationState,
@@ -13,15 +14,18 @@ const GRID_WIDTH = 160
 const GRID_HEIGHT = 100
 const TICK_MS = 90
 const RANDOM_FILL_CHANCE = 0.18
-const PATTERN_SCAN_INTERVAL = 8
+const PROTO_SCAN_INTERVAL = 6
 const MAX_LINEAGES = 3
 const MAX_TOTAL_AMS = 12
 const MAX_AMS_PER_LINEAGE = 4
+const PROTO_CONSCIOUSNESS_MIN = 10
+const PROTO_METAMORPHOSIS_MIN = 15
 const REPRODUCTION_ENERGY_COST = 18
 const REPRODUCTION_ENERGY_GAIN = 0.18
 const REPRODUCTION_ENERGY_MIN = 42
 const REPRODUCTION_COOLDOWN_CYCLES = 70
 const CONSTRUCTION_STEP_INTERVAL = 3
+const PROTO_GATHER_INTERVAL = 2
 const SEARCH_RADIUS = 12
 const LINEAGE_COLORS = ['#69f0c1', '#ff8ad8', '#7ab6ff']
 
@@ -31,6 +35,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   let generation = 0
   let aliveCount = 0
   let amLineages: LifeGodAmLineage[] = []
+  let protoEntities: LifeGodProtoEntity[] = []
   let amEntities: LifeGodAmEntity[] = []
   let constructionSites: LifeGodConstructionSite[] = []
   let selectedAmId: string | null = null
@@ -44,7 +49,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
 
   function getState(): LifeGodSimulationState {
     return {
-      phase: amEntities.length > 0 || constructionSites.length > 0 ? 'creature' : 'cellule',
+      phase: amEntities.length > 0 || protoEntities.length > 0 || constructionSites.length > 0 ? 'creature' : 'cellule',
       generation,
       aliveCount,
       status,
@@ -52,6 +57,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       gridHeight: GRID_HEIGHT,
       cells: current,
       amLineages,
+      protoEntities,
       amEntities,
       constructionSites,
       selectedAmId,
@@ -96,8 +102,34 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     return amEntities.filter((am) => am.lineageId === lineageId).length
   }
 
+  function sortCells(cells: LifeGodRelativeCell[]) {
+    return [...cells].sort((a, b) => (a.y - b.y) || (a.x - b.x))
+  }
+
+  function cellKey(x: number, y: number) {
+    return `${x}:${y}`
+  }
+
+  function protoBounds(cells: LifeGodRelativeCell[]) {
+    let minX = Infinity
+    let minY = Infinity
+    let maxX = -Infinity
+    let maxY = -Infinity
+    for (const cell of cells) {
+      if (cell.x < minX) minX = cell.x
+      if (cell.x > maxX) maxX = cell.x
+      if (cell.y < minY) minY = cell.y
+      if (cell.y > maxY) maxY = cell.y
+    }
+    return { minX, minY, maxX, maxY }
+  }
+
   function isReservedByEntity(x: number, y: number) {
     return amEntities.some((am) => am.absoluteCells.some((cell) => cell.x === x && cell.y === y))
+  }
+
+  function isReservedByProto(x: number, y: number) {
+    return protoEntities.some((proto) => proto.cells.some((cell) => cell.x === x && cell.y === y))
   }
 
   function isReservedByConstruction(x: number, y: number) {
@@ -168,35 +200,259 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     refreshAliveCount()
   }
 
-  function matchesPatternAt(pattern: LifeGodAmPattern, originX: number, originY: number) {
-    const expected = new Set(pattern.cells.map((cell) => `${cell.x}:${cell.y}`))
-    for (let py = 0; py < pattern.height; py += 1) {
-      for (let px = 0; px < pattern.width; px += 1) {
-        const alive = current[indexAt(originX + px, originY + py)] === 1
-        const shouldBeAlive = expected.has(`${px}:${py}`)
-        if (alive !== shouldBeAlive) return false
+  function scanConnectedGroups() {
+    const visited = new Set<string>()
+    const blocked = new Set<string>()
+
+    for (const am of amEntities) {
+      for (const cell of am.absoluteCells) blocked.add(cellKey(cell.x, cell.y))
+    }
+    for (const proto of protoEntities) {
+      for (const cell of proto.cells) blocked.add(cellKey(cell.x, cell.y))
+    }
+    for (const site of constructionSites) {
+      for (const cell of site.absoluteCells) blocked.add(cellKey(cell.x, cell.y))
+    }
+
+    const groups: LifeGodRelativeCell[][] = []
+    for (let y = 1; y < GRID_HEIGHT - 1; y += 1) {
+      for (let x = 1; x < GRID_WIDTH - 1; x += 1) {
+        if (!hasLivingCell(x, y)) continue
+        const startKey = cellKey(x, y)
+        if (visited.has(startKey) || blocked.has(startKey)) continue
+
+        const stack = [{ x, y }]
+        const group: LifeGodRelativeCell[] = []
+        visited.add(startKey)
+
+        while (stack.length > 0) {
+          const currentCell = stack.pop()
+          if (!currentCell) continue
+          group.push(currentCell)
+
+          for (let oy = -1; oy <= 1; oy += 1) {
+            for (let ox = -1; ox <= 1; ox += 1) {
+              if (ox === 0 && oy === 0) continue
+              const nx = currentCell.x + ox
+              const ny = currentCell.y + oy
+              if (nx <= 0 || ny <= 0 || nx >= GRID_WIDTH - 1 || ny >= GRID_HEIGHT - 1) continue
+              if (!hasLivingCell(nx, ny)) continue
+              const nextKey = cellKey(nx, ny)
+              if (visited.has(nextKey) || blocked.has(nextKey)) continue
+              visited.add(nextKey)
+              stack.push({ x: nx, y: ny })
+            }
+          }
+        }
+
+        groups.push(sortCells(group))
+      }
+    }
+
+    return groups
+  }
+
+  function tryCreateProtoEntities() {
+    if (generation % PROTO_SCAN_INTERVAL !== 0) return
+
+    const existingSignatures = new Set(
+      protoEntities.map((proto) => proto.cells.map((cell) => cellKey(cell.x, cell.y)).sort().join('|'))
+    )
+
+    for (const group of scanConnectedGroups()) {
+      if (group.length < PROTO_CONSCIOUSNESS_MIN) continue
+      const signature = group.map((cell) => cellKey(cell.x, cell.y)).sort().join('|')
+      if (existingSignatures.has(signature)) continue
+
+      const proto: LifeGodProtoEntity = {
+        id: `proto-${generation}-${existingSignatures.size + 1}`,
+        cells: group,
+        targetCellCount: PROTO_METAMORPHOSIS_MIN,
+        createdAtCycle: generation,
+        state: group.length >= PROTO_METAMORPHOSIS_MIN ? 'metamorphosing' : 'awakening',
+      }
+      protoEntities = [...protoEntities, proto]
+      existingSignatures.add(signature)
+    }
+  }
+
+  function canUsePatternOrigin(pattern: LifeGodAmPattern, origin: { x: number; y: number }, protoId: string) {
+    for (const cell of pattern.cells) {
+      const x = origin.x + cell.x
+      const y = origin.y + cell.y
+      if (x <= 0 || y <= 0 || x >= GRID_WIDTH - 1 || y >= GRID_HEIGHT - 1) return false
+      if (isReservedByEntity(x, y) || isReservedByConstruction(x, y)) return false
+      if (protoEntities.some((proto) => proto.id !== protoId && proto.cells.some((item) => item.x === x && item.y === y))) {
+        return false
       }
     }
     return true
   }
 
-  function tryCreateLineagesFromPatterns() {
-    if (generation % PATTERN_SCAN_INTERVAL !== 0) return
-    if (amLineages.length >= MAX_LINEAGES) return
+  function findPatternOriginNearProto(pattern: LifeGodAmPattern, proto: LifeGodProtoEntity) {
+    const bounds = protoBounds(proto.cells)
+    const centerX = Math.round((bounds.minX + bounds.maxX) / 2)
+    const centerY = Math.round((bounds.minY + bounds.maxY) / 2)
+    const baseOrigin = {
+      x: centerX - Math.floor(pattern.width / 2),
+      y: centerY - Math.floor(pattern.height / 2),
+    }
 
-    for (const pattern of LIFE_GOD_AM_PATTERNS) {
-      if (amLineages.some((lineage) => lineage.patternId === pattern.id)) continue
-      if (amLineages.length >= MAX_LINEAGES || amEntities.length >= MAX_TOTAL_AMS) return
+    if (canUsePatternOrigin(pattern, baseOrigin, proto.id)) return baseOrigin
 
-      let found = false
-      for (let y = 1; y <= GRID_HEIGHT - pattern.height - 1 && !found; y += 1) {
-        for (let x = 1; x <= GRID_WIDTH - pattern.width - 1; x += 1) {
-          if (!matchesPatternAt(pattern, x, y)) continue
-          const lineage = createLineage(pattern)
-          spawnAm(lineage, pattern, { x, y })
-          found = true
-          break
+    for (let distance = 1; distance <= 8; distance += 1) {
+      for (let oy = -distance; oy <= distance; oy += 1) {
+        for (let ox = -distance; ox <= distance; ox += 1) {
+          if (Math.max(Math.abs(ox), Math.abs(oy)) !== distance) continue
+          const candidate = { x: baseOrigin.x + ox, y: baseOrigin.y + oy }
+          if (canUsePatternOrigin(pattern, candidate, proto.id)) return candidate
         }
+      }
+    }
+
+    return null
+  }
+
+  function choosePatternForProto(proto: LifeGodProtoEntity) {
+    const cells = sortCells(proto.cells)
+    let checksum = 0
+    for (const cell of cells) checksum += cell.x * 31 + cell.y * 17
+
+    const unusedPatterns = LIFE_GOD_AM_PATTERNS.filter(
+      (pattern) => !amLineages.some((lineage) => lineage.patternId === pattern.id)
+    )
+    if (unusedPatterns.length > 0 && amLineages.length < MAX_LINEAGES) {
+      return unusedPatterns[checksum % unusedPatterns.length]
+    }
+    if (amLineages.length > 0) {
+      const lineage = [...amLineages].sort((a, b) => a.population - b.population || a.createdAtCycle - b.createdAtCycle)[0]
+      return LIFE_GOD_AM_PATTERNS.find((pattern) => pattern.id === lineage.patternId) ?? LIFE_GOD_AM_PATTERNS[0]
+    }
+    return LIFE_GOD_AM_PATTERNS[checksum % LIFE_GOD_AM_PATTERNS.length]
+  }
+
+  function syncProtoCells() {
+    for (const proto of protoEntities) {
+      for (const cell of proto.cells) {
+        if (cell.x <= 0 || cell.y <= 0 || cell.x >= GRID_WIDTH - 1 || cell.y >= GRID_HEIGHT - 1) continue
+        current[indexAt(cell.x, cell.y)] = 1
+      }
+    }
+  }
+
+  function findGrowthPlacement(proto: LifeGodProtoEntity) {
+    const occupied = new Set(proto.cells.map((cell) => cellKey(cell.x, cell.y)))
+    const frontier: LifeGodRelativeCell[] = []
+
+    for (const cell of proto.cells) {
+      for (let oy = -1; oy <= 1; oy += 1) {
+        for (let ox = -1; ox <= 1; ox += 1) {
+          if (ox === 0 && oy === 0) continue
+          const x = cell.x + ox
+          const y = cell.y + oy
+          const key = cellKey(x, y)
+          if (x <= 0 || y <= 0 || x >= GRID_WIDTH - 1 || y >= GRID_HEIGHT - 1) continue
+          if (occupied.has(key)) continue
+          if (isReservedByEntity(x, y) || isReservedByConstruction(x, y)) continue
+          if (isReservedByProto(x, y)) continue
+          frontier.push({ x, y })
+        }
+      }
+    }
+
+    const bounds = protoBounds(proto.cells)
+    frontier.sort((a, b) => {
+      const da = Math.abs(a.x - Math.round((bounds.minX + bounds.maxX) / 2)) + Math.abs(a.y - Math.round((bounds.minY + bounds.maxY) / 2))
+      const db = Math.abs(b.x - Math.round((bounds.minX + bounds.maxX) / 2)) + Math.abs(b.y - Math.round((bounds.minY + bounds.maxY) / 2))
+      return da - db
+    })
+
+    return frontier[0] ?? null
+  }
+
+  function findNearbyLooseCell(proto: LifeGodProtoEntity) {
+    const occupied = new Set(proto.cells.map((cell) => cellKey(cell.x, cell.y)))
+    const bounds = protoBounds(proto.cells)
+    const centerX = Math.round((bounds.minX + bounds.maxX) / 2)
+    const centerY = Math.round((bounds.minY + bounds.maxY) / 2)
+    const candidates: LifeGodRelativeCell[] = []
+
+    for (let y = Math.max(1, centerY - SEARCH_RADIUS); y <= Math.min(GRID_HEIGHT - 2, centerY + SEARCH_RADIUS); y += 1) {
+      for (let x = Math.max(1, centerX - SEARCH_RADIUS); x <= Math.min(GRID_WIDTH - 2, centerX + SEARCH_RADIUS); x += 1) {
+        const key = cellKey(x, y)
+        if (!hasLivingCell(x, y) || occupied.has(key)) continue
+        if (isReservedByEntity(x, y) || isReservedByConstruction(x, y) || isReservedByProto(x, y)) continue
+        candidates.push({ x, y })
+      }
+    }
+
+    candidates.sort((a, b) => {
+      const da = Math.abs(a.x - centerX) + Math.abs(a.y - centerY)
+      const db = Math.abs(b.x - centerX) + Math.abs(b.y - centerY)
+      return da - db
+    })
+
+    return candidates[0] ?? null
+  }
+
+  function morphProtoIntoAm(proto: LifeGodProtoEntity) {
+    if (amEntities.length >= MAX_TOTAL_AMS) return
+
+    const pattern = choosePatternForProto(proto)
+    let lineage = amLineages.find((item) => item.patternId === pattern.id) ?? null
+    if (!lineage) {
+      if (amLineages.length >= MAX_LINEAGES) return
+      lineage = createLineage(pattern)
+    }
+    if (populationForLineage(lineage.id) >= MAX_AMS_PER_LINEAGE) return
+
+    const origin = findPatternOriginNearProto(pattern, proto)
+    if (!origin) return
+
+    for (const cell of proto.cells) {
+      current[indexAt(cell.x, cell.y)] = 0
+    }
+    protoEntities = protoEntities.filter((item) => item.id !== proto.id)
+    spawnAm(lineage, pattern, origin)
+  }
+
+  function tickProtoEntities() {
+    if (protoEntities.length === 0) return
+
+    protoEntities = protoEntities
+      .map((proto) => {
+        const livingCells = sortCells(proto.cells.filter((cell) => hasLivingCell(cell.x, cell.y)))
+        if (livingCells.length < PROTO_CONSCIOUSNESS_MIN) {
+          return null
+        }
+
+        let nextCells = livingCells
+        if (livingCells.length < proto.targetCellCount && generation % PROTO_GATHER_INTERVAL === 0) {
+          const sourceCell = findNearbyLooseCell({ ...proto, cells: livingCells })
+          const placement = findGrowthPlacement({ ...proto, cells: livingCells })
+          if (sourceCell && placement) {
+            current[indexAt(sourceCell.x, sourceCell.y)] = 0
+            current[indexAt(placement.x, placement.y)] = 1
+            nextCells = sortCells([...livingCells, placement])
+          }
+        }
+
+        return {
+          ...proto,
+          cells: nextCells,
+          state:
+            nextCells.length >= proto.targetCellCount
+              ? 'metamorphosing'
+              : nextCells.length >= PROTO_CONSCIOUSNESS_MIN + 2
+                ? 'gathering'
+                : 'awakening',
+        }
+      })
+      .filter((proto): proto is LifeGodProtoEntity => proto !== null)
+
+    for (const proto of [...protoEntities]) {
+      if (proto.cells.length >= proto.targetCellCount) {
+        morphProtoIntoAm(proto)
       }
     }
   }
@@ -206,7 +462,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       const x = origin.x + cell.x
       const y = origin.y + cell.y
       if (x <= 0 || y <= 0 || x >= GRID_WIDTH - 1 || y >= GRID_HEIGHT - 1) return false
-      if (isReservedByEntity(x, y) || isReservedByConstruction(x, y)) return false
+      if (isReservedByEntity(x, y) || isReservedByConstruction(x, y) || isReservedByProto(x, y)) return false
       if (hasLivingCell(x, y)) return false
     }
     return true
@@ -332,6 +588,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   function seedRandomGrid() {
     clearGrid(current)
     amLineages = []
+    protoEntities = []
     amEntities = []
     constructionSites = []
     selectedAmId = null
@@ -344,7 +601,9 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
 
     generation = 0
     refreshAliveCount()
-    tryCreateLineagesFromPatterns()
+    tryCreateProtoEntities()
+    tickProtoEntities()
+    syncProtoCells()
     emit()
   }
 
@@ -382,12 +641,14 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     generation += 1
     aliveCount = nextAlive
 
+    tryCreateProtoEntities()
+    tickProtoEntities()
+    syncProtoCells()
     tickAmState()
     syncAmCells()
     tickConstructionSites()
     syncConstructionCells()
     refreshAliveCount()
-    tryCreateLineagesFromPatterns()
     tryStartReproduction()
     emit()
   }
@@ -447,6 +708,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       generation = 0
       aliveCount = 0
       amLineages = []
+      protoEntities = []
       amEntities = []
       constructionSites = []
       selectedAmId = null
@@ -469,7 +731,9 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
 
       current[index] = nextValue
       refreshAliveCount()
-      tryCreateLineagesFromPatterns()
+      tryCreateProtoEntities()
+      tickProtoEntities()
+      syncProtoCells()
       emit()
     },
     selectAm(amId) {
