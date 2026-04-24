@@ -86,43 +86,47 @@ export function LifeGodGameHud({
           {status === 'loading' && 'Initialisation du rendu et de la simulation...'}
           {status === 'ready' && simulationState && (
             <>
-              <div>Phase actuelle : {simulationState.phase}</div>
-              <div>Cellules vivantes : {simulationState.aliveCount}</div>
-              <div>Generation : {simulationState.generation}</div>
-              <div>Temps : {simulationState.timeScale}x</div>
-              <div>Population stable : {simulationState.amPopulationStable ? 'oui' : 'non'}</div>
-              <div>Conway : {simulationState.conwayActive ? 'actif' : 'arrete'}</div>
-              <div>Matiere : {simulationState.matterFrozen ? 'figee' : 'mobile'}</div>
-              <div>Candidate AM : {simulationState.firstAmCandidateExists ? 'oui' : 'non'}</div>
-              <div>Premiere AM revelee : {simulationState.firstAmRevealed ? 'oui' : 'non'}</div>
-              <div>Reveal restant : {simulationState.firstAmRevealRemainingCycles}</div>
-              <div>Scan AM : {simulationState.scanningActive ? 'actif' : 'arrete'}</div>
-              <div>AM visibles : {simulationState.visibleAmCount}</div>
-              <div>AM alive : {simulationState.completeAmCount}</div>
-              <div>AM en mouvement : {simulationState.movingAmCount}</div>
-              <div>AM en construction : {simulationState.assemblingAmCount}</div>
-              <div>Patterns actifs : {simulationState.activePatternIds.length}/{simulationState.maxActivePatternsPerSeed}</div>
-              <div>Lignees actives : {simulationState.amLineages.length}/3</div>
-              <div>AM completes : {simulationState.completeAmCount}/{simulationState.maxCompleteAmBeforeScanStops}</div>
-              <div>AM forming : {simulationState.formingAmCount}</div>
-              <div>AM adapting : {simulationState.adaptingAmCount}</div>
-              <div>Matiere figee : {simulationState.frozenMatterCount}</div>
-              <div>Population AM : {simulationState.amEntities.length}</div>
+              <div style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 4, marginBottom: 4 }}>
+                <div>Phase : <b>{simulationState.phase}</b></div>
+                <div>Generation : {simulationState.generation}</div>
+                <div>Vitesse : {simulationState.timeScale}x</div>
+              </div>
+              <div style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 4, marginBottom: 4 }}>
+                <div>Conway : {simulationState.conwayActive ? '✓ actif' : '✗ arrêté'}</div>
+                <div>Matière : {simulationState.matterFrozen ? '🔒 figée' : '〜 mobile'}</div>
+                <div>Première AM révélée : {simulationState.firstAmRevealed ? 'oui' : 'non'}</div>
+                {simulationState.firstAmCandidateExists && (
+                  <div>Révélation dans : {simulationState.firstAmRevealRemainingCycles} cycles</div>
+                )}
+              </div>
+              <div style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 4, marginBottom: 4 }}>
+                <div>AM vivantes : {simulationState.completeAmCount} / {simulationState.aliveAmTarget}</div>
+                <div>Objectif fondatrice : {simulationState.createdAmCount} / {simulationState.targetAmCount} AM créées</div>
+                <div>Entités vivantes actives : {simulationState.amEntities.length}</div>
+                <div>AM forming : {simulationState.formingAmCount}</div>
+                <div>AM adapting : {simulationState.adaptingAmCount}</div>
+                <div>AM en assemblage : {simulationState.assemblingAmCount}</div>
+                <div>AM en mouvement : {simulationState.movingAmCount}</div>
+              </div>
+              <div style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 4, marginBottom: 4 }}>
+                <div>Matière figée : {simulationState.frozenMatterCount} cellules</div>
+                <div>Cellules vivantes : {simulationState.aliveCount}</div>
+                <div>Lignées : {simulationState.amLineages.length} / 3</div>
+                <div>Patterns actifs : {simulationState.activePatternIds.length} / {simulationState.maxActivePatternsPerSeed}</div>
+              </div>
               {selectedAm && selectedLineage && (
-                <>
-                  <div>AM id : {selectedAm.id}</div>
-                  <div>Lineage id : {selectedAm.lineageId}</div>
-                  <div>Lignee role : {selectedLineage.role}</div>
-                  <div>AM age : {selectedAm.age}</div>
-                  <div>AM energie : {selectedAm.energy}</div>
-                  <div>AM etat : {selectedAm.state}</div>
-                  <div>AM comportement : {selectedAm.behaviorState}</div>
-                  <div>AM role : {selectedAm.role}</div>
+                <div>
+                  <div>— AM sélectionnée —</div>
+                  <div>ID : {selectedAm.id}</div>
+                  <div>Lignée : {selectedLineage.name} ({selectedLineage.role})</div>
+                  <div>Âge : {selectedAm.age}</div>
+                  <div>Énergie : {Math.round(selectedAm.energy)}</div>
+                  <div>État : {selectedAm.state}</div>
+                  <div>Comportement : {selectedAm.behaviorState}</div>
                   <div>Cooldown repro : {selectedAm.reproductionCooldown}</div>
-                  <div>AM phase : {selectedAm.state}</div>
-                  <div>Lignee : {selectedLineage.name}</div>
                   <div>Pattern : {selectedAm.patternId}</div>
-                </>
+                  <div>Cellules rassemblées : {selectedAm.gatheredCells.length}</div>
+                </div>
               )}
             </>
           )}

@@ -20,9 +20,10 @@ const TICK_MS = 90
 const RANDOM_FILL_CHANCE = 0.18
 const PROTO_SCAN_INTERVAL = 6
 const MAX_LINEAGES = 3
-const MAX_TOTAL_AMS = 10
+const MAX_TOTAL_AMS = 11
 const MAX_AMS_PER_LINEAGE = 4
-const MAX_COMPLETE_AM_BEFORE_SCAN_STOPS = 10
+const MAX_COMPLETE_AM_BEFORE_SCAN_STOPS = 11
+const TARGET_CREATED_AMS = 10 // 1 fondatrice + 10 créées = 11 total
 const PROTO_CONSCIOUSNESS_MIN = 10
 const PROTO_METAMORPHOSIS_MIN = 15
 const CONSTRUCTION_STEP_INTERVAL = 3
@@ -104,6 +105,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   let status: LifeGodSimulationState['status'] = 'paused'
   let intervalId: ReturnType<typeof setInterval> | null = null
   let stepAccumulator = 0
+  let frozenMatterGrid: Uint8Array | null = null
   const listeners = new Set<(state: LifeGodSimulationState) => void>()
 
   function createGrid() {
@@ -116,7 +118,10 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     const formingAmCount = amEntities.filter((am) => am.state === 'forming' || am.state === 'hiddenForming').length
     const movingAmCount = amEntities.filter((am) => am.state === 'alive' && am.behaviorState === 'wandering').length
     const assemblingAmCount = amEntities.filter((am) => am.behaviorState === 'assemblingAm').length
-    const frozenMatterCount = current.reduce((total, cell) => total + cell, 0) - amEntities.reduce((total, am) => total + am.absoluteCells.length, 0)
+    const frozenMatterCount = matterFrozen && frozenMatterGrid
+      ? frozenMatterGrid.reduce((total, cell) => total + cell, 0)
+      : 0
+    const createdAmCount = Math.max(0, completeAmCount - (firstAmRevealed ? 1 : 0))
     const amPopulationStable =
       completeAmCount === MAX_TOTAL_AMS &&
       constructionSites.length === 0 &&
@@ -148,6 +153,9 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       activePatternIds,
       maxActivePatternsPerSeed: MAX_ACTIVE_PATTERNS_PER_SEED,
       frozenMatterCount: Math.max(0, frozenMatterCount),
+      createdAmCount,
+      targetAmCount: TARGET_CREATED_AMS,
+      aliveAmTarget: MAX_COMPLETE_AM_BEFORE_SCAN_STOPS,
       gridWidth: GRID_WIDTH,
       gridHeight: GRID_HEIGHT,
       cells: current,
@@ -183,10 +191,17 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   }
 
   function freezeMatterFromCurrent() {
-    for (let y = 0; y < GRID_HEIGHT; y += 1) {
-      for (let x = 0; x < GRID_WIDTH; x += 1) {
-        if (!shouldFreezeCell(x, y)) continue
-        current[indexAt(x, y)] = current[indexAt(x, y)] === 1 ? 1 : 0
+    // Snapshot des cellules normales uniquement — les AM sont exclues
+    // Ce snapshot est la source de vérité immuable pour la matière figée
+    frozenMatterGrid = new Uint8Array(GRID_WIDTH * GRID_HEIGHT)
+    for (let i = 0; i < current.length; i += 1) {
+      frozenMatterGrid[i] = current[i]
+    }
+    // Retirer les cellules AM du snapshot : les AM ne sont pas de la matière figée
+    for (const am of amEntities) {
+      for (const cell of am.absoluteCells) {
+        if (cell.x < 0 || cell.y < 0 || cell.x >= GRID_WIDTH || cell.y >= GRID_HEIGHT) continue
+        frozenMatterGrid[indexAt(cell.x, cell.y)] = 0
       }
     }
   }
@@ -227,13 +242,13 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     return !stable && getCompleteAmCount() < MAX_COMPLETE_AM_BEFORE_SCAN_STOPS
   }
 
-  function shouldFreezeMatter() {
+  // Seules les cellules NORMALES se figent — jamais les entités vivantes
+  function shouldFreezeNormalCells() {
     return (
-      getCompleteAmCount() >= MAX_COMPLETE_AM_BEFORE_SCAN_STOPS &&
       firstAmRevealed &&
       conwayActive &&
       !matterFrozen &&
-      phase === 'amExpansion'
+      getCompleteAmCount() >= MAX_COMPLETE_AM_BEFORE_SCAN_STOPS
     )
   }
 
@@ -288,6 +303,13 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   }
 
   function syncAmCells() {
+    // SYSTÈME VIVANT — toujours actif, même si Conway est arrêté
+    // Quand la matière est figée : restaurer le snapshot figé avant d'écrire les AM
+    // Cela empêche les AM de laisser des "fantômes" de matière figée en se déplaçant
+    if (matterFrozen && frozenMatterGrid) {
+      current.set(frozenMatterGrid)
+    }
+    // Écrire les positions actuelles des AM par-dessus
     for (const am of amEntities) {
       am.absoluteCells = computeAbsoluteCells(am.cells, am.position)
       for (const cell of am.absoluteCells) {
@@ -417,6 +439,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       color: lineage.color,
       targetPosition: null,
       buildTarget: null,
+      gatheredCells: [],
       reproductionCooldown: roleConfig.reproductionCooldown,
       behaviorCooldown: roleConfig.movementInterval,
       formationDurationCycles,
@@ -1093,6 +1116,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     phase = 'conwayEmergence'
     conwayActive = true
     matterFrozen = false
+    frozenMatterGrid = null
     firstAmRevealed = false
     amLineages = []
     activePatternIds = []
@@ -1115,6 +1139,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   }
 
   function stepSimulationCycle() {
+    // ── SYSTÈME 1 : Conway — actif uniquement si conwayActive ─────────────────
     if (conwayActive) {
       let nextAlive = 0
 
@@ -1155,18 +1180,24 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       revealFirstAmCandidate()
     }
 
+    // ── SYSTÈME 2 : Entités vivantes — TOUJOURS actif ─────────────────────────
+    // Ce système continue même si Conway est arrêté et la matière figée.
+    // Les AM ne sont jamais gelées, jamais traitées comme des cellules normales.
     tickAmState()
     tickRoleBehavior()
-    syncAmCells()
-    tickConstructionSites()
+    syncAmCells()            // restaure snapshot figé si nécessaire, puis écrit les AM
+    tickConstructionSites()  // les chantiers continuent après le gel
     syncConstructionCells()
     refreshAliveCount()
     tryStartReproduction()
-    if (shouldFreezeMatter()) {
+
+    // ── Condition de gel : seules les cellules normales se figent ─────────────
+    // Condition : firstAmRevealed && 11 AM alive && Conway encore actif
+    if (shouldFreezeNormalCells()) {
       conwayActive = false
       matterFrozen = true
       phase = 'frozenMatter'
-      constructionSites = []
+      // NE PAS vider constructionSites — les AM continuent de se reproduire
       freezeMatterFromCurrent()
     } else {
       updatePhase()
@@ -1250,6 +1281,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       phase = 'conwayEmergence'
       conwayActive = true
       matterFrozen = false
+      frozenMatterGrid = null
       firstAmRevealed = false
       generation = 0
       aliveCount = 0

@@ -5,7 +5,7 @@ export type LifeGodPhase = 'conwayEmergence' | 'firstAmHiddenForming' | 'amExpan
 export type LifeGodTimeScale = 0.25 | 0.5 | 1 | 2 | 4 | 8
 export type LifeGodAmRole = 'builder' | 'gatherer' | 'explorer'
 export type LifeGodInfluenceMode = 'attract' | 'repel'
-export type LifeGodAmBehaviorState = 'idle' | 'wandering' | 'seekingCells' | 'assemblingAm' | 'resting'
+export type LifeGodAmBehaviorState = 'idle' | 'wandering' | 'seekingCells' | 'gatheringCells' | 'assemblingAm' | 'resting'
 
 export interface LifeGodRelativeCell {
   x: number
@@ -68,6 +68,7 @@ export interface LifeGodAmEntity {
   color: string
   targetPosition: LifeGodRelativeCell | null
   buildTarget: LifeGodRelativeCell | null
+  gatheredCells: LifeGodRelativeCell[]
   reproductionCooldown: number
   behaviorCooldown: number
   formationDurationCycles: number
@@ -119,6 +120,9 @@ export interface LifeGodSimulationState {
   activePatternIds: string[]
   maxActivePatternsPerSeed: number
   frozenMatterCount: number
+  createdAmCount: number
+  targetAmCount: number
+  aliveAmTarget: number
   gridWidth: number
   gridHeight: number
   cells: Uint8Array
