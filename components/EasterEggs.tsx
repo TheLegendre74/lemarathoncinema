@@ -1008,7 +1008,8 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
     }
     else if (t.endsWith('gomu gomu no tipiak!')) { setShowTipiak(true) }
     else if (t.endsWith('boîte de pandore') || t.endsWith('boite de pandore') || t.endsWith('pandore')) { discoverEgg('clippy'); setShowPandora(true) }
-    else if (t.endsWith('la guerre des mondes') || t.endsWith('game of life')) { discoverEgg('conway'); conwayMiniRef.current = false; localStorage.setItem('conway_unlocked', '1'); window.dispatchEvent(new CustomEvent('conway:unlocked')); setShowConway(true) }
+    else if (t.endsWith('la guerre des mondes')) { discoverEgg('conway'); conwayMiniRef.current = false; localStorage.setItem('conway_unlocked', '1'); window.dispatchEvent(new CustomEvent('conway:unlocked')); setShowConway(true) }
+    else if (t.endsWith('codex')) { window.location.href = '/labo/life' }
     else { triggered = false }
     if (triggered) { setMobileVal(''); setShowMobileInput(false) }
   }
@@ -1303,16 +1304,21 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
         keyBuf.current = []
         return
       }
-      // "la guerre des mondes" / "game of life" → Jeu de la Vie de Conway
+      // "la guerre des mondes" → Jeu de la Vie de Conway
       const last20 = buf.slice(-20).join('').toLowerCase()
-      const last12 = buf.slice(-12).join('').toLowerCase()
-      if (last20 === 'la guerre des mondes' || last12 === 'game of life') {
+      if (last20 === 'la guerre des mondes') {
         discoverEgg('conway')
         conwayMiniRef.current = false
         localStorage.setItem('conway_unlocked', '1')
         window.dispatchEvent(new CustomEvent('conway:unlocked'))
         setShowConway(true)
         keyBuf.current = []
+        return
+      }
+      // "codex" → Life God Game
+      if (buf.slice(-5).join('').toLowerCase() === 'codex') {
+        keyBuf.current = []
+        window.location.href = '/labo/life'
         return
       }
     }
