@@ -27,8 +27,10 @@ export default async function HomePage() {
 
   // Guest homepage
   if (!user) {
-    const { data: totalFilms } = await supabase.from('films').select('id', { count: 'exact' }).eq('saison', 1)
-    const { data: playerCount } = await supabase.from('profiles').select('id', { count: 'exact' })
+    const [{ count: totalFilmsCount }, { count: playerCount }] = await Promise.all([
+      supabase.from('films').select('*', { count: 'exact', head: true }).eq('saison', 1),
+      supabase.from('profiles').select('*', { count: 'exact', head: true }),
+    ])
     return (
       <div>
         <div style={{ marginBottom: '2rem' }}>
@@ -39,8 +41,8 @@ export default async function HomePage() {
         <Countdown marathonStart={cfg.MARATHON_START.toISOString()} />
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.8rem', marginBottom: '1.5rem' }}>
-          <div className="stat"><div className="stat-l">Films S1</div><div className="stat-v gold">{totalFilms?.length ?? 0}</div></div>
-          <div className="stat"><div className="stat-l">Joueurs</div><div className="stat-v blue">{playerCount?.length ?? 0}</div></div>
+          <div className="stat"><div className="stat-l">Films S1</div><div className="stat-v gold">{totalFilmsCount ?? 0}</div></div>
+          <div className="stat"><div className="stat-l">Joueurs</div><div className="stat-v blue">{playerCount ?? 0}</div></div>
         </div>
 
         <div className="card" style={{ marginBottom: '1.5rem', textAlign: 'center', padding: '2rem' }}>
@@ -79,22 +81,17 @@ export default async function HomePage() {
     )
   }
 
-  const { data: totalFilms } = await supabase.from('films').select('id', { count: 'exact' }).eq('saison', 1)
-  const totalS1 = totalFilms?.length ?? 0
+  const [{ count: totalS1Count }, { count: rankCount }, { data: recentWatched }] = await Promise.all([
+    supabase.from('films').select('*', { count: 'exact', head: true }).eq('saison', 1),
+    supabase.from('profiles').select('*', { count: 'exact', head: true }).gte('exp', profile.exp),
+    supabase.from('watched').select('film_id, watched_at, pre, films(titre)').eq('user_id', user.id).order('watched_at', { ascending: false }).limit(5),
+  ])
+  const totalS1 = totalS1Count ?? 0
+  const rank = rankCount ?? 1
   const watchedCount = watched?.length ?? 0
   const pct = totalS1 ? Math.round((watchedCount / totalS1) * 100) : 0
   const level = levelFromExp(profile.exp)
   const badge = getBadge(profile.exp)
-
-  const { data: rankData } = await supabase.from('profiles').select('id').gte('exp', profile.exp)
-  const rank = rankData?.length ?? 1
-
-  const { data: recentWatched } = await supabase
-    .from('watched')
-    .select('film_id, watched_at, pre, films(titre)')
-    .eq('user_id', user.id)
-    .order('watched_at', { ascending: false })
-    .limit(5)
 
   const wf = weekFilm?.films as any
   const d1 = (activeDuel as any)?.film1

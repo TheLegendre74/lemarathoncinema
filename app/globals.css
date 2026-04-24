@@ -1,14 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Syne:wght@300;400;500;600&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 
 :root {
-  --font-display: 'Playfair Display', serif;
-  --font-body: 'Syne', sans-serif;
-
   --bg:   #08080e;
   --bg2:  #0f0f1a;
   --bg3:  #171726;

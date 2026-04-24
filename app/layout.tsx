@@ -1,5 +1,21 @@
 import type { Metadata, Viewport } from 'next'
 import Image from 'next/image'
+import { Playfair_Display, Syne } from 'next/font/google'
+
+const playfairDisplay = Playfair_Display({
+  subsets: ['latin'],
+  weight: ['700', '900'],
+  style: ['normal', 'italic'],
+  variable: '--font-display',
+  display: 'swap',
+})
+
+const syne = Syne({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600'],
+  variable: '--font-body',
+  display: 'swap',
+})
 
 export const viewport: Viewport = {
   viewportFit: 'cover',
@@ -75,7 +91,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   }
 
   return (
-    <html lang="fr">
+    <html lang="fr" className={`${playfairDisplay.variable} ${syne.variable}`}>
       <body>
         <ToastProvider>
           <EasterEggs config={eeConfig} isGuest={!user} watchedCount={watchedCount} hasClippyEgg={hasClippyEgg} />

@@ -13,10 +13,20 @@ export default async function FilmsPage() {
   const cfg = await getServerConfig()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const [{ data: films }, { data: userCount }, { data: weekFilm }] = await Promise.all([
+  const [
+    { data: films },
+    { count: profileCount },
+    { data: weekFilm },
+    { data: allWatched },
+    { data: allRatings },
+    { data: allNegRatings },
+  ] = await Promise.all([
     supabase.from('films').select('*').eq('pending_admin_approval', false).order('titre'),
-    supabase.from('profiles').select('id', { count: 'exact' }),
+    supabase.from('profiles').select('*', { count: 'exact', head: true }),
     supabase.from('week_films').select('film_id').eq('active', true).single(),
+    supabase.from('watched').select('film_id'),
+    supabase.from('ratings').select('film_id, score'),
+    (supabase as any).from('negative_ratings').select('film_id, score'),
   ])
 
   // User-specific data (empty for guests)
@@ -45,18 +55,11 @@ export default async function FilmsPage() {
   }
 
   // Global watch counts per film
-  const { data: allWatched } = await supabase.from('watched').select('film_id')
-  const totalUsers = userCount?.length ?? 1
+  const totalUsers = profileCount ?? 1
   const watchCountMap: Record<number, number> = {}
   allWatched?.forEach((w: { film_id: number }) => {
     watchCountMap[w.film_id] = (watchCountMap[w.film_id] ?? 0) + 1
   })
-
-  // Average ratings per film (positive + negative)
-  const [{ data: allRatings }, { data: allNegRatings }] = await Promise.all([
-    supabase.from('ratings').select('film_id, score'),
-    (supabase as any).from('negative_ratings').select('film_id, score'),
-  ])
   const ratingMap: Record<number, number[]> = {}
   allRatings?.forEach((r: { film_id: number; score: number }) => {
     if (!ratingMap[r.film_id]) ratingMap[r.film_id] = []
