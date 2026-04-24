@@ -90,12 +90,16 @@ export function LifeGodGameHud({
               <div>Cellules vivantes : {simulationState.aliveCount}</div>
               <div>Generation : {simulationState.generation}</div>
               <div>Temps : {simulationState.timeScale}x</div>
+              <div>Conway : {simulationState.conwayActive ? 'actif' : 'arrete'}</div>
+              <div>Matiere : {simulationState.matterFrozen ? 'figee' : 'mobile'}</div>
               <div>Scan AM : {simulationState.scanningActive ? 'actif' : 'arrete'}</div>
-              <div>Entites conscientes : {simulationState.protoEntities.length}</div>
+              <div>AM visibles : {simulationState.visibleAmCount}</div>
+              <div>Patterns actifs : {simulationState.activePatternIds.length}/{simulationState.maxActivePatternsPerSeed}</div>
               <div>Lignees actives : {simulationState.amLineages.length}/3</div>
               <div>AM completes : {simulationState.completeAmCount}/{simulationState.maxCompleteAmBeforeScanStops}</div>
               <div>AM forming : {simulationState.formingAmCount}</div>
               <div>AM adapting : {simulationState.adaptingAmCount}</div>
+              <div>Matiere figee : {simulationState.frozenMatterCount}</div>
               <div>Population AM : {simulationState.amEntities.length}</div>
               {selectedAm && selectedLineage && (
                 <>
@@ -107,7 +111,7 @@ export function LifeGodGameHud({
                   <div>AM etat : {selectedAm.state}</div>
                   <div>AM role : {selectedAm.role}</div>
                   <div>Cooldown repro : {selectedAm.reproductionCooldown}</div>
-                  <div>AM phase : {simulationState.phase === 'creature' ? 'Creature' : 'Cellule'}</div>
+                  <div>AM phase : {selectedAm.state}</div>
                   <div>Lignee : {selectedLineage.name}</div>
                   <div>Pattern : {selectedAm.patternId}</div>
                 </>
@@ -162,7 +166,7 @@ export function LifeGodGameHud({
             textAlign: 'right',
           }}
         >
-          A 10 cellules connectees, une entite consciente emerge. Elle attire des cellules proches jusqu'a 15, puis forme une AM qui passe par forming, adapting puis alive. Maintiens Shift pour attirer les AM vivantes, Alt pour les repousser. Le scan s'arrete quand 10 AM completes existent.
+          Au debut, aucune AM visible n'apparait. Une premiere AM se forme en secret dans Conway, puis se revele. Maintiens Shift pour attirer les AM vivantes, Alt pour les repousser. A 10 AM alive, Conway s'arrete et la matiere restante se fige.
         </div>
       </div>
     </div>

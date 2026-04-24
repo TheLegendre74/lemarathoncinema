@@ -1,7 +1,7 @@
 export type LifeGodBootstrapStatus = 'loading' | 'ready' | 'error'
 export type LifeGodSimStatus = 'playing' | 'paused'
 export type LifeGodPaintMode = 'draw' | 'erase'
-export type LifeGodPhase = 'cellule' | 'creature'
+export type LifeGodPhase = 'conwayEmergence' | 'firstAmHiddenForming' | 'amExpansion' | 'frozenMatter'
 export type LifeGodTimeScale = 0.25 | 0.5 | 1 | 2 | 4 | 8
 export type LifeGodAmRole = 'builder' | 'gatherer' | 'explorer'
 export type LifeGodInfluenceMode = 'attract' | 'repel'
@@ -96,11 +96,17 @@ export interface LifeGodSimulationState {
   aliveCount: number
   status: LifeGodSimStatus
   timeScale: LifeGodTimeScale
+  conwayActive: boolean
+  matterFrozen: boolean
   scanningActive: boolean
   maxCompleteAmBeforeScanStops: number
   completeAmCount: number
   formingAmCount: number
   adaptingAmCount: number
+  visibleAmCount: number
+  activePatternIds: string[]
+  maxActivePatternsPerSeed: number
+  frozenMatterCount: number
   gridWidth: number
   gridHeight: number
   cells: Uint8Array
