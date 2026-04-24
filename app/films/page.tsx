@@ -10,10 +10,8 @@ export default async function FilmsPage() {
   const cookieStore = await cookies()
   const age18confirmed = cookieStore.get('age18confirmed')?.value === 'true'
   const supabase = await createClient()
-  const [cfg, { data: { user } }] = await Promise.all([
-    getServerConfig(),
-    supabase.auth.getUser(),
-  ])
+  const { data: { user } } = await supabase.auth.getUser()
+  const cfg = await getServerConfig()
 
   const [
     { data: films },

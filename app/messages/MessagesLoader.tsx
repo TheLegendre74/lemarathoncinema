@@ -38,11 +38,10 @@ export default function MessagesLoader() {
     const supabase = createClient()
 
     async function load() {
-      // Auth depuis le cookie — pas d'appel réseau
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) { router.replace('/auth'); return }
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (!authUser) { router.replace('/auth'); return }
 
-      const uid = session.user.id
+      const uid = authUser.id
       setMyId(uid)
 
       // Tout en parallèle, directement vers Supabase
