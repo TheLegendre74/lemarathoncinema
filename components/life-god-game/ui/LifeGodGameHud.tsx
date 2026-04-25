@@ -45,6 +45,7 @@ export function LifeGodGameHud({
     am.behaviorState === 'seekingFixedCell' || am.behaviorState === 'movingToFixedCell'
   ).length ?? 0
   const carryingAmCount = simulationState?.amEntities.filter((am) => am.behaviorState === 'carryingCellToSite').length ?? 0
+  const terraformingPercent = simulationState ? Math.round(simulationState.terraformationProgress * 100) : 0
 
   return (
     <div
@@ -93,6 +94,7 @@ export function LifeGodGameHud({
             <>
               <div style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 4, marginBottom: 4 }}>
                 <div>Phase : <b>{simulationState.phase}</b></div>
+                <div>Mission AM : <b>{simulationState.currentMission}</b></div>
                 <div>Generation : {simulationState.generation}</div>
                 <div>Vitesse : {simulationState.timeScale}x</div>
               </div>
@@ -113,10 +115,16 @@ export function LifeGodGameHud({
                 <div>AM en recherche : {seekingAmCount}</div>
                 <div>AM en transport : {carryingAmCount}</div>
                 <div>AM en assemblage : {simulationState.assemblingAmCount}</div>
+                <div>AM en terraformation : {simulationState.terraformingAmCount}</div>
                 <div>AM en mouvement : {simulationState.movingAmCount}</div>
               </div>
               <div style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 4, marginBottom: 4 }}>
                 <div>Matière figée : {simulationState.frozenMatterCount} cellules</div>
+                <div>Soil : {simulationState.soilCount}</div>
+                <div>Vegetation : {simulationState.vegetationCount}</div>
+                <div>Water : {simulationState.waterCount}</div>
+                <div>Rock : {simulationState.rockCount}</div>
+                <div>Terraforming : {terraformingPercent}%</div>
                 <div>Cellules vivantes : {simulationState.aliveCount}</div>
                 <div>Lignées : {simulationState.amLineages.length} / 3</div>
                 <div>Patterns actifs : {simulationState.activePatternIds.length} / {simulationState.maxActivePatternsPerSeed}</div>

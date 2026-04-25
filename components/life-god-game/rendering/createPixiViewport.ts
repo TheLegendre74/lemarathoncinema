@@ -28,6 +28,7 @@ export async function createPixiViewport({
   const backdrop = new PIXI.Graphics()
   const frame = new PIXI.Graphics()
   const gridLines = new PIXI.Graphics()
+  const terrainCells = new PIXI.Graphics()
   const liveCells = new PIXI.Graphics()
   const constructionGhosts = new PIXI.Graphics()
   const constructionBuilt = new PIXI.Graphics()
@@ -41,6 +42,7 @@ export async function createPixiViewport({
     backdrop,
     frame,
     gridLines,
+    terrainCells,
     liveCells,
     constructionGhosts,
     constructionBuilt,
@@ -119,6 +121,7 @@ export async function createPixiViewport({
     computeMetrics()
     drawGridFrame()
 
+    terrainCells.clear()
     liveCells.clear()
     constructionGhosts.clear()
     constructionBuilt.clear()
@@ -133,6 +136,26 @@ export async function createPixiViewport({
       ...state.protoEntities.flatMap((proto) => proto.cells.map((cell) => `${cell.x}:${cell.y}`)),
       ...state.amEntities.flatMap((am) => am.absoluteCells.map((cell) => `${cell.x}:${cell.y}`)),
     ])
+
+    const terrainColors: Record<number, { color: number; alpha: number }> = {
+      1: { color: 0x5f735f, alpha: 0.5 },
+      2: { color: 0x59b779, alpha: 0.62 },
+      3: { color: 0x3b7fb6, alpha: 0.58 },
+      4: { color: 0x8a92a0, alpha: 0.56 },
+    }
+    for (const terrainType of [1, 2, 3, 4]) {
+      for (let y = 0; y < state.gridHeight; y += 1) {
+        const rowOffset = y * state.gridWidth
+        for (let x = 0; x < state.gridWidth; x += 1) {
+          if (state.terrainGrid[rowOffset + x] !== terrainType) continue
+          if (reservedCells.has(`${x}:${y}`)) continue
+          const px = metrics.x + x * metrics.cellSize
+          const py = metrics.y + y * metrics.cellSize
+          terrainCells.rect(px + 1, py + 1, Math.max(metrics.cellSize - 1, 1), Math.max(metrics.cellSize - 1, 1))
+        }
+      }
+      terrainCells.fill(terrainColors[terrainType])
+    }
 
     for (let y = 0; y < state.gridHeight; y += 1) {
         const rowOffset = y * state.gridWidth

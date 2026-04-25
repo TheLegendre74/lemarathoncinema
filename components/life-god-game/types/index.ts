@@ -5,6 +5,8 @@ export type LifeGodPhase = 'conwayEmergence' | 'firstAmHiddenForming' | 'amExpan
 export type LifeGodTimeScale = 0.25 | 0.5 | 1 | 2 | 4 | 8
 export type LifeGodAmRole = 'builder' | 'gatherer' | 'explorer'
 export type LifeGodInfluenceMode = 'attract' | 'repel'
+export type LifeGodAmMission = 'expandingPopulation' | 'terraforming' | 'stable'
+export type LifeGodTerrainType = 0 | 1 | 2 | 3 | 4
 export type LifeGodAmBehaviorState =
   | 'idle'
   | 'wandering'
@@ -15,6 +17,11 @@ export type LifeGodAmBehaviorState =
   | 'carryingCellToSite'
   | 'depositingCell'
   | 'assemblingAm'
+  | 'seekingFrozenMatter'
+  | 'shapingSoil'
+  | 'shapingVegetation'
+  | 'shapingWater'
+  | 'shapingRock'
   | 'resting'
 
 export interface LifeGodRelativeCell {
@@ -72,6 +79,7 @@ export interface LifeGodAmEntity {
   energy: number
   state: 'hiddenForming' | 'forming' | 'adapting' | 'alive'
   behaviorState: LifeGodAmBehaviorState
+  currentGoal: LifeGodAmMission
   cells: LifeGodRelativeCell[]
   absoluteCells: LifeGodRelativeCell[]
   role: LifeGodAmRole
@@ -83,6 +91,11 @@ export interface LifeGodAmEntity {
   carriedCell: LifeGodRelativeCell | null
   movementDirection: LifeGodRelativeCell | null
   gatheredCells: LifeGodRelativeCell[]
+  memory: {
+    lastTargetCell: LifeGodRelativeCell | null
+    lastBuildSite: LifeGodRelativeCell | null
+    terraformedCells: number
+  }
   reproductionCooldown: number
   behaviorCooldown: number
   formationDurationCycles: number
@@ -136,16 +149,24 @@ export interface LifeGodSimulationState {
   visibleAmCount: number
   movingAmCount: number
   assemblingAmCount: number
+  terraformingAmCount: number
   gatheredCellsTotal: number
+  currentMission: LifeGodAmMission
   activePatternIds: string[]
   maxActivePatternsPerSeed: number
   frozenMatterCount: number
+  soilCount: number
+  vegetationCount: number
+  waterCount: number
+  rockCount: number
+  terraformationProgress: number
   createdAmCount: number
   targetAmCount: number
   aliveAmTarget: number
   gridWidth: number
   gridHeight: number
   cells: Uint8Array
+  terrainGrid: Uint8Array
   amLineages: LifeGodAmLineage[]
   protoEntities: LifeGodProtoEntity[]
   amEntities: LifeGodAmEntity[]
