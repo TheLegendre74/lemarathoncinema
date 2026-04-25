@@ -1007,7 +1007,7 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
       predSoundRef.current = snd; discoverEgg('predator'); setShowAVP(true)
     }
     else if (t.endsWith('gomu gomu no tipiak!')) { setShowTipiak(true) }
-    else if (t.endsWith('boîte de pandore') || t.endsWith('boite de pandore') || t.endsWith('pandore')) { discoverEgg('clippy'); setShowPandora(true) }
+    else if (t.endsWith('boîte de pandore') || t.endsWith('boite de pandore') || t.endsWith('pandore')) { void discoverEgg('clippy').catch(() => {}); setShowPandora(true) }
     else if (t.endsWith('la guerre des mondes')) { discoverEgg('conway'); conwayMiniRef.current = false; localStorage.setItem('conway_unlocked', '1'); window.dispatchEvent(new CustomEvent('conway:unlocked')); setShowConway(true) }
     else if (t.endsWith('codex')) { window.location.href = '/labo/life' }
     else { triggered = false }
@@ -1299,7 +1299,7 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
       const last16 = buf.slice(-16).join('').toLowerCase()
       const last7  = buf.slice(-7).join('').toLowerCase()
       if (last16 === 'boîte de pandore' || last16 === 'boite de pandore' || last7 === 'pandore') {
-        discoverEgg('clippy')
+        void discoverEgg('clippy').catch(() => {})   // fire-and-forget : ne pas laisser remonter à React
         setShowPandora(true)
         keyBuf.current = []
         return
