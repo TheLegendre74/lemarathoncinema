@@ -333,15 +333,21 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     // SYSTÈME VIVANT — toujours actif, même si Conway est arrêté
     // Quand la matière est figée : restaurer le snapshot figé avant d'écrire les AM
     // Cela empêche les AM de laisser des "fantômes" de matière figée en se déplaçant
-    if (matterFrozen && frozenMatterGrid) {
-      current.set(frozenMatterGrid)
-    }
     // Écrire les positions actuelles des AM par-dessus
     for (const am of amEntities) {
       am.absoluteCells = computeAbsoluteCells(am.cells, am.position)
       for (const cell of am.absoluteCells) {
         if (cell.x <= 0 || cell.y <= 0 || cell.x >= GRID_WIDTH - 1 || cell.y >= GRID_HEIGHT - 1) continue
         current[indexAt(cell.x, cell.y)] = 1
+      }
+    }
+  }
+
+  function clearAmVisualCellsFromMatterGrid() {
+    for (const am of amEntities) {
+      for (const cell of am.absoluteCells) {
+        if (cell.x <= 0 || cell.y <= 0 || cell.x >= GRID_WIDTH - 1 || cell.y >= GRID_HEIGHT - 1) continue
+        current[indexAt(cell.x, cell.y)] = 0
       }
     }
   }
@@ -1543,6 +1549,14 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   }
 
   function stepSimulationCycle() {
+    // AM = agent autonome, pas cellule Conway ni matiere figable.
+    // On retire le corps visuel du tick precedent avant tout calcul de matiere.
+    if (matterFrozen && frozenMatterGrid) {
+      current.set(frozenMatterGrid)
+    } else {
+      clearAmVisualCellsFromMatterGrid()
+    }
+
     // ── SYSTÈME 1 : Conway — actif uniquement si conwayActive ─────────────────
     if (conwayActive) {
       let nextAlive = 0
@@ -1589,9 +1603,9 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     // Les AM ne sont jamais gelées, jamais traitées comme des cellules normales.
     tickAmState()
     tickRoleBehavior()
-    syncAmCells()            // restaure snapshot figé si nécessaire, puis écrit les AM
     tickConstructionSites()  // les chantiers continuent après le gel
     syncConstructionCells()
+    syncAmCells()            // dessine les AM par-dessus la matiere en fin de tick
     refreshAliveCount()
     tryStartReproduction()
     updateStabilityGrid()    // calcule la stabilité des cellules pour guider les AM
