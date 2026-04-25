@@ -1613,7 +1613,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
               effectivePhase >= 5 ? '/arene-clippy-05.png'
               : effectivePhase === 4 ? '/arene-clippy-02.png'   // phase 4 = espace (sabre laser)
               : effectivePhase === 3 ? '/arene-clippy-03.png'   // phase 3 = ring (boxe)
-              : effectivePhase === 2 ? '/arenes-clippy.png'     // phase 2 = disco (image à remplacer)
+              : effectivePhase === 2 ? '/arene-clippy-disco.png'  // phase 2 = discothèque
               : '/arenes-clippy.png'
             }
             alt=""
