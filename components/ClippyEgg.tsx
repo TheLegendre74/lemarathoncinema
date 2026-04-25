@@ -1496,14 +1496,24 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
     e.stopPropagation()
 
     if (tired) {
-      setPhase('combat'); phaseRef.current = 'combat'
       setTired(false); setMisses(0)
+      setPlayerDeaths(0); playerDeathsRef.current = 0
       clippyHPRef.current = CLIPPY_MAX_HP; playerHPRef.current = PLAYER_MAX_HP
       setClippyHP(CLIPPY_MAX_HP); setPlayerHP(PLAYER_MAX_HP)
-      setPlayerDeaths(0); playerDeathsRef.current = 0
+
+      if (effectivePhase === 2) {
+        // Phase 2 → DDR direct, sans combat à l'épée
+        setPhase('combat'); phaseRef.current = 'combat'
+        setMessage("🎵 Tu veux te battre ? On danse d'abord !")
+        setBubble(true); dodge(); startMusic()
+        setTimeout(() => setDdrPhase('active'), 900)
+        return
+      }
+
+      setPhase('combat'); phaseRef.current = 'combat'
       setMessage(getBattleStart())
       setBubble(true); dodge(); startMusic()
-      if (effectivePhase >= 2) scheduleAutoAttack()
+      if (effectivePhase >= 3) scheduleAutoAttack()
       return
     }
 
