@@ -770,9 +770,8 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     return true
   }
 
-  // Récolte 1 cellule fixe de préférence (stable), sinon n'importe quelle cellule disponible.
-  // Passe 0 : uniquement cellules avec stabilityGrid >= STABILITY_THRESHOLD.
-  // Passe 1 : repli sur toute cellule libre dans le rayon.
+  // Récolte uniquement des cellules FIXES (stabilityGrid >= STABILITY_THRESHOLD).
+  // Les cellules en mouvement Conway sont ignorées — seules les zones stables sont utilisées.
   function gatherNearbyCell(am: LifeGodAmEntity): LifeGodAmEntity {
     const center = averagePosition(am.absoluteCells)
     const gathered = [...am.gatheredCells]
@@ -784,27 +783,24 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
         .map((c) => cellKey(c.x, c.y))
     )
 
-    for (let pass = 0; pass < 2; pass += 1) {
-      const requireStable = pass === 0
-      for (let r = 1; r <= GATHERING_RADIUS; r += 1) {
-        for (let oy = -r; oy <= r; oy += 1) {
-          for (let ox = -r; ox <= r; ox += 1) {
-            if (Math.max(Math.abs(ox), Math.abs(oy)) !== r) continue
-            const x = Math.round(center.x) + ox
-            const y = Math.round(center.y) + oy
-            if (x <= 0 || y <= 0 || x >= GRID_WIDTH - 1 || y >= GRID_HEIGHT - 1) continue
-            const key = cellKey(x, y)
-            if (gatheredKeys.has(key) || reservedByOthers.has(key)) continue
-            if (!hasLivingCell(x, y)) continue
-            if (isReservedByEntity(x, y) || isReservedByConstruction(x, y) || isReservedByProto(x, y)) continue
-            if (requireStable && stabilityGrid[indexAt(x, y)] < STABILITY_THRESHOLD) continue
+    for (let r = 1; r <= GATHERING_RADIUS; r += 1) {
+      for (let oy = -r; oy <= r; oy += 1) {
+        for (let ox = -r; ox <= r; ox += 1) {
+          if (Math.max(Math.abs(ox), Math.abs(oy)) !== r) continue
+          const x = Math.round(center.x) + ox
+          const y = Math.round(center.y) + oy
+          if (x <= 0 || y <= 0 || x >= GRID_WIDTH - 1 || y >= GRID_HEIGHT - 1) continue
+          const key = cellKey(x, y)
+          if (gatheredKeys.has(key) || reservedByOthers.has(key)) continue
+          if (!hasLivingCell(x, y)) continue
+          if (isReservedByEntity(x, y) || isReservedByConstruction(x, y) || isReservedByProto(x, y)) continue
+          if (stabilityGrid[indexAt(x, y)] < STABILITY_THRESHOLD) continue   // cellule mobile → ignorer
 
-            const idx = indexAt(x, y)
-            current[idx] = 0
-            if (matterFrozen && frozenMatterGrid) frozenMatterGrid[idx] = 0
-            gathered.push({ x, y })
-            return { ...am, gatheredCells: gathered }
-          }
+          const idx = indexAt(x, y)
+          current[idx] = 0
+          if (matterFrozen && frozenMatterGrid) frozenMatterGrid[idx] = 0
+          gathered.push({ x, y })
+          return { ...am, gatheredCells: gathered }
         }
       }
     }
@@ -1144,15 +1140,24 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     const lineageDistance = Math.abs(center.x - lineageAnchor.x) + Math.abs(center.y - lineageAnchor.y)
     const influenceScore = getInfluenceScore(position, am)
 
-    // Cherche les cellules FIXES : attraction forte vers la cellule stable la plus proche
+    // Cherche les cellules FIXES : direction vers la cellule stable domine toujours
     if (am.behaviorState === 'seekingFixedCells' || am.behaviorState === 'harvestingCells') {
       const stableDensity = getStableDensityAt(position, am)
       if (nearestCell) {
         const distToNearest = Math.abs(center.x - nearestCell.x) + Math.abs(center.y - nearestCell.y)
-        // Priorité : se rapprocher des cellules fixes (-dist*25), bonus si déjà entouré de cellules fixes
-        return -distToNearest * 25 + stableDensity * 20 + otherDistance * 0.2 + influenceScore
+        // -dist*25 domine : le tiebreaker stableDensity*3 ne peut jamais bloquer le déplacement
+        return -distToNearest * 25 + stableDensity * 3 + otherDistance * 0.2 + influenceScore
       }
-      return stableDensity * 22 + otherDistance * 0.5 + influenceScore
+      return stableDensity * 8 + otherDistance * 2 + influenceScore
+    }
+
+    // Supervise le chantier en mouvement : orbite autour du site de construction
+    if (am.behaviorState === 'assemblingAm') {
+      if (am.buildTarget) {
+        const distToSite = Math.abs(center.x - am.buildTarget.x) + Math.abs(center.y - am.buildTarget.y)
+        return -distToSite * 5 + otherDistance * 2 + influenceScore
+      }
+      return otherDistance * 3 + density * 0.3 + influenceScore
     }
 
     // Porte des cellules vers zone d'assemblage : se rapprocher du buildTarget ou chercher zone libre
@@ -1223,15 +1228,25 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       if (am.state !== 'alive') return am
       const roleConfig = ROLE_CONFIG[am.role]
 
-      // ── assemblingAm : chantier actif ────────────────────────────────────────
+      // ── assemblingAm : chantier actif — l'AM reste en mouvement pendant la construction ──
       const activeConstruction = constructionSites.some((site) => site.builderAmId === am.id)
       if (activeConstruction) {
+        const buildTarget = constructionSites.find((site) => site.builderAmId === am.id)?.origin ?? am.buildTarget
+        const base = { ...am, behaviorState: 'assemblingAm' as const, buildTarget, gatheredCells: [] }
+        const nextCooldown = Math.max(0, am.behaviorCooldown - 1)
+        if (nextCooldown > 0) {
+          return { ...base, behaviorCooldown: nextCooldown }
+        }
+        const target = findBehaviorTarget(base)
+        if (!target || (target.x === am.position.x && target.y === am.position.y)) {
+          return { ...base, behaviorCooldown: roleConfig.movementInterval }
+        }
         return {
-          ...am,
-          behaviorState: 'assemblingAm' as const,
-          buildTarget: constructionSites.find((site) => site.builderAmId === am.id)?.origin ?? am.buildTarget,
-          targetPosition: null,
-          gatheredCells: [],
+          ...base,
+          position: target,
+          absoluteCells: computeAbsoluteCells(am.cells, target),
+          targetPosition: target,
+          behaviorCooldown: roleConfig.movementInterval,
         }
       }
 
