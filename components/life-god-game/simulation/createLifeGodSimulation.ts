@@ -40,12 +40,12 @@ const TERRAFORM_COOLDOWN = 4
 const TERRAFORM_CELLS_PER_ACTION = 3
 const STABILITY_THRESHOLD = 8   // ticks consécutifs pour qu'une cellule soit considérée fixe (~0.7s)
 const MAX_ACTIVE_PATTERNS_PER_SEED = 3
-const CONSTRUCTION_SITE_SPACING = 8
+const CONSTRUCTION_SITE_SPACING = 34
 const STUCK_TICK_LIMIT = 18
 const EMERGENCY_ESCAPE_RADIUS = 8
 const MIN_AM_SEPARATION_CELLS = 2
-const BUILD_SITE_WORK_RADIUS_MIN = 4
-const BUILD_SITE_WORK_RADIUS_MAX = 8
+const BUILD_SITE_WORK_RADIUS_MIN = 8
+const BUILD_SITE_WORK_RADIUS_MAX = 14
 const TIME_SCALES: LifeGodTimeScale[] = [0.25, 0.5, 1, 2, 4, 8]
 const LINEAGE_COLORS = ['#69f0c1', '#ff8ad8', '#7ab6ff']
 const BUILD_PILE_OFFSETS: LifeGodRelativeCell[] = [
@@ -83,8 +83,8 @@ const ROLE_CONFIG: Record<
     reproductionEnergyMin: 52,
     reproductionEnergyCost: 22,
     reproductionCooldown: 60,
-    searchRadius: 12,
-    reproductionDistanceMin: 4,
+    searchRadius: 38,
+    reproductionDistanceMin: 14,
     movementInterval: 1,
     movementReach: 1,
   },
@@ -93,8 +93,8 @@ const ROLE_CONFIG: Record<
     reproductionEnergyMin: 40,
     reproductionEnergyCost: 16,
     reproductionCooldown: 40,
-    searchRadius: 16,
-    reproductionDistanceMin: 4,
+    searchRadius: 46,
+    reproductionDistanceMin: 16,
     movementInterval: 1,
     movementReach: 1,
   },
@@ -103,8 +103,8 @@ const ROLE_CONFIG: Record<
     reproductionEnergyMin: 38,
     reproductionEnergyCost: 18,
     reproductionCooldown: 35,
-    searchRadius: 20,
-    reproductionDistanceMin: 6,
+    searchRadius: 54,
+    reproductionDistanceMin: 18,
     movementInterval: 1,
     movementReach: 1,
   },
@@ -882,8 +882,9 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     return Math.max(MIN_BUILD_PILE_CELLS, Math.min(MAX_BUILD_PILE_CELLS, pattern.cells.length))
   }
 
-  function canPlaceConstruction(pattern: LifeGodAmPattern, origin: { x: number; y: number }) {
+  function canPlaceConstruction(pattern: LifeGodAmPattern, origin: { x: number; y: number }, builderAmId: string) {
     if (isConstructionOriginTooClose(origin)) return false
+    if (isConstructionOriginTooCloseToOtherAms(origin, builderAmId)) return false
     const cellsToCheck = [
       ...pattern.cells,
       ...BUILD_PILE_OFFSETS.slice(0, getRequiredCellCount(pattern)),
@@ -922,6 +923,13 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
 
   function isConstructionOriginTooClose(origin: LifeGodRelativeCell) {
     return constructionSites.some((site) => distanceBetweenCells(origin, site.origin) < CONSTRUCTION_SITE_SPACING)
+  }
+
+  function isConstructionOriginTooCloseToOtherAms(origin: LifeGodRelativeCell, builderAmId: string) {
+    return amEntities.some((am) => {
+      if (am.id === builderAmId) return false
+      return distanceBetweenCells(origin, averagePosition(am.absoluteCells)) < CONSTRUCTION_SITE_SPACING
+    })
   }
 
   function isReservedByOtherConstruction(x: number, y: number, siteId: string) {
@@ -1155,7 +1163,10 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   }
 
   function findBehaviorTarget(am: LifeGodAmEntity) {
-    const candidates = getMovementCandidates(am).filter((position) => canMoveAmTo(am, position))
+    const nearbyCandidates = getMovementCandidates(am).filter((position) => canMoveAmTo(am, position))
+    const candidates = nearbyCandidates.length > 0
+      ? nearbyCandidates
+      : getEmergencyMovementCandidates(am).filter((position) => canMoveAmTo(am, position))
     if (candidates.length === 0) return null
 
     const scored = candidates
@@ -1180,7 +1191,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
             x: parent.position.x + ox,
             y: parent.position.y + oy,
           }
-          if (!canPlaceConstruction(pattern, origin)) continue
+          if (!canPlaceConstruction(pattern, origin, parent.id)) continue
 
           let localDensity = 0
           for (const cell of pattern.cells) {
@@ -1747,6 +1758,26 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     }
   }
 
+  function wanderAm(am: LifeGodAmEntity): LifeGodAmEntity {
+    const roamingTarget = findBehaviorTarget({ ...am, behaviorState: 'wandering' as const })
+    if (!roamingTarget || (roamingTarget.x === am.position.x && roamingTarget.y === am.position.y)) {
+      return {
+        ...am,
+        behaviorState: 'wandering' as const,
+        targetPosition: roamingTarget,
+        behaviorCooldown: 0,
+      }
+    }
+    return {
+      ...am,
+      position: roamingTarget,
+      absoluteCells: computeAbsoluteCells(am.cells, roamingTarget),
+      behaviorState: 'wandering' as const,
+      targetPosition: roamingTarget,
+      behaviorCooldown: ROLE_CONFIG[am.role].movementInterval,
+    }
+  }
+
   function tickRoleBehavior() {
     const previousAmEntities = amEntities
     const nextAmEntities: LifeGodAmEntity[] = []
@@ -1780,18 +1811,17 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
 
         if (!targetCell) {
           const roamingTarget = findBehaviorTarget({ ...am, currentGoal: 'terraforming' })
+          if (!roamingTarget) {
+            return wanderAm({ ...am, currentGoal: 'terraforming', targetCell: null })
+          }
           return {
             ...am,
             currentGoal: 'terraforming',
-            behaviorState: roamingTarget ? 'wandering' as const : 'resting' as const,
+            behaviorState: 'wandering' as const,
             targetCell: null,
             targetPosition: roamingTarget,
-            ...(roamingTarget
-              ? {
-                  position: roamingTarget,
-                  absoluteCells: computeAbsoluteCells(am.cells, roamingTarget),
-                }
-              : {}),
+            position: roamingTarget,
+            absoluteCells: computeAbsoluteCells(am.cells, roamingTarget),
             behaviorCooldown: roleConfig.movementInterval,
           }
         }
@@ -1822,16 +1852,15 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
 
       if (!wantsToBuild && !site) {
         if (am.gatheredCells.length > 0 || am.carriedCell) releaseGatheredCells(am)
-        return {
+        return wanderAm({
           ...am,
           currentGoal: currentMission,
-          behaviorState: 'resting' as const,
           buildSite: null,
           buildTarget: null,
           targetCell: null,
           carriedCell: null,
           gatheredCells: [],
-        }
+        })
       }
 
       if (!site) {
@@ -1920,23 +1949,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
         }
       }
 
-      const roamingTarget = findBehaviorTarget(am)
-      if (!roamingTarget || (roamingTarget.x === am.position.x && roamingTarget.y === am.position.y)) {
-        return {
-          ...am,
-          behaviorState: am.reproductionCooldown > 0 ? 'resting' as const : 'wandering' as const,
-          targetPosition: roamingTarget,
-          behaviorCooldown: roleConfig.movementInterval,
-        }
-      }
-      return {
-        ...am,
-        position: roamingTarget,
-        absoluteCells: computeAbsoluteCells(am.cells, roamingTarget),
-        behaviorState: 'wandering' as const,
-        targetPosition: roamingTarget,
-        behaviorCooldown: roleConfig.movementInterval,
-      }
+      return wanderAm(am)
       })())
       nextAmEntities.push(nextAm)
     }
