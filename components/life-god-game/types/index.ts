@@ -5,7 +5,17 @@ export type LifeGodPhase = 'conwayEmergence' | 'firstAmHiddenForming' | 'amExpan
 export type LifeGodTimeScale = 0.25 | 0.5 | 1 | 2 | 4 | 8
 export type LifeGodAmRole = 'builder' | 'gatherer' | 'explorer'
 export type LifeGodInfluenceMode = 'attract' | 'repel'
-export type LifeGodAmBehaviorState = 'idle' | 'wandering' | 'seekingFixedCells' | 'harvestingCells' | 'carryingCells' | 'assemblingAm' | 'resting'
+export type LifeGodAmBehaviorState =
+  | 'idle'
+  | 'wandering'
+  | 'selectingBuildSite'
+  | 'seekingFixedCell'
+  | 'movingToFixedCell'
+  | 'harvestingCell'
+  | 'carryingCellToSite'
+  | 'depositingCell'
+  | 'assemblingAm'
+  | 'resting'
 
 export interface LifeGodRelativeCell {
   x: number
@@ -68,6 +78,10 @@ export interface LifeGodAmEntity {
   color: string
   targetPosition: LifeGodRelativeCell | null
   buildTarget: LifeGodRelativeCell | null
+  buildSite: LifeGodRelativeCell | null
+  targetCell: LifeGodRelativeCell | null
+  carriedCell: LifeGodRelativeCell | null
+  movementDirection: LifeGodRelativeCell | null
   gatheredCells: LifeGodRelativeCell[]
   reproductionCooldown: number
   behaviorCooldown: number
@@ -85,6 +99,11 @@ export interface LifeGodConstructionSite {
   }
   cells: LifeGodRelativeCell[]
   absoluteCells: LifeGodRelativeCell[]
+  depositedCells: LifeGodRelativeCell[]
+  reservedByAmId: string
+  targetPatternId: string
+  requiredCellCount: number
+  assemblyProgress: number
   createdAtCycle: number
   builderAmId: string
 }

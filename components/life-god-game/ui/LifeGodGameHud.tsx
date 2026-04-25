@@ -38,6 +38,13 @@ export function LifeGodGameHud({
   const selectedLineage = selectedAm
     ? simulationState?.amLineages.find((lineage) => lineage.id === selectedAm.lineageId) ?? null
     : null
+  const selectedSite = selectedAm
+    ? simulationState?.constructionSites.find((site) => site.builderAmId === selectedAm.id) ?? null
+    : null
+  const seekingAmCount = simulationState?.amEntities.filter((am) =>
+    am.behaviorState === 'seekingFixedCell' || am.behaviorState === 'movingToFixedCell'
+  ).length ?? 0
+  const carryingAmCount = simulationState?.amEntities.filter((am) => am.behaviorState === 'carryingCellToSite').length ?? 0
 
   return (
     <div
@@ -103,6 +110,8 @@ export function LifeGodGameHud({
                 <div>Entités vivantes actives : {simulationState.amEntities.length}</div>
                 <div>AM forming : {simulationState.formingAmCount}</div>
                 <div>AM adapting : {simulationState.adaptingAmCount}</div>
+                <div>AM en recherche : {seekingAmCount}</div>
+                <div>AM en transport : {carryingAmCount}</div>
                 <div>AM en assemblage : {simulationState.assemblingAmCount}</div>
                 <div>AM en mouvement : {simulationState.movingAmCount}</div>
               </div>
@@ -123,7 +132,12 @@ export function LifeGodGameHud({
                   <div>Comportement : {selectedAm.behaviorState}</div>
                   <div>Cooldown repro : {selectedAm.reproductionCooldown}</div>
                   <div>Pattern : {selectedAm.patternId}</div>
+                  <div>Target cell : {selectedAm.targetCell ? `${selectedAm.targetCell.x},${selectedAm.targetCell.y}` : 'aucune'}</div>
+                  <div>Build site : {selectedAm.buildSite ? `${selectedAm.buildSite.x},${selectedAm.buildSite.y}` : 'aucun'}</div>
                   <div>Cellules rassemblées : {selectedAm.gatheredCells.length}</div>
+                  {selectedSite && (
+                    <div>Chantier : {selectedSite.depositedCells.length} / {selectedSite.requiredCellCount}</div>
+                  )}
                 </div>
               )}
             </>
