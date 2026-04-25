@@ -1502,10 +1502,11 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
       setClippyHP(CLIPPY_MAX_HP); setPlayerHP(PLAYER_MAX_HP)
 
       if (effectivePhase === 2) {
-        // Phase 2 → DDR direct, sans combat à l'épée
+        // Phase 2 → DDR direct, sans combat à l'épée, sans musique combat
         setPhase('combat'); phaseRef.current = 'combat'
         setMessage("🎵 Tu veux te battre ? On danse d'abord !")
-        setBubble(true); dodge(); startMusic()
+        setBubble(true); dodge()
+        // Pas de startMusic() ici — le DDR gère sa propre musique
         setTimeout(() => setDdrPhase('active'), 900)
         return
       }

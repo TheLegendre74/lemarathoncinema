@@ -28,23 +28,16 @@ export default function ClippyDanceBattle({ onWin, onLose }: Props) {
   useEffect(() => { onWinRef.current  = onWin  }, [onWin])
   useEffect(() => { onLoseRef.current = onLose }, [onLose])
 
-  // Empêcher le scroll de page sur les flèches (preventDefault seulement, pas de stopPropagation)
-  // Note : stopImmediatePropagation bloquerait Phaser → les touches ne seraient jamais reçues
-  useEffect(() => {
-    const block = (e: KeyboardEvent) => {
-      if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
-        e.preventDefault()
-      }
-    }
-    window.addEventListener('keydown', block, { capture: false, passive: false })
-    return () => window.removeEventListener('keydown', block)
-  }, [])
+  // Les flèches directionnelles sont gérées DIRECTEMENT dans la scène Phaser
+  // via window.addEventListener (voir ci-dessous) — pas de blocker externe ici.
 
   useEffect(() => {
     if (!containerRef.current) return
     let destroyed = false
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let phaserGame: any = null
+    // Référence au listener clavier direct (bypasse le système focus/input de Phaser)
+    let activeKeyListener: ((e: KeyboardEvent) => void) | null = null
 
     ;(async () => {
       const Phaser = (await import('phaser')).default
@@ -68,7 +61,6 @@ export default function ClippyDanceBattle({ onWin, onLose }: Props) {
         private colX!: number[]
         private hitY!: number
         private spawnAdv!: number  // ms avant hit pour spawner la note
-        private keys!: Record<string, Phaser.Input.Keyboard.Key>
         private ended = false
         private discoBg!: Phaser.GameObjects.Rectangle
         private discoTween!: Phaser.Tweens.Tween
@@ -139,18 +131,24 @@ export default function ClippyDanceBattle({ onWin, onLose }: Props) {
             letterSpacing: 3, fontFamily: 'monospace',
           }).setOrigin(0.5, 0)
 
-          // ── Touches clavier ───────────────────────────────────────────────
-          // addCapture : Phaser appelle preventDefault sur ces touches (pas de scroll page)
-          this.input.keyboard!.addCapture(['LEFT', 'DOWN', 'UP', 'RIGHT'])
-          this.keys = {
-            LEFT:  this.input.keyboard!.addKey('LEFT'),
-            DOWN:  this.input.keyboard!.addKey('DOWN'),
-            UP:    this.input.keyboard!.addKey('UP'),
-            RIGHT: this.input.keyboard!.addKey('RIGHT'),
+          // ── Touches clavier — listener direct sur window ──────────────────
+          // Bypasse le système focus/canvas de Phaser : fonctionne quelle que
+          // soit la situation de focus du DOM.
+          const keyMap: Record<string, Dir> = {
+            ArrowLeft: 'left', ArrowDown: 'down',
+            ArrowUp:   'up',   ArrowRight: 'right',
           }
-          // Forcer le focus du canvas pour que Phaser reçoive les événements clavier
-          this.game.canvas.setAttribute('tabindex', '0')
-          this.game.canvas.focus()
+          const kbListener = (e: KeyboardEvent) => {
+            const dir = keyMap[e.key]
+            if (!dir) return
+            e.preventDefault()
+            e.stopImmediatePropagation()
+            if (this.ended) return
+            const elapsed = this.time.now - this.startTime
+            this.handleInput(dir, elapsed)
+          }
+          activeKeyListener = kbListener
+          window.addEventListener('keydown', kbListener, true)  // capture=true : priorité max
 
           // ── Musique ───────────────────────────────────────────────────────
           const music = this.sound.add('ddr-music', { loop: false, volume: 0.85 })
@@ -168,17 +166,7 @@ export default function ClippyDanceBattle({ onWin, onLose }: Props) {
         update() {
           if (this.ended) return
           const elapsed = this.time.now - this.startTime
-
-          // Input
-          const dirByKey: { key: string; dir: Dir }[] = [
-            { key: 'LEFT', dir: 'left' }, { key: 'DOWN', dir: 'down' },
-            { key: 'UP',   dir: 'up'  }, { key: 'RIGHT', dir: 'right' },
-          ]
-          for (const { key, dir } of dirByKey) {
-            if (Phaser.Input.Keyboard.JustDown(this.keys[key])) {
-              this.handleInput(dir, elapsed)
-            }
-          }
+          // Input géré via window.addEventListener dans create() — rien à faire ici
 
           // Spawn les notes dont le hit time approche
           while (
@@ -293,6 +281,10 @@ export default function ClippyDanceBattle({ onWin, onLose }: Props) {
 
     return () => {
       destroyed = true
+      if (activeKeyListener) {
+        window.removeEventListener('keydown', activeKeyListener, true)
+        activeKeyListener = null
+      }
       phaserGame?.destroy(true)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
