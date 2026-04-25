@@ -20,17 +20,18 @@ const TICK_MS = 90
 const RANDOM_FILL_CHANCE = 0.18
 const PROTO_SCAN_INTERVAL = 6
 const MAX_LINEAGES = 3
-const MAX_TOTAL_AMS = 11
+const MAX_TOTAL_AMS = 10
 const MAX_AMS_PER_LINEAGE = 4
-const MAX_COMPLETE_AM_BEFORE_SCAN_STOPS = 11
-const TARGET_CREATED_AMS = 10 // 1 fondatrice + 10 créées = 11 total
+const MAX_COMPLETE_AM_BEFORE_SCAN_STOPS = 10  // gel Conway à 10 AM vivantes
 const PROTO_CONSCIOUSNESS_MIN = 10
 const PROTO_METAMORPHOSIS_MIN = 15
 const CONSTRUCTION_STEP_INTERVAL = 3
 const PROTO_GATHER_INTERVAL = 2
 const SEARCH_RADIUS = 12
-const MIN_FORMATION_CYCLES = Math.round((3 * 60 * 1000) / TICK_MS)
-const MAX_FORMATION_CYCLES = Math.round((10 * 60 * 1000) / TICK_MS)
+const MIN_FORMATION_CYCLES = Math.round((10 * 1000) / TICK_MS)  // ~10 secondes
+const MAX_FORMATION_CYCLES = Math.round((20 * 1000) / TICK_MS)  // ~20 secondes
+const CELLS_NEEDED_FOR_AM = 10  // cellules à récolter avant de créer une AM
+const GATHERING_RADIUS = 10     // rayon de récolte autour de l'AM
 const MAX_ACTIVE_PATTERNS_PER_SEED = 3
 const TIME_SCALES: LifeGodTimeScale[] = [0.25, 0.5, 1, 2, 4, 8]
 const LINEAGE_COLORS = ['#69f0c1', '#ff8ad8', '#7ab6ff']
@@ -118,6 +119,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     const formingAmCount = amEntities.filter((am) => am.state === 'forming' || am.state === 'hiddenForming').length
     const movingAmCount = amEntities.filter((am) => am.state === 'alive' && am.behaviorState === 'wandering').length
     const assemblingAmCount = amEntities.filter((am) => am.behaviorState === 'assemblingAm').length
+    const gatheredCellsTotal = amEntities.reduce((sum, am) => sum + am.gatheredCells.length, 0)
     const frozenMatterCount = matterFrozen && frozenMatterGrid
       ? frozenMatterGrid.reduce((total, cell) => total + cell, 0)
       : 0
@@ -150,11 +152,12 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       visibleAmCount: completeAmCount,
       movingAmCount,
       assemblingAmCount,
+      gatheredCellsTotal,
       activePatternIds,
       maxActivePatternsPerSeed: MAX_ACTIVE_PATTERNS_PER_SEED,
       frozenMatterCount: Math.max(0, frozenMatterCount),
       createdAmCount,
-      targetAmCount: TARGET_CREATED_AMS,
+      targetAmCount: MAX_COMPLETE_AM_BEFORE_SCAN_STOPS - 1,
       aliveAmTarget: MAX_COMPLETE_AM_BEFORE_SCAN_STOPS,
       gridWidth: GRID_WIDTH,
       gridHeight: GRID_HEIGHT,
@@ -763,6 +766,57 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     return true
   }
 
+  // Récolte 1 cellule Conway libre dans le rayon de l'AM.
+  // La cellule est retirée de current (et du snapshot figé si besoin) :
+  // elle est physiquement "ramassée" par l'AM.
+  function gatherNearbyCell(am: LifeGodAmEntity): LifeGodAmEntity {
+    const center = averagePosition(am.absoluteCells)
+    const gathered = [...am.gatheredCells]
+    const gatheredKeys = new Set(gathered.map((c) => cellKey(c.x, c.y)))
+    const reservedByOthers = new Set(
+      amEntities
+        .filter((other) => other.id !== am.id)
+        .flatMap((other) => other.gatheredCells)
+        .map((c) => cellKey(c.x, c.y))
+    )
+
+    for (let r = 1; r <= GATHERING_RADIUS; r += 1) {
+      for (let oy = -r; oy <= r; oy += 1) {
+        for (let ox = -r; ox <= r; ox += 1) {
+          if (Math.max(Math.abs(ox), Math.abs(oy)) !== r) continue
+          const x = Math.round(center.x) + ox
+          const y = Math.round(center.y) + oy
+          if (x <= 0 || y <= 0 || x >= GRID_WIDTH - 1 || y >= GRID_HEIGHT - 1) continue
+          const key = cellKey(x, y)
+          if (gatheredKeys.has(key) || reservedByOthers.has(key)) continue
+          if (!hasLivingCell(x, y)) continue
+          if (isReservedByEntity(x, y) || isReservedByConstruction(x, y) || isReservedByProto(x, y)) continue
+
+          // Retirer la cellule du monde — elle appartient maintenant à l'AM
+          const idx = indexAt(x, y)
+          current[idx] = 0
+          if (matterFrozen && frozenMatterGrid) {
+            frozenMatterGrid[idx] = 0
+          }
+
+          gathered.push({ x, y })
+          return { ...am, gatheredCells: gathered }
+        }
+      }
+    }
+    return am
+  }
+
+  // Restitue les cellules récoltées par une AM au monde (et au snapshot figé si actif).
+  function releaseGatheredCells(am: LifeGodAmEntity) {
+    for (const cell of am.gatheredCells) {
+      if (cell.x <= 0 || cell.y <= 0 || cell.x >= GRID_WIDTH - 1 || cell.y >= GRID_HEIGHT - 1) continue
+      const idx = indexAt(cell.x, cell.y)
+      current[idx] = 1
+      if (matterFrozen && frozenMatterGrid) frozenMatterGrid[idx] = 1
+    }
+  }
+
   function countLivingNeighbors(x: number, y: number) {
     let count = 0
     for (let oy = -1; oy <= 1; oy += 1) {
@@ -888,6 +942,13 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       const roleConfig = ROLE_CONFIG[am.role]
       if (am.state !== 'alive') continue
       if (constructionSites.some((site) => site.builderAmId === am.id)) continue
+      // Ignorer les AM déjà engagées dans le flux de récolte/assemblage
+      if (
+        am.behaviorState === 'seekingFixedCells' ||
+        am.behaviorState === 'harvestingCells' ||
+        am.behaviorState === 'carryingCells' ||
+        am.behaviorState === 'assemblingAm'
+      ) continue
       if (am.reproductionCooldown > 0 || am.energy < roleConfig.reproductionEnergyMin) continue
 
       const pattern = choosePatternForBirth()
@@ -1018,6 +1079,22 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     const lineageDistance = Math.abs(center.x - lineageAnchor.x) + Math.abs(center.y - lineageAnchor.y)
     const influenceScore = getInfluenceScore(position, am)
 
+    // Cherche activement des cellules : se diriger vers les zones denses
+    if (am.behaviorState === 'seekingFixedCells' || am.behaviorState === 'harvestingCells') {
+      return density * 22 + otherDistance * 0.5 - lineageDistance * 0.2 + influenceScore
+    }
+
+    // Porte des cellules vers zone d'assemblage : se rapprocher du buildTarget ou chercher zone libre
+    if (am.behaviorState === 'carryingCells') {
+      if (am.buildTarget) {
+        const distToTarget = Math.abs(center.x - am.buildTarget.x) + Math.abs(center.y - am.buildTarget.y)
+        return -distToTarget * 12 + density * 0.5 + influenceScore
+      }
+      // Pas de cible : chercher une zone peu dense pour poser l'assemblage
+      return -density * 6 + otherDistance * 2 + influenceScore
+    }
+
+    // Comportement normal selon le rôle
     if (am.role === 'explorer') {
       return lineageDistance * 4 + otherDistance * 3 - density * 1.5 + influenceScore
     }
@@ -1027,26 +1104,170 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     return density * 2.5 + otherDistance * 0.8 - lineageDistance * 4 + influenceScore
   }
 
+  // Tente de créer un chantier à partir des cellules récoltées par une AM.
+  // Crée le chantier et renvoie l'AM mise à jour (assemblingAm), ou null si impossible.
+  // La lignée n'est créée QUE si un emplacement valide est trouvé.
+  function tryCreateSiteFromGathered(am: LifeGodAmEntity): LifeGodAmEntity | null {
+    if (!canCreateMoreVisibleAms()) return null
+    if (constructionSites.some((site) => site.builderAmId === am.id)) return null
+    const roleConfig = ROLE_CONFIG[am.role]
+
+    const pattern = choosePatternForBirth()
+    const existingLineage = amLineages.find((item) => item.patternId === pattern.id) ?? null
+    if (!existingLineage && activePatternIds.length >= MAX_ACTIVE_PATTERNS_PER_SEED) return null
+    if (existingLineage && populationForLineage(existingLineage.id) >= MAX_AMS_PER_LINEAGE) return null
+
+    // Chercher l'emplacement AVANT de créer la lignée (évite les lignées orphelines)
+    const origin = findNearbyConstructionOrigin(am, pattern)
+    if (!origin) return null
+
+    const lineage = existingLineage ?? createLineage(pattern)
+    if (populationForLineage(lineage.id) >= MAX_AMS_PER_LINEAGE) return null
+
+    const site: LifeGodConstructionSite = {
+      id: `site-${am.id}-${generation}`,
+      lineageId: lineage.id,
+      patternId: pattern.id,
+      origin,
+      cells: pattern.cells,
+      absoluteCells: computeAbsoluteCells(pattern.cells, origin),
+      createdAtCycle: generation,
+      builderAmId: am.id,
+    }
+    constructionSites = [...constructionSites, site]
+
+    return {
+      ...am,
+      energy: Math.max(0, am.energy - roleConfig.reproductionEnergyCost),
+      behaviorState: 'assemblingAm' as const,
+      buildTarget: origin,
+      reproductionCooldown: roleConfig.reproductionCooldown,
+      gatheredCells: [],
+    }
+  }
+
   function tickRoleBehavior() {
     amEntities = amEntities.map((am) => {
       if (am.state !== 'alive') return am
       const roleConfig = ROLE_CONFIG[am.role]
+
+      // ── assemblingAm : chantier actif ────────────────────────────────────────
       const activeConstruction = constructionSites.some((site) => site.builderAmId === am.id)
       if (activeConstruction) {
         return {
           ...am,
-          behaviorState: 'assemblingAm',
+          behaviorState: 'assemblingAm' as const,
           buildTarget: constructionSites.find((site) => site.builderAmId === am.id)?.origin ?? am.buildTarget,
           targetPosition: null,
+          gatheredCells: [],
         }
       }
 
+      const wantsToReproduce = canCreateMoreVisibleAms() &&
+        am.reproductionCooldown <= 0 &&
+        am.energy >= roleConfig.reproductionEnergyMin
+
+      // ── seekingFixedCells / harvestingCells : chercher et récolter ───────────
+      // Chaque tick : récolte 1 cellule Conway libre dans le rayon
+      if (am.behaviorState === 'seekingFixedCells' || am.behaviorState === 'harvestingCells') {
+        if (!wantsToReproduce) {
+          releaseGatheredCells(am)
+          return { ...am, behaviorState: 'wandering' as const, gatheredCells: [] }
+        }
+
+        // Récolter 1 cellule ce tick
+        const amGathered = gatherNearbyCell(am)
+
+        if (amGathered.gatheredCells.length >= CELLS_NEEDED_FOR_AM) {
+          // Assez récoltées → chercher zone d'assemblage et passer en carryingCells
+          const pattern = choosePatternForBirth()
+          const buildOrigin = findNearbyConstructionOrigin(amGathered, pattern)
+          return {
+            ...amGathered,
+            behaviorState: 'carryingCells' as const,
+            buildTarget: buildOrigin,   // null si aucune zone trouvée maintenant
+            behaviorCooldown: roleConfig.movementInterval,
+          }
+        }
+
+        // Pas encore assez : se déplacer vers les cellules
+        const nextCooldown = Math.max(0, amGathered.behaviorCooldown - 1)
+        if (nextCooldown > 0) {
+          return {
+            ...amGathered,
+            behaviorCooldown: nextCooldown,
+            behaviorState: amGathered.gatheredCells.length > 0
+              ? 'harvestingCells' as const
+              : 'seekingFixedCells' as const,
+          }
+        }
+
+        const target = findBehaviorTarget(amGathered)
+        if (!target || (target.x === amGathered.position.x && target.y === amGathered.position.y)) {
+          return {
+            ...amGathered,
+            behaviorCooldown: roleConfig.movementInterval,
+            behaviorState: amGathered.gatheredCells.length > 0
+              ? 'harvestingCells' as const
+              : 'seekingFixedCells' as const,
+          }
+        }
+
+        return {
+          ...amGathered,
+          position: target,
+          absoluteCells: computeAbsoluteCells(amGathered.cells, target),
+          behaviorState: amGathered.gatheredCells.length > 0
+            ? 'harvestingCells' as const
+            : 'seekingFixedCells' as const,
+          targetPosition: target,
+          behaviorCooldown: roleConfig.movementInterval,
+        }
+      }
+
+      // ── carryingCells : se déplacer et tenter de créer un chantier ──────────
+      if (am.behaviorState === 'carryingCells') {
+        if (!canCreateMoreVisibleAms() || am.gatheredCells.length < CELLS_NEEDED_FOR_AM) {
+          releaseGatheredCells(am)
+          return { ...am, behaviorState: 'wandering' as const, gatheredCells: [] }
+        }
+        const nextCooldown = Math.max(0, am.behaviorCooldown - 1)
+        if (nextCooldown > 0) {
+          return { ...am, behaviorCooldown: nextCooldown }
+        }
+        // Tenter de créer le chantier à chaque déplacement
+        const assembled = tryCreateSiteFromGathered(am)
+        if (assembled) return assembled
+        // Pas encore de zone libre trouvée : continuer à se déplacer
+        const target = findBehaviorTarget(am)
+        if (!target) {
+          return { ...am, behaviorCooldown: roleConfig.movementInterval }
+        }
+        return {
+          ...am,
+          position: target,
+          absoluteCells: computeAbsoluteCells(am.cells, target),
+          behaviorState: 'carryingCells' as const,
+          targetPosition: target,
+          behaviorCooldown: roleConfig.movementInterval,
+        }
+      }
+
+      // ── wandering / idle / resting : comportement standard ───────────────────
       const nextBehaviorCooldown = Math.max(0, am.behaviorCooldown - 1)
       if (nextBehaviorCooldown > 0) {
         return {
           ...am,
           behaviorCooldown: nextBehaviorCooldown,
-          behaviorState: am.reproductionCooldown <= roleConfig.reproductionCooldown / 2 ? 'seekingCells' : am.behaviorState,
+          behaviorState: wantsToReproduce ? 'seekingFixedCells' as const : am.behaviorState,
+        }
+      }
+
+      if (wantsToReproduce) {
+        return {
+          ...am,
+          behaviorState: 'seekingFixedCells' as const,
+          behaviorCooldown: roleConfig.movementInterval,
         }
       }
 
@@ -1055,30 +1276,23 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
         return {
           ...am,
           behaviorCooldown: roleConfig.movementInterval,
-          behaviorState: 'idle',
+          behaviorState: 'idle' as const,
           targetPosition: null,
         }
       }
-
-      const nextBehaviorState: LifeGodAmBehaviorState =
-        canCreateMoreVisibleAms() && am.reproductionCooldown <= roleConfig.reproductionCooldown / 2
-          ? 'seekingCells'
-          : 'wandering'
-
       if (target.x === am.position.x && target.y === am.position.y) {
         return {
           ...am,
           behaviorCooldown: roleConfig.movementInterval,
-          behaviorState: 'resting',
+          behaviorState: 'resting' as const,
           targetPosition: target,
         }
       }
-
       return {
         ...am,
         position: target,
         absoluteCells: computeAbsoluteCells(am.cells, target),
-        behaviorState: nextBehaviorState,
+        behaviorState: 'wandering' as const,
         targetPosition: target,
         behaviorCooldown: roleConfig.movementInterval,
       }
