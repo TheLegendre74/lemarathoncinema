@@ -43,6 +43,7 @@ const MAX_ACTIVE_PATTERNS_PER_SEED = 3
 const CONSTRUCTION_SITE_SPACING = 8
 const STUCK_TICK_LIMIT = 18
 const EMERGENCY_ESCAPE_RADIUS = 8
+const MIN_AM_SEPARATION_CELLS = 2
 const BUILD_SITE_WORK_RADIUS_MIN = 4
 const BUILD_SITE_WORK_RADIUS_MAX = 8
 const TIME_SCALES: LifeGodTimeScale[] = [0.25, 0.5, 1, 2, 4, 8]
@@ -1288,18 +1289,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
 
   function canMoveAmTo(am: LifeGodAmEntity, position: { x: number; y: number }) {
     if (!canMoveAmThroughStaticObstacles(am, position)) return false
-    for (const cell of am.cells) {
-      const x = position.x + cell.x
-      const y = position.y + cell.y
-      if (
-        amEntities.some(
-          (other) => other.id !== am.id && other.absoluteCells.some((item) => item.x === x && item.y === y)
-        )
-      ) {
-        return false
-      }
-    }
-    return true
+    return countAmSeparationViolationsAt(am, position) === 0
   }
 
   function isBlockedByConstructionForAm(am: LifeGodAmEntity, x: number, y: number) {
@@ -1320,19 +1310,37 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     return true
   }
 
-  function countAmOverlapAt(am: LifeGodAmEntity, position: { x: number; y: number }) {
+  function countAmSeparationViolationsAt(am: LifeGodAmEntity, position: { x: number; y: number }) {
     const candidateCells = computeAbsoluteCells(am.cells, position)
-    let overlap = 0
+    let violations = 0
     for (const cell of candidateCells) {
-      if (
-        amEntities.some(
-          (other) => other.id !== am.id && other.absoluteCells.some((item) => item.x === cell.x && item.y === cell.y)
-        )
-      ) {
-        overlap += 1
+      for (const other of amEntities) {
+        if (other.id === am.id) continue
+        for (const item of other.absoluteCells) {
+          const distance = Math.max(Math.abs(item.x - cell.x), Math.abs(item.y - cell.y))
+          if (distance <= MIN_AM_SEPARATION_CELLS) {
+            violations += MIN_AM_SEPARATION_CELLS - distance + 1
+          }
+        }
       }
     }
-    return overlap
+    return violations
+  }
+
+  function getNearestAmCenter(position: { x: number; y: number }, am: LifeGodAmEntity) {
+    const center = getAmCenter(am, position)
+    let nearest: LifeGodRelativeCell | null = null
+    let nearestDistance = Infinity
+    for (const other of amEntities) {
+      if (other.id === am.id) continue
+      const otherCenter = averagePosition(other.absoluteCells)
+      const distance = Math.abs(center.x - otherCenter.x) + Math.abs(center.y - otherCenter.y)
+      if (distance < nearestDistance) {
+        nearestDistance = distance
+        nearest = otherCenter
+      }
+    }
+    return nearest
   }
 
   function getEmergencyMovementCandidates(am: LifeGodAmEntity) {
@@ -1349,16 +1357,22 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   }
 
   function moveOutOfAmCollision(am: LifeGodAmEntity): LifeGodAmEntity | null {
-    const currentOverlap = countAmOverlapAt(am, am.position)
-    if (currentOverlap === 0) return null
+    const currentViolations = countAmSeparationViolationsAt(am, am.position)
+    if (currentViolations === 0) return null
+    const nearestCenter = getNearestAmCenter(am.position, am)
+    const currentCenter = getAmCenter(am)
 
     const candidates = getEmergencyMovementCandidates(am)
       .filter((position) => canMoveAmThroughStaticObstacles(am, position))
       .map((position) => {
-        const overlap = countAmOverlapAt(am, position)
+        const violations = countAmSeparationViolationsAt(am, position)
         const step = { x: position.x - am.position.x, y: position.y - am.position.y }
         const travel = Math.max(Math.abs(step.x), Math.abs(step.y))
         const otherDistance = getMinDistanceToOtherAms(position, am)
+        const awayVector = nearestCenter
+          ? { x: currentCenter.x - nearestCenter.x, y: currentCenter.y - nearestCenter.y }
+          : { x: 0, y: 0 }
+        const movesAway = step.x * awayVector.x + step.y * awayVector.y > 0 ? 18 : 0
         const keepsDirection =
           am.movementDirection &&
           step.x === am.movementDirection.x &&
@@ -1368,14 +1382,14 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
         return {
           position,
           step,
-          overlap,
-          score: -overlap * 500 + Math.min(otherDistance, 20) * 8 - travel * 6 + keepsDirection,
+          violations,
+          score: -violations * 500 + Math.min(otherDistance, 20) * 8 + movesAway - travel * 6 + keepsDirection,
         }
       })
       .sort((a, b) => b.score - a.score)
 
     const best = candidates[0]
-    if (!best || best.overlap >= currentOverlap) {
+    if (!best || best.violations >= currentViolations) {
       return {
         ...am,
         behaviorCooldown: 0,
