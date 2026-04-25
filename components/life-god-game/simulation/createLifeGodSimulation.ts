@@ -15,8 +15,8 @@ import type {
   LifeGodTimeScale,
 } from '../types'
 
-const GRID_WIDTH = 220
-const GRID_HEIGHT = 140
+const GRID_WIDTH = 320
+const GRID_HEIGHT = 200
 const TICK_MS = 90
 const RANDOM_FILL_CHANCE = 0.18
 const PROTO_SCAN_INTERVAL = 6
