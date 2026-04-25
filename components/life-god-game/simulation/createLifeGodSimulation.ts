@@ -1782,7 +1782,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
         }
       }
 
-      if (!wantsToBuild) {
+      if (!wantsToBuild && !site) {
         if (am.gatheredCells.length > 0 || am.carriedCell) releaseGatheredCells(am)
         return {
           ...am,
