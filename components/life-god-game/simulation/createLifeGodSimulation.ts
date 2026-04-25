@@ -901,12 +901,12 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     )
   }
 
-  function isFixedCellAvailable(x: number, y: number, amId: string) {
+  function isFixedCellAvailable(x: number, y: number, amId: string, requireStable = true) {
     if (x <= 0 || y <= 0 || x >= GRID_WIDTH - 1 || y >= GRID_HEIGHT - 1) return false
     if (!hasLivingCell(x, y)) return false
     if (isReservedByEntity(x, y) || isReservedByConstruction(x, y) || isReservedByProto(x, y)) return false
     if (isCellReservedByOtherAm(x, y, amId)) return false
-    return matterFrozen || stabilityGrid[indexAt(x, y)] >= STABILITY_THRESHOLD
+    return matterFrozen || !requireStable || stabilityGrid[indexAt(x, y)] >= STABILITY_THRESHOLD
   }
 
   function isFrozenMatterAvailable(x: number, y: number, amId: string) {
@@ -983,13 +983,16 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   }
 
   function findNearestStableCell(cx: number, cy: number, amId: string): { x: number; y: number } | null {
-    for (let r = 1; r <= CELL_ATTRACTION_RADIUS; r += 1) {
-      for (let oy = -r; oy <= r; oy += 1) {
-        for (let ox = -r; ox <= r; ox += 1) {
-          if (Math.max(Math.abs(ox), Math.abs(oy)) !== r) continue
-          const x = cx + ox
-          const y = cy + oy
-          if (isFixedCellAvailable(x, y, amId)) return { x, y }
+    for (let pass = 0; pass < 2; pass += 1) {
+      const requireStable = pass === 0
+      for (let r = 1; r <= CELL_ATTRACTION_RADIUS; r += 1) {
+        for (let oy = -r; oy <= r; oy += 1) {
+          for (let ox = -r; ox <= r; ox += 1) {
+            if (Math.max(Math.abs(ox), Math.abs(oy)) !== r) continue
+            const x = cx + ox
+            const y = cy + oy
+            if (isFixedCellAvailable(x, y, amId, requireStable)) return { x, y }
+          }
         }
       }
     }
@@ -1447,7 +1450,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   }
 
   function harvestTargetCell(am: LifeGodAmEntity): LifeGodAmEntity {
-    if (!am.targetCell || !isFixedCellAvailable(am.targetCell.x, am.targetCell.y, am.id)) {
+    if (!am.targetCell || !isFixedCellAvailable(am.targetCell.x, am.targetCell.y, am.id, false)) {
       return { ...am, behaviorState: 'seekingFixedCell' as const, targetCell: null }
     }
     const idx = indexAt(am.targetCell.x, am.targetCell.y)
@@ -1612,7 +1615,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       }
 
       if (site && (am.behaviorState === 'seekingFixedCell' || am.behaviorState === 'movingToFixedCell')) {
-        const targetCell = am.targetCell && isFixedCellAvailable(am.targetCell.x, am.targetCell.y, am.id)
+        const targetCell = am.targetCell && isFixedCellAvailable(am.targetCell.x, am.targetCell.y, am.id, false)
           ? am.targetCell
           : findNearestStableCell(Math.round(getAmCenter(am).x), Math.round(getAmCenter(am).y), am.id)
         if (!targetCell) return { ...am, behaviorState: 'wandering' as const, targetCell: null, buildSite: site.origin }
