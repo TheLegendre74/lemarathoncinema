@@ -28,17 +28,16 @@ export default function ClippyDanceBattle({ onWin, onLose }: Props) {
   useEffect(() => { onWinRef.current  = onWin  }, [onWin])
   useEffect(() => { onLoseRef.current = onLose }, [onLose])
 
-  // Bloquer les flèches sur window (capture phase) pour ne pas scroller la page
-  // ni déclencher d'autres listeners de ClippyEgg
+  // Empêcher le scroll de page sur les flèches (preventDefault seulement, pas de stopPropagation)
+  // Note : stopImmediatePropagation bloquerait Phaser → les touches ne seraient jamais reçues
   useEffect(() => {
     const block = (e: KeyboardEvent) => {
       if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
-        e.stopImmediatePropagation()
         e.preventDefault()
       }
     }
-    window.addEventListener('keydown', block, true)
-    return () => window.removeEventListener('keydown', block, true)
+    window.addEventListener('keydown', block, { capture: false, passive: false })
+    return () => window.removeEventListener('keydown', block)
   }, [])
 
   useEffect(() => {
@@ -141,12 +140,17 @@ export default function ClippyDanceBattle({ onWin, onLose }: Props) {
           }).setOrigin(0.5, 0)
 
           // ── Touches clavier ───────────────────────────────────────────────
+          // addCapture : Phaser appelle preventDefault sur ces touches (pas de scroll page)
+          this.input.keyboard!.addCapture(['LEFT', 'DOWN', 'UP', 'RIGHT'])
           this.keys = {
             LEFT:  this.input.keyboard!.addKey('LEFT'),
             DOWN:  this.input.keyboard!.addKey('DOWN'),
             UP:    this.input.keyboard!.addKey('UP'),
             RIGHT: this.input.keyboard!.addKey('RIGHT'),
           }
+          // Forcer le focus du canvas pour que Phaser reçoive les événements clavier
+          this.game.canvas.setAttribute('tabindex', '0')
+          this.game.canvas.focus()
 
           // ── Musique ───────────────────────────────────────────────────────
           const music = this.sound.add('ddr-music', { loop: false, volume: 0.85 })
@@ -297,11 +301,13 @@ export default function ClippyDanceBattle({ onWin, onLose }: Props) {
   return (
     <div
       ref={containerRef}
+      tabIndex={-1}
       style={{
         position: 'fixed',
         inset: 0,
         zIndex: 99985,
         background: '#06021a',
+        outline: 'none',
       }}
     />
   )

@@ -831,6 +831,17 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
   const effectivePhase = activeGodPhase > 0 ? activeGodPhase : combatPhase
   const [showGodModePanel, setShowGodModePanel] = useState(false)
 
+  // Sync God Mode en temps réel si modifié depuis un autre onglet / la page admin
+  useEffect(() => {
+    function onStorage(e: StorageEvent) {
+      if (e.key !== LS_GOD_PHASE) return
+      const v = parseInt(e.newValue ?? '0')
+      setActiveGodPhase(v >= 1 && v <= 9 ? v : 0)
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
+
   function applyGodPhase(p: number) {
     try {
       if (p === 0) localStorage.removeItem(LS_GOD_PHASE)
@@ -889,6 +900,11 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
 
     const newMsg = pickFrom(normalQueue, newNormalReplies)
     setMessage(newMsg); setBubble(true)
+    // Reset l'état normal pour refléter la nouvelle phase immédiatement
+    if (phase !== 'combat') {
+      setMisses(0); setTired(false)
+      setDdrPhase('idle')
+    }
     setActiveGodPhase(p)
     setShowGodModePanel(false)
   }
@@ -1010,7 +1026,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
   const playerDeathsRef    = useRef(0)
   const [showAbandon,      setShowAbandon]     = useState(false)   // conservé pour compat mini-jeu
   const [showDeathScreen,  setShowDeathScreen] = useState(false)
-  const [deathReason,      setDeathReason]     = useState<'hp'|'duel'>('hp')
+  const [deathReason,      setDeathReason]     = useState<'hp'|'duel'|'ddr'>('hp')
   const [showLarbinMsg,    setShowLarbinMsg]   = useState(false)
   const [showLarbinModal,  setShowLarbinModal] = useState(false)
   const [hellPhase,        setHellPhase]       = useState<'idle'|'flames'|'grab'|'dialog'|'drag'|'scream'|'fade'>('idle')
@@ -1334,7 +1350,10 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
     playerDeathsRef.current = 0; setPlayerDeaths(0)
     const resumeHP = deathReason === 'duel' ? 10 : PLAYER_MAX_HP
     playerHPRef.current = resumeHP; setPlayerHP(resumeHP)
-    if (deathReason === 'duel') {
+    if (deathReason === 'ddr') {
+      // Après une défaite DDR : reset complet des HP (combat entier, pas juste +10)
+      clippyHPRef.current = CLIPPY_MAX_HP; setClippyHP(CLIPPY_MAX_HP)
+    } else if (deathReason === 'duel') {
       const newClippyHP = Math.min(CLIPPY_MAX_HP, clippyHPRef.current + 10)
       clippyHPRef.current = newClippyHP; setClippyHP(newClippyHP)
     }
@@ -1599,7 +1618,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
           }}
           onLose={() => {
             setDdrPhase('idle')
-            setDeathReason('duel')
+            setDeathReason('ddr')
             setShowDeathScreen(true)
           }}
         />
