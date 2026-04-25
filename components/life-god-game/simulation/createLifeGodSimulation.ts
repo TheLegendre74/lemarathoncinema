@@ -42,6 +42,8 @@ const STABILITY_THRESHOLD = 8   // ticks consécutifs pour qu'une cellule soit c
 const MAX_ACTIVE_PATTERNS_PER_SEED = 3
 const CONSTRUCTION_SITE_SPACING = 8
 const STUCK_TICK_LIMIT = 18
+const BUILD_SITE_WORK_RADIUS_MIN = 4
+const BUILD_SITE_WORK_RADIUS_MAX = 8
 const TIME_SCALES: LifeGodTimeScale[] = [0.25, 0.5, 1, 2, 4, 8]
 const LINEAGE_COLORS = ['#69f0c1', '#ff8ad8', '#7ab6ff']
 const BUILD_PILE_OFFSETS: LifeGodRelativeCell[] = [
@@ -1514,11 +1516,20 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   function isMovementMissionState(state: LifeGodAmBehaviorState) {
     return [
       'wandering',
+      'selectingBuildSite',
       'seekingFixedCell',
       'movingToFixedCell',
       'carryingCellToSite',
+      'assemblingAm',
       'seekingFrozenMatter',
     ].includes(state)
+  }
+
+  function shouldForceUnstuck(am: LifeGodAmEntity) {
+    if (isMovementMissionState(am.behaviorState)) return true
+    if (am.carriedCell) return true
+    if (am.currentGoal === 'expandingPopulation' && am.buildSite) return true
+    return am.currentGoal === 'terraforming' && currentMission === 'terraforming'
   }
 
   function forceUnstuckMove(am: LifeGodAmEntity) {
@@ -1591,7 +1602,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
 
     if (
       !moved &&
-      isMovementMissionState(tracked.behaviorState) &&
+      shouldForceUnstuck(tracked) &&
       stationaryTicks >= STUCK_TICK_LIMIT &&
       generation >= tracked.memory.unstuckUntilCycle
     ) {
@@ -1634,10 +1645,48 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     return null
   }
 
+  function canDepositFrom(am: LifeGodAmEntity, site: LifeGodConstructionSite) {
+    return distanceToCell(am, site.origin) <= BUILD_SITE_WORK_RADIUS_MIN
+  }
+
+  function findBuildSiteWorkTarget(am: LifeGodAmEntity, site: LifeGodConstructionSite) {
+    const candidates: { target: LifeGodRelativeCell; score: number }[] = []
+    const footprint = new Set(getConstructionFootprintCells(site).map((cell) => cellKey(cell.x, cell.y)))
+
+    for (let radius = BUILD_SITE_WORK_RADIUS_MIN; radius <= BUILD_SITE_WORK_RADIUS_MAX; radius += 1) {
+      for (let oy = -radius; oy <= radius; oy += 1) {
+        for (let ox = -radius; ox <= radius; ox += 1) {
+          if (Math.max(Math.abs(ox), Math.abs(oy)) !== radius) continue
+          const target = { x: site.origin.x + ox, y: site.origin.y + oy }
+          if (!isValidBuildCoordinate(target.x, target.y)) continue
+          if (footprint.has(cellKey(target.x, target.y))) continue
+          if (isReservedByOtherConstruction(target.x, target.y, site.id)) continue
+          const otherDistance = amEntities.reduce((closest, other) => {
+            if (other.id === am.id) return closest
+            return Math.min(closest, distanceBetweenCells(averagePosition(other.absoluteCells), target))
+          }, 999)
+          const score = -radius * 8 + Math.min(otherDistance, 18) * 3 + Math.random()
+          candidates.push({ target, score })
+        }
+      }
+    }
+
+    candidates.sort((a, b) => b.score - a.score)
+    return candidates[0]?.target ?? site.origin
+  }
+
   function depositCarriedCell(am: LifeGodAmEntity, site: LifeGodConstructionSite): LifeGodAmEntity {
     if (!am.carriedCell) return { ...am, behaviorState: 'seekingFixedCell' as const, gatheredCells: [] }
     const placement = findDepositCell(site)
-    if (!placement) return { ...am, behaviorState: 'resting' as const }
+    if (!placement) {
+      return {
+        ...am,
+        behaviorState: 'carryingCellToSite' as const,
+        buildSite: site.origin,
+        buildTarget: findBuildSiteWorkTarget(am, site),
+        behaviorCooldown: 0,
+      }
+    }
 
     current[indexAt(placement.x, placement.y)] = 1
     if (matterFrozen && frozenMatterGrid) frozenMatterGrid[indexAt(placement.x, placement.y)] = 1
@@ -1751,15 +1800,27 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
         return createBuildSiteMission({ ...am, currentGoal: 'expandingPopulation', behaviorState: 'selectingBuildSite' as const })
       }
 
+      if (site && am.carriedCell && am.behaviorState !== 'carryingCellToSite' && am.behaviorState !== 'assemblingAm') {
+        return {
+          ...am,
+          behaviorState: 'carryingCellToSite' as const,
+          buildSite: site.origin,
+          buildTarget: findBuildSiteWorkTarget(am, site),
+          targetCell: null,
+          behaviorCooldown: 0,
+        }
+      }
+
       if (site && am.behaviorState === 'assemblingAm') {
+        const workTarget = findBuildSiteWorkTarget(am, site)
         const nextCooldown = Math.max(0, am.behaviorCooldown - 1)
-        if (nextCooldown > 0) return { ...am, buildSite: site.origin, buildTarget: site.origin, behaviorCooldown: nextCooldown }
-        const moved = moveToward({ ...am, buildSite: site.origin, buildTarget: site.origin }, site.origin)
+        if (nextCooldown > 0) return { ...am, buildSite: site.origin, buildTarget: workTarget, behaviorCooldown: nextCooldown }
+        const moved = moveToward({ ...am, buildSite: site.origin, buildTarget: workTarget }, workTarget)
         return {
           ...moved,
           behaviorState: 'assemblingAm' as const,
           buildSite: site.origin,
-          buildTarget: site.origin,
+          buildTarget: workTarget,
           gatheredCells: [],
           carriedCell: null,
         }
@@ -1796,17 +1857,18 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
 
       if (site && am.behaviorState === 'carryingCellToSite') {
         if (!am.carriedCell) return { ...am, behaviorState: 'seekingFixedCell' as const, gatheredCells: [] }
-        if (distanceToCell(am, site.origin) <= 2) {
+        if (canDepositFrom(am, site)) {
           return depositCarriedCell({ ...am, behaviorState: 'depositingCell' as const }, site)
         }
+        const workTarget = findBuildSiteWorkTarget(am, site)
         const nextCooldown = Math.max(0, am.behaviorCooldown - 1)
-        if (nextCooldown > 0) return { ...am, buildSite: site.origin, buildTarget: site.origin, behaviorCooldown: nextCooldown }
-        const moved = moveToward({ ...am, buildSite: site.origin, buildTarget: site.origin }, site.origin)
+        if (nextCooldown > 0) return { ...am, buildSite: site.origin, buildTarget: workTarget, behaviorCooldown: nextCooldown }
+        const moved = moveToward({ ...am, buildSite: site.origin, buildTarget: workTarget }, workTarget)
         return {
           ...moved,
           behaviorState: 'carryingCellToSite' as const,
           buildSite: site.origin,
-          buildTarget: site.origin,
+          buildTarget: workTarget,
         }
       }
 
