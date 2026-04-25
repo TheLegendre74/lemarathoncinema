@@ -57,8 +57,8 @@ const ROLE_CONFIG: Record<
     reproductionCooldown: 60,
     searchRadius: 12,
     reproductionDistanceMin: 4,
-    movementInterval: 10,
-    movementReach: 2,
+    movementInterval: 1,
+    movementReach: 1,
   },
   gatherer: {
     energyGain: 0.28,
@@ -67,8 +67,8 @@ const ROLE_CONFIG: Record<
     reproductionCooldown: 40,
     searchRadius: 16,
     reproductionDistanceMin: 4,
-    movementInterval: 7,
-    movementReach: 2,
+    movementInterval: 1,
+    movementReach: 1,
   },
   explorer: {
     energyGain: 0.2,
@@ -77,8 +77,8 @@ const ROLE_CONFIG: Record<
     reproductionCooldown: 35,
     searchRadius: 20,
     reproductionDistanceMin: 6,
-    movementInterval: 5,
-    movementReach: 3,
+    movementInterval: 1,
+    movementReach: 1,
   },
 }
 
@@ -1152,19 +1152,19 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     if (am.behaviorState === 'assemblingAm') {
       if (am.buildTarget) {
         const distToSite = Math.abs(center.x - am.buildTarget.x) + Math.abs(center.y - am.buildTarget.y)
-        return -distToSite * 5 + otherDistance * 2 + influenceScore
+        return -distToSite * 5 + Math.random() * 4 + influenceScore
       }
-      return otherDistance * 3 + density * 0.3 + influenceScore
+      return density * 2 + Math.random() * 4 + influenceScore
     }
 
     // Porte des cellules vers zone d'assemblage : se rapprocher du buildTarget ou chercher zone libre
     if (am.behaviorState === 'carryingCells') {
       if (am.buildTarget) {
         const distToTarget = Math.abs(center.x - am.buildTarget.x) + Math.abs(center.y - am.buildTarget.y)
-        return -distToTarget * 12 + density * 0.5 + influenceScore
+        return -distToTarget * 12 + density * 0.5 + Math.random() * 2 + influenceScore
       }
-      // Pas de cible : chercher une zone peu dense pour poser l'assemblage
-      return -density * 6 + otherDistance * 2 + influenceScore
+      // Pas de cible : chercher zone peu dense, jitter pour briser les égalités
+      return -density * 4 + Math.random() * 4 + influenceScore
     }
 
     // Comportement normal selon le rôle
@@ -1235,8 +1235,8 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
           return { ...base, behaviorCooldown: nextCooldown }
         }
         const target = findBehaviorTarget(base)
-        if (!target || (target.x === am.position.x && target.y === am.position.y)) {
-          return { ...base, behaviorCooldown: roleConfig.movementInterval }
+        if (!target) {
+          return { ...base, behaviorCooldown: 1 }
         }
         return {
           ...base,
@@ -1288,10 +1288,10 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
         }
 
         const target = findBehaviorTarget(amGathered)
-        if (!target || (target.x === amGathered.position.x && target.y === amGathered.position.y)) {
+        if (!target) {
           return {
             ...amGathered,
-            behaviorCooldown: roleConfig.movementInterval,
+            behaviorCooldown: 1,
             behaviorState: amGathered.gatheredCells.length > 0
               ? 'harvestingCells' as const
               : 'seekingFixedCells' as const,
