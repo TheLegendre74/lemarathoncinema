@@ -33,6 +33,7 @@ const MAX_FORMATION_CYCLES = Math.round((20 * 1000) / TICK_MS)  // ~20 secondes
 const CELLS_NEEDED_FOR_AM = 10  // cellules à récolter avant de créer une AM
 const GATHERING_RADIUS = 15     // rayon de récolte autour de l'AM
 const CELL_ATTRACTION_RADIUS = 40  // portée de l'attraction vers les cellules libres
+const STABILITY_THRESHOLD = 14  // ticks consécutifs pour qu'une cellule soit considérée fixe (~1.3s)
 const MAX_ACTIVE_PATTERNS_PER_SEED = 3
 const TIME_SCALES: LifeGodTimeScale[] = [0.25, 0.5, 1, 2, 4, 8]
 const LINEAGE_COLORS = ['#69f0c1', '#ff8ad8', '#7ab6ff']
@@ -108,6 +109,8 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   let intervalId: ReturnType<typeof setInterval> | null = null
   let stepAccumulator = 0
   let frozenMatterGrid: Uint8Array | null = null
+  let stabilityGrid = createGrid()  // nombre de ticks consécutifs où chaque cellule est restée vivante
+  let prevGrid = createGrid()       // snapshot de la grille au tick précédent (pour calculer la stabilité)
   const listeners = new Set<(state: LifeGodSimulationState) => void>()
 
   function createGrid() {
@@ -767,9 +770,9 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     return true
   }
 
-  // Récolte 1 cellule Conway libre dans le rayon de l'AM.
-  // La cellule est retirée de current (et du snapshot figé si besoin) :
-  // elle est physiquement "ramassée" par l'AM.
+  // Récolte 1 cellule fixe de préférence (stable), sinon n'importe quelle cellule disponible.
+  // Passe 0 : uniquement cellules avec stabilityGrid >= STABILITY_THRESHOLD.
+  // Passe 1 : repli sur toute cellule libre dans le rayon.
   function gatherNearbyCell(am: LifeGodAmEntity): LifeGodAmEntity {
     const center = averagePosition(am.absoluteCells)
     const gathered = [...am.gatheredCells]
@@ -781,27 +784,27 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
         .map((c) => cellKey(c.x, c.y))
     )
 
-    for (let r = 1; r <= GATHERING_RADIUS; r += 1) {
-      for (let oy = -r; oy <= r; oy += 1) {
-        for (let ox = -r; ox <= r; ox += 1) {
-          if (Math.max(Math.abs(ox), Math.abs(oy)) !== r) continue
-          const x = Math.round(center.x) + ox
-          const y = Math.round(center.y) + oy
-          if (x <= 0 || y <= 0 || x >= GRID_WIDTH - 1 || y >= GRID_HEIGHT - 1) continue
-          const key = cellKey(x, y)
-          if (gatheredKeys.has(key) || reservedByOthers.has(key)) continue
-          if (!hasLivingCell(x, y)) continue
-          if (isReservedByEntity(x, y) || isReservedByConstruction(x, y) || isReservedByProto(x, y)) continue
+    for (let pass = 0; pass < 2; pass += 1) {
+      const requireStable = pass === 0
+      for (let r = 1; r <= GATHERING_RADIUS; r += 1) {
+        for (let oy = -r; oy <= r; oy += 1) {
+          for (let ox = -r; ox <= r; ox += 1) {
+            if (Math.max(Math.abs(ox), Math.abs(oy)) !== r) continue
+            const x = Math.round(center.x) + ox
+            const y = Math.round(center.y) + oy
+            if (x <= 0 || y <= 0 || x >= GRID_WIDTH - 1 || y >= GRID_HEIGHT - 1) continue
+            const key = cellKey(x, y)
+            if (gatheredKeys.has(key) || reservedByOthers.has(key)) continue
+            if (!hasLivingCell(x, y)) continue
+            if (isReservedByEntity(x, y) || isReservedByConstruction(x, y) || isReservedByProto(x, y)) continue
+            if (requireStable && stabilityGrid[indexAt(x, y)] < STABILITY_THRESHOLD) continue
 
-          // Retirer la cellule du monde — elle appartient maintenant à l'AM
-          const idx = indexAt(x, y)
-          current[idx] = 0
-          if (matterFrozen && frozenMatterGrid) {
-            frozenMatterGrid[idx] = 0
+            const idx = indexAt(x, y)
+            current[idx] = 0
+            if (matterFrozen && frozenMatterGrid) frozenMatterGrid[idx] = 0
+            gathered.push({ x, y })
+            return { ...am, gatheredCells: gathered }
           }
-
-          gathered.push({ x, y })
-          return { ...am, gatheredCells: gathered }
         }
       }
     }
@@ -818,23 +821,59 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     }
   }
 
-  // Trouve la cellule libre la plus proche (non réservée) depuis un point central.
-  // Utilisée pour l'attraction à longue portée pendant la récolte.
-  function findNearestAvailableCell(cx: number, cy: number): { x: number; y: number } | null {
-    for (let r = 1; r <= CELL_ATTRACTION_RADIUS; r += 1) {
-      for (let oy = -r; oy <= r; oy += 1) {
-        for (let ox = -r; ox <= r; ox += 1) {
-          if (Math.max(Math.abs(ox), Math.abs(oy)) !== r) continue
-          const x = cx + ox
-          const y = cy + oy
-          if (x <= 0 || y <= 0 || x >= GRID_WIDTH - 1 || y >= GRID_HEIGHT - 1) continue
-          if (!hasLivingCell(x, y)) continue
-          if (isReservedByEntity(x, y) || isReservedByConstruction(x, y) || isReservedByProto(x, y)) continue
-          return { x, y }
+  // Trouve la cellule fixe la plus proche (puis repli sur n'importe quelle cellule libre).
+  // Passe 0 : uniquement cellules stables (stabilityGrid >= threshold).
+  // Passe 1 : repli sur toute cellule disponible si aucune fixe trouvée.
+  function findNearestStableCell(cx: number, cy: number): { x: number; y: number } | null {
+    for (let pass = 0; pass < 2; pass += 1) {
+      const requireStable = pass === 0
+      for (let r = 1; r <= CELL_ATTRACTION_RADIUS; r += 1) {
+        for (let oy = -r; oy <= r; oy += 1) {
+          for (let ox = -r; ox <= r; ox += 1) {
+            if (Math.max(Math.abs(ox), Math.abs(oy)) !== r) continue
+            const x = cx + ox
+            const y = cy + oy
+            if (x <= 0 || y <= 0 || x >= GRID_WIDTH - 1 || y >= GRID_HEIGHT - 1) continue
+            if (!hasLivingCell(x, y)) continue
+            if (isReservedByEntity(x, y) || isReservedByConstruction(x, y) || isReservedByProto(x, y)) continue
+            if (requireStable && stabilityGrid[indexAt(x, y)] < STABILITY_THRESHOLD) continue
+            return { x, y }
+          }
         }
       }
     }
     return null
+  }
+
+  // Compte les voisins stables (fixes) autour des cellules d'une AM à une position candidate.
+  function getStableDensityAt(position: { x: number; y: number }, am: LifeGodAmEntity) {
+    let count = 0
+    for (const cell of am.cells) {
+      for (let oy = -1; oy <= 1; oy += 1) {
+        for (let ox = -1; ox <= 1; ox += 1) {
+          if (ox === 0 && oy === 0) continue
+          const nx = position.x + cell.x + ox
+          const ny = position.y + cell.y + oy
+          if (nx <= 0 || ny <= 0 || nx >= GRID_WIDTH - 1 || ny >= GRID_HEIGHT - 1) continue
+          const idx = indexAt(nx, ny)
+          if (current[idx] === 1 && stabilityGrid[idx] >= STABILITY_THRESHOLD) count += 1
+        }
+      }
+    }
+    return count
+  }
+
+  // Met à jour stabilityGrid en comparant l'état courant au tick précédent.
+  // Cellule vivante dans les deux ticks → stabilité++. Sinon → reset à 0.
+  function updateStabilityGrid() {
+    for (let i = 0; i < current.length; i += 1) {
+      if (current[i] === 1 && prevGrid[i] === 1) {
+        if (stabilityGrid[i] < 255) stabilityGrid[i] += 1
+      } else {
+        stabilityGrid[i] = 0
+      }
+    }
+    prevGrid.set(current)
   }
 
   function countLivingNeighbors(x: number, y: number) {
@@ -908,11 +947,11 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     const candidates = getMovementCandidates(am).filter((position) => canMoveAmTo(am, position))
     if (candidates.length === 0) return null
 
-    // Pré-calcul de la cellule la plus proche (une seule fois par AM, pas par candidat)
+    // Pré-calcul de la cellule fixe la plus proche (une seule fois par AM, pas par candidat)
     let nearestCell: { x: number; y: number } | null = null
     if (am.behaviorState === 'seekingFixedCells' || am.behaviorState === 'harvestingCells') {
       const c = averagePosition(am.absoluteCells)
-      nearestCell = findNearestAvailableCell(Math.round(c.x), Math.round(c.y))
+      nearestCell = findNearestStableCell(Math.round(c.x), Math.round(c.y))
     }
 
     const scored = candidates
@@ -1105,13 +1144,15 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     const lineageDistance = Math.abs(center.x - lineageAnchor.x) + Math.abs(center.y - lineageAnchor.y)
     const influenceScore = getInfluenceScore(position, am)
 
-    // Cherche activement des cellules : attraction forte vers la cellule libre la plus proche
+    // Cherche les cellules FIXES : attraction forte vers la cellule stable la plus proche
     if (am.behaviorState === 'seekingFixedCells' || am.behaviorState === 'harvestingCells') {
+      const stableDensity = getStableDensityAt(position, am)
       if (nearestCell) {
         const distToNearest = Math.abs(center.x - nearestCell.x) + Math.abs(center.y - nearestCell.y)
-        return -distToNearest * 20 + density * 10 + otherDistance * 0.3 + influenceScore
+        // Priorité : se rapprocher des cellules fixes (-dist*25), bonus si déjà entouré de cellules fixes
+        return -distToNearest * 25 + stableDensity * 20 + otherDistance * 0.2 + influenceScore
       }
-      return density * 22 + otherDistance * 0.5 - lineageDistance * 0.2 + influenceScore
+      return stableDensity * 22 + otherDistance * 0.5 + influenceScore
     }
 
     // Porte des cellules vers zone d'assemblage : se rapprocher du buildTarget ou chercher zone libre
@@ -1371,6 +1412,8 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     constructionSites = []
     firstAmCandidate = null
     selectedAmId = null
+    stabilityGrid = createGrid()
+    prevGrid = createGrid()
 
     for (let y = 1; y < GRID_HEIGHT - 1; y += 1) {
       for (let x = 1; x < GRID_WIDTH - 1; x += 1) {
@@ -1378,6 +1421,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       }
     }
 
+    prevGrid.set(current)
     generation = 0
     refreshAliveCount()
     initializeFirstAmCandidate()
@@ -1436,6 +1480,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     syncConstructionCells()
     refreshAliveCount()
     tryStartReproduction()
+    updateStabilityGrid()    // calcule la stabilité des cellules pour guider les AM
 
     // ── Condition de gel : seules les cellules normales se figent ─────────────
     // Condition : firstAmRevealed && 11 AM alive && Conway encore actif
@@ -1538,6 +1583,8 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       constructionSites = []
       firstAmCandidate = null
       selectedAmId = null
+      stabilityGrid = createGrid()
+      prevGrid = createGrid()
       emit()
     },
     randomize() {
