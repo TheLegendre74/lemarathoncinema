@@ -94,6 +94,9 @@ export interface LifeGodAmEntity {
   memory: {
     lastTargetCell: LifeGodRelativeCell | null
     lastBuildSite: LifeGodRelativeCell | null
+    lastPosition: LifeGodRelativeCell | null
+    stationaryTicks: number
+    unstuckUntilCycle: number
     terraformedCells: number
   }
   reproductionCooldown: number

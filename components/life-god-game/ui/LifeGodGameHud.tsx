@@ -10,6 +10,7 @@ interface LifeGodGameHudProps {
   onRandomize: () => void
   onDecreaseTimeScale: () => void
   onIncreaseTimeScale: () => void
+  onToggleMiniature: () => void
 }
 
 const controlButtonStyle: CSSProperties = {
@@ -33,6 +34,7 @@ export function LifeGodGameHud({
   onRandomize,
   onDecreaseTimeScale,
   onIncreaseTimeScale,
+  onToggleMiniature,
 }: LifeGodGameHudProps) {
   const selectedAm = simulationState?.amEntities.find((am) => am.id === simulationState.selectedAmId) ?? null
   const selectedLineage = selectedAm
@@ -55,12 +57,17 @@ export function LifeGodGameHud({
         gap: 12,
         alignItems: 'flex-start',
         flexWrap: 'wrap',
+        minWidth: 0,
+        height: '100%',
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        boxSizing: 'border-box',
         padding: '14px 18px',
-        borderBottom: '1px solid rgba(255,255,255,0.07)',
+        borderLeft: '1px solid rgba(255,255,255,0.07)',
         background: 'rgba(4,6,11,0.6)',
       }}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 380 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', minWidth: 0 }}>
         <div
           style={{
             padding: '0.45rem 0.7rem',
@@ -87,6 +94,7 @@ export function LifeGodGameHud({
             color: status === 'error' ? '#fca5a5' : 'var(--text2)',
             fontSize: 12,
             lineHeight: 1.45,
+            overflowWrap: 'anywhere',
           }}
         >
           {status === 'loading' && 'Initialisation du rendu et de la simulation...'}
@@ -184,6 +192,9 @@ export function LifeGodGameHud({
           </button>
           <button type="button" onClick={onIncreaseTimeScale} style={controlButtonStyle}>
             +
+          </button>
+          <button type="button" onClick={onToggleMiniature} style={controlButtonStyle}>
+            Mini
           </button>
         </div>
         <div

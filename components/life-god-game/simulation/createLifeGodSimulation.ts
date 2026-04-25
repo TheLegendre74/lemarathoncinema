@@ -21,8 +21,9 @@ const TICK_MS = 90
 const RANDOM_FILL_CHANCE = 0.18
 const PROTO_SCAN_INTERVAL = 6
 const MAX_LINEAGES = 3
-const MAX_TOTAL_AMS = 10
-const MAX_AMS_PER_LINEAGE = 4
+const MIN_COMPLETE_AM_BEFORE_TERRAFORMING = 10
+const MAX_TOTAL_AMS = 15
+const MAX_AMS_PER_LINEAGE = 5
 const MAX_COMPLETE_AM_BEFORE_SCAN_STOPS = 10  // gel Conway à 10 AM vivantes
 const PROTO_CONSCIOUSNESS_MIN = 10
 const PROTO_METAMORPHOSIS_MIN = 15
@@ -39,6 +40,8 @@ const TERRAFORM_COOLDOWN = 4
 const TERRAFORM_CELLS_PER_ACTION = 3
 const STABILITY_THRESHOLD = 8   // ticks consécutifs pour qu'une cellule soit considérée fixe (~0.7s)
 const MAX_ACTIVE_PATTERNS_PER_SEED = 3
+const CONSTRUCTION_SITE_SPACING = 8
+const STUCK_TICK_LIMIT = 18
 const TIME_SCALES: LifeGodTimeScale[] = [0.25, 0.5, 1, 2, 4, 8]
 const LINEAGE_COLORS = ['#69f0c1', '#ff8ad8', '#7ab6ff']
 const BUILD_PILE_OFFSETS: LifeGodRelativeCell[] = [
@@ -131,6 +134,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   let intervalId: ReturnType<typeof setInterval> | null = null
   let stepAccumulator = 0
   let terrainGrid = createGrid()
+  let movedMatterSourceGrid = createGrid()
   let frozenMatterGrid: Uint8Array | null = null
   let stabilityGrid = createGrid()  // nombre de ticks consécutifs où chaque cellule est restée vivante
   let prevGrid = createGrid()       // snapshot de la grille au tick précédent (pour calculer la stabilité)
@@ -144,6 +148,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     const completeAmCount = amEntities.filter((am) => am.state === 'alive').length
     const adaptingAmCount = amEntities.filter((am) => am.state === 'adapting').length
     const formingAmCount = amEntities.filter((am) => am.state === 'forming' || am.state === 'hiddenForming').length
+    const committedAmCount = completeAmCount + adaptingAmCount + formingAmCount + constructionSites.length
     const movingAmCount = amEntities.filter((am) =>
       am.state === 'alive' &&
       ['wandering', 'movingToFixedCell', 'carryingCellToSite'].includes(am.behaviorState)
@@ -183,7 +188,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       firstAmRevealed,
       firstAmRevealRemainingCycles: firstAmCandidate ? Math.max(0, firstAmCandidate.revealAtCycle - generation) : 0,
       amPopulationStable,
-      scanningActive: !amPopulationStable && completeAmCount < MAX_COMPLETE_AM_BEFORE_SCAN_STOPS,
+      scanningActive: !amPopulationStable && committedAmCount < MIN_COMPLETE_AM_BEFORE_TERRAFORMING,
       maxCompleteAmBeforeScanStops: MAX_COMPLETE_AM_BEFORE_SCAN_STOPS,
       completeAmCount,
       formingAmCount,
@@ -203,8 +208,8 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       rockCount,
       terraformationProgress: terraformableTotal > 0 ? terraformedCount / terraformableTotal : 0,
       createdAmCount,
-      targetAmCount: MAX_COMPLETE_AM_BEFORE_SCAN_STOPS - 1,
-      aliveAmTarget: MAX_COMPLETE_AM_BEFORE_SCAN_STOPS,
+      targetAmCount: MIN_COMPLETE_AM_BEFORE_TERRAFORMING - 1,
+      aliveAmTarget: MIN_COMPLETE_AM_BEFORE_TERRAFORMING,
       gridWidth: GRID_WIDTH,
       gridHeight: GRID_HEIGHT,
       cells: current,
@@ -255,6 +260,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     for (let i = 0; i < current.length; i += 1) {
       frozenMatterGrid[i] = current[i]
     }
+    suppressMovedMatterSources(frozenMatterGrid)
     // Retirer les cellules AM du snapshot : les AM ne sont pas de la matière figée
     for (const am of amEntities) {
       for (const cell of am.absoluteCells) {
@@ -283,8 +289,16 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     return amEntities.filter((am) => am.state === 'alive').length
   }
 
+  function getFormingOrAdaptingAmCount() {
+    return amEntities.filter((am) => am.state === 'forming' || am.state === 'hiddenForming' || am.state === 'adapting').length
+  }
+
+  function getCommittedAmCount() {
+    return getCompleteAmCount() + getFormingOrAdaptingAmCount() + constructionSites.length
+  }
+
   function isScanningActive() {
-    return getCompleteAmCount() < MAX_COMPLETE_AM_BEFORE_SCAN_STOPS
+    return getCommittedAmCount() < MIN_COMPLETE_AM_BEFORE_TERRAFORMING
   }
 
   function canCreateMoreVisibleAms() {
@@ -297,12 +311,18 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       matterFrozen &&
       activePatternIds.length >= 1 &&
       activePatternIds.length <= MAX_ACTIVE_PATTERNS_PER_SEED
-    return !stable && getCompleteAmCount() < MAX_COMPLETE_AM_BEFORE_SCAN_STOPS
+    return !stable && getCommittedAmCount() < MIN_COMPLETE_AM_BEFORE_TERRAFORMING
+  }
+
+  function canFinishStartedAm() {
+    return getCommittedAmCount() < MAX_TOTAL_AMS
   }
 
   function shouldRunTerraformingMission() {
     return (
-      getCompleteAmCount() >= MAX_COMPLETE_AM_BEFORE_SCAN_STOPS &&
+      getCompleteAmCount() >= MIN_COMPLETE_AM_BEFORE_TERRAFORMING &&
+      getFormingOrAdaptingAmCount() === 0 &&
+      constructionSites.length === 0 &&
       !conwayActive &&
       matterFrozen &&
       frozenMatterGrid !== null
@@ -325,7 +345,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       firstAmRevealed &&
       conwayActive &&
       !matterFrozen &&
-      getCompleteAmCount() >= MAX_COMPLETE_AM_BEFORE_SCAN_STOPS
+      getCompleteAmCount() >= MIN_COMPLETE_AM_BEFORE_TERRAFORMING
     )
   }
 
@@ -376,7 +396,9 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   }
 
   function isReservedByConstruction(x: number, y: number) {
-    return constructionSites.some((site) => site.absoluteCells.some((cell) => cell.x === x && cell.y === y))
+    return constructionSites.some((site) =>
+      getConstructionFootprintCells(site).some((cell) => cell.x === x && cell.y === y)
+    )
   }
 
   function syncAmCells() {
@@ -531,6 +553,9 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       memory: {
         lastTargetCell: null,
         lastBuildSite: null,
+        lastPosition: origin,
+        stationaryTicks: 0,
+        unstuckUntilCycle: 0,
         terraformedCells: 0,
       },
       reproductionCooldown: roleConfig.reproductionCooldown,
@@ -854,6 +879,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   }
 
   function canPlaceConstruction(pattern: LifeGodAmPattern, origin: { x: number; y: number }) {
+    if (isConstructionOriginTooClose(origin)) return false
     const cellsToCheck = [
       ...pattern.cells,
       ...BUILD_PILE_OFFSETS.slice(0, getRequiredCellCount(pattern)),
@@ -881,6 +907,26 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     return cells
   }
 
+  function getConstructionFootprintCells(site: LifeGodConstructionSite) {
+    const pattern = LIFE_GOD_AM_PATTERNS.find((entry) => entry.id === site.targetPatternId)
+    return pattern ? getBuildFootprintCells(pattern, site.origin) : site.absoluteCells
+  }
+
+  function distanceBetweenCells(a: LifeGodRelativeCell, b: LifeGodRelativeCell) {
+    return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y))
+  }
+
+  function isConstructionOriginTooClose(origin: LifeGodRelativeCell) {
+    return constructionSites.some((site) => distanceBetweenCells(origin, site.origin) < CONSTRUCTION_SITE_SPACING)
+  }
+
+  function isReservedByOtherConstruction(x: number, y: number, siteId: string) {
+    return constructionSites.some((site) =>
+      site.id !== siteId &&
+      getConstructionFootprintCells(site).some((cell) => cell.x === x && cell.y === y)
+    )
+  }
+
   function clearNormalMatterAt(cells: LifeGodRelativeCell[], keep = new Set<string>()) {
     for (const cell of cells) {
       if (cell.x <= 0 || cell.y <= 0 || cell.x >= GRID_WIDTH - 1 || cell.y >= GRID_HEIGHT - 1) continue
@@ -890,6 +936,22 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       current[idx] = 0
       if (matterFrozen && frozenMatterGrid) frozenMatterGrid[idx] = 0
       stabilityGrid[idx] = 0
+    }
+  }
+
+  function markMatterMovedFrom(cell: LifeGodRelativeCell) {
+    if (cell.x <= 0 || cell.y <= 0 || cell.x >= GRID_WIDTH - 1 || cell.y >= GRID_HEIGHT - 1) return
+    const idx = indexAt(cell.x, cell.y)
+    movedMatterSourceGrid[idx] = 1
+    current[idx] = 0
+    next[idx] = 0
+    stabilityGrid[idx] = 0
+    if (matterFrozen && frozenMatterGrid) frozenMatterGrid[idx] = 0
+  }
+
+  function suppressMovedMatterSources(grid: Uint8Array) {
+    for (let i = 0; i < movedMatterSourceGrid.length; i += 1) {
+      if (movedMatterSourceGrid[i] === 1) grid[i] = 0
     }
   }
 
@@ -1207,7 +1269,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       const lineage = amLineages.find((entry) => entry.id === item.lineageId)
       const pattern = LIFE_GOD_AM_PATTERNS.find((entry) => entry.id === item.patternId)
       if (!lineage || !pattern) continue
-      if (!canCreateMoreVisibleAms()) continue
+      if (!canFinishStartedAm()) continue
       if (populationForLineage(lineage.id) >= MAX_AMS_PER_LINEAGE) continue
       spawnAm(lineage, pattern, item.origin)
     }
@@ -1449,13 +1511,101 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     }
   }
 
+  function isMovementMissionState(state: LifeGodAmBehaviorState) {
+    return [
+      'wandering',
+      'seekingFixedCell',
+      'movingToFixedCell',
+      'carryingCellToSite',
+      'seekingFrozenMatter',
+    ].includes(state)
+  }
+
+  function forceUnstuckMove(am: LifeGodAmEntity) {
+    const currentCenter = getAmCenter(am)
+    const target = am.targetCell ?? am.buildSite ?? am.targetPosition ?? currentCenter
+    const candidates = getMovementCandidates(am)
+      .filter((position) => position.x !== am.position.x || position.y !== am.position.y)
+      .filter((position) => canMoveAmTo(am, position))
+      .map((position) => {
+        const center = getAmCenter(am, position)
+        const targetDistance = Math.abs(center.x - target.x) + Math.abs(center.y - target.y)
+        const otherDistance = getMinDistanceToOtherAms(position, am)
+        const siteDistance = constructionSites.reduce((closest, site) => {
+          if (site.builderAmId === am.id) return closest
+          return Math.min(closest, distanceBetweenCells(center, site.origin))
+        }, 999)
+        const step = { x: position.x - am.position.x, y: position.y - am.position.y }
+        const reverses = am.movementDirection && step.x === -am.movementDirection.x && step.y === -am.movementDirection.y ? -2 : 0
+        return {
+          position,
+          step,
+          score: -targetDistance * 6 + Math.min(otherDistance, 18) * 5 + Math.min(siteDistance, 18) * 4 + reverses + Math.random(),
+        }
+      })
+      .sort((a, b) => b.score - a.score)
+
+    const best = candidates[0]
+    if (!best) {
+      return {
+        ...am,
+        targetCell: am.carriedCell ? am.targetCell : null,
+        movementDirection: null,
+        behaviorCooldown: 0,
+        memory: {
+          ...am.memory,
+          stationaryTicks: 0,
+          unstuckUntilCycle: generation + STUCK_TICK_LIMIT,
+        },
+      }
+    }
+
+    return {
+      ...am,
+      position: best.position,
+      absoluteCells: computeAbsoluteCells(am.cells, best.position),
+      targetPosition: target,
+      movementDirection: best.step,
+      behaviorCooldown: 0,
+      memory: {
+        ...am.memory,
+        lastPosition: best.position,
+        stationaryTicks: 0,
+        unstuckUntilCycle: generation + STUCK_TICK_LIMIT,
+      },
+    }
+  }
+
+  function withMotionMemory(previous: LifeGodAmEntity, nextAm: LifeGodAmEntity) {
+    if (nextAm.state !== 'alive') return nextAm
+    const moved = previous.position.x !== nextAm.position.x || previous.position.y !== nextAm.position.y
+    const stationaryTicks = moved ? 0 : previous.memory.stationaryTicks + 1
+    const tracked = {
+      ...nextAm,
+      memory: {
+        ...nextAm.memory,
+        lastPosition: nextAm.position,
+        stationaryTicks,
+      },
+    }
+
+    if (
+      !moved &&
+      isMovementMissionState(tracked.behaviorState) &&
+      stationaryTicks >= STUCK_TICK_LIMIT &&
+      generation >= tracked.memory.unstuckUntilCycle
+    ) {
+      return forceUnstuckMove(tracked)
+    }
+
+    return tracked
+  }
+
   function harvestTargetCell(am: LifeGodAmEntity): LifeGodAmEntity {
     if (!am.targetCell || !isFixedCellAvailable(am.targetCell.x, am.targetCell.y, am.id, false)) {
       return { ...am, behaviorState: 'seekingFixedCell' as const, targetCell: null }
     }
-    const idx = indexAt(am.targetCell.x, am.targetCell.y)
-    current[idx] = 0
-    if (matterFrozen && frozenMatterGrid) frozenMatterGrid[idx] = 0
+    markMatterMovedFrom(am.targetCell)
     return {
       ...am,
       behaviorState: 'carryingCellToSite' as const,
@@ -1477,6 +1627,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       if (occupied.has(key)) continue
       if (!isValidBuildCoordinate(cell.x, cell.y)) continue
       if (isReservedByEntity(cell.x, cell.y) || isReservedByProto(cell.x, cell.y)) continue
+      if (isReservedByOtherConstruction(cell.x, cell.y, site.id)) continue
       if (hasLivingCell(cell.x, cell.y)) continue
       return cell
     }
@@ -1516,7 +1667,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     for (let amIndex = 0; amIndex < previousAmEntities.length; amIndex += 1) {
       const am = previousAmEntities[amIndex]
       amEntities = [...nextAmEntities, ...previousAmEntities.slice(amIndex)]
-      const nextAm = ((): LifeGodAmEntity => {
+      const nextAm = withMotionMemory(am, ((): LifeGodAmEntity => {
       if (am.state !== 'alive') return am
       const roleConfig = ROLE_CONFIG[am.role]
       const collisionEscape = moveOutOfAmCollision(am)
@@ -1686,7 +1837,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
         targetPosition: roamingTarget,
         behaviorCooldown: roleConfig.movementInterval,
       }
-      })()
+      })())
       nextAmEntities.push(nextAm)
     }
 
@@ -1725,6 +1876,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     matterFrozen = false
     frozenMatterGrid = null
     terrainGrid = createGrid()
+    movedMatterSourceGrid = createGrid()
     currentMission = 'expandingPopulation'
     firstAmRevealed = false
     amLineages = []
@@ -1789,9 +1941,10 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
         }
       }
 
+      suppressMovedMatterSources(next)
       current = next
       next = createGrid()
-      aliveCount = nextAlive
+      aliveCount = recountAlive(current)
     }
 
     generation += 1
@@ -1908,6 +2061,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       matterFrozen = false
       frozenMatterGrid = null
       terrainGrid = createGrid()
+      movedMatterSourceGrid = createGrid()
       currentMission = 'expandingPopulation'
       firstAmRevealed = false
       generation = 0
