@@ -1,7 +1,10 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { unlockClippyMaster } from '@/lib/actions'
+
+const ClippyDanceBattle = dynamic(() => import('./ClippyDanceBattle'), { ssr: false })
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr]
@@ -998,6 +1001,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
   const [parriedAnim,      setParriedAnim]     = useState(false)
   const [mousePos,         setMousePos]        = useState({ x:-300, y:-300 })
   const [mgPhase,          setMgPhase]         = useState<'idle'|'active'|'win'|'lose'>('idle')
+  const [ddrPhase,         setDdrPhase]        = useState<'idle'|'active'>('idle')
   const [playerPresses,    setPlayerPresses]   = useState(0)
   const [clippyPresses,    setClippyPresses]   = useState(0)
   const [sessionLosses,    setSessionLosses]   = useState(0)
@@ -1270,8 +1274,16 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
     if (atkTimer.current) clearTimeout(atkTimer.current)
     clearAutoAttack()
     parryActive.current = false; setParrySquare(null)
-    setMessage("🗡️ ÉPREUVE DE FORCE !!! Montre ce que tu vaux !"); setBubble(true)
-    setTimeout(() => setMgPhase('active'), 800)
+
+    if (effectivePhase === 2) {
+      // Phase 2 = Discothèque → mini-jeu DDR avant l'épreuve de force
+      setMessage("🎵 Un duel de DANSE ?! Montre ce que tu as dans les jambes !")
+      setBubble(true)
+      setTimeout(() => setDdrPhase('active'), 900)
+    } else {
+      setMessage("🗡️ ÉPREUVE DE FORCE !!! Montre ce que tu vaux !"); setBubble(true)
+      setTimeout(() => setMgPhase('active'), 800)
+    }
   }
 
   // ── Mini-jeu ───────────────────────────────────────────────────────────────
@@ -1572,8 +1584,29 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
         }
       `}</style>
 
+      {/* ── DDR mini-jeu (phase 2) ── */}
+      {ddrPhase === 'active' && (
+        <ClippyDanceBattle
+          onWin={() => {
+            setDdrPhase('idle')
+            setMessage("🎵 Im... impossible ! Tu danses mieux que moi ?!")
+            setBubble(true)
+            setTimeout(() => {
+              setMessage("🗡️ ÉPREUVE DE FORCE !!! Prouve que tu sais aussi te battre !")
+              setBubble(true)
+              setTimeout(() => setMgPhase('active'), 800)
+            }, 1400)
+          }}
+          onLose={() => {
+            setDdrPhase('idle')
+            setDeathReason('duel')
+            setShowDeathScreen(true)
+          }}
+        />
+      )}
+
       {/* ── Arène background (combat uniquement — bloque tout le site derrière) ── */}
-      {phase === 'combat' && hellPhase === 'idle' && (
+      {phase === 'combat' && hellPhase === 'idle' && ddrPhase === 'idle' && (
         <div style={{ position:'fixed', inset:0, zIndex:99980, background:'#000' }}>
           <img
             src={
