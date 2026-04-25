@@ -42,16 +42,14 @@ export function LifeGodGameHud({
   return (
     <div
       style={{
-        position: 'absolute',
-        top: 18,
-        left: 18,
-        right: 18,
         display: 'flex',
         justifyContent: 'space-between',
-        gap: 8,
+        gap: 12,
         alignItems: 'flex-start',
-        pointerEvents: 'none',
         flexWrap: 'wrap',
+        padding: '14px 18px',
+        borderBottom: '1px solid rgba(255,255,255,0.07)',
+        background: 'rgba(4,6,11,0.6)',
       }}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 380 }}>

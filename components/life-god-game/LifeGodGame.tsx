@@ -102,18 +102,10 @@ export default function LifeGodGame() {
           overflow: 'hidden',
           background: 'rgba(5,7,13,0.92)',
           boxShadow: '0 30px 90px rgba(0,0,0,0.45)',
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
-        <div
-          ref={hostRef}
-          aria-label="Life God Game viewport"
-          style={{
-            position: 'relative',
-            minHeight: 'calc(100dvh - 120px)',
-            background: 'linear-gradient(180deg, rgba(10,14,24,0.95) 0%, rgba(3,4,8,1) 100%)',
-          }}
-        />
-
         <LifeGodGameHud
           status={status}
           errorMessage={errorMessage}
@@ -123,6 +115,17 @@ export default function LifeGodGame() {
           onRandomize={() => runtimeRef.current?.simulation.randomize()}
           onDecreaseTimeScale={() => runtimeRef.current?.simulation.decreaseTimeScale()}
           onIncreaseTimeScale={() => runtimeRef.current?.simulation.increaseTimeScale()}
+        />
+
+        <div
+          ref={hostRef}
+          aria-label="Life God Game viewport"
+          style={{
+            position: 'relative',
+            flex: 1,
+            minHeight: 'calc(100dvh - 220px)',
+            background: 'linear-gradient(180deg, rgba(10,14,24,0.95) 0%, rgba(3,4,8,1) 100%)',
+          }}
         />
       </div>
     </div>
