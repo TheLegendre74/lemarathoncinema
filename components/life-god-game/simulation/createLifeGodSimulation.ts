@@ -1084,12 +1084,10 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   }
 
   function canMoveAmTo(am: LifeGodAmEntity, position: { x: number; y: number }) {
+    if (!canMoveAmThroughStaticObstacles(am, position)) return false
     for (const cell of am.cells) {
       const x = position.x + cell.x
       const y = position.y + cell.y
-      if (x <= 0 || y <= 0 || x >= GRID_WIDTH - 1 || y >= GRID_HEIGHT - 1) return false
-      if (constructionSites.some((site) => site.absoluteCells.some((item) => item.x === x && item.y === y))) return false
-      if (protoEntities.some((proto) => proto.cells.some((item) => item.x === x && item.y === y))) return false
       if (
         amEntities.some(
           (other) => other.id !== am.id && other.absoluteCells.some((item) => item.x === x && item.y === y)
@@ -1099,6 +1097,75 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       }
     }
     return true
+  }
+
+  function canMoveAmThroughStaticObstacles(am: LifeGodAmEntity, position: { x: number; y: number }) {
+    for (const cell of am.cells) {
+      const x = position.x + cell.x
+      const y = position.y + cell.y
+      if (x <= 0 || y <= 0 || x >= GRID_WIDTH - 1 || y >= GRID_HEIGHT - 1) return false
+      if (constructionSites.some((site) => site.absoluteCells.some((item) => item.x === x && item.y === y))) return false
+      if (protoEntities.some((proto) => proto.cells.some((item) => item.x === x && item.y === y))) return false
+    }
+    return true
+  }
+
+  function countAmOverlapAt(am: LifeGodAmEntity, position: { x: number; y: number }) {
+    const candidateCells = computeAbsoluteCells(am.cells, position)
+    let overlap = 0
+    for (const cell of candidateCells) {
+      if (
+        amEntities.some(
+          (other) => other.id !== am.id && other.absoluteCells.some((item) => item.x === cell.x && item.y === cell.y)
+        )
+      ) {
+        overlap += 1
+      }
+    }
+    return overlap
+  }
+
+  function moveOutOfAmCollision(am: LifeGodAmEntity): LifeGodAmEntity | null {
+    const currentOverlap = countAmOverlapAt(am, am.position)
+    if (currentOverlap === 0) return null
+
+    const candidates = getMovementCandidates(am)
+      .filter((position) => canMoveAmThroughStaticObstacles(am, position))
+      .map((position) => {
+        const overlap = countAmOverlapAt(am, position)
+        const step = { x: position.x - am.position.x, y: position.y - am.position.y }
+        const keepsDirection =
+          am.movementDirection &&
+          step.x === am.movementDirection.x &&
+          step.y === am.movementDirection.y
+            ? 1
+            : 0
+        return {
+          position,
+          step,
+          overlap,
+          score: -overlap * 100 + keepsDirection - (step.x === 0 && step.y === 0 ? 20 : 0),
+        }
+      })
+      .sort((a, b) => b.score - a.score)
+
+    const best = candidates[0]
+    if (!best || best.overlap >= currentOverlap) {
+      return {
+        ...am,
+        behaviorCooldown: 1,
+        movementDirection: am.movementDirection ? { x: -am.movementDirection.x, y: -am.movementDirection.y } : null,
+      }
+    }
+
+    return {
+      ...am,
+      position: best.position,
+      absoluteCells: computeAbsoluteCells(am.cells, best.position),
+      targetPosition: am.targetCell ?? am.buildSite ?? best.position,
+      movementDirection: best.step,
+      behaviorCooldown: 1,
+    }
   }
 
   function getMovementCandidates(am: LifeGodAmEntity) {
@@ -1296,9 +1363,17 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   }
 
   function tickRoleBehavior() {
-    amEntities = amEntities.map((am): LifeGodAmEntity => {
+    const previousAmEntities = amEntities
+    const nextAmEntities: LifeGodAmEntity[] = []
+
+    for (let amIndex = 0; amIndex < previousAmEntities.length; amIndex += 1) {
+      const am = previousAmEntities[amIndex]
+      amEntities = [...nextAmEntities, ...previousAmEntities.slice(amIndex)]
+      const nextAm = ((): LifeGodAmEntity => {
       if (am.state !== 'alive') return am
       const roleConfig = ROLE_CONFIG[am.role]
+      const collisionEscape = moveOutOfAmCollision(am)
+      if (collisionEscape) return collisionEscape
       const site = getBuildSiteForAm(am)
       const wantsToBuild = canCreateMoreVisibleAms()
 
@@ -1405,7 +1480,11 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
         targetPosition: roamingTarget,
         behaviorCooldown: roleConfig.movementInterval,
       }
-    })
+      })()
+      nextAmEntities.push(nextAm)
+    }
+
+    amEntities = nextAmEntities
   }
   function tickAmState() {
     amEntities = amEntities.map((am) => {
