@@ -44,6 +44,7 @@ const CONSTRUCTION_SITE_SPACING = 34
 const STUCK_TICK_LIMIT = 18
 const EMERGENCY_ESCAPE_RADIUS = 8
 const MIN_AM_SEPARATION_CELLS = 2
+const WALL_ESCAPE_MARGIN = 12
 const BUILD_SITE_WORK_RADIUS_MIN = 8
 const BUILD_SITE_WORK_RADIUS_MAX = 14
 const TIME_SCALES: LifeGodTimeScale[] = [0.25, 0.5, 1, 2, 4, 8]
@@ -1354,6 +1355,64 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     return nearest
   }
 
+  function getWallEscapeVector(am: LifeGodAmEntity) {
+    const bounds = am.absoluteCells.reduce(
+      (acc, cell) => ({
+        minX: Math.min(acc.minX, cell.x),
+        minY: Math.min(acc.minY, cell.y),
+        maxX: Math.max(acc.maxX, cell.x),
+        maxY: Math.max(acc.maxY, cell.y),
+      }),
+      { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity }
+    )
+    let x = 0
+    let y = 0
+    if (bounds.minX <= WALL_ESCAPE_MARGIN) x += WALL_ESCAPE_MARGIN - bounds.minX + 1
+    if (bounds.maxX >= GRID_WIDTH - 1 - WALL_ESCAPE_MARGIN) x -= bounds.maxX - (GRID_WIDTH - 1 - WALL_ESCAPE_MARGIN) + 1
+    if (bounds.minY <= WALL_ESCAPE_MARGIN) y += WALL_ESCAPE_MARGIN - bounds.minY + 1
+    if (bounds.maxY >= GRID_HEIGHT - 1 - WALL_ESCAPE_MARGIN) y -= bounds.maxY - (GRID_HEIGHT - 1 - WALL_ESCAPE_MARGIN) + 1
+    return { x, y }
+  }
+
+  function moveAwayFromWallOrObstacle(am: LifeGodAmEntity): LifeGodAmEntity {
+    const wallVector = getWallEscapeVector(am)
+    const obstacleVector = am.movementDirection
+      ? { x: -am.movementDirection.x, y: -am.movementDirection.y }
+      : { x: 0, y: 0 }
+    const escapeVector = {
+      x: wallVector.x !== 0 ? wallVector.x : obstacleVector.x,
+      y: wallVector.y !== 0 ? wallVector.y : obstacleVector.y,
+    }
+
+    const candidates = getEmergencyMovementCandidates(am)
+      .filter((position) => position.x !== am.position.x || position.y !== am.position.y)
+      .filter((position) => canMoveAmTo(am, position))
+      .map((position) => {
+        const step = { x: position.x - am.position.x, y: position.y - am.position.y }
+        const travel = Math.max(Math.abs(step.x), Math.abs(step.y))
+        const center = getAmCenter(am, position)
+        const edgeDistance = Math.min(center.x, center.y, GRID_WIDTH - 1 - center.x, GRID_HEIGHT - 1 - center.y)
+        const escapeAlignment = step.x * escapeVector.x + step.y * escapeVector.y
+        return {
+          position,
+          step,
+          score: escapeAlignment * 12 + edgeDistance * 4 + getMinDistanceToOtherAms(position, am) * 2 - travel,
+        }
+      })
+      .sort((a, b) => b.score - a.score)
+
+    const best = candidates[0]
+    if (!best) return { ...am, behaviorCooldown: 0, movementDirection: null }
+    return {
+      ...am,
+      position: best.position,
+      absoluteCells: computeAbsoluteCells(am.cells, best.position),
+      targetPosition: best.position,
+      movementDirection: best.step,
+      behaviorCooldown: 0,
+    }
+  }
+
   function getEmergencyMovementCandidates(am: LifeGodAmEntity) {
     const candidates: { x: number; y: number }[] = []
     for (let radius = 1; radius <= EMERGENCY_ESCAPE_RADIUS; radius += 1) {
@@ -1534,7 +1593,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   function moveToward(am: LifeGodAmEntity, targetPosition: LifeGodRelativeCell): LifeGodAmEntity {
     const currentDistance = Math.abs(getAmCenter(am).x - targetPosition.x) + Math.abs(getAmCenter(am).y - targetPosition.y)
     const candidates = getMovementCandidates(am).filter((position) => canMoveAmTo(am, position))
-    if (candidates.length === 0) return { ...am, behaviorCooldown: 1 }
+    if (candidates.length === 0) return moveAwayFromWallOrObstacle(am)
 
     const scored = candidates
       .map((position) => {
@@ -1550,7 +1609,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       .sort((a, b) => b.score - a.score)
 
     const best = scored[0]
-    if (!best) return { ...am, behaviorCooldown: 1 }
+    if (!best) return moveAwayFromWallOrObstacle(am)
     return {
       ...am,
       position: best.position,
@@ -1607,13 +1666,12 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
 
     const best = candidates[0]
     if (!best) {
+      const escaped = moveAwayFromWallOrObstacle(am)
       return {
-        ...am,
+        ...escaped,
         targetCell: am.carriedCell ? am.targetCell : null,
-        movementDirection: null,
-        behaviorCooldown: 0,
         memory: {
-          ...am.memory,
+          ...escaped.memory,
           stationaryTicks: 0,
           unstuckUntilCycle: generation + STUCK_TICK_LIMIT,
         },
