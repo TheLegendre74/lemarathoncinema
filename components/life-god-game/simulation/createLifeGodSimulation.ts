@@ -33,7 +33,7 @@ const MAX_FORMATION_CYCLES = Math.round((20 * 1000) / TICK_MS)  // ~20 secondes
 const CELLS_NEEDED_FOR_AM = 10  // cellules à récolter avant de créer une AM
 const GATHERING_RADIUS = 15     // rayon de récolte autour de l'AM
 const CELL_ATTRACTION_RADIUS = 40  // portée de l'attraction vers les cellules libres
-const STABILITY_THRESHOLD = 14  // ticks consécutifs pour qu'une cellule soit considérée fixe (~1.3s)
+const STABILITY_THRESHOLD = 8   // ticks consécutifs pour qu'une cellule soit considérée fixe (~0.7s)
 const MAX_ACTIVE_PATTERNS_PER_SEED = 3
 const TIME_SCALES: LifeGodTimeScale[] = [0.25, 0.5, 1, 2, 4, 8]
 const LINEAGE_COLORS = ['#69f0c1', '#ff8ad8', '#7ab6ff']
@@ -1116,16 +1116,11 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
 
   function getMovementCandidates(am: LifeGodAmEntity) {
     const roleConfig = ROLE_CONFIG[am.role]
-    const candidates = [{ x: am.position.x, y: am.position.y }]
+    const candidates: { x: number; y: number }[] = []
 
     for (let oy = -roleConfig.movementReach; oy <= roleConfig.movementReach; oy += 1) {
       for (let ox = -roleConfig.movementReach; ox <= roleConfig.movementReach; ox += 1) {
-        if (ox === 0 && oy === 0) continue
-        const position = {
-          x: am.position.x + ox,
-          y: am.position.y + oy,
-        }
-        candidates.push(position)
+        candidates.push({ x: am.position.x + ox, y: am.position.y + oy })
       }
     }
 
@@ -1148,7 +1143,9 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
         // -dist*25 domine : le tiebreaker stableDensity*3 ne peut jamais bloquer le déplacement
         return -distToNearest * 25 + stableDensity * 3 + otherDistance * 0.2 + influenceScore
       }
-      return stableDensity * 8 + otherDistance * 2 + influenceScore
+      // Pas de cellule fixe en vue : se déplacer vers les zones denses (scouting)
+      // density + bruit aléatoire brisent les égalités → l'AM ne reste plus figée
+      return stableDensity * 8 + density * 5 + Math.random() * 4 + influenceScore
     }
 
     // Supervise le chantier en mouvement : orbite autour du site de construction
