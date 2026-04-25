@@ -15,8 +15,8 @@ import type {
   LifeGodTimeScale,
 } from '../types'
 
-const GRID_WIDTH = 160
-const GRID_HEIGHT = 100
+const GRID_WIDTH = 220
+const GRID_HEIGHT = 140
 const TICK_MS = 90
 const RANDOM_FILL_CHANCE = 0.18
 const PROTO_SCAN_INTERVAL = 6
@@ -42,6 +42,7 @@ const STABILITY_THRESHOLD = 8   // ticks consécutifs pour qu'une cellule soit c
 const MAX_ACTIVE_PATTERNS_PER_SEED = 3
 const CONSTRUCTION_SITE_SPACING = 8
 const STUCK_TICK_LIMIT = 18
+const EMERGENCY_ESCAPE_RADIUS = 8
 const BUILD_SITE_WORK_RADIUS_MIN = 4
 const BUILD_SITE_WORK_RADIUS_MAX = 8
 const TIME_SCALES: LifeGodTimeScale[] = [0.25, 0.5, 1, 2, 4, 8]
@@ -1301,12 +1302,19 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     return true
   }
 
+  function isBlockedByConstructionForAm(am: LifeGodAmEntity, x: number, y: number) {
+    return constructionSites.some((site) =>
+      site.builderAmId !== am.id &&
+      site.absoluteCells.some((item) => item.x === x && item.y === y)
+    )
+  }
+
   function canMoveAmThroughStaticObstacles(am: LifeGodAmEntity, position: { x: number; y: number }) {
     for (const cell of am.cells) {
       const x = position.x + cell.x
       const y = position.y + cell.y
       if (x <= 0 || y <= 0 || x >= GRID_WIDTH - 1 || y >= GRID_HEIGHT - 1) return false
-      if (constructionSites.some((site) => site.absoluteCells.some((item) => item.x === x && item.y === y))) return false
+      if (isBlockedByConstructionForAm(am, x, y)) return false
       if (protoEntities.some((proto) => proto.cells.some((item) => item.x === x && item.y === y))) return false
     }
     return true
@@ -1327,15 +1335,30 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     return overlap
   }
 
+  function getEmergencyMovementCandidates(am: LifeGodAmEntity) {
+    const candidates: { x: number; y: number }[] = []
+    for (let radius = 1; radius <= EMERGENCY_ESCAPE_RADIUS; radius += 1) {
+      for (let oy = -radius; oy <= radius; oy += 1) {
+        for (let ox = -radius; ox <= radius; ox += 1) {
+          if (Math.max(Math.abs(ox), Math.abs(oy)) !== radius) continue
+          candidates.push({ x: am.position.x + ox, y: am.position.y + oy })
+        }
+      }
+    }
+    return candidates
+  }
+
   function moveOutOfAmCollision(am: LifeGodAmEntity): LifeGodAmEntity | null {
     const currentOverlap = countAmOverlapAt(am, am.position)
     if (currentOverlap === 0) return null
 
-    const candidates = getMovementCandidates(am)
+    const candidates = getEmergencyMovementCandidates(am)
       .filter((position) => canMoveAmThroughStaticObstacles(am, position))
       .map((position) => {
         const overlap = countAmOverlapAt(am, position)
         const step = { x: position.x - am.position.x, y: position.y - am.position.y }
+        const travel = Math.max(Math.abs(step.x), Math.abs(step.y))
+        const otherDistance = getMinDistanceToOtherAms(position, am)
         const keepsDirection =
           am.movementDirection &&
           step.x === am.movementDirection.x &&
@@ -1346,7 +1369,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
           position,
           step,
           overlap,
-          score: -overlap * 100 + keepsDirection - (step.x === 0 && step.y === 0 ? 20 : 0),
+          score: -overlap * 500 + Math.min(otherDistance, 20) * 8 - travel * 6 + keepsDirection,
         }
       })
       .sort((a, b) => b.score - a.score)
@@ -1355,7 +1378,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     if (!best || best.overlap >= currentOverlap) {
       return {
         ...am,
-        behaviorCooldown: 1,
+        behaviorCooldown: 0,
         movementDirection: am.movementDirection ? { x: -am.movementDirection.x, y: -am.movementDirection.y } : null,
       }
     }
@@ -1366,7 +1389,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       absoluteCells: computeAbsoluteCells(am.cells, best.position),
       targetPosition: am.targetCell ?? am.buildSite ?? best.position,
       movementDirection: best.step,
-      behaviorCooldown: 1,
+      behaviorCooldown: 0,
     }
   }
 
@@ -1535,13 +1558,14 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   function forceUnstuckMove(am: LifeGodAmEntity) {
     const currentCenter = getAmCenter(am)
     const target = am.targetCell ?? am.buildSite ?? am.targetPosition ?? currentCenter
-    const candidates = getMovementCandidates(am)
+    const candidates = getEmergencyMovementCandidates(am)
       .filter((position) => position.x !== am.position.x || position.y !== am.position.y)
       .filter((position) => canMoveAmTo(am, position))
       .map((position) => {
         const center = getAmCenter(am, position)
         const targetDistance = Math.abs(center.x - target.x) + Math.abs(center.y - target.y)
         const otherDistance = getMinDistanceToOtherAms(position, am)
+        const travel = Math.max(Math.abs(position.x - am.position.x), Math.abs(position.y - am.position.y))
         const siteDistance = constructionSites.reduce((closest, site) => {
           if (site.builderAmId === am.id) return closest
           return Math.min(closest, distanceBetweenCells(center, site.origin))
@@ -1551,7 +1575,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
         return {
           position,
           step,
-          score: -targetDistance * 6 + Math.min(otherDistance, 18) * 5 + Math.min(siteDistance, 18) * 4 + reverses + Math.random(),
+          score: -targetDistance * 5 + Math.min(otherDistance, 18) * 7 + Math.min(siteDistance, 18) * 4 - travel * 2 + reverses + Math.random(),
         }
       })
       .sort((a, b) => b.score - a.score)

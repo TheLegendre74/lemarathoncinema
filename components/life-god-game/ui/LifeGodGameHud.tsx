@@ -58,6 +58,7 @@ export function LifeGodGameHud({
         alignItems: 'flex-start',
         flexWrap: 'wrap',
         minWidth: 0,
+        maxWidth: 420,
         height: '100%',
         overflowY: 'auto',
         overflowX: 'hidden',

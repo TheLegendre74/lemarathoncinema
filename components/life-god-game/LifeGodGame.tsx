@@ -98,7 +98,7 @@ export default function LifeGodGame() {
         style={{
           position: 'relative',
           width: '100%',
-          maxWidth: isMiniature ? 'none' : 1560,
+          maxWidth: isMiniature ? 'none' : 1840,
           margin: isMiniature ? 0 : '0 auto',
           border: '1px solid rgba(255,255,255,0.08)',
           borderRadius: isMiniature ? 14 : 24,
@@ -106,7 +106,7 @@ export default function LifeGodGame() {
           background: 'rgba(5,7,13,0.92)',
           boxShadow: '0 30px 90px rgba(0,0,0,0.45)',
           display: 'grid',
-          gridTemplateColumns: isMiniature ? '1fr' : 'minmax(0, 1fr) minmax(320px, 410px)',
+          gridTemplateColumns: isMiniature ? '1fr' : 'minmax(0, 1fr) minmax(360px, 420px)',
           minHeight: isMiniature ? 'auto' : 'calc(100dvh - 96px)',
           height: isMiniature ? '100%' : 'calc(100dvh - 96px)',
         }}
@@ -118,7 +118,8 @@ export default function LifeGodGame() {
           style={{
             position: 'relative',
             minWidth: 0,
-            minHeight: isMiniature ? 0 : 520,
+            overflow: 'hidden',
+            minHeight: isMiniature ? 0 : 680,
             background: 'linear-gradient(180deg, rgba(10,14,24,0.95) 0%, rgba(3,4,8,1) 100%)',
           }}
         />
@@ -187,7 +188,7 @@ export default function LifeGodGame() {
           }
 
           .life-god-viewport {
-            min-height: 54dvh !important;
+            min-height: 62dvh !important;
           }
         }
       `}</style>
