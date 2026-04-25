@@ -1578,9 +1578,9 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
           <img
             src={
               effectivePhase >= 5 ? '/arene-clippy-05.png'
-              : effectivePhase === 4 ? '/arene-clippy-04.png'
-              : effectivePhase === 3 ? '/arene-clippy-03.png'
-              : effectivePhase === 2 ? '/arene-clippy-02.png'
+              : effectivePhase === 4 ? '/arene-clippy-02.png'   // phase 4 = espace (sabre laser)
+              : effectivePhase === 3 ? '/arene-clippy-03.png'   // phase 3 = ring (boxe)
+              : effectivePhase === 2 ? '/arenes-clippy.png'     // phase 2 = disco (image à remplacer)
               : '/arenes-clippy.png'
             }
             alt=""
