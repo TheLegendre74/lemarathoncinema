@@ -1575,7 +1575,17 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
       {/* ── Arène background (combat uniquement — bloque tout le site derrière) ── */}
       {phase === 'combat' && hellPhase === 'idle' && (
         <div style={{ position:'fixed', inset:0, zIndex:99980, background:'#000' }}>
-          <img src="/arenes-clippy.png" alt="" style={{ width:'100%', height:'100%', objectFit:'cover', opacity:0.88, display:'block' }} />
+          <img
+            src={
+              effectivePhase >= 5 ? '/arene-clippy-05.png'
+              : effectivePhase === 4 ? '/arene-clippy-04.png'
+              : effectivePhase === 3 ? '/arene-clippy-03.png'
+              : effectivePhase === 2 ? '/arene-clippy-02.png'
+              : '/arenes-clippy.png'
+            }
+            alt=""
+            style={{ width:'100%', height:'100%', objectFit:'cover', opacity:0.88, display:'block' }}
+          />
         </div>
       )}
 
