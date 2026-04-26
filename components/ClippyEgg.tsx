@@ -1018,6 +1018,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
   const [mousePos,         setMousePos]        = useState({ x:-300, y:-300 })
   const [mgPhase,          setMgPhase]         = useState<'idle'|'active'|'win'|'lose'>('idle')
   const [ddrPhase,         setDdrPhase]        = useState<'idle'|'active'>('idle')
+  const ddrPhaseRef        = useRef<'idle'|'active'>('idle')
   const [playerPresses,    setPlayerPresses]   = useState(0)
   const [clippyPresses,    setClippyPresses]   = useState(0)
   const [sessionLosses,    setSessionLosses]   = useState(0)
@@ -1189,7 +1190,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
     const [minMs, maxMs] = effectivePhase >= 9 ? [60, 200] : effectivePhase === 8 ? [100, 350] : effectivePhase === 7 ? [150, 500] : effectivePhase === 6 ? [200, 700] : effectivePhase >= 5 ? [300, 1200] : effectivePhase === 4 ? [400, 1500] : effectivePhase >= 3 ? [500, 2000] : [3000, 6500]
     const delay = minMs + Math.random() * (maxMs - minMs)
     autoAttackRef.current = setTimeout(() => {
-      if (phaseRef.current !== 'combat' || parryActive.current || mgPhaseRef.current !== 'idle') {
+      if (phaseRef.current !== 'combat' || parryActive.current || mgPhaseRef.current !== 'idle' || ddrPhaseRef.current !== 'idle') {
         scheduleAutoAttack()   // reschedule sans attaquer si blocage
         return
       }
@@ -1280,7 +1281,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
 
   // ── Attaque avec windup ────────────────────────────────────────────────────
   function triggerAttack() {
-    if (phaseRef.current !== 'combat' || parryActive.current) return
+    if (phaseRef.current !== 'combat' || parryActive.current || ddrPhaseRef.current !== 'idle') return
     setSwordWindup(true)
     setTimeout(() => { setSwordWindup(false); startParry() }, 700)
   }
@@ -1292,10 +1293,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
     parryActive.current = false; setParrySquare(null)
 
     if (effectivePhase === 2) {
-      // Phase 2 = Discothèque → mini-jeu DDR avant l'épreuve de force
-      setMessage("🎵 Un duel de DANSE ?! Montre ce que tu as dans les jambes !")
-      setBubble(true)
-      setTimeout(() => setDdrPhase('active'), 900)
+      ddrPhaseRef.current = 'active'; setDdrPhase('active')
     } else {
       setMessage("🗡️ ÉPREUVE DE FORCE !!! Montre ce que tu vaux !"); setBubble(true)
       setTimeout(() => setMgPhase('active'), 800)
@@ -1352,7 +1350,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
     if (deathReason === 'ddr') {
       // Après une défaite DDR : relancer le mini-jeu de danse
       clippyHPRef.current = CLIPPY_MAX_HP; setClippyHP(CLIPPY_MAX_HP)
-      setDdrPhase('active')
+      ddrPhaseRef.current = 'active'; setDdrPhase('active')
       return
     }
     if (deathReason === 'duel') {
@@ -1504,12 +1502,9 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
       setClippyHP(CLIPPY_MAX_HP); setPlayerHP(PLAYER_MAX_HP)
 
       if (effectivePhase === 2) {
-        // Phase 2 → DDR direct, sans combat à l'épée, sans musique combat
+        // Phase 2 → DDR immédiat, aucune fenêtre de combat épée
         setPhase('combat'); phaseRef.current = 'combat'
-        setMessage("🎵 Tu veux te battre ? On danse d'abord !")
-        setBubble(true); dodge()
-        // Pas de startMusic() ici — le DDR gère sa propre musique
-        setTimeout(() => setDdrPhase('active'), 900)
+        ddrPhaseRef.current = 'active'; setDdrPhase('active')
         return
       }
 
@@ -1533,7 +1528,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
 
   function handleCombatClick(e: React.MouseEvent) {
     e.stopPropagation()
-    if (parryActive.current || mgPhase !== 'idle') return
+    if (parryActive.current || mgPhase !== 'idle' || ddrPhaseRef.current !== 'idle') return
     playSound('/clippy-swoosh.wav', 0.8)
     setTimeout(() => playSound('/clippy-hit.mp3', 0.9), 180)
     const nextHP = Math.max(0, clippyHPRef.current - 1)
@@ -1626,7 +1621,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
             setPlayerHP(next)
           }}
           onWin={() => {
-            setDdrPhase('idle')
+            ddrPhaseRef.current = 'idle'; setDdrPhase('idle')
             setMessage("🎵 Im... impossible ! Tu danses mieux que moi ?!")
             setBubble(true)
             setTimeout(() => {
@@ -1636,7 +1631,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
             }, 1400)
           }}
           onLose={() => {
-            setDdrPhase('idle')
+            ddrPhaseRef.current = 'idle'; setDdrPhase('idle')
             setDeathReason('ddr')
             setShowDeathScreen(true)
           }}
