@@ -1,7 +1,6 @@
 import MessagesLoader from './MessagesLoader'
 
-// Page statique — servie depuis le CDN Vercel, zéro cold start serverless
-export const dynamic = 'force-static'
+export const dynamic = 'force-dynamic'
 
 export default function MessagesPage() {
   return (

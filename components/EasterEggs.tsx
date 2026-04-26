@@ -910,7 +910,7 @@ function TamagotchiKeyOverlay({ onClose, isGuest }: { onClose: () => void; isGue
   )
 }
 
-export default function EasterEggs({ config = {}, isGuest = false, watchedCount = 0, hasClippyEgg = false }: { config?: EasterEggsConfig; isGuest?: boolean; watchedCount?: number; hasClippyEgg?: boolean }) {
+export default function EasterEggs({ config = {}, isGuest = false, watchedCount = 0, hasClippyEgg = false, isAdmin = false }: { config?: EasterEggsConfig; isGuest?: boolean; watchedCount?: number; hasClippyEgg?: boolean; isAdmin?: boolean }) {
   const ee = {
     matrixLine1:     config.matrixLine1     ?? 'Wake up, Neo...',
     matrixLine2:     config.matrixLine2     ?? 'The Matrix has you.',
@@ -1155,7 +1155,7 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
     function onRevoke() {
       if (showPleaRef.current) { advancePlea(); return }
       // En mode admin (revoke depuis le panel) : dismiss direct, pas de plea aléatoire
-      if (localStorage.getItem('clippy_is_admin') === '1') { dismissClipy(); return }
+      if (isAdmin) { dismissClipy(); return }
       if (Math.random() < 0.05) { setPleaIdx(0); setShowPlea(true) }
       else dismissClipy()
     }
@@ -1393,6 +1393,7 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
           onDismiss={() => { localStorage.removeItem('clippy_is_larbin'); setIsMastered(localStorage.getItem('clippy_mastered') === '1'); setShowClipy(false) }}
           customReplies={config.clippyReplies}
           forcedMessage={showPlea && !pleaDone ? PLEA_CITATIONS[pleaIdx] : undefined}
+          isAdmin={isAdmin}
         />
       )}
 

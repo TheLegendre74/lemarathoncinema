@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useCallback, type CSSProperties } from 'react'
 import { DANCE_BEATMAP } from './ClippyDanceBattleBeatmap'
 import type { DanceNote } from './ClippyDanceBattleBeatmap'
 
@@ -23,14 +23,19 @@ const PERFECT_MS    = 80
 const MAX_HP        = 10
 
 export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const onWinRef     = useRef(onWin)
-  const onLoseRef    = useRef(onLose)
-  const onMissRef    = useRef(onMiss)
+  const containerRef   = useRef<HTMLDivElement>(null)
+  const onWinRef       = useRef(onWin)
+  const onLoseRef      = useRef(onLose)
+  const onMissRef      = useRef(onMiss)
+  const touchInputRef  = useRef<((dir: Dir) => void) | null>(null)
 
   useEffect(() => { onWinRef.current  = onWin  }, [onWin])
   useEffect(() => { onLoseRef.current = onLose }, [onLose])
   useEffect(() => { onMissRef.current = onMiss }, [onMiss])
+
+  const handleTouchInput = useCallback((dir: Dir) => {
+    touchInputRef.current?.(dir)
+  }, [])
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -77,7 +82,7 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP }: 
 
         preload() {
           this.load.audio('ddr-music', '/audio/clippy/nightclub.m4a')
-          this.load.image('clippy-normal', '/clippy1.png')
+          this.load.image('evil-clippy-disco', '/evil-clippy-disco.png')
         }
 
         create() {
@@ -185,9 +190,9 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP }: 
             fontSize: '13px', color: '#cc88ff', fontFamily: 'monospace',
           }).setOrigin(0.5, 1)
 
-          // Sprite Clippy positionné au centre du tapis — taille fixe, jamais tweenée
-          this.clippySprite = this.add.image(this.matCenterX, this.matCenterY, 'clippy-normal')
-          this.clippySprite.setDisplaySize(TW * 0.82, TW * 1.18)
+          // Sprite Evil Clippy Disco — taille réduite pour tenir sur la case centrale
+          this.clippySprite = this.add.image(this.matCenterX, this.matCenterY, 'evil-clippy-disco')
+          this.clippySprite.setDisplaySize(TW * 0.70, TW * 0.70)
 
           // Séparateur "VS"
           const sepX = Math.round(laneX0 + laneW + (this.matCenterX - (TW * 1.5 + GAP * 2) - laneX0 - laneW) / 2)
@@ -231,6 +236,13 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP }: 
           }
           activeKeyListener = kbListener
           window.addEventListener('keydown', kbListener, true)
+
+          // ── Touch (mobile) — exposé via ref React ────────────────────────
+          touchInputRef.current = (dir: Dir) => {
+            if (this.ended) return
+            const elapsed = this.time.now - this.startTime
+            this.handleInput(dir, elapsed)
+          }
 
           // ── Musique ───────────────────────────────────────────────────────
           const music = this.sound.add('ddr-music', { loop: false, volume: 0.85 })
@@ -388,16 +400,67 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP }: 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  function btnStyle(color: string): CSSProperties {
+    return {
+      width: 64, height: 64,
+      background: `${color}22`,
+      border: `2px solid ${color}`,
+      borderRadius: 12,
+      color,
+      fontSize: 28,
+      fontFamily: 'monospace',
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      WebkitTapHighlightColor: 'transparent',
+      touchAction: 'none',
+    }
+  }
+
   return (
-    <div
-      ref={containerRef}
-      tabIndex={-1}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 99985,
-        outline: 'none',
-      }}
-    />
+    <>
+      <div
+        ref={containerRef}
+        tabIndex={-1}
+        style={{ position: 'fixed', inset: 0, zIndex: 99985, outline: 'none' }}
+      />
+      {/* ── Boutons tactiles mobiles (masqués sur desktop via media query) ── */}
+      <style>{`
+        @media (pointer: fine) { .ddr-touch-controls { display: none !important; } }
+      `}</style>
+      <div
+        className="ddr-touch-controls"
+        style={{
+          position: 'fixed',
+          bottom: 24,
+          left: '5vw',
+          zIndex: 99990,
+          display: 'grid',
+          gridTemplateColumns: '64px 64px 64px',
+          gridTemplateRows: '64px 64px 64px',
+          gap: 6,
+          userSelect: 'none',
+          touchAction: 'none',
+        }}
+      >
+        {/* ligne 1 : vide | ↑ | vide */}
+        <span />
+        <button onPointerDown={e => { e.preventDefault(); handleTouchInput('up') }}
+          style={btnStyle('#66ff99')}>↑</button>
+        <span />
+        {/* ligne 2 : ← | vide | → */}
+        <button onPointerDown={e => { e.preventDefault(); handleTouchInput('left') }}
+          style={btnStyle('#ff6699')}>←</button>
+        <span />
+        <button onPointerDown={e => { e.preventDefault(); handleTouchInput('right') }}
+          style={btnStyle('#ffcc44')}>→</button>
+        {/* ligne 3 : vide | ↓ | vide */}
+        <span />
+        <button onPointerDown={e => { e.preventDefault(); handleTouchInput('down') }}
+          style={btnStyle('#6699ff')}>↓</button>
+        <span />
+      </div>
+    </>
   )
 }

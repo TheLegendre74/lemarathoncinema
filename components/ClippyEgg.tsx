@@ -796,7 +796,6 @@ const LS_LARBIN_IDX = 'clippy_larbin_idx'
 const LS_ACTIVE     = 'clippy_active'
 const LS_MASTERED   = 'clippy_mastered'  // jamais effacé une fois acquis
 const LS_GOD_PHASE  = 'clippy_god_phase' // 0=off, 1-9 = phase active (god mode)
-const LS_IS_ADMIN   = 'clippy_is_admin'  // mis par le panel admin
 
 function getDefeats(): number  { return parseInt(localStorage.getItem(LS_DEFEATS)    ?? '0') }
 function setDefeatsLS(n: number) { localStorage.setItem(LS_DEFEATS, String(n)) }
@@ -811,9 +810,9 @@ function getPhaseFromDefeats(d: number): 1|2|3|4|5 {
 }
 
 // ── Interface ─────────────────────────────────────────────────────────────────
-interface ClippyProps { onDismiss: () => void; customReplies?: string[]; forcedMessage?: string }
+interface ClippyProps { onDismiss: () => void; customReplies?: string[]; forcedMessage?: string; isAdmin?: boolean }
 
-export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: ClippyProps) {
+export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isAdmin = false }: ClippyProps) {
 
   // ── Données persistantes ───────────────────────────────────────────────────
   const defeatsRef    = useRef(getDefeats())
@@ -827,7 +826,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
     const v = parseInt(localStorage.getItem(LS_GOD_PHASE) ?? '0')
     return v >= 1 && v <= 9 ? v : 0
   })
-  const isAdminMode = typeof window !== 'undefined' && localStorage.getItem(LS_IS_ADMIN) === '1'
+  const isAdminMode = isAdmin
   const effectivePhase = activeGodPhase > 0 ? activeGodPhase : combatPhase
   const [showGodModePanel, setShowGodModePanel] = useState(false)
 

@@ -94,7 +94,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="fr" className={`${playfairDisplay.variable} ${syne.variable}`}>
       <body>
         <ToastProvider>
-          <EasterEggs config={eeConfig} isGuest={!user} watchedCount={watchedCount} hasClippyEgg={hasClippyEgg} />
+          <EasterEggs config={eeConfig} isGuest={!user} watchedCount={watchedCount} hasClippyEgg={hasClippyEgg} isAdmin={!!(profile as any)?.is_admin} />
           <ClientShell profile={profile} hasRageuxEgg={hasRageuxEgg} hasTamagotchiEgg={hasTamagotchiEgg} hasConwayEgg={hasConwayEgg} unreadMessages={unreadMessages}>
             {children}
           </ClientShell>
