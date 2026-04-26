@@ -240,8 +240,9 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP }: 
           this.add.rectangle(W / 2, this.clippyZoneH / 2, W, this.clippyZoneH, 0x08001a).setAlpha(0.88)
           this.add.rectangle(W / 2, this.clippyZoneH, W, 2, 0x9966ff).setAlpha(0.55)
 
-          // Clippy centré dans sa bande, taille adaptée
+          // Clippy positionné sur la barre séparatrice (centre = séparateur)
           const clippySize = Math.round(Math.min(this.clippyZoneH * 0.78, W * 0.30))
+          this.clippyTopY  = this.clippyZoneH  // centre de Clippy pile sur la barre
           this.clippySprite = this.add.image(W / 2, this.clippyTopY, 'evil-clippy-disco')
           this.clippySprite.setDisplaySize(clippySize, clippySize)
 

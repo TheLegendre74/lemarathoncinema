@@ -1001,10 +1001,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
 
   // ── States ─────────────────────────────────────────────────────────────────
   const [phase,            setPhase]           = useState<'normal'|'combat'>('normal')
-  const [pos,              setPos]             = useState(() => {
-    const mob = window.matchMedia('(pointer: coarse)').matches
-    return { x: Math.max(20, window.innerWidth - (mob ? 120 : 220)), y: Math.max(20, window.innerHeight - 240) }
-  })
+  const [pos,              setPos]             = useState({ x: Math.max(20, window.innerWidth - 220), y: Math.max(20, window.innerHeight - 240) })
   const [message,          setMessage]         = useState('')
   const [bubble,           setBubble]          = useState(true)
   const [misses,           setMisses]          = useState(0)
@@ -1208,8 +1205,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
 
   // ── Esquive ────────────────────────────────────────────────────────────────
   function dodge() {
-    const mob = window.matchMedia('(pointer: coarse)').matches
-    const margin = 130, vw = window.innerWidth - (mob ? 120 : 220), vh = window.innerHeight - 220
+    const margin = 130, vw = window.innerWidth - 220, vh = window.innerHeight - 220
     let nx = 0, ny = 0, tries = 0
     do {
       nx = margin + Math.random() * (vw - margin)
@@ -1582,13 +1578,24 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
 
   const bubbleLeft = pos.x > window.innerWidth / 2
 
-  // Tailles adaptées : Clippy est plus petit sur mobile (tactile) mais reste cliquable
+  // En combat sur mobile : Clippy +10% (cible tactile plus grande).
+  // Hors combat : taille originale inchangée sur tous les appareils.
   const isMobileUI = window.matchMedia('(pointer: coarse)').matches
-  const wCombat = isMobileUI ? 85  : W_COMBAT
-  const wNormal = isMobileUI ? 72  : W_NORMAL
-  const wShield = isMobileUI ? 58  : W_SHIELD
-  const wSword  = isMobileUI ? 78  : W_SWORD
-  const hSword  = isMobileUI ? 220 : H_SWORD
+  const wCombat = isMobileUI ? Math.round(W_COMBAT * 1.10) : W_COMBAT  // 176 mobile / 160 desktop
+  const wNormal = W_NORMAL                                              // 140 partout
+  const wShield = isMobileUI ? Math.round(W_SHIELD * 1.10) : W_SHIELD
+  const wSword  = isMobileUI ? Math.round(W_SWORD  * 1.10) : W_SWORD
+  const hSword  = isMobileUI ? Math.round(H_SWORD  * 1.10) : H_SWORD
+
+  // Barres HP réduites de 20% sur mobile
+  const hpScale  = isMobileUI ? 0.80 : 1
+  const hpFont   = Math.round(11 * hpScale)
+  const hpBarW   = Math.round(120 * hpScale)
+  const hpBarH   = Math.round(10  * hpScale)
+  const hpDotW   = Math.round(11  * hpScale)
+  const hpDotH   = Math.round(14  * hpScale)
+  const hpPadPx  = `${Math.round(5 * hpScale)}px ${Math.round(14 * hpScale)}px`
+  const hpGap    = Math.round(10 * hpScale)
 
   // ═══════════════════════════════ RENDER ════════════════════════════════════
   return (
@@ -1690,21 +1697,21 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
       {/* ── Barres HP ── */}
       {phase === 'combat' && hellPhase === 'idle' && mgPhase === 'idle' && !showDeathScreen && (
         <>
-          <div className="clippy-hpbar-clippy" style={{ background:'rgba(8,8,14,.92)', border:`2px solid ${effectivePhase >= 3 ? '#e85a5a' : '#e8c46a'}`, borderRadius:10, padding:'5px 14px', display:'flex', alignItems:'center', gap:10, backdropFilter:'blur(6px)' }}>
-            <span style={{ fontSize:11, color: effectivePhase >= 3 ? '#e85a5a' : '#e8c46a', fontWeight:700 }}>📎 CLIPPY {`(Ph.${effectivePhase})`}{activeGodPhase > 0 && ' ⚙️'}</span>
-            <div style={{ width:120, height:10, background:'rgba(255,255,255,.1)', borderRadius:99, overflow:'hidden' }}>
+          <div className="clippy-hpbar-clippy" style={{ background:'rgba(8,8,14,.92)', border:`2px solid ${effectivePhase >= 3 ? '#e85a5a' : '#e8c46a'}`, borderRadius:10, padding:hpPadPx, display:'flex', alignItems:'center', gap:hpGap, backdropFilter:'blur(6px)' }}>
+            <span style={{ fontSize:hpFont, color: effectivePhase >= 3 ? '#e85a5a' : '#e8c46a', fontWeight:700 }}>📎 CLIPPY {`(Ph.${effectivePhase})`}{activeGodPhase > 0 && ' ⚙️'}</span>
+            <div style={{ width:hpBarW, height:hpBarH, background:'rgba(255,255,255,.1)', borderRadius:99, overflow:'hidden' }}>
               <div style={{ height:'100%', width:`${(clippyHP/CLIPPY_MAX_HP)*100}%`, background:clippyHP>30?'linear-gradient(90deg,#e8c46a,#f0a060)':clippyHP>15?'linear-gradient(90deg,#f0a060,#e85a5a)':'#e85a5a', borderRadius:99, transition:'width .2s', animation:clippyHit?'clippy-hp-flash .3s ease':'none' }} />
             </div>
-            <span style={{ fontSize:11, color:'#e8c46a', fontWeight:700, fontFamily:'monospace' }}>{clippyHP}/{CLIPPY_MAX_HP}</span>
+            <span style={{ fontSize:hpFont, color:'#e8c46a', fontWeight:700, fontFamily:'monospace' }}>{clippyHP}/{CLIPPY_MAX_HP}</span>
           </div>
-          <div className="clippy-hpbar-player" style={{ background:'rgba(8,8,14,.92)', border:'2px solid #e85a5a', borderRadius:10, padding:'5px 14px', display:'flex', alignItems:'center', gap:10, backdropFilter:'blur(6px)' }}>
-            <span style={{ fontSize:11, color:'#ff8888', fontWeight:700 }}>❤️ VIE</span>
+          <div className="clippy-hpbar-player" style={{ background:'rgba(8,8,14,.92)', border:'2px solid #e85a5a', borderRadius:10, padding:hpPadPx, display:'flex', alignItems:'center', gap:hpGap, backdropFilter:'blur(6px)' }}>
+            <span style={{ fontSize:hpFont, color:'#ff8888', fontWeight:700 }}>❤️ VIE</span>
             <div style={{ display:'flex', gap:3 }}>
               {Array.from({ length:PLAYER_MAX_HP }).map((_,i) => (
-                <div key={i} style={{ width:11, height:14, borderRadius:2, background:i<playerHP?(playerHP<=4?'#ff3333':playerHP<=8?'#ff8800':'#e85a5a'):'rgba(255,255,255,.07)', border:'1px solid rgba(255,255,255,.1)', transition:'background .15s' }} />
+                <div key={i} style={{ width:hpDotW, height:hpDotH, borderRadius:2, background:i<playerHP?(playerHP<=4?'#ff3333':playerHP<=8?'#ff8800':'#e85a5a'):'rgba(255,255,255,.07)', border:'1px solid rgba(255,255,255,.1)', transition:'background .15s' }} />
               ))}
             </div>
-            <span style={{ fontSize:11, color:'#ff7777', fontWeight:700, fontFamily:'monospace' }}>{playerHP}/{PLAYER_MAX_HP}</span>
+            <span style={{ fontSize:hpFont, color:'#ff7777', fontWeight:700, fontFamily:'monospace' }}>{playerHP}/{PLAYER_MAX_HP}</span>
           </div>
         </>
       )}
