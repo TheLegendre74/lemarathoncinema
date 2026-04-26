@@ -354,7 +354,7 @@ export default function WatchlistClient({ watchlists: initial, watchedFilmIds: i
                         <div key={item.film_id} style={{ display: 'flex', alignItems: 'center', gap: '.9rem', background: isWatched ? 'rgba(74,222,128,.04)' : 'var(--bg3)', border: `1px solid ${isWatched ? 'rgba(74,222,128,.2)' : 'var(--border)'}`, borderRadius: 'var(--r)', padding: '.65rem .9rem', transition: 'all .15s' }}>
                           <div style={{ width: 32, height: 48, borderRadius: 4, overflow: 'hidden', flexShrink: 0, background: 'var(--bg2)', position: 'relative' }}>
                             {film.poster
-                              ? <Image src={film.poster} alt={film.titre} width={32} height={48} style={{ objectFit: 'cover', width: '100%', height: '100%', opacity: isWatched ? 0.5 : 1, transition: 'opacity .2s' }} />
+                              ? <Image src={film.poster} alt={film.titre} fill sizes="32px" style={{ objectFit: 'cover', opacity: isWatched ? 0.5 : 1, transition: 'opacity .2s' }} />
                               : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.75rem' }}>🎬</div>
                             }
                             {isWatched && (
