@@ -49,7 +49,6 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP }: 
         private hp = sceneMaxHP
         private score = 0
         private bmIdx = 0
-        private clippyBeatIdx = 0
         private activeNotes: {
           obj: Phaser.GameObjects.Container
           time: number
@@ -186,11 +185,9 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP }: 
             fontSize: '13px', color: '#cc88ff', fontFamily: 'monospace',
           }).setOrigin(0.5, 1)
 
-          // Sprite Clippy positionné au centre du tapis
+          // Sprite Clippy positionné au centre du tapis — taille fixe, jamais tweenée
           this.clippySprite = this.add.image(this.matCenterX, this.matCenterY, 'clippy-normal')
-          const spriteW = TW * 1.05
-          const spriteH = TW * 1.5
-          this.clippySprite.setDisplaySize(spriteW, spriteH)
+          this.clippySprite.setDisplaySize(TW * 0.82, TW * 1.18)
 
           // Séparateur "VS"
           const sepX = Math.round(laneX0 + laneW + (this.matCenterX - (TW * 1.5 + GAP * 2) - laneX0 - laneW) / 2)
@@ -251,7 +248,7 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP }: 
           if (this.ended) return
           const elapsed = this.time.now - this.startTime
 
-          // Spawn notes joueur
+          // Spawn notes joueur (Clippy suit au moment du spawn = note visible à l'écran)
           while (
             this.bmIdx < DANCE_BEATMAP.length &&
             DANCE_BEATMAP[this.bmIdx].time - elapsed < this.spawnAdv
@@ -259,15 +256,6 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP }: 
             const note = DANCE_BEATMAP[this.bmIdx]
             if (note.time >= elapsed - 200) this.spawnNote(note.direction, note.time)
             this.bmIdx++
-          }
-
-          // Clippy suit la beatmap en temps réel
-          while (
-            this.clippyBeatIdx < DANCE_BEATMAP.length &&
-            DANCE_BEATMAP[this.clippyBeatIdx].time <= elapsed
-          ) {
-            this.moveClippyToDir(DANCE_BEATMAP[this.clippyBeatIdx].direction)
-            this.clippyBeatIdx++
           }
 
           // Déplacer + miss check
@@ -290,44 +278,20 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP }: 
 
         private moveClippyToDir(dir: Dir) {
           const pos = this.matTilePos[dir]
-          // Flash de la case
-          if (this.matTileBg[dir]) {
-            this.matTileBg[dir].setAlpha(0.88)
-            this.time.delayedCall(260, () => {
-              if (!this.ended && this.matTileBg[dir]) this.matTileBg[dir].setAlpha(0.2)
-            })
-          }
-          // Déplacement de Clippy avec effet squish
+          // Éteindre toutes les cases, allumer celle-ci
+          ;(['up', 'down', 'left', 'right'] as Dir[]).forEach(d => {
+            if (this.matTileBg[d]) this.matTileBg[d].setAlpha(d === dir ? 0.85 : 0.2)
+          })
+          // Déplacement position uniquement — JAMAIS de tween sur scale/displaySize
           this.tweens.killTweensOf(this.clippySprite)
           this.tweens.add({
             targets: this.clippySprite,
             x: pos.x,
             y: pos.y,
-            scaleX: 1.18,
-            scaleY: 0.82,
-            duration: 65,
-            ease: 'Cubic.Out',
-            onComplete: () => {
-              this.tweens.add({
-                targets: this.clippySprite,
-                scaleX: 1,
-                scaleY: 1,
-                duration: 110,
-                ease: 'Back.Out',
-              })
-              // Retour au centre entre les notes
-              this.time.delayedCall(310, () => {
-                if (this.ended) return
-                this.tweens.add({
-                  targets: this.clippySprite,
-                  x: this.matCenterX,
-                  y: this.matCenterY,
-                  duration: 160,
-                  ease: 'Sine.Out',
-                })
-              })
-            },
+            duration: 90,
+            ease: 'Back.Out',
           })
+          // Clippy reste sur la case jusqu'à la prochaine note (pas de retour centre auto)
         }
 
         private spawnNote(dir: Dir, hitTime: number) {
@@ -342,6 +306,8 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP }: 
           }).setOrigin(0.5)
           container.add([circle, arrow])
           this.activeNotes.push({ obj: container, time: hitTime, dir, judged: false })
+          // Clippy se déplace sur la case au moment où la note apparaît
+          this.moveClippyToDir(dir)
         }
 
         private handleInput(dir: Dir, elapsed: number) {
