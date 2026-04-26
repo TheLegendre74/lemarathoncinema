@@ -20,8 +20,6 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
   useEffect(() => {
     setClippyMastered(localStorage.getItem('clippy_mastered') === '1')
     setClippyActive(localStorage.getItem('clippy_active') === '1')
-    // Fallback localStorage pour affichage immédiat si egg déclenché dans cette session
-    if (!hasConwayEgg && localStorage.getItem('conway_unlocked') === '1') setConwayUnlocked(true)
     function onState(e: Event) { setClippyActive((e as CustomEvent).detail?.active ?? false) }
     function onConwayUnlock() { setConwayUnlocked(true) }
     window.addEventListener('clippy:statechange', onState)
@@ -30,7 +28,7 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
       window.removeEventListener('clippy:statechange', onState)
       window.removeEventListener('conway:unlocked', onConwayUnlock)
     }
-  }, [hasConwayEgg])
+  }, [])
 
   function isActive(href: string) {
     if (href.includes('?')) {

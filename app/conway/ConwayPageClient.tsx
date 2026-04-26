@@ -9,42 +9,9 @@ import { CONWAY_CONFIG } from '@/components/conway/config'
 import type { SpeedKey, DrawTool } from '@/components/conway/config'
 import ConwayControls from '@/components/conway/controls'
 
-// ─── Locked screen ──────────────────────────────────────────────────────────
-function LockedScreen() {
-  return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      minHeight: '60vh', gap: 16, textAlign: 'center', padding: '2rem',
-      fontFamily: 'monospace',
-    }}>
-      <div style={{ fontSize: 48, filter: 'grayscale(1)', opacity: .35 }}>◼◻◼◻◼</div>
-      <div style={{ fontSize: '1.1rem', color: 'var(--text2)', fontWeight: 600 }}>
-        Contenu verrouillé
-      </div>
-      <div style={{ fontSize: '.85rem', color: 'var(--text3)', maxWidth: 340, lineHeight: 1.6 }}>
-        Cet easter egg n'a pas encore été découvert.
-        Il se cache quelque part dans le site…
-      </div>
-      <a href="/easter-eggs" style={{
-        marginTop: 8, padding: '8px 18px',
-        borderRadius: 8, border: '1px solid rgba(74,222,128,0.2)',
-        color: 'rgba(74,222,128,0.7)', fontSize: '.82rem',
-        textDecoration: 'none',
-      }}>
-        🥚 Voir les easter eggs
-      </a>
-    </div>
-  )
-}
-
 // ─── Page principale ─────────────────────────────────────────────────────────
 export default function ConwayPageClient() {
   const router = useRouter()
-  const [unlocked, setUnlocked] = useState<boolean | null>(null)
-
-  useEffect(() => {
-    setUnlocked(localStorage.getItem('conway_unlocked') === '1')
-  }, [])
 
   const containerRef  = useRef<HTMLDivElement>(null)
   const canvasRef     = useRef<HTMLCanvasElement>(null)
@@ -62,7 +29,6 @@ export default function ConwayPageClient() {
 
   // ── Init canvas ──────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!unlocked) return
     const container = containerRef.current
     const canvas    = canvasRef.current
     if (!container || !canvas) return
@@ -92,7 +58,7 @@ export default function ConwayPageClient() {
     ctrl.play()
 
     return () => { ctrl.destroy(); rend.destroy() }
-  }, [unlocked])
+  }, [])
 
   // ── Souris ──────────────────────────────────────────────────────────────
   const toGrid = useCallback((cx: number, cy: number) => {
@@ -141,10 +107,6 @@ export default function ConwayPageClient() {
   }, [router])
 
   // ── Rendu ────────────────────────────────────────────────────────────
-  if (unlocked === null) return null
-
-  if (!unlocked) return <LockedScreen />
-
   const cursor = activeTool === 'erase' ? 'cell' : 'crosshair'
 
   return (

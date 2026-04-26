@@ -1008,8 +1008,7 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
     }
     else if (t.endsWith('gomu gomu no tipiak!')) { setShowTipiak(true) }
     else if (t.endsWith('boîte de pandore') || t.endsWith('boite de pandore') || t.endsWith('pandore')) { void discoverEgg('clippy').catch(() => {}); setShowPandora(true) }
-    else if (t.endsWith('la guerre des mondes')) { discoverEgg('conway'); conwayMiniRef.current = false; localStorage.setItem('conway_unlocked', '1'); window.dispatchEvent(new CustomEvent('conway:unlocked')); setShowConway(true) }
-    else if (t.endsWith('codex')) { window.location.href = '/labo/life' }
+    else if (t.endsWith('la guerre des mondes') && !isGuest) { discoverEgg('conway'); conwayMiniRef.current = false; localStorage.setItem('conway_unlocked', '1'); window.dispatchEvent(new CustomEvent('conway:unlocked')); setShowConway(true) }
     else { triggered = false }
     if (triggered) { setMobileVal(''); setShowMobileInput(false) }
   }
@@ -1174,6 +1173,7 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
   // Mini mode   : window.dispatchEvent(new CustomEvent('conway:invoke', { detail: { mini: true } }))
   useEffect(() => {
     function onConwayInvoke(e: Event) {
+      if (isGuest) return
       const mini = (e as CustomEvent).detail?.mini === true
       conwayMiniRef.current = mini
       discoverEgg('conway')
@@ -1183,7 +1183,7 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
     }
     window.addEventListener('conway:invoke', onConwayInvoke)
     return () => window.removeEventListener('conway:invoke', onConwayInvoke)
-  }, [])
+  }, [isGuest])
 
   // Keyboard easter eggs
   useEffect(() => {
@@ -1314,21 +1314,15 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
         keyBuf.current = []
         return
       }
-      // "la guerre des mondes" → Jeu de la Vie de Conway
+      // "la guerre des mondes" → Jeu de la Vie de Conway (invités exclus)
       const last20 = buf.slice(-20).join('').toLowerCase()
-      if (last20 === 'la guerre des mondes') {
+      if (last20 === 'la guerre des mondes' && !isGuest) {
         discoverEgg('conway')
         conwayMiniRef.current = false
         localStorage.setItem('conway_unlocked', '1')
         window.dispatchEvent(new CustomEvent('conway:unlocked'))
         setShowConway(true)
         keyBuf.current = []
-        return
-      }
-      // "codex" → Life God Game
-      if (buf.slice(-5).join('').toLowerCase() === 'codex') {
-        keyBuf.current = []
-        window.location.href = '/labo/life'
         return
       }
     }
