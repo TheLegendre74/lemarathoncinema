@@ -1159,12 +1159,12 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
     window.addEventListener('mousemove', move)
     return () => window.removeEventListener('mousemove', move)
   }, [phase])
-  // Curseur caché uniquement hors mini-jeu (pendant le mini-jeu = curseur normal visible)
+  // Curseur caché uniquement en combat à l'épée (pas pendant DDR, pas sur l'écran de mort)
   useEffect(() => {
-    const hideCursor = phase === 'combat' && mgPhase === 'idle' && hellPhase === 'idle'
+    const hideCursor = phase === 'combat' && mgPhase === 'idle' && hellPhase === 'idle' && ddrPhase === 'idle' && !showDeathScreen
     document.body.style.cursor = hideCursor ? 'none' : ''
     return () => { document.body.style.cursor = '' }
-  }, [phase, mgPhase, hellPhase])
+  }, [phase, mgPhase, hellPhase, ddrPhase, showDeathScreen])
 
   // ── Rotation messages auto ─────────────────────────────────────────────────
   const rotateMsg = () => {
@@ -1348,12 +1348,14 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
     setShowDeathScreen(false)
     sessionLossesRef.current = 0; setSessionLosses(0)
     playerDeathsRef.current = 0; setPlayerDeaths(0)
-    const resumeHP = deathReason === 'duel' ? 10 : PLAYER_MAX_HP
-    playerHPRef.current = resumeHP; setPlayerHP(resumeHP)
+    playerHPRef.current = PLAYER_MAX_HP; setPlayerHP(PLAYER_MAX_HP)
     if (deathReason === 'ddr') {
-      // Après une défaite DDR : reset complet des HP (combat entier, pas juste +10)
+      // Après une défaite DDR : relancer le mini-jeu de danse
       clippyHPRef.current = CLIPPY_MAX_HP; setClippyHP(CLIPPY_MAX_HP)
-    } else if (deathReason === 'duel') {
+      setDdrPhase('active')
+      return
+    }
+    if (deathReason === 'duel') {
       const newClippyHP = Math.min(CLIPPY_MAX_HP, clippyHPRef.current + 10)
       clippyHPRef.current = newClippyHP; setClippyHP(newClippyHP)
     }
@@ -1617,6 +1619,12 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
       {/* ── DDR mini-jeu (phase 2) ── */}
       {ddrPhase === 'active' && (
         <ClippyDanceBattle
+          initialHP={PLAYER_MAX_HP}
+          onMiss={() => {
+            const next = Math.max(0, playerHPRef.current - 1)
+            playerHPRef.current = next
+            setPlayerHP(next)
+          }}
           onWin={() => {
             setDdrPhase('idle')
             setMessage("🎵 Im... impossible ! Tu danses mieux que moi ?!")
@@ -1653,7 +1661,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
       )}
 
       {/* ── Épée curseur joueur ── */}
-      {phase === 'combat' && mgPhase === 'idle' && hellPhase === 'idle' && (
+      {phase === 'combat' && mgPhase === 'idle' && hellPhase === 'idle' && ddrPhase === 'idle' && (
         <img src="/epee.png" alt="" style={{ position:'fixed', left:mousePos.x-45, top:mousePos.y-200, width:110, height:320, objectFit:'contain', pointerEvents:'none', zIndex:99998, transform:'rotate(45deg)', userSelect:'none', filter:'drop-shadow(0 4px 12px rgba(0,0,0,.85))' }} />
       )}
 
@@ -1717,7 +1725,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
               onClick={handleDeathContinue}
               style={{ padding:'.9rem 2rem', borderRadius:8, background:'linear-gradient(135deg,rgba(79,217,138,.2),rgba(79,217,138,.1))', border:'2px solid rgba(79,217,138,.5)', color:'#4fd98a', fontSize:'.95rem', fontWeight:800, cursor:'pointer', letterSpacing:2 }}
             >
-              ⚔️ Continuez ?
+              ⚔️ Continuer ?
             </button>
             <button
               onClick={handleDeathAbandon}
@@ -1970,7 +1978,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
 
       {/* ── Corps Clippy ── */}
       <div
-        style={{ position:'fixed', left:pos.x, top:pos.y, zIndex:99993, cursor:phase==='combat'?'none':(tired?'crosshair':'pointer'), transition:'left .3s cubic-bezier(.34,1.56,.64,1),top .3s cubic-bezier(.34,1.56,.64,1)', userSelect:'none', display:(hellPhase!=='idle'||mgPhase!=='idle'||showLarbinMsg||showLarbinModal||showDeathScreen)?'none':'block' }}
+        style={{ position:'fixed', left:pos.x, top:pos.y, zIndex:99993, cursor:phase==='combat'?'none':(tired?'crosshair':'pointer'), transition:'left .3s cubic-bezier(.34,1.56,.64,1),top .3s cubic-bezier(.34,1.56,.64,1)', userSelect:'none', display:(hellPhase!=='idle'||mgPhase!=='idle'||ddrPhase!=='idle'||showLarbinMsg||showLarbinModal||showDeathScreen)?'none':'block' }}
         onClick={phase==='normal' ? handleNormalClick : handleCombatClick}
       >
         {(bubble || forcedMessage) && (

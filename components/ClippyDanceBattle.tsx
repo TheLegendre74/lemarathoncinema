@@ -8,6 +8,8 @@ type Dir = DanceNote['direction']
 interface Props {
   onWin: () => void
   onLose: () => void
+  onMiss?: () => void
+  initialHP?: number
 }
 
 const COLS: Dir[] = ['left', 'down', 'up', 'right']
@@ -20,13 +22,15 @@ const HIT_WINDOW_MS = 160   // ±ms autour du hit pour juger
 const PERFECT_MS    = 80    // ±ms pour PERFECT
 const MAX_HP        = 10
 
-export default function ClippyDanceBattle({ onWin, onLose }: Props) {
+export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const onWinRef     = useRef(onWin)
   const onLoseRef    = useRef(onLose)
+  const onMissRef    = useRef(onMiss)
 
   useEffect(() => { onWinRef.current  = onWin  }, [onWin])
   useEffect(() => { onLoseRef.current = onLose }, [onLose])
+  useEffect(() => { onMissRef.current = onMiss }, [onMiss])
 
   // Les flèches directionnelles sont gérées DIRECTEMENT dans la scène Phaser
   // via window.addEventListener (voir ci-dessous) — pas de blocker externe ici.
@@ -44,8 +48,9 @@ export default function ClippyDanceBattle({ onWin, onLose }: Props) {
       if (destroyed || !containerRef.current) return
 
       // ── Scène DDR ─────────────────────────────────────────────────────────
+      const sceneMaxHP = initialHP ?? MAX_HP
       class DDRScene extends Phaser.Scene {
-        private hp = MAX_HP
+        private hp = sceneMaxHP
         private score = 0
         private bmIdx = 0
         private activeNotes: {
@@ -115,9 +120,10 @@ export default function ClippyDanceBattle({ onWin, onLose }: Props) {
           this.add.rectangle(W / 2, this.hitY, laneW + 10, 2, 0xffffff, 0.18)
 
           // ── HUD ─────────────────────────────────────────────────────────
+          // HP géré par la barre ClippyEgg au-dessus — on garde la ref mais on la masque
           this.hpText = this.add.text(14, 14, this.buildHpString(), {
             fontSize: '18px', fontFamily: 'monospace',
-          })
+          }).setAlpha(0)
           this.scoreTxt = this.add.text(W - 14, 14, 'Score: 0', {
             fontSize: '16px', color: '#cccccc', fontFamily: 'monospace',
           }).setOrigin(1, 0)
@@ -238,6 +244,7 @@ export default function ClippyDanceBattle({ onWin, onLose }: Props) {
           this.hp = Math.max(0, this.hp - 1)
           this.hpText.setText(this.buildHpString())
           this.showFeedback('MISS !', '#ff4444')
+          onMissRef.current?.()
           if (this.hp <= 0) this.endGame('lose')
         }
 
@@ -246,7 +253,7 @@ export default function ClippyDanceBattle({ onWin, onLose }: Props) {
         }
 
         private buildHpString() {
-          return '❤️'.repeat(this.hp) + '🖤'.repeat(MAX_HP - this.hp)
+          return '❤️'.repeat(this.hp) + '🖤'.repeat(sceneMaxHP - this.hp)
         }
 
         private endGame(result: 'win' | 'lose') {
