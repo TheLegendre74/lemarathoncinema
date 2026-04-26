@@ -2202,7 +2202,19 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   function tickEscapingStuckArea(am: LifeGodAmEntity) {
     const stuckCenter = am.memory.stuckAreaCenter
     const escapeTarget = am.memory.escapeTarget
-    if (!stuckCenter || !escapeTarget) return { ...am, behaviorState: 'wandering' as const }
+    if (!stuckCenter || !escapeTarget) {
+      return {
+        ...am,
+        behaviorState: 'wandering' as const,
+        targetCell: null,
+        targetPosition: null,
+        memory: {
+          ...am.memory,
+          escapeTarget: null,
+          escapeTicksRemaining: 0,
+        },
+      }
+    }
 
     const center = getAmCenter(am)
     const outOfStuckArea = distanceBetweenCells(center, stuckCenter) > LOCAL_STUCK_RADIUS + 3
@@ -2227,13 +2239,13 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       }, 6, 'escaped_stuck_area')
     }
 
-    const moved = moveToward({
+    const moved = moveTowardEscapeTarget({
       ...am,
       targetCell: null,
       targetPosition: escapeTarget,
       movementDirection: null,
       behaviorCooldown: 0,
-    }, escapeTarget)
+    }, escapeTarget, stuckCenter)
 
     return {
       ...moved,
@@ -2246,6 +2258,88 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
         escapeTarget,
         escapeTicksRemaining: Math.max(0, am.memory.escapeTicksRemaining - 1),
         lastStuckReason: 'escaping_stuck_area',
+      },
+    }
+  }
+
+  function moveTowardEscapeTarget(
+    am: LifeGodAmEntity,
+    escapeTarget: LifeGodRelativeCell,
+    stuckCenter: LifeGodRelativeCell
+  ): LifeGodAmEntity {
+    const currentCenter = getAmCenter(am)
+    const currentDistanceToTarget = distanceBetweenCells(currentCenter, escapeTarget)
+    const currentDistanceFromStuck = distanceBetweenCells(currentCenter, stuckCenter)
+    const currentViolations = countAmSeparationViolationsAt(am, am.position)
+    const seen = new Set<string>()
+    const candidates = [...getMovementCandidates(am), ...getEmergencyMovementCandidates(am)]
+      .filter((position) => {
+        const key = `${position.x}:${position.y}`
+        if (seen.has(key)) return false
+        seen.add(key)
+        return position.x !== am.position.x || position.y !== am.position.y
+      })
+      .filter((position) => canMoveAmThroughStaticObstacles(am, position))
+      .map((position) => {
+        const center = getAmCenter(am, position)
+        const targetDistance = distanceBetweenCells(center, escapeTarget)
+        const stuckDistance = distanceBetweenCells(center, stuckCenter)
+        const violations = countAmSeparationViolationsAt(am, position)
+        const crowding = getCrowdingAt(position, am)
+        const otherDistance = getMinDistanceToOtherAms(position, am)
+        const step = { x: position.x - am.position.x, y: position.y - am.position.y }
+        const travel = Math.max(Math.abs(step.x), Math.abs(step.y))
+        const improvesTarget = targetDistance < currentDistanceToTarget ? 120 : -60
+        const improvesEscape = stuckDistance > currentDistanceFromStuck ? 180 : -120
+        const failedAreaPenalty = isNearFailedArea(am, center, LOCAL_STUCK_RADIUS) ? 220 : 0
+
+        return {
+          position,
+          step,
+          violations,
+          score:
+            (currentViolations - violations) * 1500 -
+            violations * 260 -
+            targetDistance * 40 +
+            stuckDistance * 65 +
+            Math.min(otherDistance, MIN_AM_SEPARATION_CELLS + 20) * 18 -
+            crowding.closeCount * 120 -
+            crowding.crowdCount * 26 +
+            getInwardWallScore(position, am) -
+            getRecentPositionPenalty(position, am) * 0.6 -
+            failedAreaPenalty -
+            travel * 4 +
+            improvesTarget +
+            improvesEscape,
+        }
+      })
+      .sort((a, b) => b.score - a.score)
+
+    const best = candidates[0]
+    if (!best) {
+      return {
+        ...am,
+        behaviorCooldown: 0,
+        movementDirection: null,
+        memory: {
+          ...am.memory,
+          avoidCrowdBoostTicks: Math.max(am.memory.avoidCrowdBoostTicks, 14),
+          explorationBoostTicks: Math.max(am.memory.explorationBoostTicks, 14),
+        },
+      }
+    }
+
+    return {
+      ...rewardAm(am, best.violations < currentViolations ? 2.5 : 0.7, 'escape_stuck_area_move'),
+      position: best.position,
+      absoluteCells: computeAbsoluteCells(am.cells, best.position),
+      targetPosition: escapeTarget,
+      movementDirection: best.step,
+      behaviorCooldown: 0,
+      memory: {
+        ...am.memory,
+        avoidCrowdBoostTicks: Math.max(am.memory.avoidCrowdBoostTicks, best.violations > 0 ? 18 : 8),
+        explorationBoostTicks: Math.max(am.memory.explorationBoostTicks, 10),
       },
     }
   }
@@ -2651,10 +2745,6 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       const nextAm = withMotionMemory(am, ((): LifeGodAmEntity => {
       if (am.state !== 'alive') return am
       const roleConfig = ROLE_CONFIG[am.role]
-      const collisionEscape = moveOutOfAmCollision(am)
-      if (collisionEscape) return collisionEscape
-      const site = getBuildSiteForAm(am)
-      const wantsToBuild = canCreateMoreVisibleAms()
 
       if (am.behaviorState === 'escapingStuckArea') {
         return tickEscapingStuckArea(am)
@@ -2663,6 +2753,11 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       if (isAmStuckInLocalArea(am)) {
         return startEscapingStuckArea(am, hasOscillationLoop(am) ? 'oscillation_loop' : 'stuck_in_local_area')
       }
+
+      const collisionEscape = moveOutOfAmCollision(am)
+      if (collisionEscape) return collisionEscape
+      const site = getBuildSiteForAm(am)
+      const wantsToBuild = canCreateMoreVisibleAms()
 
       if (currentMission === 'terraforming') {
         if (
