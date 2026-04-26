@@ -1739,18 +1739,19 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
             <button key={p} className="btn btn-outline" style={{ fontSize: '.78rem' }}
               onClick={() => {
                 localStorage.setItem('clippy_is_admin', '1')
-                localStorage.setItem('clippy_active', '1')
-                if (p === 0) localStorage.removeItem('clippy_god_phase')
-                else localStorage.setItem('clippy_god_phase', String(p))
-                // Mettre à jour activeGodPhase dans ClippyEgg (même onglet via StorageEvent synthétique)
-                window.dispatchEvent(new StorageEvent('storage', {
-                  key: 'clippy_god_phase',
-                  newValue: p === 0 ? null : String(p),
-                  storageArea: localStorage,
-                }))
-                // Faire apparaître Clippy si pas déjà visible
-                window.dispatchEvent(new CustomEvent('clippy:invoke'))
-                addToast(p === 0 ? 'God Mode désactivé' : `God Mode Phase ${p} activé`, '⚙️')
+                if (p === 0) {
+                  localStorage.removeItem('clippy_god_phase')
+                  localStorage.removeItem('clippy_active')
+                  window.dispatchEvent(new CustomEvent('clippy:revoke'))
+                  addToast('God Mode désactivé — Clippy révoqué', '🔴')
+                } else {
+                  localStorage.setItem('clippy_god_phase', String(p))
+                  localStorage.setItem('clippy_active', '1')
+                  // Revoke → remontage propre → invoke avec le nouveau localStorage
+                  window.dispatchEvent(new CustomEvent('clippy:revoke'))
+                  setTimeout(() => window.dispatchEvent(new CustomEvent('clippy:invoke')), 80)
+                  addToast(`God Mode Phase ${p} activé`, '⚙️')
+                }
               }}>
               {p === 0 ? '🔴 Désactiver' : `Phase ${p}`}
             </button>
