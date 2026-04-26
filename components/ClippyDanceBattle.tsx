@@ -17,9 +17,9 @@ const COL_ARROWS: Record<Dir, string> = { left: '←', down: '↓', up: '↑', r
 const COL_COLORS_HEX: Record<Dir, number> = { left: 0xff6699, down: 0x6699ff, up: 0x66ff99, right: 0xffcc44 }
 const COL_LABEL_CSS: Record<Dir, string> = { left: '#ff6699', down: '#6699ff', up: '#66ff99', right: '#ffcc44' }
 
-const NOTE_SPEED    = 380   // px/sec
-const HIT_WINDOW_MS = 160   // ±ms autour du hit pour juger
-const PERFECT_MS    = 80    // ±ms pour PERFECT
+const NOTE_SPEED    = 380
+const HIT_WINDOW_MS = 160
+const PERFECT_MS    = 80
 const MAX_HP        = 10
 
 export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP }: Props) {
@@ -32,27 +32,24 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP }: 
   useEffect(() => { onLoseRef.current = onLose }, [onLose])
   useEffect(() => { onMissRef.current = onMiss }, [onMiss])
 
-  // Les flèches directionnelles sont gérées DIRECTEMENT dans la scène Phaser
-  // via window.addEventListener (voir ci-dessous) — pas de blocker externe ici.
-
   useEffect(() => {
     if (!containerRef.current) return
     let destroyed = false
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let phaserGame: any = null
-    // Référence au listener clavier direct (bypasse le système focus/input de Phaser)
     let activeKeyListener: ((e: KeyboardEvent) => void) | null = null
 
     ;(async () => {
       const Phaser = (await import('phaser')).default
       if (destroyed || !containerRef.current) return
 
-      // ── Scène DDR ─────────────────────────────────────────────────────────
       const sceneMaxHP = initialHP ?? MAX_HP
+
       class DDRScene extends Phaser.Scene {
         private hp = sceneMaxHP
         private score = 0
         private bmIdx = 0
+        private clippyBeatIdx = 0
         private activeNotes: {
           obj: Phaser.GameObjects.Container
           time: number
@@ -65,16 +62,23 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP }: 
         private feedbackTxt!: Phaser.GameObjects.Text
         private colX!: number[]
         private hitY!: number
-        private spawnAdv!: number  // ms avant hit pour spawner la note
+        private spawnAdv!: number
         private ended = false
         private discoBg!: Phaser.GameObjects.Rectangle
-        private discoTween!: Phaser.Tweens.Tween
         private colCount = COLS.length
+        // Clippy mat
+        private clippySprite!: Phaser.GameObjects.Image
+        private matTilePos!: Record<Dir, { x: number; y: number }>
+        private matCenterX = 0
+        private matCenterY = 0
+        private matTileBg!: Record<Dir, Phaser.GameObjects.Rectangle>
+        private laneCenterX = 0
 
         constructor() { super({ key: 'DDRScene' }) }
 
         preload() {
           this.load.audio('ddr-music', '/audio/clippy/nightclub.m4a')
+          this.load.image('clippy-normal', '/clippy1.png')
         }
 
         create() {
@@ -83,32 +87,38 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP }: 
           this.hitY     = Math.round(H * 0.82)
           this.spawnAdv = ((this.hitY + 80) / NOTE_SPEED) * 1000
 
-          const laneW   = Math.min(W * 0.56, 340)
-          const laneX0  = (W - laneW) / 2
-          this.colX     = COLS.map((_, i) => Math.round(laneX0 + (i + 0.5) * (laneW / this.colCount)))
+          // ── Overlay sombre semi-transparent (arène visible derrière) ──────
+          this.add.rectangle(W / 2, H / 2, W, H, 0x000000).setAlpha(0.52)
 
-          // ── Fond disco animé ──────────────────────────────────────────────
-          this.add.rectangle(W / 2, H / 2, W, H, 0x06021a)
+          // ── Fond disco pulsant ────────────────────────────────────────────
           this.discoBg = this.add.rectangle(W / 2, H / 2, W, H, 0x1a0035)
           this.discoBg.setAlpha(0)
-          this.discoTween = this.tweens.add({
+          this.tweens.add({
             targets: this.discoBg,
-            alpha: { from: 0, to: 0.35 },
+            alpha: { from: 0, to: 0.28 },
             duration: 600,
             yoyo: true,
             repeat: -1,
             ease: 'Sine.easeInOut',
           })
 
-          // Titres colonnes
+          // ── Lanes joueur — décalées à gauche ─────────────────────────────
+          const laneW  = Math.min(W * 0.42, 260)
+          const laneX0 = W * 0.04
+          this.laneCenterX = Math.round(laneX0 + laneW / 2)
+          this.colX = COLS.map((_, i) =>
+            Math.round(laneX0 + (i + 0.5) * (laneW / this.colCount))
+          )
+
+          // Overlay sombre derrière les lanes pour lisibilité
+          this.add.rectangle(this.laneCenterX, H / 2, laneW + 18, H, 0x000000).setAlpha(0.35)
+
           this.colX.forEach((x, i) => {
             const dir = COLS[i]
             const lane = this.add.rectangle(x, H / 2, Math.round(laneW / this.colCount) - 6, H, 0x0d0828)
             lane.setAlpha(0.55)
-            // Zone de frappe (anneau)
             const ring = this.add.circle(x, this.hitY, 30, 0x000000, 0)
             ring.setStrokeStyle(3, COL_COLORS_HEX[dir], 0.5)
-            // Flèche cible fixe (dim)
             this.add.text(x, this.hitY, COL_ARROWS[dir], {
               fontSize: '30px',
               color: COL_LABEL_CSS[dir],
@@ -117,29 +127,98 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP }: 
           })
 
           // Ligne de frappe
-          this.add.rectangle(W / 2, this.hitY, laneW + 10, 2, 0xffffff, 0.18)
+          this.add.rectangle(this.laneCenterX, this.hitY, laneW + 10, 2, 0xffffff, 0.18)
 
-          // ── HUD ─────────────────────────────────────────────────────────
-          // HP géré par la barre ClippyEgg au-dessus — on garde la ref mais on la masque
+          // ── Tapis DDR de Clippy — côté droit ─────────────────────────────
+          this.matCenterX = Math.round(W * 0.78)
+          this.matCenterY = Math.round(H * 0.52)
+          const TW  = Math.min(Math.max(52, H * 0.082), 82)  // taille d'une case
+          const GAP = 8
+
+          // Positions des 4 cases en croix
+          this.matTilePos = {
+            up:    { x: this.matCenterX,       y: this.matCenterY - TW - GAP },
+            down:  { x: this.matCenterX,       y: this.matCenterY + TW + GAP },
+            left:  { x: this.matCenterX - TW - GAP, y: this.matCenterY },
+            right: { x: this.matCenterX + TW + GAP, y: this.matCenterY },
+          }
+
+          // Fond du tapis (panneau)
+          const matPanelW = TW * 3 + GAP * 4 + 24
+          const matPanelH = TW * 3 + GAP * 4 + 50
+          this.add.rectangle(this.matCenterX, this.matCenterY, matPanelW, matPanelH, 0x080018).setAlpha(0.78)
+          const border = this.add.graphics()
+          border.lineStyle(2, 0x9966ff, 0.55)
+          border.strokeRect(
+            this.matCenterX - matPanelW / 2,
+            this.matCenterY - matPanelH / 2,
+            matPanelW, matPanelH
+          )
+
+          // Cases directionnelles
+          this.matTileBg = {} as Record<Dir, Phaser.GameObjects.Rectangle>
+          ;(['up', 'down', 'left', 'right'] as Dir[]).forEach(dir => {
+            const pos = this.matTilePos[dir]
+            const col = COL_COLORS_HEX[dir]
+            const bg = this.add.rectangle(pos.x, pos.y, TW - 4, TW - 4, col)
+            bg.setAlpha(0.2)
+            this.matTileBg[dir] = bg
+            // Bordure case
+            const g = this.add.graphics()
+            g.lineStyle(2, col, 0.5)
+            g.strokeRect(pos.x - (TW - 4) / 2, pos.y - (TW - 4) / 2, TW - 4, TW - 4)
+            // Flèche sur la case
+            this.add.text(pos.x, pos.y, COL_ARROWS[dir], {
+              fontSize: `${Math.round(TW * 0.52)}px`,
+              color: COL_LABEL_CSS[dir],
+              fontFamily: 'monospace',
+            }).setOrigin(0.5).setAlpha(0.55)
+          })
+
+          // Case centre (neutre)
+          this.add.rectangle(this.matCenterX, this.matCenterY, TW - 4, TW - 4, 0x221144).setAlpha(0.55)
+          const gc = this.add.graphics()
+          gc.lineStyle(1, 0x9966ff, 0.3)
+          gc.strokeRect(this.matCenterX - (TW - 4) / 2, this.matCenterY - (TW - 4) / 2, TW - 4, TW - 4)
+
+          // Label "CLIPPY" au-dessus du tapis
+          this.add.text(this.matCenterX, this.matCenterY - matPanelH / 2 - 10, '📎 CLIPPY', {
+            fontSize: '13px', color: '#cc88ff', fontFamily: 'monospace',
+          }).setOrigin(0.5, 1)
+
+          // Sprite Clippy positionné au centre du tapis
+          this.clippySprite = this.add.image(this.matCenterX, this.matCenterY, 'clippy-normal')
+          const spriteW = TW * 1.05
+          const spriteH = TW * 1.5
+          this.clippySprite.setDisplaySize(spriteW, spriteH)
+
+          // Séparateur "VS"
+          const sepX = Math.round(laneX0 + laneW + (this.matCenterX - (TW * 1.5 + GAP * 2) - laneX0 - laneW) / 2)
+          this.add.text(sepX, Math.round(H * 0.5), 'VS', {
+            fontSize: '22px', color: '#cc88ff', fontFamily: 'monospace', fontStyle: 'bold',
+          }).setOrigin(0.5).setAlpha(0.5)
+
+          // ── HUD ──────────────────────────────────────────────────────────
           this.hpText = this.add.text(14, 14, this.buildHpString(), {
             fontSize: '18px', fontFamily: 'monospace',
           }).setAlpha(0)
-          this.scoreTxt = this.add.text(W - 14, 14, 'Score: 0', {
-            fontSize: '16px', color: '#cccccc', fontFamily: 'monospace',
-          }).setOrigin(1, 0)
 
-          this.feedbackTxt = this.add.text(W / 2, Math.round(H * 0.62), '', {
-            fontSize: '38px', fontStyle: 'bold', fontFamily: 'monospace',
-          }).setOrigin(0.5)
+          this.scoreTxt = this.add.text(
+            Math.round(laneX0 + laneW) + 6, 14,
+            'Score: 0',
+            { fontSize: '14px', color: '#cccccc', fontFamily: 'monospace' }
+          )
 
-          this.add.text(W / 2, 18, '🎵  DUEL DE DANSE  🎵', {
-            fontSize: '15px', color: '#cc88ff',
-            letterSpacing: 3, fontFamily: 'monospace',
+          this.feedbackTxt = this.add.text(
+            this.laneCenterX, Math.round(H * 0.62), '',
+            { fontSize: '36px', fontStyle: 'bold', fontFamily: 'monospace' }
+          ).setOrigin(0.5)
+
+          this.add.text(this.laneCenterX, 18, '🎵  DUEL DE DANSE  🎵', {
+            fontSize: '14px', color: '#cc88ff', letterSpacing: 3, fontFamily: 'monospace',
           }).setOrigin(0.5, 0)
 
-          // ── Touches clavier — listener direct sur window ──────────────────
-          // Bypasse le système focus/canvas de Phaser : fonctionne quelle que
-          // soit la situation de focus du DOM.
+          // ── Clavier ───────────────────────────────────────────────────────
           const keyMap: Record<string, Dir> = {
             ArrowLeft: 'left', ArrowDown: 'down',
             ArrowUp:   'up',   ArrowRight: 'right',
@@ -154,14 +233,13 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP }: 
             this.handleInput(dir, elapsed)
           }
           activeKeyListener = kbListener
-          window.addEventListener('keydown', kbListener, true)  // capture=true : priorité max
+          window.addEventListener('keydown', kbListener, true)
 
           // ── Musique ───────────────────────────────────────────────────────
           const music = this.sound.add('ddr-music', { loop: false, volume: 0.85 })
           music.play()
           this.startTime = this.time.now
 
-          // Victoire automatique si toujours en vie à la fin de la beatmap + 2s
           const lastNote = DANCE_BEATMAP[DANCE_BEATMAP.length - 1]
           this.time.addEvent({
             delay: lastNote.time + 2200,
@@ -172,9 +250,8 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP }: 
         update() {
           if (this.ended) return
           const elapsed = this.time.now - this.startTime
-          // Input géré via window.addEventListener dans create() — rien à faire ici
 
-          // Spawn les notes dont le hit time approche
+          // Spawn notes joueur
           while (
             this.bmIdx < DANCE_BEATMAP.length &&
             DANCE_BEATMAP[this.bmIdx].time - elapsed < this.spawnAdv
@@ -182,6 +259,15 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP }: 
             const note = DANCE_BEATMAP[this.bmIdx]
             if (note.time >= elapsed - 200) this.spawnNote(note.direction, note.time)
             this.bmIdx++
+          }
+
+          // Clippy suit la beatmap en temps réel
+          while (
+            this.clippyBeatIdx < DANCE_BEATMAP.length &&
+            DANCE_BEATMAP[this.clippyBeatIdx].time <= elapsed
+          ) {
+            this.moveClippyToDir(DANCE_BEATMAP[this.clippyBeatIdx].direction)
+            this.clippyBeatIdx++
           }
 
           // Déplacer + miss check
@@ -197,10 +283,51 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP }: 
           }
           this.activeNotes = this.activeNotes.filter(n => !n.judged)
 
-          // Fade feedback
           if (this.feedbackTxt.alpha > 0) {
             this.feedbackTxt.setAlpha(Math.max(0, this.feedbackTxt.alpha - 0.02))
           }
+        }
+
+        private moveClippyToDir(dir: Dir) {
+          const pos = this.matTilePos[dir]
+          // Flash de la case
+          if (this.matTileBg[dir]) {
+            this.matTileBg[dir].setAlpha(0.88)
+            this.time.delayedCall(260, () => {
+              if (!this.ended && this.matTileBg[dir]) this.matTileBg[dir].setAlpha(0.2)
+            })
+          }
+          // Déplacement de Clippy avec effet squish
+          this.tweens.killTweensOf(this.clippySprite)
+          this.tweens.add({
+            targets: this.clippySprite,
+            x: pos.x,
+            y: pos.y,
+            scaleX: 1.18,
+            scaleY: 0.82,
+            duration: 65,
+            ease: 'Cubic.Out',
+            onComplete: () => {
+              this.tweens.add({
+                targets: this.clippySprite,
+                scaleX: 1,
+                scaleY: 1,
+                duration: 110,
+                ease: 'Back.Out',
+              })
+              // Retour au centre entre les notes
+              this.time.delayedCall(310, () => {
+                if (this.ended) return
+                this.tweens.add({
+                  targets: this.clippySprite,
+                  x: this.matCenterX,
+                  y: this.matCenterY,
+                  duration: 160,
+                  ease: 'Sine.Out',
+                })
+              })
+            },
+          })
         }
 
         private spawnNote(dir: Dir, hitTime: number) {
@@ -237,7 +364,6 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP }: 
             }
             this.scoreTxt.setText('Score: ' + this.score)
           }
-          // Phantom press (sans note proche) = pas de pénalité
         }
 
         private onMiss() {
@@ -270,12 +396,11 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP }: 
           })
         }
       }
-      // ── /Scène DDR ────────────────────────────────────────────────────────
 
       phaserGame = new Phaser.Game({
         type: Phaser.AUTO,
         parent: containerRef.current!,
-        backgroundColor: '#06021a',
+        transparent: true,
         scale: {
           mode: Phaser.Scale.RESIZE,
           autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -305,7 +430,6 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP }: 
         position: 'fixed',
         inset: 0,
         zIndex: 99985,
-        background: '#06021a',
         outline: 'none',
       }}
     />

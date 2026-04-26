@@ -1638,8 +1638,8 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
         />
       )}
 
-      {/* ── Arène background (combat uniquement — bloque tout le site derrière) ── */}
-      {phase === 'combat' && hellPhase === 'idle' && ddrPhase === 'idle' && (
+      {/* ── Arène background (combat + DDR — bloque tout le site derrière) ── */}
+      {phase === 'combat' && hellPhase === 'idle' && (
         <div style={{ position:'fixed', inset:0, zIndex:99980, background:'#000' }}>
           <img
             src={
