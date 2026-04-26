@@ -22,6 +22,7 @@ export type LifeGodAmBehaviorState =
   | 'shapingVegetation'
   | 'shapingWater'
   | 'shapingRock'
+  | 'escapingStuckArea'
   | 'resting'
 
 export interface LifeGodRelativeCell {
@@ -37,6 +38,8 @@ export type LifeGodAmMessageType =
   | 'overcrowdedArea'
   | 'wallDanger'
   | 'goodTerraformZone'
+  | 'areaBusy'
+  | 'terraformingZoneClaimed'
 
 export interface LifeGodAmMessage {
   id: string
@@ -136,6 +139,21 @@ export interface LifeGodAmEntity {
     independenceScore: number
     totalReward: number
     lastRewardReason: string | null
+    terraformStuckTicks: number
+    failedTerraformTargets: LifeGodRelativeCell[]
+    recentBlockedPositions: LifeGodRelativeCell[]
+    lastTerraformConversionTick: number
+    lastTerraformAction: string | null
+    recoveryTriggered: boolean
+    recentTimedPositions: Array<LifeGodRelativeCell & { tick: number }>
+    stuckAreaCenter: LifeGodRelativeCell | null
+    stuckAreaTicks: number
+    escapeTarget: LifeGodRelativeCell | null
+    escapeTicksRemaining: number
+    lastUsefulActionTick: number
+    failedTargets: LifeGodRelativeCell[]
+    failedAreas: LifeGodRelativeCell[]
+    lastStuckReason: string | null
   }
   reproductionCooldown: number
   behaviorCooldown: number
@@ -201,6 +219,9 @@ export interface LifeGodSimulationState {
   waterCount: number
   rockCount: number
   terraformationProgress: number
+  terraformationComplete: boolean
+  terraformationStabilized: boolean
+  criticallyBlockedAmCount: number
   createdAmCount: number
   targetAmCount: number
   aliveAmTarget: number

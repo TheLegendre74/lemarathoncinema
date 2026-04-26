@@ -134,6 +134,8 @@ export function LifeGodGameHud({
                 <div>Water : {simulationState.waterCount}</div>
                 <div>Rock : {simulationState.rockCount}</div>
                 <div>Terraforming : {terraformingPercent}%</div>
+                <div>Terraform complete : {simulationState.terraformationComplete ? 'oui' : 'non'}</div>
+                <div>AM bloquées : {simulationState.criticallyBlockedAmCount}</div>
                 <div>Cellules vivantes : {simulationState.aliveCount}</div>
                 <div>Lignées : {simulationState.amLineages.length} / 3</div>
                 <div>Patterns actifs : {simulationState.activePatternIds.length} / {simulationState.maxActivePatternsPerSeed}</div>
@@ -161,6 +163,20 @@ export function LifeGodGameHud({
                   <div>Independence : {selectedAm.memory.independenceScore.toFixed(2)}</div>
                   <div>Total reward : {selectedAm.memory.totalReward.toFixed(1)}</div>
                   <div>Last reward : {selectedAm.memory.lastRewardReason ?? 'aucune'}</div>
+                  <div>Terraform stuck : {selectedAm.memory.terraformStuckTicks}</div>
+                  <div>Terraform target : {selectedAm.targetCell ? `${selectedAm.targetCell.x},${selectedAm.targetCell.y}` : 'aucune'}</div>
+                  <div>Failed terraform targets : {selectedAm.memory.failedTerraformTargets.length}</div>
+                  <div>Terraform conversions : {selectedAm.memory.terraformedCells}</div>
+                  <div>Last terraform action : {selectedAm.memory.lastTerraformAction ?? 'aucune'}</div>
+                  <div>Recovery triggered : {selectedAm.memory.recoveryTriggered ? 'oui' : 'non'}</div>
+                  <div>Stuck area ticks : {selectedAm.memory.stuckAreaTicks}</div>
+                  <div>Stuck center : {selectedAm.memory.stuckAreaCenter ? `${Math.round(selectedAm.memory.stuckAreaCenter.x)},${Math.round(selectedAm.memory.stuckAreaCenter.y)}` : 'aucun'}</div>
+                  <div>Escape target : {selectedAm.memory.escapeTarget ? `${selectedAm.memory.escapeTarget.x},${selectedAm.memory.escapeTarget.y}` : 'aucune'}</div>
+                  <div>Escape ticks left : {selectedAm.memory.escapeTicksRemaining}</div>
+                  <div>Failed areas : {selectedAm.memory.failedAreas.length}</div>
+                  <div>Escaping stuck area : {selectedAm.behaviorState === 'escapingStuckArea' ? 'oui' : 'non'}</div>
+                  <div>Last useful action : {selectedAm.memory.lastUsefulActionTick}</div>
+                  <div>Last stuck reason : {selectedAm.memory.lastStuckReason ?? 'aucune'}</div>
                   {selectedSite && (
                     <div>Chantier : {selectedSite.depositedCells.length} / {selectedSite.requiredCellCount}</div>
                   )}
