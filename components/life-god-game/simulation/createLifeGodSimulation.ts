@@ -44,16 +44,16 @@ const STABILITY_THRESHOLD = 8   // ticks consécutifs pour qu'une cellule soit c
 const MAX_ACTIVE_PATTERNS_PER_SEED = 3
 const CONSTRUCTION_SITE_SPACING = 34
 const STUCK_TICK_LIMIT = 18
-const EMERGENCY_ESCAPE_RADIUS = 8
-const MIN_AM_SEPARATION_CELLS = 2
+const EMERGENCY_ESCAPE_RADIUS = 14
+const MIN_AM_SEPARATION_CELLS = 10
 const WALL_ESCAPE_MARGIN = 12
 const BUILD_SITE_WORK_RADIUS_MIN = 8
 const BUILD_SITE_WORK_RADIUS_MAX = 14
 const WALL_DANGER_MARGIN = 4
-const WALL_HUGGING_TICK_LIMIT = 6
-const OVERCROWD_RADIUS = 9
-const OVERCROWD_CLOSE_RADIUS = 3
-const OVERCROWD_TICK_LIMIT = 5
+const WALL_HUGGING_TICK_LIMIT = 4
+const OVERCROWD_RADIUS = 16
+const OVERCROWD_CLOSE_RADIUS = MIN_AM_SEPARATION_CELLS
+const OVERCROWD_TICK_LIMIT = 3
 const COMMUNICATION_RADIUS = 56
 const MESSAGE_TTL_TICKS = 90
 const MAX_AM_MESSAGES = 90
@@ -1619,6 +1619,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   }
 
   function moveAwayFromWallOrObstacle(am: LifeGodAmEntity): LifeGodAmEntity {
+    const currentViolations = countAmSeparationViolationsAt(am, am.position)
     const wallVector = getWallEscapeVector(am)
     const obstacleVector = am.movementDirection
       ? { x: -am.movementDirection.x, y: -am.movementDirection.y }
@@ -1630,8 +1631,9 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
 
     const candidates = getEmergencyMovementCandidates(am)
       .filter((position) => position.x !== am.position.x || position.y !== am.position.y)
-      .filter((position) => canMoveAmTo(am, position))
+      .filter((position) => canMoveAmThroughStaticObstacles(am, position))
       .map((position) => {
+        const violations = countAmSeparationViolationsAt(am, position)
         const step = { x: position.x - am.position.x, y: position.y - am.position.y }
         const travel = Math.max(Math.abs(step.x), Math.abs(step.y))
         const center = getAmCenter(am, position)
@@ -1641,10 +1643,12 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
         return {
           position,
           step,
+          violations,
           score:
+            (currentViolations - violations) * 900 +
             escapeAlignment * 12 +
             edgeDistance * 4 +
-            getMinDistanceToOtherAms(position, am) * 3 -
+            Math.min(getMinDistanceToOtherAms(position, am), MIN_AM_SEPARATION_CELLS + 12) * 8 -
             crowding.closeCount * 70 -
             crowding.crowdCount * 18 -
             travel,
@@ -1653,9 +1657,9 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       .sort((a, b) => b.score - a.score)
 
     const best = candidates[0]
-    if (!best) return { ...am, behaviorCooldown: 0, movementDirection: null }
+    if (!best || (currentViolations > 0 && best.violations > currentViolations)) return { ...am, behaviorCooldown: 0, movementDirection: null }
     return {
-      ...am,
+      ...rewardAm(am, best.violations < currentViolations ? 2.5 : 0.6, 'escape_spacing'),
       position: best.position,
       absoluteCells: computeAbsoluteCells(am.cells, best.position),
       targetPosition: best.position,
@@ -1704,13 +1708,20 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
           position,
           step,
           violations,
-          score: -violations * 500 + Math.min(otherDistance, 20) * 8 + movesAway - travel * 6 + keepsDirection,
+          score:
+            (currentViolations - violations) * 1200 -
+            violations * 220 +
+            Math.min(otherDistance, MIN_AM_SEPARATION_CELLS + 16) * 12 +
+            movesAway -
+            travel * 6 +
+            keepsDirection +
+            getInwardWallScore(position, am),
         }
       })
       .sort((a, b) => b.score - a.score)
 
     const best = candidates[0]
-    if (!best || best.violations >= currentViolations) {
+    if (!best || best.violations > currentViolations) {
       return {
         ...am,
         behaviorCooldown: 0,
@@ -1718,7 +1729,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       }
     }
 
-    const rewardedAm = rewardAm(am, 1.8, 'collision_avoided')
+    const rewardedAm = rewardAm(am, best.violations < currentViolations ? 5 : 1.8, 'collision_avoided')
     return {
       ...rewardedAm,
       position: best.position,
@@ -1929,10 +1940,12 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   function forceUnstuckMove(am: LifeGodAmEntity) {
     const currentCenter = getAmCenter(am)
     const target = am.targetCell ?? am.buildSite ?? am.targetPosition ?? currentCenter
+    const currentViolations = countAmSeparationViolationsAt(am, am.position)
     const candidates = getEmergencyMovementCandidates(am)
       .filter((position) => position.x !== am.position.x || position.y !== am.position.y)
-      .filter((position) => canMoveAmTo(am, position))
+      .filter((position) => canMoveAmThroughStaticObstacles(am, position))
       .map((position) => {
+        const violations = countAmSeparationViolationsAt(am, position)
         const center = getAmCenter(am, position)
         const targetDistance = Math.abs(center.x - target.x) + Math.abs(center.y - target.y)
         const otherDistance = getMinDistanceToOtherAms(position, am)
@@ -1947,9 +1960,12 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
         return {
           position,
           step,
+          violations,
           score:
+            (currentViolations - violations) * 1100 -
+            violations * 180 +
             -targetDistance * 5 +
-            Math.min(otherDistance, 24) * 8 +
+            Math.min(otherDistance, MIN_AM_SEPARATION_CELLS + 16) * 12 +
             Math.min(siteDistance, 18) * 4 -
             crowding.closeCount * 80 -
             crowding.crowdCount * 20 +
@@ -1976,7 +1992,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     }
 
     return {
-      ...am,
+      ...rewardAm(am, best.violations < currentViolations ? 4 : 1, 'unstuck_move'),
       position: best.position,
       absoluteCells: computeAbsoluteCells(am.cells, best.position),
       targetPosition: target,
@@ -2010,12 +2026,12 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
         explorationBoostTicks: Math.max(0, nextAm.memory.explorationBoostTicks - 1),
         avoidCrowdBoostTicks: Math.max(0, nextAm.memory.avoidCrowdBoostTicks - 1),
         recentPositions: clampList([...nextAm.memory.recentPositions, roundedCenter], MAX_MEMORY_POSITIONS),
-        independenceScore: Math.max(0, Math.min(1, getMinDistanceToOtherAms(nextAm.position, nextAm) / 18)),
+        independenceScore: Math.max(0, Math.min(1, getMinDistanceToOtherAms(nextAm.position, nextAm) / MIN_AM_SEPARATION_CELLS)),
       },
     }
 
     if (wallDanger > 0) {
-      const penalized = penalizeAm(tracked, tracked.memory.wallStickTicks >= WALL_HUGGING_TICK_LIMIT ? 1.4 : 0.35, 'wall_hugging')
+      const penalized = penalizeAm(tracked, tracked.memory.wallStickTicks >= WALL_HUGGING_TICK_LIMIT ? 3 : 1, 'wall_hugging')
       tracked = {
         ...penalized,
         memory: {
@@ -2032,7 +2048,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     }
 
     if (crowding.closeCount > 0 || crowding.crowdCount >= 3) {
-      const penalized = penalizeAm(tracked, tracked.memory.overcrowdedTicks >= OVERCROWD_TICK_LIMIT ? 1.6 : 0.4, 'overcrowded')
+      const penalized = penalizeAm(tracked, tracked.memory.overcrowdedTicks >= OVERCROWD_TICK_LIMIT ? 4 : 1.2, 'overcrowded')
       tracked = {
         ...penalized,
         memory: {
@@ -2043,13 +2059,13 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
           knownDangerHints: rememberCell(penalized.memory.knownDangerHints, roundedCenter),
         },
       }
-      tracked = publishAmMessage(tracked, 'overcrowdedArea', roundedCenter, Math.min(2, 0.8 + crowding.crowdCount / 3))
+      tracked = publishAmMessage(tracked, 'overcrowdedArea', roundedCenter, Math.min(2.6, 1.2 + crowding.crowdCount / 2))
     } else if (previous.memory.overcrowdedTicks >= OVERCROWD_TICK_LIMIT) {
       tracked = rewardAm(tracked, 1, 'escaped_overcrowding')
     }
 
-    if (tracked.memory.repeatedAreaTicks >= 7) {
-      const penalized = penalizeAm(tracked, 1.2, 'repeated_same_area')
+    if (tracked.memory.repeatedAreaTicks >= 5) {
+      const penalized = penalizeAm(tracked, 2, 'repeated_same_area')
       tracked = {
         ...penalized,
         memory: {
@@ -2060,8 +2076,15 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       }
     }
 
-    if (moved && wallDanger === 0 && crowding.closeCount === 0 && crowding.crowdCount <= 1 && !repeatedArea) {
-      tracked = rewardAm(tracked, 0.25, 'useful_exploration')
+    if (!moved) {
+      tracked = penalizeAm(tracked, tracked.memory.stationaryTicks >= 4 ? 2.4 : 0.8, 'immobile')
+    }
+
+    const safelySpaced = wallDanger === 0 && getMinDistanceToOtherAms(tracked.position, tracked) >= MIN_AM_SEPARATION_CELLS && crowding.closeCount === 0
+    if (safelySpaced) {
+      tracked = rewardAm(tracked, moved && !repeatedArea ? 1.2 : 0.5, moved ? 'safe_independent_move' : 'safe_spacing')
+    } else if (moved && wallDanger === 0 && crowding.closeCount === 0 && crowding.crowdCount <= 1 && !repeatedArea) {
+      tracked = rewardAm(tracked, 0.35, 'useful_exploration')
     }
 
     return tracked
