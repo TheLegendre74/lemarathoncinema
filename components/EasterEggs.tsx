@@ -1120,6 +1120,14 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
     "Bon. Si tu nettoies le coffre un jour, ça sentira moins la moisissure. C'est tout ce que je demande. 🍄",
   ]
 
+  // Correction SSR : le lazy initializer retourne false côté serveur, on corrige côté client
+  useEffect(() => {
+    if (!showClipy && (localStorage.getItem('clippy_active') === '1' || localStorage.getItem('clippy_is_larbin') === '1')) {
+      setShowClipy(true)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Dispatcher l'état de Clippy vers la Sidebar
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('clippy:statechange', { detail: { active: showClipy } }))

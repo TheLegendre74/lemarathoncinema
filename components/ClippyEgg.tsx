@@ -899,7 +899,8 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
     }
 
     const newMsg = pickFrom(normalQueue, newNormalReplies)
-    setMessage(newMsg); setBubble(true)
+    setMessage(newMsg)
+    if (phase === 'combat') setBubble(true)  // bubble uniquement si changement en combat
     // Reset l'état normal pour refléter la nouvelle phase immédiatement
     if (phase !== 'combat') {
       setMisses(0); setTired(false)
@@ -1396,7 +1397,6 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
   // ── Séquence enfer ─────────────────────────────────────────────────────────
   function startHellSequence() {
     stopMusic(); clearAutoAttack()
-    try { localStorage.removeItem(LS_ACTIVE) } catch {}
     if (isLarbin) { try { localStorage.removeItem(LS_LARBIN) } catch {} }
     // En god mode : utiliser l'index de phase (0-8) pour les dialogues, sans incrémenter defeats
     const hellIdx = activeGodPhase > 0 ? (activeGodPhase - 1) : defeatsRef.current
@@ -1431,7 +1431,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage }: C
           // God mode : juste reset après la séquence
           resetToNormal()
         } else if (defeatsRef.current >= 5) {
-          try { localStorage.setItem(LS_MASTERED, '1') } catch {}
+          try { localStorage.setItem(LS_MASTERED, '1'); localStorage.removeItem(LS_ACTIVE) } catch {}
           unlockClippyMaster().catch(() => {})
           setShowMastery(true)
         } else {
