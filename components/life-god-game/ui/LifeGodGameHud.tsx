@@ -152,6 +152,15 @@ export function LifeGodGameHud({
                   <div>Target cell : {selectedAm.targetCell ? `${selectedAm.targetCell.x},${selectedAm.targetCell.y}` : 'aucune'}</div>
                   <div>Build site : {selectedAm.buildSite ? `${selectedAm.buildSite.x},${selectedAm.buildSite.y}` : 'aucun'}</div>
                   <div>Cellules rassemblées : {selectedAm.gatheredCells.length}</div>
+                  <div>Wall stick ticks : {selectedAm.memory.wallStickTicks}</div>
+                  <div>Overcrowded ticks : {selectedAm.memory.overcrowdedTicks}</div>
+                  <div>Repeated area ticks : {selectedAm.memory.repeatedAreaTicks}</div>
+                  <div>Last message : {selectedAm.memory.lastMessageSent ?? 'aucun'}</div>
+                  <div>Resource hints : {selectedAm.memory.knownResourceHints.length}</div>
+                  <div>Danger hints : {selectedAm.memory.knownDangerHints.length}</div>
+                  <div>Independence : {selectedAm.memory.independenceScore.toFixed(2)}</div>
+                  <div>Total reward : {selectedAm.memory.totalReward.toFixed(1)}</div>
+                  <div>Last reward : {selectedAm.memory.lastRewardReason ?? 'aucune'}</div>
                   {selectedSite && (
                     <div>Chantier : {selectedSite.depositedCells.length} / {selectedSite.requiredCellCount}</div>
                   )}

@@ -3,6 +3,8 @@ import type {
   LifeGodAmEntity,
   LifeGodAmBehaviorState,
   LifeGodAmMission,
+  LifeGodAmMessage,
+  LifeGodAmMessageType,
   LifeGodAmLineage,
   LifeGodAmPattern,
   LifeGodInfluenceMode,
@@ -47,6 +49,16 @@ const MIN_AM_SEPARATION_CELLS = 2
 const WALL_ESCAPE_MARGIN = 12
 const BUILD_SITE_WORK_RADIUS_MIN = 8
 const BUILD_SITE_WORK_RADIUS_MAX = 14
+const WALL_DANGER_MARGIN = 4
+const WALL_HUGGING_TICK_LIMIT = 6
+const OVERCROWD_RADIUS = 9
+const OVERCROWD_CLOSE_RADIUS = 3
+const OVERCROWD_TICK_LIMIT = 5
+const COMMUNICATION_RADIUS = 56
+const MESSAGE_TTL_TICKS = 90
+const MAX_AM_MESSAGES = 90
+const MAX_MEMORY_POSITIONS = 18
+const MAX_MEMORY_HINTS = 8
 const TIME_SCALES: LifeGodTimeScale[] = [0.25, 0.5, 1, 2, 4, 8]
 const LINEAGE_COLORS = ['#69f0c1', '#ff8ad8', '#7ab6ff']
 const BUILD_PILE_OFFSETS: LifeGodRelativeCell[] = [
@@ -131,6 +143,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   let protoEntities: LifeGodProtoEntity[] = []
   let amEntities: LifeGodAmEntity[] = []
   let constructionSites: LifeGodConstructionSite[] = []
+  let amMessages: LifeGodAmMessage[] = []
   let currentMission: LifeGodAmMission = 'expandingPopulation'
   let firstAmCandidate: FirstAmCandidate | null = null
   let selectedAmId: string | null = null
@@ -463,6 +476,141 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     return lineage
   }
 
+  function createInitialMemory(origin: LifeGodRelativeCell): LifeGodAmEntity['memory'] {
+    return {
+      lastTargetCell: null,
+      lastBuildSite: null,
+      lastPosition: origin,
+      stationaryTicks: 0,
+      unstuckUntilCycle: 0,
+      terraformedCells: 0,
+      wallStickTicks: 0,
+      overcrowdedTicks: 0,
+      repeatedAreaTicks: 0,
+      explorationBoostTicks: 0,
+      avoidCrowdBoostTicks: 0,
+      recentPositions: [origin],
+      crowdedZones: [],
+      wallDangerZones: [],
+      usefulZones: [],
+      lastMessageSent: null,
+      knownResourceHints: [],
+      knownDangerHints: [],
+      independenceScore: 1,
+      totalReward: 0,
+      lastRewardReason: null,
+    }
+  }
+
+  function clampList<T>(items: T[], maxItems = MAX_MEMORY_HINTS) {
+    return items.slice(Math.max(0, items.length - maxItems))
+  }
+
+  function rememberCell(cells: LifeGodRelativeCell[], cell: LifeGodRelativeCell, maxItems = MAX_MEMORY_HINTS) {
+    const filtered = cells.filter((item) => distanceBetweenCells(item, cell) > 2)
+    return clampList([...filtered, { x: Math.round(cell.x), y: Math.round(cell.y) }], maxItems)
+  }
+
+  function rewardAm(am: LifeGodAmEntity, amount: number, reason: string): LifeGodAmEntity {
+    return {
+      ...am,
+      memory: {
+        ...am.memory,
+        totalReward: am.memory.totalReward + amount,
+        lastRewardReason: reason,
+      },
+    }
+  }
+
+  function penalizeAm(am: LifeGodAmEntity, amount: number, reason: string): LifeGodAmEntity {
+    return rewardAm(am, -Math.abs(amount), reason)
+  }
+
+  function publishAmMessage(
+    am: LifeGodAmEntity,
+    type: LifeGodAmMessageType,
+    position: LifeGodRelativeCell,
+    strength = 1
+  ): LifeGodAmEntity {
+    const roundedPosition = { x: Math.round(position.x), y: Math.round(position.y) }
+    const existing = amMessages.find((message) =>
+      message.senderAmId === am.id &&
+      message.type === type &&
+      distanceBetweenCells(message.position, roundedPosition) <= 4 &&
+      message.ageTicks < 18
+    )
+    if (!existing) {
+      amMessages = [
+        ...amMessages,
+        {
+          id: `msg-${generation}-${am.id}-${type}-${amMessages.length}`,
+          senderAmId: am.id,
+          type,
+          position: roundedPosition,
+          strength,
+          ageTicks: 0,
+          payload: { lineageId: am.lineageId },
+        },
+      ].slice(-MAX_AM_MESSAGES)
+    }
+    return {
+      ...am,
+      memory: {
+        ...am.memory,
+        lastMessageSent: type,
+      },
+    }
+  }
+
+  function tickAmMessages() {
+    amMessages = amMessages
+      .map((message) => ({ ...message, ageTicks: message.ageTicks + 1 }))
+      .filter((message) => message.ageTicks <= MESSAGE_TTL_TICKS)
+      .slice(-MAX_AM_MESSAGES)
+  }
+
+  function absorbNearbyMessages(am: LifeGodAmEntity): LifeGodAmEntity {
+    const center = getAmCenter(am)
+    let knownResourceHints = am.memory.knownResourceHints
+    let knownDangerHints = am.memory.knownDangerHints
+    let usefulZones = am.memory.usefulZones
+    let crowdedZones = am.memory.crowdedZones
+    let wallDangerZones = am.memory.wallDangerZones
+
+    for (const message of amMessages) {
+      if (message.senderAmId === am.id) continue
+      if (message.payload?.lineageId && message.payload.lineageId !== am.lineageId && distanceBetweenCells(center, message.position) > COMMUNICATION_RADIUS * 0.55) {
+        continue
+      }
+      if (distanceBetweenCells(center, message.position) > COMMUNICATION_RADIUS) continue
+
+      if (message.type === 'stableCellsFound' || message.type === 'resourceFound' || message.type === 'frozenMatterFound' || message.type === 'goodTerraformZone') {
+        knownResourceHints = rememberCell(knownResourceHints, message.position)
+        usefulZones = rememberCell(usefulZones, message.position)
+      }
+      if (message.type === 'overcrowdedArea') {
+        knownDangerHints = rememberCell(knownDangerHints, message.position)
+        crowdedZones = rememberCell(crowdedZones, message.position)
+      }
+      if (message.type === 'wallDanger') {
+        knownDangerHints = rememberCell(knownDangerHints, message.position)
+        wallDangerZones = rememberCell(wallDangerZones, message.position)
+      }
+    }
+
+    return {
+      ...am,
+      memory: {
+        ...am.memory,
+        knownResourceHints,
+        knownDangerHints,
+        usefulZones,
+        crowdedZones,
+        wallDangerZones,
+      },
+    }
+  }
+
   function rollFormationDurations() {
     const total = Math.round(MIN_FORMATION_CYCLES + Math.random() * (MAX_FORMATION_CYCLES - MIN_FORMATION_CYCLES))
     const forming = Math.max(1, Math.round(total * 0.62))
@@ -555,14 +703,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       carriedCell: null,
       movementDirection: null,
       gatheredCells: [],
-      memory: {
-        lastTargetCell: null,
-        lastBuildSite: null,
-        lastPosition: origin,
-        stationaryTicks: 0,
-        unstuckUntilCycle: 0,
-        terraformedCells: 0,
-      },
+      memory: createInitialMemory(origin),
       reproductionCooldown: roleConfig.reproductionCooldown,
       behaviorCooldown: roleConfig.movementInterval,
       formationDurationCycles,
@@ -1042,16 +1183,21 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       converted += 1
     }
 
+    const communicatedAm = converted > 0
+      ? publishAmMessage(rewardAm(am, converted * 4, 'terraform_success'), 'goodTerraformZone', origin, 1 + converted / 3)
+      : penalizeAm(am, 0.8, 'empty_terraform_search')
+
     return {
-      ...am,
+      ...communicatedAm,
       behaviorState: converted > 0 ? terrainBehaviorState(terrainType) : 'seekingFrozenMatter',
       currentGoal: 'terraforming',
       targetCell: null,
       targetPosition: origin,
       memory: {
-        ...am.memory,
+        ...communicatedAm.memory,
         lastTargetCell: origin,
-        terraformedCells: am.memory.terraformedCells + converted,
+        terraformedCells: communicatedAm.memory.terraformedCells + converted,
+        usefulZones: converted > 0 ? rememberCell(communicatedAm.memory.usefulZones, origin) : communicatedAm.memory.usefulZones,
       },
       behaviorCooldown: TERRAFORM_COOLDOWN,
     }
@@ -1072,6 +1218,20 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       }
     }
     return null
+  }
+
+  function findKnownStableHint(am: LifeGodAmEntity) {
+    const hints = [...am.memory.knownResourceHints, ...am.memory.usefulZones]
+      .filter((cell) => isFixedCellAvailable(cell.x, cell.y, am.id, false))
+      .sort((a, b) => distanceBetweenCells(getAmCenter(am), a) - distanceBetweenCells(getAmCenter(am), b))
+    return hints[0] ?? null
+  }
+
+  function findKnownFrozenHint(am: LifeGodAmEntity) {
+    const hints = [...am.memory.knownResourceHints, ...am.memory.usefulZones]
+      .filter((cell) => isFrozenMatterAvailable(cell.x, cell.y, am.id))
+      .sort((a, b) => distanceBetweenCells(getAmCenter(am), a) - distanceBetweenCells(getAmCenter(am), b))
+    return hints[0] ?? null
   }
 
   function releaseGatheredCells(am: LifeGodAmEntity) {
@@ -1152,6 +1312,90 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     }
 
     return Number.isFinite(minDistance) ? minDistance : 999
+  }
+
+  function getCrowdingAt(position: { x: number; y: number }, am: LifeGodAmEntity) {
+    const center = getAmCenter(am, position)
+    let closeCount = 0
+    let crowdCount = 0
+    let targetConflictCount = 0
+
+    for (const other of amEntities) {
+      if (other.id === am.id) continue
+      const otherCenter = averagePosition(other.absoluteCells)
+      const distance = distanceBetweenCells(center, otherCenter)
+      if (distance <= OVERCROWD_CLOSE_RADIUS) closeCount += 1
+      if (distance <= OVERCROWD_RADIUS) crowdCount += 1
+
+      const otherTarget = other.targetPosition ?? other.targetCell ?? other.buildSite
+      if (otherTarget && distanceBetweenCells(center, otherTarget) <= OVERCROWD_RADIUS) {
+        targetConflictCount += 1
+      }
+    }
+
+    return { closeCount, crowdCount, targetConflictCount }
+  }
+
+  function getWallDangerAt(position: { x: number; y: number }, am: LifeGodAmEntity) {
+    const cells = computeAbsoluteCells(am.cells, position)
+    const bounds = cells.reduce(
+      (acc, cell) => ({
+        minX: Math.min(acc.minX, cell.x),
+        minY: Math.min(acc.minY, cell.y),
+        maxX: Math.max(acc.maxX, cell.x),
+        maxY: Math.max(acc.maxY, cell.y),
+      }),
+      { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity }
+    )
+    const left = Math.max(0, WALL_DANGER_MARGIN - bounds.minX + 1)
+    const top = Math.max(0, WALL_DANGER_MARGIN - bounds.minY + 1)
+    const right = Math.max(0, bounds.maxX - (GRID_WIDTH - 1 - WALL_DANGER_MARGIN) + 1)
+    const bottom = Math.max(0, bounds.maxY - (GRID_HEIGHT - 1 - WALL_DANGER_MARGIN) + 1)
+    return left + top + right + bottom
+  }
+
+  function getInwardWallScore(position: { x: number; y: number }, am: LifeGodAmEntity) {
+    const currentDanger = getWallDangerAt(am.position, am)
+    const nextDanger = getWallDangerAt(position, am)
+    if (currentDanger === 0 && nextDanger === 0) return 0
+    return (currentDanger - nextDanger) * 18 - nextDanger * 22
+  }
+
+  function getCommunicationScore(position: { x: number; y: number }, am: LifeGodAmEntity) {
+    const center = getAmCenter(am, position)
+    let score = 0
+
+    for (const message of amMessages) {
+      if (message.senderAmId === am.id) continue
+      const distance = distanceBetweenCells(center, message.position)
+      if (distance > COMMUNICATION_RADIUS) continue
+      const strength = Math.max(0, message.strength * (1 - message.ageTicks / MESSAGE_TTL_TICKS))
+      if (strength <= 0) continue
+
+      if (message.type === 'overcrowdedArea' || message.type === 'wallDanger') {
+        score -= Math.max(0, 18 - distance) * 2.4 * strength
+      }
+      if (
+        (am.currentGoal === 'terraforming' && (message.type === 'frozenMatterFound' || message.type === 'goodTerraformZone')) ||
+        (am.currentGoal === 'expandingPopulation' && message.type === 'stableCellsFound')
+      ) {
+        score += Math.max(0, 16 - distance) * 1.6 * strength
+      }
+      if (message.type === 'buildSiteReserved') {
+        score -= Math.max(0, 12 - distance) * 2 * strength
+      }
+    }
+
+    return score
+  }
+
+  function getRecentPositionPenalty(position: { x: number; y: number }, am: LifeGodAmEntity) {
+    return am.memory.recentPositions.reduce((penalty, item, index) => {
+      const distance = distanceBetweenCells(position, item)
+      if (distance > 1) return penalty
+      const recency = (index + 1) / Math.max(am.memory.recentPositions.length, 1)
+      return penalty + recency * 8
+    }, 0)
   }
 
   function getInfluenceScore(position: { x: number; y: number }, am: LifeGodAmEntity) {
@@ -1393,10 +1637,17 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
         const center = getAmCenter(am, position)
         const edgeDistance = Math.min(center.x, center.y, GRID_WIDTH - 1 - center.x, GRID_HEIGHT - 1 - center.y)
         const escapeAlignment = step.x * escapeVector.x + step.y * escapeVector.y
+        const crowding = getCrowdingAt(position, am)
         return {
           position,
           step,
-          score: escapeAlignment * 12 + edgeDistance * 4 + getMinDistanceToOtherAms(position, am) * 2 - travel,
+          score:
+            escapeAlignment * 12 +
+            edgeDistance * 4 +
+            getMinDistanceToOtherAms(position, am) * 3 -
+            crowding.closeCount * 70 -
+            crowding.crowdCount * 18 -
+            travel,
         }
       })
       .sort((a, b) => b.score - a.score)
@@ -1467,13 +1718,18 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       }
     }
 
+    const rewardedAm = rewardAm(am, 1.8, 'collision_avoided')
     return {
-      ...am,
+      ...rewardedAm,
       position: best.position,
       absoluteCells: computeAbsoluteCells(am.cells, best.position),
       targetPosition: am.targetCell ?? am.buildSite ?? best.position,
       movementDirection: best.step,
       behaviorCooldown: 0,
+      memory: {
+        ...rewardedAm.memory,
+        avoidCrowdBoostTicks: Math.max(rewardedAm.memory.avoidCrowdBoostTicks, 12),
+      },
     }
   }
 
@@ -1493,26 +1749,37 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   function scoreMovement(am: LifeGodAmEntity, position: { x: number; y: number }) {
     const density = getLivingDensityAt(position, am)
     const otherDistance = getMinDistanceToOtherAms(position, am)
+    const crowding = getCrowdingAt(position, am)
     const lineageAnchor = getLineageAnchor(am.lineageId, am.id)
     const center = averagePosition(computeAbsoluteCells(am.cells, position))
     const lineageDistance = Math.abs(center.x - lineageAnchor.x) + Math.abs(center.y - lineageAnchor.y)
     const influenceScore = getInfluenceScore(position, am)
+    const avoidCrowdBoost = 1 + Math.min(1.3, (am.memory.avoidCrowdBoostTicks + am.memory.overcrowdedTicks) / 16)
+    const exploreBoost = 1 + Math.min(1.1, (am.memory.explorationBoostTicks + am.memory.wallStickTicks) / 18)
+    const independenceScore =
+      Math.min(otherDistance, 26) * 2.5 * avoidCrowdBoost -
+      crowding.closeCount * 48 * avoidCrowdBoost -
+      crowding.crowdCount * 16 * avoidCrowdBoost -
+      crowding.targetConflictCount * 10
+    const wallScore = getInwardWallScore(position, am)
+    const memoryScore = -getRecentPositionPenalty(position, am)
+    const communicationScore = getCommunicationScore(position, am)
 
     if (am.behaviorState === 'assemblingAm') {
       if (am.buildTarget) {
         const distToSite = Math.abs(center.x - am.buildTarget.x) + Math.abs(center.y - am.buildTarget.y)
-        return -distToSite * 5 + Math.random() * 4 + influenceScore
+        return -distToSite * 5 + independenceScore * 0.35 + wallScore + memoryScore + communicationScore + Math.random() * 4 + influenceScore
       }
-      return density * 2 + Math.random() * 4 + influenceScore
+      return density * 2 + independenceScore * 0.45 + wallScore + memoryScore + communicationScore + Math.random() * 4 + influenceScore
     }
 
     if (am.role === 'explorer') {
-      return lineageDistance * 4 + otherDistance * 3 - density * 1.5 + influenceScore
+      return lineageDistance * 4 * exploreBoost + independenceScore + wallScore + memoryScore + communicationScore - density * 1.5 + influenceScore
     }
     if (am.role === 'gatherer') {
-      return density * 7 + otherDistance * 1.2 - lineageDistance * 1.6 + influenceScore
+      return density * 7 + independenceScore * 0.75 + wallScore + memoryScore + communicationScore - lineageDistance * 1.4 + influenceScore
     }
-    return density * 2.5 + otherDistance * 0.8 - lineageDistance * 4 + influenceScore
+    return density * 2.5 + independenceScore * 0.85 + wallScore + memoryScore + communicationScore - lineageDistance * 3.5 + influenceScore
   }
 
   function createBuildSiteMission(am: LifeGodAmEntity): LifeGodAmEntity {
@@ -1556,8 +1823,9 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
 
     constructionSites = [...constructionSites, site]
     clearNormalMatterAt(getBuildFootprintCells(pattern, origin))
+    const communicatingAm = publishAmMessage(am, 'buildSiteReserved', origin, 1.2)
     return {
-      ...am,
+      ...communicatingAm,
       energy: Math.max(0, am.energy - roleConfig.reproductionEnergyCost),
       behaviorState: 'seekingFixedCell' as const,
       currentGoal: 'expandingPopulation',
@@ -1569,8 +1837,9 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       reproductionCooldown: roleConfig.reproductionCooldown,
       behaviorCooldown: roleConfig.movementInterval,
       memory: {
-        ...am.memory,
+        ...communicatingAm.memory,
         lastBuildSite: origin,
+        usefulZones: rememberCell(communicatingAm.memory.usefulZones, origin),
       },
     }
   }
@@ -1604,7 +1873,25 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
         const waits = step.x === 0 && step.y === 0 ? -6 : 0
         const reverses = am.movementDirection && step.x === -am.movementDirection.x && step.y === -am.movementDirection.y ? -8 : 0
         const improves = distance <= currentDistance ? 10 : -20
-        return { position, step, score: -distance * 20 + improves + keepsDirection + reverses + waits + getInfluenceScore(position, am) }
+        const crowding = getCrowdingAt(position, am)
+        const otherDistance = getMinDistanceToOtherAms(position, am)
+        const avoidCrowdBoost = 1 + Math.min(1.4, (am.memory.avoidCrowdBoostTicks + am.memory.overcrowdedTicks) / 14)
+        const separationScore = Math.min(otherDistance, 24) * 3 * avoidCrowdBoost - crowding.closeCount * 60 - crowding.crowdCount * 18
+        return {
+          position,
+          step,
+          score:
+            -distance * 20 +
+            improves +
+            keepsDirection +
+            reverses +
+            waits +
+            separationScore +
+            getInwardWallScore(position, am) +
+            getCommunicationScore(position, am) -
+            getRecentPositionPenalty(position, am) +
+            getInfluenceScore(position, am),
+        }
       })
       .sort((a, b) => b.score - a.score)
 
@@ -1656,10 +1943,20 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
         }, 999)
         const step = { x: position.x - am.position.x, y: position.y - am.position.y }
         const reverses = am.movementDirection && step.x === -am.movementDirection.x && step.y === -am.movementDirection.y ? -2 : 0
+        const crowding = getCrowdingAt(position, am)
         return {
           position,
           step,
-          score: -targetDistance * 5 + Math.min(otherDistance, 18) * 7 + Math.min(siteDistance, 18) * 4 - travel * 2 + reverses + Math.random(),
+          score:
+            -targetDistance * 5 +
+            Math.min(otherDistance, 24) * 8 +
+            Math.min(siteDistance, 18) * 4 -
+            crowding.closeCount * 80 -
+            crowding.crowdCount * 20 +
+            getInwardWallScore(position, am) -
+            travel * 2 +
+            reverses +
+            Math.random(),
         }
       })
       .sort((a, b) => b.score - a.score)
@@ -1694,18 +1991,94 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     }
   }
 
+  function updateSpatialMemory(previous: LifeGodAmEntity, nextAm: LifeGodAmEntity, moved: boolean) {
+    const center = getAmCenter(nextAm)
+    const roundedCenter = { x: Math.round(center.x), y: Math.round(center.y) }
+    const wallDanger = getWallDangerAt(nextAm.position, nextAm)
+    const crowding = getCrowdingAt(nextAm.position, nextAm)
+    const repeatedArea = nextAm.memory.recentPositions.some((item) => distanceBetweenCells(item, roundedCenter) <= 1)
+    let tracked: LifeGodAmEntity = {
+      ...nextAm,
+      memory: {
+        ...nextAm.memory,
+        wallStickTicks: wallDanger > 0 ? nextAm.memory.wallStickTicks + 1 : Math.max(0, nextAm.memory.wallStickTicks - 1),
+        overcrowdedTicks:
+          crowding.closeCount > 0 || crowding.crowdCount >= 3
+            ? nextAm.memory.overcrowdedTicks + 1
+            : Math.max(0, nextAm.memory.overcrowdedTicks - 1),
+        repeatedAreaTicks: repeatedArea && moved ? nextAm.memory.repeatedAreaTicks + 1 : Math.max(0, nextAm.memory.repeatedAreaTicks - 1),
+        explorationBoostTicks: Math.max(0, nextAm.memory.explorationBoostTicks - 1),
+        avoidCrowdBoostTicks: Math.max(0, nextAm.memory.avoidCrowdBoostTicks - 1),
+        recentPositions: clampList([...nextAm.memory.recentPositions, roundedCenter], MAX_MEMORY_POSITIONS),
+        independenceScore: Math.max(0, Math.min(1, getMinDistanceToOtherAms(nextAm.position, nextAm) / 18)),
+      },
+    }
+
+    if (wallDanger > 0) {
+      const penalized = penalizeAm(tracked, tracked.memory.wallStickTicks >= WALL_HUGGING_TICK_LIMIT ? 1.4 : 0.35, 'wall_hugging')
+      tracked = {
+        ...penalized,
+        memory: {
+          ...penalized.memory,
+          explorationBoostTicks: Math.max(penalized.memory.explorationBoostTicks, 16),
+          avoidCrowdBoostTicks: Math.max(penalized.memory.avoidCrowdBoostTicks, 10),
+          wallDangerZones: rememberCell(penalized.memory.wallDangerZones, roundedCenter),
+          knownDangerHints: rememberCell(penalized.memory.knownDangerHints, roundedCenter),
+        },
+      }
+      tracked = publishAmMessage(tracked, 'wallDanger', roundedCenter, Math.min(1.8, 0.8 + tracked.memory.wallStickTicks / 8))
+    } else if (previous.memory.wallStickTicks >= WALL_HUGGING_TICK_LIMIT) {
+      tracked = rewardAm(tracked, 1.2, 'returned_from_wall')
+    }
+
+    if (crowding.closeCount > 0 || crowding.crowdCount >= 3) {
+      const penalized = penalizeAm(tracked, tracked.memory.overcrowdedTicks >= OVERCROWD_TICK_LIMIT ? 1.6 : 0.4, 'overcrowded')
+      tracked = {
+        ...penalized,
+        memory: {
+          ...penalized.memory,
+          avoidCrowdBoostTicks: Math.max(penalized.memory.avoidCrowdBoostTicks, 18),
+          explorationBoostTicks: Math.max(penalized.memory.explorationBoostTicks, 8),
+          crowdedZones: rememberCell(penalized.memory.crowdedZones, roundedCenter),
+          knownDangerHints: rememberCell(penalized.memory.knownDangerHints, roundedCenter),
+        },
+      }
+      tracked = publishAmMessage(tracked, 'overcrowdedArea', roundedCenter, Math.min(2, 0.8 + crowding.crowdCount / 3))
+    } else if (previous.memory.overcrowdedTicks >= OVERCROWD_TICK_LIMIT) {
+      tracked = rewardAm(tracked, 1, 'escaped_overcrowding')
+    }
+
+    if (tracked.memory.repeatedAreaTicks >= 7) {
+      const penalized = penalizeAm(tracked, 1.2, 'repeated_same_area')
+      tracked = {
+        ...penalized,
+        memory: {
+          ...penalized.memory,
+          explorationBoostTicks: Math.max(penalized.memory.explorationBoostTicks, 14),
+          avoidCrowdBoostTicks: Math.max(penalized.memory.avoidCrowdBoostTicks, 10),
+        },
+      }
+    }
+
+    if (moved && wallDanger === 0 && crowding.closeCount === 0 && crowding.crowdCount <= 1 && !repeatedArea) {
+      tracked = rewardAm(tracked, 0.25, 'useful_exploration')
+    }
+
+    return tracked
+  }
+
   function withMotionMemory(previous: LifeGodAmEntity, nextAm: LifeGodAmEntity) {
     if (nextAm.state !== 'alive') return nextAm
     const moved = previous.position.x !== nextAm.position.x || previous.position.y !== nextAm.position.y
     const stationaryTicks = moved ? 0 : previous.memory.stationaryTicks + 1
-    const tracked = {
+    const tracked = updateSpatialMemory(previous, {
       ...nextAm,
       memory: {
         ...nextAm.memory,
         lastPosition: nextAm.position,
         stationaryTicks,
       },
-    }
+    }, moved)
 
     if (
       !moved &&
@@ -1713,7 +2086,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       stationaryTicks >= STUCK_TICK_LIMIT &&
       generation >= tracked.memory.unstuckUntilCycle
     ) {
-      return forceUnstuckMove(tracked)
+      return forceUnstuckMove(penalizeAm(tracked, 2, 'stuck'))
     }
 
     return tracked
@@ -1724,15 +2097,17 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       return { ...am, behaviorState: 'seekingFixedCell' as const, targetCell: null }
     }
     markMatterMovedFrom(am.targetCell)
+    const rewardedAm = rewardAm(publishAmMessage(am, 'resourceFound', am.targetCell, 1.1), 4, 'harvest_success')
     return {
-      ...am,
+      ...rewardedAm,
       behaviorState: 'carryingCellToSite' as const,
       carriedCell: am.targetCell,
       gatheredCells: [am.targetCell],
       targetCell: null,
       memory: {
-        ...am.memory,
+        ...rewardedAm.memory,
         lastTargetCell: am.targetCell,
+        usefulZones: rememberCell(rewardedAm.memory.usefulZones, am.targetCell),
       },
     }
   }
@@ -1772,7 +2147,15 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
             if (other.id === am.id) return closest
             return Math.min(closest, distanceBetweenCells(averagePosition(other.absoluteCells), target))
           }, 999)
-          const score = -radius * 8 + Math.min(otherDistance, 18) * 3 + Math.random()
+          const crowding = getCrowdingAt(target, am)
+          const score =
+            -radius * 8 +
+            Math.min(otherDistance, 22) * 4 -
+            crowding.closeCount * 42 -
+            crowding.crowdCount * 12 +
+            getCommunicationScore(target, am) -
+            getRecentPositionPenalty(target, am) +
+            Math.random()
           candidates.push({ target, score })
         }
       }
@@ -1806,13 +2189,18 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
 
     const updatedSite = constructionSites.find((item) => item.id === site.id)
     const readyToAssemble = updatedSite ? updatedSite.depositedCells.length >= updatedSite.requiredCellCount : false
+    const rewardedAm = rewardAm(am, 4, 'deposit_success')
     return {
-      ...am,
+      ...rewardedAm,
       behaviorState: readyToAssemble ? 'assemblingAm' as const : 'seekingFixedCell' as const,
       carriedCell: null,
       gatheredCells: [],
       targetCell: null,
       targetPosition: placement,
+      memory: {
+        ...rewardedAm.memory,
+        usefulZones: rememberCell(rewardedAm.memory.usefulZones, placement),
+      },
     }
   }
 
@@ -1865,7 +2253,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
 
         const targetCell = am.targetCell && isFrozenMatterAvailable(am.targetCell.x, am.targetCell.y, am.id)
           ? am.targetCell
-          : findNearestFrozenMatter(Math.round(getAmCenter(am).x), Math.round(getAmCenter(am).y), am.id)
+          : findKnownFrozenHint(am) ?? findNearestFrozenMatter(Math.round(getAmCenter(am).x), Math.round(getAmCenter(am).y), am.id)
 
         if (!targetCell) {
           const roamingTarget = findBehaviorTarget({ ...am, currentGoal: 'terraforming' })
@@ -1884,14 +2272,16 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
           }
         }
 
-        if (distanceToCell(am, targetCell) <= 2) {
-          return terraformAround({ ...am, targetCell, currentGoal: 'terraforming' }, targetCell)
+        const informedAm = publishAmMessage(rewardAm(am, 0.6, 'frozen_matter_found'), 'frozenMatterFound', targetCell, 1)
+
+        if (distanceToCell(informedAm, targetCell) <= 2) {
+          return terraformAround({ ...informedAm, targetCell, currentGoal: 'terraforming' }, targetCell)
         }
 
-        const nextCooldown = Math.max(0, am.behaviorCooldown - 1)
+        const nextCooldown = Math.max(0, informedAm.behaviorCooldown - 1)
         if (nextCooldown > 0) {
           return {
-            ...am,
+            ...informedAm,
             currentGoal: 'terraforming',
             behaviorState: 'seekingFrozenMatter' as const,
             targetCell,
@@ -1899,7 +2289,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
           }
         }
 
-        const moved = moveToward({ ...am, currentGoal: 'terraforming', targetCell }, targetCell)
+        const moved = moveToward({ ...informedAm, currentGoal: 'terraforming', targetCell }, targetCell)
         return {
           ...moved,
           currentGoal: 'terraforming',
@@ -1954,11 +2344,12 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       if (site && (am.behaviorState === 'seekingFixedCell' || am.behaviorState === 'movingToFixedCell')) {
         const targetCell = am.targetCell && isFixedCellAvailable(am.targetCell.x, am.targetCell.y, am.id, false)
           ? am.targetCell
-          : findNearestStableCell(Math.round(getAmCenter(am).x), Math.round(getAmCenter(am).y), am.id)
+          : findKnownStableHint(am) ?? findNearestStableCell(Math.round(getAmCenter(am).x), Math.round(getAmCenter(am).y), am.id)
         if (!targetCell) return { ...am, behaviorState: 'wandering' as const, targetCell: null, buildSite: site.origin }
-        if (distanceToCell(am, targetCell) <= 1) {
+        const informedAm = publishAmMessage(rewardAm(am, 0.4, 'stable_cell_found'), 'stableCellsFound', targetCell, 1)
+        if (distanceToCell(informedAm, targetCell) <= 1) {
           return harvestTargetCell({
-            ...am,
+            ...informedAm,
             behaviorState: 'harvestingCell' as const,
             targetCell,
             buildSite: site.origin,
@@ -1966,11 +2357,11 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
           })
         }
 
-        const nextCooldown = Math.max(0, am.behaviorCooldown - 1)
+        const nextCooldown = Math.max(0, informedAm.behaviorCooldown - 1)
         if (nextCooldown > 0) {
-          return { ...am, behaviorState: 'movingToFixedCell' as const, targetCell, buildSite: site.origin, behaviorCooldown: nextCooldown }
+          return { ...informedAm, behaviorState: 'movingToFixedCell' as const, targetCell, buildSite: site.origin, behaviorCooldown: nextCooldown }
         }
-        const moved = moveToward({ ...am, targetCell, buildSite: site.origin, buildTarget: site.origin }, targetCell)
+        const moved = moveToward({ ...informedAm, targetCell, buildSite: site.origin, buildTarget: site.origin }, targetCell)
         return {
           ...moved,
           behaviorState: 'movingToFixedCell' as const,
@@ -2018,7 +2409,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     amEntities = amEntities.map((am) => {
       const roleConfig = ROLE_CONFIG[am.role]
       const nextAge = am.age + 1
-      const nextState =
+      const nextState: LifeGodAmEntity['state'] =
         nextAge < am.formationDurationCycles
           ? 'forming'
           : nextAge < am.formationDurationCycles + am.adaptationDurationCycles
@@ -2027,7 +2418,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       const cooldown = nextState === 'alive' ? Math.max(0, am.reproductionCooldown - 1) : am.reproductionCooldown
       const energyGain = nextState === 'alive' ? roleConfig.energyGain : roleConfig.energyGain * 0.35
       const energy = Math.min(100, am.energy + energyGain)
-      return {
+      const nextAm: LifeGodAmEntity = {
         ...am,
         age: nextAge,
         energy,
@@ -2036,6 +2427,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
         behaviorState: nextState === 'alive' ? am.behaviorState : 'idle',
         absoluteCells: computeAbsoluteCells(am.cells, am.position),
       }
+      return nextState === 'alive' ? absorbNearbyMessages(nextAm) : nextAm
     })
   }
 
@@ -2055,6 +2447,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     protoEntities = []
     amEntities = []
     constructionSites = []
+    amMessages = []
     firstAmCandidate = null
     selectedAmId = null
     stabilityGrid = createGrid()
@@ -2134,6 +2527,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     tickConstructionSites()  // les chantiers continuent après le gel
     syncConstructionCells()
     syncAmCells()            // dessine les AM par-dessus la matiere en fin de tick
+    tickAmMessages()
     refreshAliveCount()
     tryStartReproduction()
     updateStabilityGrid()    // calcule la stabilité des cellules pour guider les AM
@@ -2242,6 +2636,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       protoEntities = []
       amEntities = []
       constructionSites = []
+      amMessages = []
       firstAmCandidate = null
       selectedAmId = null
       stabilityGrid = createGrid()

@@ -29,6 +29,29 @@ export interface LifeGodRelativeCell {
   y: number
 }
 
+export type LifeGodAmMessageType =
+  | 'resourceFound'
+  | 'stableCellsFound'
+  | 'frozenMatterFound'
+  | 'buildSiteReserved'
+  | 'overcrowdedArea'
+  | 'wallDanger'
+  | 'goodTerraformZone'
+
+export interface LifeGodAmMessage {
+  id: string
+  senderAmId: string
+  type: LifeGodAmMessageType
+  position: LifeGodRelativeCell
+  strength: number
+  ageTicks: number
+  payload?: {
+    lineageId?: string
+    siteId?: string
+    terrainType?: LifeGodTerrainType
+  }
+}
+
 export interface LifeGodBodyParts {
   head: LifeGodRelativeCell[]
   body: LifeGodRelativeCell[]
@@ -98,6 +121,21 @@ export interface LifeGodAmEntity {
     stationaryTicks: number
     unstuckUntilCycle: number
     terraformedCells: number
+    wallStickTicks: number
+    overcrowdedTicks: number
+    repeatedAreaTicks: number
+    explorationBoostTicks: number
+    avoidCrowdBoostTicks: number
+    recentPositions: LifeGodRelativeCell[]
+    crowdedZones: LifeGodRelativeCell[]
+    wallDangerZones: LifeGodRelativeCell[]
+    usefulZones: LifeGodRelativeCell[]
+    lastMessageSent: LifeGodAmMessageType | null
+    knownResourceHints: LifeGodRelativeCell[]
+    knownDangerHints: LifeGodRelativeCell[]
+    independenceScore: number
+    totalReward: number
+    lastRewardReason: string | null
   }
   reproductionCooldown: number
   behaviorCooldown: number
