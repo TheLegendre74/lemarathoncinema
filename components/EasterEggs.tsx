@@ -1154,6 +1154,8 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
     function onInvoke() { setShowClipy(true) }
     function onRevoke() {
       if (showPleaRef.current) { advancePlea(); return }
+      // En mode admin (revoke depuis le panel) : dismiss direct, pas de plea aléatoire
+      if (localStorage.getItem('clippy_is_admin') === '1') { dismissClipy(); return }
       if (Math.random() < 0.05) { setPleaIdx(0); setShowPlea(true) }
       else dismissClipy()
     }

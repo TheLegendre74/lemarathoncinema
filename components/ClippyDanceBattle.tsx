@@ -77,7 +77,7 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP }: 
 
         preload() {
           this.load.audio('ddr-music', '/audio/clippy/nightclub.m4a')
-          this.load.image('clippy-normal', '/clippy1.png')
+          this.load.image('clippy-normal', '/clippy2.png')
         }
 
         create() {

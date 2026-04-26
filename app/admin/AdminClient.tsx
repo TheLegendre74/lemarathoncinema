@@ -1690,7 +1690,11 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
                 localStorage.setItem('clippy_active', '1')
                 localStorage.removeItem('clippy_is_larbin')
                 localStorage.removeItem('clippy_mastered')
-                addToast(`Phase ${d+1} activée — ouvre /films`, '📎')
+                localStorage.removeItem('clippy_god_phase')
+                // Forcer un remontage propre de ClippyEgg avec le nouveau localStorage
+                window.dispatchEvent(new CustomEvent('clippy:revoke'))
+                setTimeout(() => window.dispatchEvent(new CustomEvent('clippy:invoke')), 80)
+                addToast(`Phase ${d+1} activée`, '📎')
               }}>Phase {d+1} ({d} défaite{d>1?'s':''})</button>
           ))}
           <button className="btn btn-outline" style={{ fontSize: '.78rem' }}
@@ -1698,6 +1702,8 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
               localStorage.setItem('clippy_defeats', '0')
               localStorage.setItem('clippy_active', '1')
               localStorage.setItem('clippy_is_larbin', '1')
+              window.dispatchEvent(new CustomEvent('clippy:revoke'))
+              setTimeout(() => window.dispatchEvent(new CustomEvent('clippy:invoke')), 80)
               addToast('Mode Larbin activé', '🥾')
             }}>🥾 Mode Larbin</button>
           <button className="btn btn-outline" style={{ fontSize: '.78rem' }}
@@ -1705,7 +1711,8 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
               localStorage.setItem('clippy_defeats', '5')
               localStorage.setItem('clippy_mastered', '1')
               localStorage.removeItem('clippy_active')
-              addToast('Mode Maître activé — coffre visible', '🏆')
+              window.dispatchEvent(new CustomEvent('clippy:revoke'))
+              addToast('Mode Maître activé — coffre visible dans la Sidebar', '🏆')
             }}>🏆 Mode Maître</button>
           <button className="btn btn-outline" style={{ fontSize: '.78rem' }}
             onClick={() => {
@@ -1715,6 +1722,7 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
           <button className="btn btn-red" style={{ fontSize: '.78rem' }}
             onClick={() => {
               ;['clippy_defeats','clippy_active','clippy_is_larbin','clippy_larbin_idx','clippy_mastered','clippy_triggers','clippy_god_phase','clippy_is_admin'].forEach(k => localStorage.removeItem(k))
+              window.dispatchEvent(new CustomEvent('clippy:revoke'))
               addToast('Clippy reset complet', '🗑️')
             }}>🗑️ Reset tout</button>
         </div>
@@ -1731,8 +1739,17 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
             <button key={p} className="btn btn-outline" style={{ fontSize: '.78rem' }}
               onClick={() => {
                 localStorage.setItem('clippy_is_admin', '1')
+                localStorage.setItem('clippy_active', '1')
                 if (p === 0) localStorage.removeItem('clippy_god_phase')
                 else localStorage.setItem('clippy_god_phase', String(p))
+                // Mettre à jour activeGodPhase dans ClippyEgg (même onglet via StorageEvent synthétique)
+                window.dispatchEvent(new StorageEvent('storage', {
+                  key: 'clippy_god_phase',
+                  newValue: p === 0 ? null : String(p),
+                  storageArea: localStorage,
+                }))
+                // Faire apparaître Clippy si pas déjà visible
+                window.dispatchEvent(new CustomEvent('clippy:invoke'))
                 addToast(p === 0 ? 'God Mode désactivé' : `God Mode Phase ${p} activé`, '⚙️')
               }}>
               {p === 0 ? '🔴 Désactiver' : `Phase ${p}`}
