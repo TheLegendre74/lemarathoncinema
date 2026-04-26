@@ -104,6 +104,8 @@ export function LifeGodGameHud({
               <div style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 4, marginBottom: 4 }}>
                 <div>Phase : <b>{simulationState.phase}</b></div>
                 <div>Mission AM : <b>{simulationState.currentMission}</b></div>
+                <div>Demande active : {simulationState.currentPatternRequest ? `${simulationState.currentPatternRequest.label} ${simulationState.currentPatternRequest.requestIndex}/${simulationState.currentPatternRequest.totalForType}` : 'aucune'}</div>
+                <div>Mode dessin : {simulationState.currentPatternRequest ? 'oui' : 'non'}</div>
                 <div>Generation : {simulationState.generation}</div>
                 <div>Vitesse : {simulationState.timeScale}x</div>
               </div>
@@ -139,6 +141,12 @@ export function LifeGodGameHud({
                 <div>Cellules vivantes : {simulationState.aliveCount}</div>
                 <div>Lignées : {simulationState.amLineages.length} / 3</div>
                 <div>Patterns actifs : {simulationState.activePatternIds.length} / {simulationState.maxActivePatternsPerSeed}</div>
+                <div>Arbres : {simulationState.treePatternLibrary.length} / 3</div>
+                <div>Animaux : {simulationState.animalPatternLibrary.length} / 3</div>
+                <div>Rochers : {simulationState.rockPatternLibrary.length} / 3</div>
+                <div>Riviere : {simulationState.riverPatternLibrary.length} / 1</div>
+                <div>Porte-parole : {simulationState.currentPatternSpokespersonAmId ?? 'aucun'}</div>
+                <div>Collection patterns : {simulationState.playerPatternCollectionComplete ? 'complete' : 'en cours'}</div>
               </div>
               {selectedAm && selectedLineage && (
                 <div>

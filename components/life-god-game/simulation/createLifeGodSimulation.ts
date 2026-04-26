@@ -10,6 +10,9 @@ import type {
   LifeGodInfluenceMode,
   LifeGodAmRole,
   LifeGodConstructionSite,
+  LifeGodPatternRequest,
+  LifeGodPlayerPattern,
+  LifeGodPlayerPatternType,
   LifeGodProtoEntity,
   LifeGodRelativeCell,
   LifeGodSimulationController,
@@ -69,6 +72,24 @@ const LOCAL_STUCK_RADIUS = 8
 const ESCAPE_MIN_DISTANCE = 14
 const ESCAPE_MAX_DISTANCE = 24
 const ESCAPE_TICKS = Math.round((5 * 1000) / TICK_MS)
+const PLAYER_PATTERN_LIBRARY_LIMITS: Record<LifeGodPlayerPatternType, number> = {
+  tree: 3,
+  animal: 3,
+  rock: 3,
+  river: 1,
+}
+const PLAYER_PATTERN_LABELS: Record<LifeGodPlayerPatternType, string> = {
+  tree: 'Arbre',
+  animal: 'Animal',
+  rock: 'Rocher',
+  river: 'Riviere',
+}
+const PLAYER_PATTERN_COLOR_HINTS: Record<LifeGodPlayerPatternType, string> = {
+  tree: '#48b86b',
+  animal: '#8a5d3b',
+  rock: '#9aa1aa',
+  river: '#3d8ed8',
+}
 const TIME_SCALES: LifeGodTimeScale[] = [0.25, 0.5, 1, 2, 4, 8]
 const LINEAGE_COLORS = ['#69f0c1', '#ff8ad8', '#7ab6ff']
 const BUILD_PILE_OFFSETS: LifeGodRelativeCell[] = [
@@ -162,6 +183,14 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   let amMessages: LifeGodAmMessage[] = []
   let terraformReservations: TerraformReservation[] = []
   let currentMission: LifeGodAmMission = 'expandingPopulation'
+  let patternRequestQueue: LifeGodPatternRequest[] = createPatternRequestQueue()
+  let currentPatternRequest: LifeGodPatternRequest | null = null
+  let completedPatternRequests: string[] = []
+  let currentPatternSpokespersonAmId: string | null = null
+  let treePatternLibrary: LifeGodPlayerPattern[] = []
+  let animalPatternLibrary: LifeGodPlayerPattern[] = []
+  let rockPatternLibrary: LifeGodPlayerPattern[] = []
+  let riverPatternLibrary: LifeGodPlayerPattern[] = []
   let firstAmCandidate: FirstAmCandidate | null = null
   let selectedAmId: string | null = null
   let influencePoint: { x: number; y: number; mode: LifeGodInfluenceMode } | null = null
@@ -177,6 +206,51 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
 
   function createGrid() {
     return new Uint8Array(GRID_WIDTH * GRID_HEIGHT)
+  }
+
+  function createPatternRequestQueue(): LifeGodPatternRequest[] {
+    return (Object.entries(PLAYER_PATTERN_LIBRARY_LIMITS) as Array<[LifeGodPlayerPatternType, number]>)
+      .flatMap(([type, total]) =>
+        Array.from({ length: total }, (_, index) => ({
+          id: `${type}_${index + 1}`,
+          type,
+          label: PLAYER_PATTERN_LABELS[type],
+          requestIndex: index + 1,
+          totalForType: total,
+        }))
+      )
+  }
+
+  function getPatternLibrary(type: LifeGodPlayerPatternType) {
+    if (type === 'tree') return treePatternLibrary
+    if (type === 'animal') return animalPatternLibrary
+    if (type === 'rock') return rockPatternLibrary
+    return riverPatternLibrary
+  }
+
+  function setPatternLibrary(type: LifeGodPlayerPatternType, library: LifeGodPlayerPattern[]) {
+    if (type === 'tree') {
+      treePatternLibrary = library
+      return
+    }
+    if (type === 'animal') {
+      animalPatternLibrary = library
+      return
+    }
+    if (type === 'rock') {
+      rockPatternLibrary = library
+      return
+    }
+    riverPatternLibrary = library
+  }
+
+  function isPlayerPatternCollectionComplete() {
+    return (
+      treePatternLibrary.length >= PLAYER_PATTERN_LIBRARY_LIMITS.tree &&
+      animalPatternLibrary.length >= PLAYER_PATTERN_LIBRARY_LIMITS.animal &&
+      rockPatternLibrary.length >= PLAYER_PATTERN_LIBRARY_LIMITS.rock &&
+      riverPatternLibrary.length >= PLAYER_PATTERN_LIBRARY_LIMITS.river
+    )
   }
 
   function getState(): LifeGodSimulationState {
@@ -259,6 +333,15 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       terraformationComplete,
       terraformationStabilized,
       criticallyBlockedAmCount,
+      currentPatternRequest,
+      completedPatternRequests,
+      patternRequestQueue,
+      playerPatternCollectionComplete: isPlayerPatternCollectionComplete(),
+      currentPatternSpokespersonAmId,
+      treePatternLibrary,
+      animalPatternLibrary,
+      rockPatternLibrary,
+      riverPatternLibrary,
       createdAmCount,
       targetAmCount: MIN_COMPLETE_AM_BEFORE_TERRAFORMING - 1,
       aliveAmTarget: MIN_COMPLETE_AM_BEFORE_TERRAFORMING,
@@ -381,7 +464,50 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     )
   }
 
+  function getTerraformationStabilizedForMission() {
+    const state = getState()
+    return state.terraformationStabilized
+  }
+
+  function choosePatternSpokesperson() {
+    const existingSpeaker = currentPatternSpokespersonAmId
+      ? amEntities.find((am) => am.id === currentPatternSpokespersonAmId && am.state === 'alive' && am.behaviorState !== 'escapingStuckArea')
+      : null
+    if (existingSpeaker) return existingSpeaker.id
+
+    const center = { x: GRID_WIDTH / 2, y: GRID_HEIGHT / 2 }
+    const candidate = [...amEntities]
+      .filter((am) => am.state === 'alive' && am.behaviorState !== 'escapingStuckArea')
+      .sort((a, b) => distanceBetweenCells(getAmCenter(a), center) - distanceBetweenCells(getAmCenter(b), center))[0]
+    return candidate?.id ?? null
+  }
+
+  function ensureCurrentPatternRequest() {
+    if (isPlayerPatternCollectionComplete()) {
+      currentPatternRequest = null
+      currentPatternSpokespersonAmId = null
+      return
+    }
+    if (!currentPatternRequest) {
+      currentPatternRequest = patternRequestQueue[0] ?? null
+    }
+    currentPatternSpokespersonAmId = choosePatternSpokesperson()
+  }
+
   function updateCurrentMission() {
+    if (isPlayerPatternCollectionComplete()) {
+      currentMission = 'applyingPlayerPatterns'
+      currentPatternRequest = null
+      currentPatternSpokespersonAmId = null
+      return
+    }
+    if (currentMission === 'requestingPlayerPatterns' || getTerraformationStabilizedForMission()) {
+      ensureCurrentPatternRequest()
+      if (currentPatternRequest) {
+        currentMission = 'requestingPlayerPatterns'
+        return
+      }
+    }
     if (shouldRunTerraformingMission()) {
       currentMission = frozenMatterGrid && frozenMatterGrid.some((cell) => cell === 1)
         ? 'terraforming'
@@ -2754,6 +2880,21 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
         return startEscapingStuckArea(am, hasOscillationLoop(am) ? 'oscillation_loop' : 'stuck_in_local_area')
       }
 
+      if (currentMission === 'requestingPlayerPatterns') {
+        if (am.id === currentPatternSpokespersonAmId) {
+          return {
+            ...am,
+            currentGoal: 'requestingPlayerPatterns',
+            behaviorState: 'requestingPattern' as const,
+            targetCell: null,
+            targetPosition: null,
+            movementDirection: null,
+            behaviorCooldown: ROLE_CONFIG[am.role].movementInterval,
+          }
+        }
+        return wanderAm({ ...am, currentGoal: 'requestingPlayerPatterns', targetCell: null })
+      }
+
       const collisionEscape = moveOutOfAmCollision(am)
       if (collisionEscape) return collisionEscape
       const site = getBuildSiteForAm(am)
@@ -3186,6 +3327,14 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       constructionSites = []
       amMessages = []
       terraformReservations = []
+      patternRequestQueue = createPatternRequestQueue()
+      currentPatternRequest = null
+      completedPatternRequests = []
+      currentPatternSpokespersonAmId = null
+      treePatternLibrary = []
+      animalPatternLibrary = []
+      rockPatternLibrary = []
+      riverPatternLibrary = []
       firstAmCandidate = null
       selectedAmId = null
       stabilityGrid = createGrid()
@@ -3197,6 +3346,15 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       status = 'paused'
       next = createGrid()
       stepAccumulator = 0
+      currentMission = 'expandingPopulation'
+      patternRequestQueue = createPatternRequestQueue()
+      currentPatternRequest = null
+      completedPatternRequests = []
+      currentPatternSpokespersonAmId = null
+      treePatternLibrary = []
+      animalPatternLibrary = []
+      rockPatternLibrary = []
+      riverPatternLibrary = []
       seedRandomGrid()
     },
     increaseTimeScale() {
@@ -3231,6 +3389,47 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       current[index] = nextValue
       refreshAliveCount()
       emit()
+    },
+    submitPlayerPattern(pattern) {
+      const request = currentPatternRequest
+      if (!request || pattern.type !== request.type) return false
+      if (pattern.cells.length === 0) return false
+      const library = getPatternLibrary(request.type)
+      if (library.length >= PLAYER_PATTERN_LIBRARY_LIMITS[request.type]) return false
+
+      const storedPattern: LifeGodPlayerPattern = {
+        ...pattern,
+        id: `player-${request.id}-${generation}`,
+        createdAt: generation,
+        requestIndex: request.requestIndex,
+        colorHint: PLAYER_PATTERN_COLOR_HINTS[request.type],
+      }
+
+      setPatternLibrary(request.type, [...library, storedPattern])
+      completedPatternRequests = [...completedPatternRequests, request.id]
+      patternRequestQueue = patternRequestQueue.filter((item) => item.id !== request.id)
+      currentPatternRequest = patternRequestQueue[0] ?? null
+
+      if (currentPatternSpokespersonAmId) {
+        amEntities = amEntities.map((am) => {
+          if (am.id !== currentPatternSpokespersonAmId) return am
+          return {
+            ...rewardAm(am, 2, 'player_pattern_received'),
+            behaviorState: currentPatternRequest ? 'requestingPattern' as const : 'wandering' as const,
+          }
+        })
+      }
+
+      if (!currentPatternRequest && isPlayerPatternCollectionComplete()) {
+        currentMission = 'applyingPlayerPatterns'
+        currentPatternSpokespersonAmId = null
+      } else {
+        currentMission = 'requestingPlayerPatterns'
+        currentPatternSpokespersonAmId = choosePatternSpokesperson()
+      }
+
+      emit()
+      return true
     },
     selectAm(amId) {
       selectedAmId = amEntities.some((am) => am.id === amId) ? amId : null

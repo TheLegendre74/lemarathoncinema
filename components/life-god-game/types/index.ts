@@ -5,8 +5,14 @@ export type LifeGodPhase = 'conwayEmergence' | 'firstAmHiddenForming' | 'amExpan
 export type LifeGodTimeScale = 0.25 | 0.5 | 1 | 2 | 4 | 8
 export type LifeGodAmRole = 'builder' | 'gatherer' | 'explorer'
 export type LifeGodInfluenceMode = 'attract' | 'repel'
-export type LifeGodAmMission = 'expandingPopulation' | 'terraforming' | 'stable'
+export type LifeGodAmMission =
+  | 'expandingPopulation'
+  | 'terraforming'
+  | 'requestingPlayerPatterns'
+  | 'applyingPlayerPatterns'
+  | 'stable'
 export type LifeGodTerrainType = 0 | 1 | 2 | 3 | 4
+export type LifeGodPlayerPatternType = 'tree' | 'animal' | 'rock' | 'river'
 export type LifeGodAmBehaviorState =
   | 'idle'
   | 'wandering'
@@ -23,6 +29,7 @@ export type LifeGodAmBehaviorState =
   | 'shapingWater'
   | 'shapingRock'
   | 'escapingStuckArea'
+  | 'requestingPattern'
   | 'resting'
 
 export interface LifeGodRelativeCell {
@@ -180,6 +187,25 @@ export interface LifeGodConstructionSite {
   builderAmId: string
 }
 
+export interface LifeGodPatternRequest {
+  id: string
+  type: LifeGodPlayerPatternType
+  label: string
+  requestIndex: number
+  totalForType: number
+}
+
+export interface LifeGodPlayerPattern {
+  id: string
+  type: LifeGodPlayerPatternType
+  width: number
+  height: number
+  cells: LifeGodRelativeCell[]
+  createdAt: number
+  requestIndex: number
+  colorHint: string
+}
+
 export interface LifeGodViewportMetrics {
   x: number
   y: number
@@ -222,6 +248,15 @@ export interface LifeGodSimulationState {
   terraformationComplete: boolean
   terraformationStabilized: boolean
   criticallyBlockedAmCount: number
+  currentPatternRequest: LifeGodPatternRequest | null
+  completedPatternRequests: string[]
+  patternRequestQueue: LifeGodPatternRequest[]
+  playerPatternCollectionComplete: boolean
+  currentPatternSpokespersonAmId: string | null
+  treePatternLibrary: LifeGodPlayerPattern[]
+  animalPatternLibrary: LifeGodPlayerPattern[]
+  rockPatternLibrary: LifeGodPlayerPattern[]
+  riverPatternLibrary: LifeGodPlayerPattern[]
   createdAmCount: number
   targetAmCount: number
   aliveAmTarget: number
@@ -249,6 +284,7 @@ export interface LifeGodSimulationController {
   setInfluence(x: number, y: number, mode: LifeGodInfluenceMode): void
   clearInfluence(): void
   paintCell(x: number, y: number, mode: LifeGodPaintMode): void
+  submitPlayerPattern(pattern: Omit<LifeGodPlayerPattern, 'id' | 'createdAt'>): boolean
   selectAm(amId: string | null): void
   destroy(): void
 }

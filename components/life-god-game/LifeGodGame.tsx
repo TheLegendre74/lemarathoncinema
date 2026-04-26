@@ -5,6 +5,7 @@ import { createLifeGodSimulation } from './simulation/createLifeGodSimulation'
 import { createPixiViewport } from './rendering/createPixiViewport'
 import { createLifeGodInput } from './input/createLifeGodInput'
 import { LifeGodGameHud } from './ui/LifeGodGameHud'
+import { PatternDrawingOverlay } from './ui/PatternDrawingOverlay'
 import type { LifeGodRuntime, LifeGodSimulationState } from './types'
 
 export default function LifeGodGame() {
@@ -14,6 +15,9 @@ export default function LifeGodGame() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [simulationState, setSimulationState] = useState<LifeGodSimulationState | null>(null)
   const [isMiniature, setIsMiniature] = useState(false)
+  const [patternFeedback, setPatternFeedback] = useState<string | null>(null)
+  const previousPatternRequestIdRef = useRef<string | null>(null)
+  const wasPlayingBeforePatternRef = useRef(false)
 
   useEffect(() => {
     let cancelled = false
@@ -83,6 +87,53 @@ export default function LifeGodGame() {
     }
   }, [])
 
+  const activePatternRequest = simulationState?.currentPatternRequest ?? null
+
+  useEffect(() => {
+    const requestId = activePatternRequest?.id ?? null
+    const simulation = runtimeRef.current?.simulation
+    if (!simulation) return
+
+    if (requestId && previousPatternRequestIdRef.current === null) {
+      wasPlayingBeforePatternRef.current = simulationState?.status === 'playing'
+      simulation.pause()
+    }
+
+    if (!requestId && previousPatternRequestIdRef.current !== null && wasPlayingBeforePatternRef.current) {
+      simulation.play()
+      wasPlayingBeforePatternRef.current = false
+    }
+
+    previousPatternRequestIdRef.current = requestId
+  }, [activePatternRequest?.id, simulationState?.status])
+
+  const patternSpeakerBubble = (() => {
+    if (!simulationState?.currentPatternRequest || !simulationState.currentPatternSpokespersonAmId) return null
+    const speaker = simulationState.amEntities.find((am) => am.id === simulationState.currentPatternSpokespersonAmId)
+    const metrics = runtimeRef.current?.renderer.getViewportMetrics()
+    if (!speaker || !metrics || speaker.absoluteCells.length === 0) return null
+    const center = speaker.absoluteCells.reduce(
+      (sum, cell) => ({ x: sum.x + cell.x, y: sum.y + cell.y }),
+      { x: 0, y: 0 }
+    )
+    center.x /= speaker.absoluteCells.length
+    center.y /= speaker.absoluteCells.length
+    return {
+      x: metrics.x + center.x * metrics.cellSize,
+      y: metrics.y + center.y * metrics.cellSize,
+      text: `${simulationState.currentPatternRequest.label}!`,
+    }
+  })()
+
+  function submitPattern(pattern: Parameters<LifeGodRuntime['simulation']['submitPlayerPattern']>[0]) {
+    const accepted = runtimeRef.current?.simulation.submitPlayerPattern(pattern) ?? false
+    if (accepted) {
+      setPatternFeedback('Pattern enregistre')
+      window.setTimeout(() => setPatternFeedback(null), 1100)
+    }
+    return accepted
+  }
+
   return (
     <div
       className="life-god-shell"
@@ -112,7 +163,6 @@ export default function LifeGodGame() {
         }}
       >
         <div
-          ref={hostRef}
           aria-label="Life God Game viewport"
           className="life-god-viewport"
           style={{
@@ -122,7 +172,34 @@ export default function LifeGodGame() {
             minHeight: isMiniature ? 0 : 760,
             background: 'linear-gradient(180deg, rgba(10,14,24,0.95) 0%, rgba(3,4,8,1) 100%)',
           }}
-        />
+        >
+          <div
+            ref={hostRef}
+            style={{
+              position: 'absolute',
+              inset: 0,
+            }}
+          />
+          {patternSpeakerBubble && (
+            <div
+              className="life-god-pattern-bubble"
+              style={{
+                left: patternSpeakerBubble.x,
+                top: patternSpeakerBubble.y,
+              }}
+            >
+              {patternSpeakerBubble.text}
+            </div>
+          )}
+          {patternFeedback && <div className="life-god-pattern-feedback">{patternFeedback}</div>}
+          {activePatternRequest && (
+            <PatternDrawingOverlay
+              key={activePatternRequest.id}
+              request={activePatternRequest}
+              onSubmit={submitPattern}
+            />
+          )}
+        </div>
         {isMiniature ? (
           <button
             type="button"
@@ -174,6 +251,51 @@ export default function LifeGodGame() {
           cursor: pointer;
           font-size: 19px;
           line-height: 1;
+        }
+
+        .life-god-pattern-bubble {
+          position: absolute;
+          z-index: 11;
+          transform: translate(-50%, calc(-100% - 14px));
+          max-width: 160px;
+          padding: 0.35rem 0.58rem;
+          border: 1px solid rgba(255, 255, 255, 0.22);
+          border-radius: 6px;
+          background: rgba(235, 241, 255, 0.94);
+          color: #111827;
+          font-size: 13px;
+          font-weight: 800;
+          pointer-events: none;
+          box-shadow: 0 10px 24px rgba(0, 0, 0, 0.34);
+        }
+
+        .life-god-pattern-bubble::after {
+          content: '';
+          position: absolute;
+          left: 50%;
+          bottom: -6px;
+          width: 10px;
+          height: 10px;
+          transform: translateX(-50%) rotate(45deg);
+          background: rgba(235, 241, 255, 0.94);
+          border-right: 1px solid rgba(255, 255, 255, 0.22);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.22);
+        }
+
+        .life-god-pattern-feedback {
+          position: absolute;
+          z-index: 13;
+          left: 50%;
+          top: 18px;
+          transform: translateX(-50%);
+          padding: 0.48rem 0.75rem;
+          border: 1px solid rgba(110, 190, 142, 0.42);
+          border-radius: 6px;
+          background: rgba(10, 28, 20, 0.9);
+          color: rgba(210, 247, 222, 0.96);
+          font-size: 12px;
+          font-weight: 700;
+          pointer-events: none;
         }
 
         @media (max-width: 920px) {
