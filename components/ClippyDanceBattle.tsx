@@ -142,39 +142,46 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP }: 
           })
         }
 
-        // ── Layout DESKTOP ──────────────────────────────────────────────────
+        // ── Layout DESKTOP — lanes centrées, tapis DDR à droite ────────────
 
         private setupDesktop(W: number, H: number) {
           this.hitY     = Math.round(H * 0.82)
           this.spawnAdv = ((this.hitY + 80) / NOTE_SPEED) * 1000
 
-          const laneW  = Math.min(W * 0.42, 260)
-          const laneX0 = W * 0.04
-          this.laneCenterX = Math.round(laneX0 + laneW / 2)
+          // Lanes centrées horizontalement
+          const laneW  = Math.min(W * 0.38, 280)
+          const laneX0 = Math.round(W / 2 - laneW / 2)
+          this.laneCenterX = Math.round(W / 2)
           this.colX = COLS.map((_, i) => Math.round(laneX0 + (i + 0.5) * (laneW / this.colCount)))
 
           this.add.rectangle(this.laneCenterX, H / 2, laneW + 18, H, 0x000000).setAlpha(0.35)
           this.colX.forEach((x, i) => {
             const dir = COLS[i]
             this.add.rectangle(x, H / 2, Math.round(laneW / this.colCount) - 6, H, 0x0d0828).setAlpha(0.55)
-            this.add.circle(x, this.hitY, 30, 0x000000, 0).setStrokeStyle(3, COL_COLORS_HEX[dir], 0.5)
-            this.add.text(x, this.hitY, COL_ARROWS[dir], { fontSize: '30px', color: COL_LABEL_CSS[dir], fontFamily: 'monospace' }).setOrigin(0.5).setAlpha(0.28)
+            this.add.circle(x, this.hitY, 32, 0x000000, 0).setStrokeStyle(3, COL_COLORS_HEX[dir], 0.55)
+            this.add.text(x, this.hitY, COL_ARROWS[dir], { fontSize: '32px', color: COL_LABEL_CSS[dir], fontFamily: 'monospace' }).setOrigin(0.5).setAlpha(0.30)
           })
           this.add.rectangle(this.laneCenterX, this.hitY, laneW + 10, 2, 0xffffff, 0.18)
 
-          // Tapis DDR Clippy (droite)
-          this.matCenterX = Math.round(W * 0.78)
-          const matCenterY = Math.round(H * 0.52)
-          const TW  = Math.min(Math.max(52, H * 0.082), 82)
+          // Tapis DDR Clippy — à droite des lanes, jamais chevauchant
+          const TW  = Math.min(Math.max(72, H * 0.095), 100)  // cases plus grandes
           const GAP = 8
+          const matPanelW = Math.round(TW * 3 + GAP * 4 + 24)
+          const matPanelH = Math.round(TW * 3 + GAP * 4 + 50)
+          const laneRightEdge = Math.round(W / 2 + laneW / 2)
+          // Position : 50px après le bord droit des lanes, capée pour rester dans l'écran
+          this.matCenterX = Math.min(
+            Math.round(laneRightEdge + 50 + matPanelW / 2),
+            W - Math.round(matPanelW / 2) - 12
+          )
+          const matCenterY = Math.round(H * 0.50)
+
           this.matTilePos = {
-            up:    { x: this.matCenterX,           y: matCenterY - TW - GAP },
-            down:  { x: this.matCenterX,           y: matCenterY + TW + GAP },
+            up:    { x: this.matCenterX,            y: matCenterY - TW - GAP },
+            down:  { x: this.matCenterX,            y: matCenterY + TW + GAP },
             left:  { x: this.matCenterX - TW - GAP, y: matCenterY },
             right: { x: this.matCenterX + TW + GAP, y: matCenterY },
           }
-          const matPanelW = TW * 3 + GAP * 4 + 24
-          const matPanelH = TW * 3 + GAP * 4 + 50
           this.add.rectangle(this.matCenterX, matCenterY, matPanelW, matPanelH, 0x080018).setAlpha(0.78)
           const border = this.add.graphics()
           border.lineStyle(2, 0x9966ff, 0.55)
@@ -195,16 +202,20 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP }: 
           const gc = this.add.graphics()
           gc.lineStyle(1, 0x9966ff, 0.3)
           gc.strokeRect(this.matCenterX - (TW - 4) / 2, matCenterY - (TW - 4) / 2, TW - 4, TW - 4)
-          this.add.text(this.matCenterX, matCenterY - matPanelH / 2 - 10, '📎 CLIPPY', { fontSize: '13px', color: '#cc88ff', fontFamily: 'monospace' }).setOrigin(0.5, 1)
+          this.add.text(this.matCenterX, matCenterY - matPanelH / 2 - 10, '📎 CLIPPY', { fontSize: '14px', color: '#cc88ff', fontFamily: 'monospace' }).setOrigin(0.5, 1)
 
+          // Clippy plus grand sur le tapis
           this.clippySprite = this.add.image(this.matCenterX, matCenterY, 'evil-clippy-disco')
-          this.clippySprite.setDisplaySize(TW * 0.70, TW * 0.70)
+          this.clippySprite.setDisplaySize(TW * 0.88, TW * 0.88)
 
-          const sepX = Math.round(laneX0 + laneW + (this.matCenterX - (TW * 1.5 + GAP * 2) - laneX0 - laneW) / 2)
-          this.add.text(sepX, Math.round(H * 0.5), 'VS', { fontSize: '22px', color: '#cc88ff', fontFamily: 'monospace', fontStyle: 'bold' }).setOrigin(0.5).setAlpha(0.5)
+          // Séparateur VS entre lanes et tapis
+          const matLeftEdge = this.matCenterX - matPanelW / 2
+          const sepX = Math.round((laneRightEdge + matLeftEdge) / 2)
+          this.add.text(sepX, Math.round(H * 0.50), 'VS', { fontSize: '24px', color: '#cc88ff', fontFamily: 'monospace', fontStyle: 'bold' }).setOrigin(0.5).setAlpha(0.5)
 
+          // HUD
           this.hpText = this.add.text(14, 14, this.buildHpString(), { fontSize: '18px', fontFamily: 'monospace' }).setAlpha(0)
-          this.scoreTxt = this.add.text(Math.round(laneX0 + laneW) + 6, 14, 'Score: 0', { fontSize: '14px', color: '#cccccc', fontFamily: 'monospace' })
+          this.scoreTxt = this.add.text(laneX0 - 6, 14, 'Score: 0', { fontSize: '14px', color: '#cccccc', fontFamily: 'monospace' }).setOrigin(1, 0)
           this.feedbackTxt = this.add.text(this.laneCenterX, Math.round(H * 0.62), '', { fontSize: '36px', fontStyle: 'bold', fontFamily: 'monospace' }).setOrigin(0.5)
           this.add.text(this.laneCenterX, 18, '🎵  DUEL DE DANSE  🎵', { fontSize: '14px', color: '#cc88ff', letterSpacing: 3, fontFamily: 'monospace' }).setOrigin(0.5, 0)
         }

@@ -1001,7 +1001,10 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
 
   // ── States ─────────────────────────────────────────────────────────────────
   const [phase,            setPhase]           = useState<'normal'|'combat'>('normal')
-  const [pos,              setPos]             = useState({ x: Math.max(20, window.innerWidth - 220), y: Math.max(20, window.innerHeight - 240) })
+  const [pos,              setPos]             = useState(() => {
+    const mob = window.matchMedia('(pointer: coarse)').matches
+    return { x: Math.max(20, window.innerWidth - (mob ? 120 : 220)), y: Math.max(20, window.innerHeight - 240) }
+  })
   const [message,          setMessage]         = useState('')
   const [bubble,           setBubble]          = useState(true)
   const [misses,           setMisses]          = useState(0)
@@ -1205,7 +1208,8 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
 
   // ── Esquive ────────────────────────────────────────────────────────────────
   function dodge() {
-    const margin = 130, vw = window.innerWidth - 220, vh = window.innerHeight - 220
+    const mob = window.matchMedia('(pointer: coarse)').matches
+    const margin = 130, vw = window.innerWidth - (mob ? 120 : 220), vh = window.innerHeight - 220
     let nx = 0, ny = 0, tries = 0
     do {
       nx = margin + Math.random() * (vw - margin)
@@ -1578,6 +1582,14 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
 
   const bubbleLeft = pos.x > window.innerWidth / 2
 
+  // Tailles adaptées : Clippy est plus petit sur mobile (tactile) mais reste cliquable
+  const isMobileUI = window.matchMedia('(pointer: coarse)').matches
+  const wCombat = isMobileUI ? 85  : W_COMBAT
+  const wNormal = isMobileUI ? 72  : W_NORMAL
+  const wShield = isMobileUI ? 58  : W_SHIELD
+  const wSword  = isMobileUI ? 78  : W_SWORD
+  const hSword  = isMobileUI ? 220 : H_SWORD
+
   // ═══════════════════════════════ RENDER ════════════════════════════════════
   return (
     <>
@@ -1865,13 +1877,13 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
       )}
 
       {hellPhase !== 'idle' && hellPhase !== 'fade' && (
-        <div style={{ position:'fixed', left:hellPos.x, top:hellPos.y, width:W_COMBAT, zIndex:99995, pointerEvents:'none', animation:(hellPhase==='drag'||hellPhase==='scream')?'hell-drag-down 1.1s cubic-bezier(.4,0,.6,1) forwards':'none' }}>
-          <img src="/evil-clippy.png" alt="Clippy" style={{ width:W_COMBAT, display:'block', objectFit:'contain', filter:'drop-shadow(0 0 24px rgba(255,60,60,.9))', animation:(hellPhase==='grab'||hellPhase==='dialog')?'hell-clippy-shake .3s ease infinite':'none' }} />
+        <div style={{ position:'fixed', left:hellPos.x, top:hellPos.y, width:wCombat, zIndex:99995, pointerEvents:'none', animation:(hellPhase==='drag'||hellPhase==='scream')?'hell-drag-down 1.1s cubic-bezier(.4,0,.6,1) forwards':'none' }}>
+          <img src="/evil-clippy.png" alt="Clippy" style={{ width:wCombat, display:'block', objectFit:'contain', filter:'drop-shadow(0 0 24px rgba(255,60,60,.9))', animation:(hellPhase==='grab'||hellPhase==='dialog')?'hell-clippy-shake .3s ease infinite':'none' }} />
         </div>
       )}
 
       {(hellPhase==='grab'||hellPhase==='dialog'||hellPhase==='drag'||hellPhase==='scream') && (
-        <div style={{ position:'fixed', left:hellPos.x+W_COMBAT/2-160, top:hellPos.y+32, width:320, zIndex:99993, pointerEvents:'none', animation:(hellPhase==='drag'||hellPhase==='scream')?'hell-drag-down 1.1s cubic-bezier(.4,0,.6,1) forwards':hellPhase==='grab'?'hell-hand-rise 1s cubic-bezier(.34,1.56,.64,1) forwards':'none' }}>
+        <div style={{ position:'fixed', left:hellPos.x+wCombat/2-160, top:hellPos.y+32, width:320, zIndex:99993, pointerEvents:'none', animation:(hellPhase==='drag'||hellPhase==='scream')?'hell-drag-down 1.1s cubic-bezier(.4,0,.6,1) forwards':hellPhase==='grab'?'hell-hand-rise 1s cubic-bezier(.34,1.56,.64,1) forwards':'none' }}>
           <DemonicHand />
         </div>
       )}
@@ -1976,7 +1988,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
         onClick={phase==='normal' ? handleNormalClick : handleCombatClick}
       >
         {(bubble || forcedMessage) && (
-          <div style={{ position:'absolute', bottom:phase==='combat'?W_COMBAT*1.4+20:W_NORMAL*.7+16, [bubbleLeft?'right':'left']:0, width:230, background: forcedMessage ? '#1a0a2e' : phase==='combat'?'#120505':'#fffde7', border:`2px solid ${forcedMessage ? '#a855f7' : phase==='combat'?'#e85a5a':'#c4a030'}`, borderRadius:10, padding:'9px 12px', fontSize:12, color: forcedMessage ? '#e9d5ff' : phase==='combat'?'#ffaaaa':'#1a1a1a', lineHeight:1.5, boxShadow:`0 4px 20px ${forcedMessage ? 'rgba(168,85,247,.35)' : phase==='combat'?'rgba(232,90,90,.3)':'rgba(0,0,0,.3)'}`, animation:'clippy-bubble-in .2s ease', zIndex:10000 }}
+          <div style={{ position:'absolute', bottom:phase==='combat'?wCombat*1.4+20:wNormal*.7+16, [bubbleLeft?'right':'left']:0, width:230, background: forcedMessage ? '#1a0a2e' : phase==='combat'?'#120505':'#fffde7', border:`2px solid ${forcedMessage ? '#a855f7' : phase==='combat'?'#e85a5a':'#c4a030'}`, borderRadius:10, padding:'9px 12px', fontSize:12, color: forcedMessage ? '#e9d5ff' : phase==='combat'?'#ffaaaa':'#1a1a1a', lineHeight:1.5, boxShadow:`0 4px 20px ${forcedMessage ? 'rgba(168,85,247,.35)' : phase==='combat'?'rgba(232,90,90,.3)':'rgba(0,0,0,.3)'}`, animation:'clippy-bubble-in .2s ease', zIndex:10000 }}
             onClick={e => { e.stopPropagation(); if (!forcedMessage) setBubble(false) }}>
             {forcedMessage ?? message}
             {!forcedMessage && isLarbin && phase === 'normal' && <span style={{ display:'block', marginTop:4, fontSize:10, color:'rgba(0,0,0,.25)', fontStyle:'italic' }}>— Clippy, ton maître</span>}
@@ -1985,14 +1997,14 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
         )}
 
         {phase === 'combat' ? (
-          <div style={{ position:'relative', width:W_COMBAT }}>
-            <img src="/bouclier.png" alt="" style={{ position:'absolute', left:-W_SHIELD*.7, bottom:10, width:W_SHIELD, height:W_SHIELD, objectFit:'contain', mixBlendMode:'multiply', transform:`rotate(-15deg) scale(${shieldFlash?1.2:1})`, transition:'transform .15s', filter:shieldFlash?'brightness(1.8) drop-shadow(0 0 12px #ffaa00)':'none' }} />
-            <img src={effectivePhase === 2 ? '/evil-clippy-disco.png' : '/evil-clippy.png'} alt="Clippy" style={{ width:W_COMBAT, objectFit:'contain', display:'block', mixBlendMode:'multiply', filter:clippyHit?'brightness(3) saturate(0)':'drop-shadow(0 6px 20px rgba(100,80,180,.6))', transition:'filter .15s' }} />
-            <img src="/epee.png" alt="" style={{ position:'absolute', right:-W_SWORD*.9, bottom:0, width:W_SWORD, height:H_SWORD, objectFit:'contain', transform:swordWindup?undefined:'rotate(-152deg)', filter:'drop-shadow(0 2px 6px rgba(0,0,0,.6))', animation:swordWindup?'sword-windup .7s ease forwards':'none' }} />
+          <div style={{ position:'relative', width:wCombat }}>
+            <img src="/bouclier.png" alt="" style={{ position:'absolute', left:-wShield*.7, bottom:10, width:wShield, height:wShield, objectFit:'contain', mixBlendMode:'multiply', transform:`rotate(-15deg) scale(${shieldFlash?1.2:1})`, transition:'transform .15s', filter:shieldFlash?'brightness(1.8) drop-shadow(0 0 12px #ffaa00)':'none' }} />
+            <img src={effectivePhase === 2 ? '/evil-clippy-disco.png' : '/evil-clippy.png'} alt="Clippy" style={{ width:wCombat, objectFit:'contain', display:'block', mixBlendMode:'multiply', filter:clippyHit?'brightness(3) saturate(0)':'drop-shadow(0 6px 20px rgba(100,80,180,.6))', transition:'filter .15s' }} />
+            <img src="/epee.png" alt="" style={{ position:'absolute', right:-wSword*.9, bottom:0, width:wSword, height:hSword, objectFit:'contain', transform:swordWindup?undefined:'rotate(-152deg)', filter:'drop-shadow(0 2px 6px rgba(0,0,0,.6))', animation:swordWindup?'sword-windup .7s ease forwards':'none' }} />
           </div>
         ) : (
           <div style={{ position:'relative' }}>
-            <img src="/clippy1.png" alt="Clippy" style={{ width:W_NORMAL, objectFit:'contain', display:'block', mixBlendMode:'multiply', transform:tired?'rotate(6deg) scale(.92)':'none', transition:'transform .3s', filter:tired?'grayscale(.4) brightness(.8)':'none' }} />
+            <img src="/clippy1.png" alt="Clippy" style={{ width:wNormal, objectFit:'contain', display:'block', mixBlendMode:'multiply', transform:tired?'rotate(6deg) scale(.92)':'none', transition:'transform .3s', filter:tired?'grayscale(.4) brightness(.8)':'none' }} />
             {tired && <div style={{ position:'absolute', bottom:-22, left:'50%', transform:'translateX(-50%)', fontSize:11, color:'#e8c46a', whiteSpace:'nowrap', fontWeight:700, textShadow:'0 1px 4px #000', letterSpacing:1 }}>😮‍💨 Épuisé…</div>}
             {isLarbin && !tired && <div style={{ position:'absolute', bottom:-18, left:'50%', transform:'translateX(-50%)', fontSize:10, color:'#cc1111', whiteSpace:'nowrap', fontStyle:'italic', textShadow:'0 1px 4px #000' }}>📎 ton maître</div>}
           </div>

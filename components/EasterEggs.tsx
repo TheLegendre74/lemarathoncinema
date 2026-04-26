@@ -1458,6 +1458,25 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
       )}
 
 
+      {/* ── Coffre maître — toujours visible en coin quand l'egg est découvert ── */}
+      {isMastered && !isGuest && (
+        <button
+          title={showClipy ? 'Révoquer Clippy dans le coffre' : 'Invoquer Clippy depuis le coffre'}
+          onClick={() => window.dispatchEvent(new CustomEvent(showClipy ? 'clippy:revoke' : 'clippy:invoke'))}
+          style={{
+            position: 'fixed', bottom: 14, right: 14, zIndex: 900,
+            background: showClipy ? 'rgba(40,10,80,.92)' : 'rgba(18,8,36,.88)',
+            border: `1px solid ${showClipy ? 'rgba(180,100,255,.65)' : 'rgba(140,90,200,.35)'}`,
+            borderRadius: 10, padding: '5px 10px', cursor: 'pointer',
+            fontSize: '1.1rem', lineHeight: 1, letterSpacing: 1,
+            boxShadow: showClipy ? '0 2px 12px rgba(130,60,220,.4)' : 'none',
+            transition: 'background .2s, border .2s',
+          }}
+        >
+          📦
+        </button>
+      )}
+
       {/* Bouton flottant mobile — accès barre easter egg */}
       <button
         className="ee-mobile-btn"
