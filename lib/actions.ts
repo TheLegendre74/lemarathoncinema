@@ -2865,6 +2865,43 @@ export async function getFightClubLeaderboard(difficulty: string): Promise<{ pse
   return (data ?? []) as unknown as { pseudo: string; score: number }[]
 }
 
+// ── DANCE LEADERBOARD ─────────────────────────────────────────
+// Requires: CREATE TABLE dance_scores (
+//   user_id uuid references auth.users(id) on delete cascade primary key,
+//   pseudo text not null, score int not null, max_combo int not null default 0,
+//   updated_at timestamptz not null default now()
+// ); ALTER TABLE dance_scores ENABLE ROW LEVEL SECURITY;
+// CREATE POLICY "read" ON dance_scores FOR SELECT USING (true);
+// CREATE POLICY "own" ON dance_scores FOR ALL USING (auth.uid() = user_id);
+
+export async function saveDanceScore(score: number, maxCombo: number): Promise<void> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: existing } = await (supabase as any).from('dance_scores').select('score').eq('user_id', user.id).single()
+    if (existing && existing.score >= score) return
+    const { data: profile } = await supabase.from('profiles').select('pseudo').eq('id', user.id).single()
+    await (supabase as any).from('dance_scores').upsert({
+      user_id: user.id,
+      pseudo: (profile as any)?.pseudo ?? 'Anonyme',
+      score: Math.round(score),
+      max_combo: Math.round(maxCombo),
+      updated_at: new Date().toISOString(),
+    })
+  } catch {}
+}
+
+export async function getDanceLeaderboard(): Promise<{ pseudo: string; score: number; max_combo: number }[]> {
+  try {
+    const supabase = await createClient()
+    const { data } = await (supabase as any).from('dance_scores').select('pseudo, score, max_combo').order('score', { ascending: false }).limit(10)
+    return (data ?? []) as { pseudo: string; score: number; max_combo: number }[]
+  } catch {
+    return []
+  }
+}
+
 // ── MESSAGES PRIVÉS ───────────────────────────────────────────
 
 export async function sendMessage(recipientId: string, content: string) {

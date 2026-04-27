@@ -810,9 +810,9 @@ function getPhaseFromDefeats(d: number): 1|2|3|4|5 {
 }
 
 // ── Interface ─────────────────────────────────────────────────────────────────
-interface ClippyProps { onDismiss: () => void; customReplies?: string[]; forcedMessage?: string; isAdmin?: boolean }
+interface ClippyProps { onDismiss: () => void; customReplies?: string[]; forcedMessage?: string; isAdmin?: boolean; userId?: string }
 
-export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isAdmin = false }: ClippyProps) {
+export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isAdmin = false, userId }: ClippyProps) {
 
   // ── Données persistantes ───────────────────────────────────────────────────
   const defeatsRef    = useRef(getDefeats())
@@ -1633,6 +1633,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
       {ddrPhase === 'active' && (
         <ClippyDanceBattle
           initialHP={PLAYER_MAX_HP}
+          userId={userId}
           onMiss={() => {
             const next = Math.max(0, playerHPRef.current - 1)
             playerHPRef.current = next

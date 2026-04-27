@@ -910,7 +910,7 @@ function TamagotchiKeyOverlay({ onClose, isGuest }: { onClose: () => void; isGue
   )
 }
 
-export default function EasterEggs({ config = {}, isGuest = false, watchedCount = 0, hasClippyEgg = false, isAdmin = false }: { config?: EasterEggsConfig; isGuest?: boolean; watchedCount?: number; hasClippyEgg?: boolean; isAdmin?: boolean }) {
+export default function EasterEggs({ config = {}, isGuest = false, watchedCount = 0, hasClippyEgg = false, isAdmin = false, userId }: { config?: EasterEggsConfig; isGuest?: boolean; watchedCount?: number; hasClippyEgg?: boolean; isAdmin?: boolean; userId?: string }) {
   const ee = {
     matrixLine1:     config.matrixLine1     ?? 'Wake up, Neo...',
     matrixLine2:     config.matrixLine2     ?? 'The Matrix has you.',
@@ -1388,6 +1388,7 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
           customReplies={config.clippyReplies}
           forcedMessage={showPlea && !pleaDone ? PLEA_CITATIONS[pleaIdx] : undefined}
           isAdmin={isAdmin}
+          userId={userId}
         />
       )}
 
