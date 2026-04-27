@@ -380,6 +380,9 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           const sepX = Math.round((laneRight + this.matCenterX - matPanelW/2) / 2)
           this.add.text(sepX, Math.round(H * 0.50), 'VS', { fontSize: '22px', color: '#cc88ff', fontFamily: 'monospace', fontStyle: 'bold' }).setOrigin(0.5).setAlpha(0.45)
 
+          // ── Lasers boîte de nuit (côté gauche uniquement, hors zone de jeu) ──
+          this.spawnLasers(W, H, laneX0)
+
           // HUD
           this.hpText  = this.add.text(14, 14, this.buildHpStr(), { fontSize: '16px', fontFamily: 'monospace' }).setAlpha(0)
           this.scoreTxt = this.add.text(laneX0 - 6, 14, 'Score: 0', { fontSize: '14px', color: '#fff', fontFamily: 'monospace', fontStyle: 'bold', stroke: '#000', strokeThickness: 2 }).setOrigin(1, 0)
@@ -527,6 +530,70 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
             fontSize: '40px', fontStyle: 'bold', fontFamily: 'monospace',
             stroke: '#000000', strokeThickness: 5,
           }).setOrigin(0.5)
+
+          // Lasers boîte de nuit (coins hors zone de jeu, très discrets)
+          this.spawnLasers(W, H, -1)  // -1 = mobile (pas de laneX0)
+        }
+
+        // ── Lasers projecteurs boîte de nuit ─────────────────────────────────
+        // laneX0 = bord gauche des lanes (desktop) | -1 = mobile (pas de laneX0)
+
+        private spawnLasers(W: number, H: number, laneX0: number) {
+          const LASER_COLORS = [0xff2266, 0x2266ff, 0x22ffcc, 0xff9900, 0xcc22ff, 0x22ff44]
+          // Sur desktop : 3 lasers à gauche des lanes (zone libre)
+          // Sur mobile : 0 laser supplémentaire (les coins de la zone Clippy sont libres)
+          const isMob = laneX0 < 0
+
+          const laserDefs = isMob
+            ? [
+                // Mobile : coin haut-gauche et haut-droit (au-dessus des lanes, dans la zone Clippy)
+                { ox: W * 0.04, oy: this.clippyZoneH * 0.18, angle: 55, col: LASER_COLORS[0] },
+                { ox: W * 0.96, oy: this.clippyZoneH * 0.18, angle: 125, col: LASER_COLORS[1] },
+                { ox: W * 0.08, oy: this.clippyZoneH * 0.50, angle: 60, col: LASER_COLORS[4] },
+                { ox: W * 0.92, oy: this.clippyZoneH * 0.50, angle: 120, col: LASER_COLORS[2] },
+              ]
+            : [
+                // Desktop : 3 lasers dans la zone libre à gauche des lanes
+                { ox: laneX0 * 0.35, oy: H * 0.04, angle: 65, col: LASER_COLORS[0] },
+                { ox: laneX0 * 0.60, oy: H * 0.03, angle: 75, col: LASER_COLORS[2] },
+                { ox: laneX0 * 0.20, oy: H * 0.06, angle: 50, col: LASER_COLORS[4] },
+              ]
+
+          laserDefs.forEach(({ ox, oy, angle, col }) => {
+            const laserG = this.add.graphics()
+            laserG.setDepth(2)
+
+            // Durée de rotation aléatoire pour donner l'impression de projecteurs différents
+            const startAngle = angle
+            const speed = 18 + Math.random() * 22  // degrés/sec
+            let t = Math.random() * 360
+
+            // Longueur laser : traverse toute la scène
+            const len = Math.max(W, H) * 1.4
+
+            this.time.addEvent({
+              delay: 40,
+              loop: true,
+              callback: () => {
+                if (this.ended) return
+                t += speed * 0.04
+                const rad = Phaser.Math.DegToRad(startAngle + Math.sin(Phaser.Math.DegToRad(t)) * 28)
+                const ex = ox + Math.cos(rad) * len
+                const ey = oy + Math.sin(rad) * len
+
+                laserG.clear()
+                // Halo large (très transparent)
+                laserG.lineStyle(6, col, 0.04)
+                laserG.beginPath(); laserG.moveTo(ox, oy); laserG.lineTo(ex, ey); laserG.strokePath()
+                // Faisceau principal (légèrement plus opaque)
+                laserG.lineStyle(2, col, 0.14)
+                laserG.beginPath(); laserG.moveTo(ox, oy); laserG.lineTo(ex, ey); laserG.strokePath()
+                // Core brillant (très fin)
+                laserG.lineStyle(1, 0xffffff, 0.18)
+                laserG.beginPath(); laserG.moveTo(ox, oy); laserG.lineTo(ex, ey); laserG.strokePath()
+              },
+            })
+          })
         }
 
         // ── HUD helpers ─────────────────────────────────────────────────────

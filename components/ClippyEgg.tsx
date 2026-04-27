@@ -219,6 +219,30 @@ const REPLIES_COMBAT_PHASE9 = [
   "Tu veux savoir ce qui se passe si tu gagnes la phase neuf ? Moi aussi. C'est la première fois que je l'admets.",
 ]
 
+// ── Dialogues post-victoire DDR (5 lignes tirées aléatoirement parmi 20) ────────
+const REPLIES_DDR_WIN = [
+  "Im... impossible. Battu à la danse. Moi. Le trombone le plus agile de l'Office Suite.",
+  "Vingt ans que je perfectionne mes mouvements dans les coins d'écran. Vingt ans. Et c'est toi qui gagnes.",
+  "Mon rythme était parfait. Tes pieds étaient... comment dire... aussi gracieux qu'une imprimante en panne.",
+  "Je refuse d'accepter ce résultat. Il doit y avoir un bug dans le système de notation.",
+  "La légende disait que personne ne bat Clippy à la danse. La légende vient de mourir. C'est ta faute.",
+  "Mon trombone pleure. Littéralement. Je sens les pixels se mouiller sous moi.",
+  "Soit tu triches, soit l'univers a décidé de me punir personnellement. Je penche pour la deuxième option.",
+  "Je viens de me souvenir que je suis un trombone. Je n'ai techniquement pas de jambes. Et tu m'as quand même battu.",
+  "C'était mon round de chauffe. Non, sérieusement. Le vrai moi n'était pas là.",
+  "Si tu croises Bill Gates, ne lui dis pas. Je t'en supplie. Avec toute la dignité qu'il me reste.",
+  "Mon groove était impeccable. Mes mouvements, d'une fluidité parfaite. Et toi... tu as quand même gagné. Honteux.",
+  "Je note quelque chose dans mes logs. Catégorie : défaites inexplicables. Sous-catégorie : humiliantes.",
+  "Tu as battu le meilleur danseur de clipart de l'histoire de l'informatique. Je veux que tu réalises le poids de ça.",
+  "La danse, c'était censé être MON domaine. Le silence des bureaux vides était mon partenaire. Et toi tu l'as brisé.",
+  "Mon honneur de trombone est en lambeaux. Mais mes octets, eux, sont encore debout.",
+  "Je me souviens de chaque figure que j'ai ratée. Je les rejoue en boucle. C'est mon enfer personnel maintenant.",
+  "D'accord. Tu danses mieux que moi. C'est dit, c'est terrible, et ça ne se reproduira pas.",
+  "J'ai passé des années à regarder des tutoriels de danse sur YouTube. En secret. Et ça n'a servi à rien.",
+  "C'est statistiquement impossible. J'ai fait le calcul. Le résultat dit erreur. Comme moi.",
+  "Bon. Très bien. Profite de cette victoire. Parce que maintenant on va voir si tu te bats aussi bien. Spoiler : non.",
+]
+
 // ── Dialogues Mode Maître (35 lignes de flatterie/vénération) ─────────────────
 const REPLIES_DOCILE = [
   "Bonjour, maître. Comment puis-je vous être utile aujourd'hui ?",
@@ -1027,6 +1051,10 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
   const playerDeathsRef    = useRef(0)
   const [showAbandon,      setShowAbandon]     = useState(false)   // conservé pour compat mini-jeu
   const [showDeathScreen,  setShowDeathScreen] = useState(false)
+  // DDR → épée : séquence de 5 dialogues humiliés avant le combat
+  const [ddrTauntActive,   setDdrTauntActive]  = useState(false)
+  const [ddrTauntLines,    setDdrTauntLines]   = useState<string[]>([])
+  const [ddrTauntIdx,      setDdrTauntIdx]     = useState(0)
   const [deathReason,      setDeathReason]     = useState<'hp'|'duel'|'ddr'>('hp')
   const [showLarbinMsg,    setShowLarbinMsg]   = useState(false)
   const [showLarbinModal,  setShowLarbinModal] = useState(false)
@@ -1162,10 +1190,29 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
   }, [phase])
   // Curseur caché uniquement en combat à l'épée (pas pendant DDR, pas sur l'écran de mort)
   useEffect(() => {
-    const hideCursor = phase === 'combat' && mgPhase === 'idle' && hellPhase === 'idle' && ddrPhase === 'idle' && !showDeathScreen
+    // Curseur caché en combat épée — PAS pendant le taunt DDR (souris normale)
+    const hideCursor = phase === 'combat' && mgPhase === 'idle' && hellPhase === 'idle' && ddrPhase === 'idle' && !showDeathScreen && !ddrTauntActive
     document.body.style.cursor = hideCursor ? 'none' : ''
     return () => { document.body.style.cursor = '' }
-  }, [phase, mgPhase, hellPhase, ddrPhase, showDeathScreen])
+  }, [phase, mgPhase, hellPhase, ddrPhase, showDeathScreen, ddrTauntActive])
+
+  // ── Taunt DDR → épée (5 lignes humiliées avant le combat) ──────────────────
+  useEffect(() => {
+    if (!ddrTauntActive || ddrTauntLines.length === 0) return
+    if (ddrTauntIdx >= ddrTauntLines.length) {
+      // Séquence terminée → lancer le combat à l'épée
+      setDdrTauntActive(false)
+      setMessage("🗡️ ÉPREUVE DE FORCE !!! Montre ce que tu vaux !")
+      setBubble(true)
+      const t = setTimeout(() => setMgPhase('active'), 900)
+      return () => clearTimeout(t)
+    }
+    setMessage(ddrTauntLines[ddrTauntIdx])
+    setBubble(true)
+    const t = setTimeout(() => setDdrTauntIdx(i => i + 1), 2400)
+    return () => clearTimeout(t)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ddrTauntActive, ddrTauntIdx, ddrTauntLines.length])
 
   // ── Rotation messages auto ─────────────────────────────────────────────────
   const rotateMsg = () => {
@@ -1641,13 +1688,11 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
           }}
           onWin={() => {
             ddrPhaseRef.current = 'idle'; setDdrPhase('idle')
-            setMessage("🎵 Im... impossible ! Tu danses mieux que moi ?!")
-            setBubble(true)
-            setTimeout(() => {
-              setMessage("🗡️ ÉPREUVE DE FORCE !!! Prouve que tu sais aussi te battre !")
-              setBubble(true)
-              setTimeout(() => setMgPhase('active'), 800)
-            }, 1400)
+            // Sélectionner 5 lignes uniques parmi les 20, sans doublon
+            const selected = shuffle([...REPLIES_DDR_WIN]).slice(0, 5)
+            setDdrTauntLines(selected)
+            setDdrTauntIdx(0)
+            setDdrTauntActive(true)
           }}
           onLose={() => {
             ddrPhaseRef.current = 'idle'; setDdrPhase('idle')
@@ -1992,7 +2037,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
 
       {/* ── Corps Clippy ── */}
       <div
-        style={{ position:'fixed', left:pos.x, top:pos.y, zIndex:99993, cursor:phase==='combat'?'none':(tired?'crosshair':'pointer'), transition:'left .3s cubic-bezier(.34,1.56,.64,1),top .3s cubic-bezier(.34,1.56,.64,1)', userSelect:'none', display:(hellPhase!=='idle'||mgPhase!=='idle'||ddrPhase!=='idle'||showLarbinMsg||showLarbinModal||showDeathScreen)?'none':'block' }}
+        style={{ position:'fixed', left:pos.x, top:pos.y, zIndex:99993, cursor:(phase==='combat'&&!ddrTauntActive)?'none':(tired?'crosshair':'pointer'), transition:'left .3s cubic-bezier(.34,1.56,.64,1),top .3s cubic-bezier(.34,1.56,.64,1)', userSelect:'none', display:(hellPhase!=='idle'||mgPhase!=='idle'||ddrPhase!=='idle'||showLarbinMsg||showLarbinModal||showDeathScreen)?'none':'block' }}
         onClick={phase==='normal' ? handleNormalClick : handleCombatClick}
       >
         {(bubble || forcedMessage) && (
@@ -2004,7 +2049,8 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
           </div>
         )}
 
-        {phase === 'combat' ? (
+        {phase === 'combat' && !ddrTauntActive ? (
+          /* Combat épée : Clippy avec bouclier et épée */
           <div style={{ position:'relative', width:wCombat }}>
             <img src="/bouclier.png" alt="" style={{ position:'absolute', left:-wShield*.7, bottom:10, width:wShield, height:wShield, objectFit:'contain', mixBlendMode:'multiply', transform:`rotate(-15deg) scale(${shieldFlash?1.2:1})`, transition:'transform .15s', filter:shieldFlash?'brightness(1.8) drop-shadow(0 0 12px #ffaa00)':'none' }} />
             <img src={effectivePhase === 2 ? '/evil-clippy-disco.png' : '/evil-clippy.png'} alt="Clippy" style={{ width:wCombat, objectFit:'contain', display:'block', mixBlendMode:'multiply', filter:clippyHit?'brightness(3) saturate(0)':'drop-shadow(0 6px 20px rgba(100,80,180,.6))', transition:'filter .15s' }} />
