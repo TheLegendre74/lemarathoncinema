@@ -22,9 +22,9 @@ const COL_CSS:    Record<Dir, string>    = { left: '#ff6699', down: '#6699ff', u
 const COL_DARK:   Record<Dir, number>    = { left: 0x661133, down: 0x112266, up: 0x116633, right: 0x664411 }
 
 const NOTE_SPEED    = 380
-const HIT_WIN_MS    = 95     // fenêtre proportionnelle aux notes +50% (~36px à 380px/s)
-const PERFECT_MS    = 42     // perfect ≈ note pile sur le récepteur
-const EARLY_GRACE   = 220    // ms max avant hitY pour "trop tôt" vs "rien"
+const HIT_WIN_MS    = 109    // +15% — légère souplesse sans perdre la difficulté
+const PERFECT_MS    = 48     // idem +15%
+const EARLY_GRACE   = 252    // +15%
 const MAX_HP        = 20     // fallback si initialHP non fourni
 const FEVER_AT      = 10     // ×2
 const FEVER_X3      = 30     // ×3
@@ -172,11 +172,19 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
   const finalScore       = useRef(0)
   const finalCombo       = useRef(0)
   const finalWon         = useRef(false)
-  const onComboChangeRef = useRef<((c: number) => void) | null>(null)
-  const [liveCombo, setLiveCombo] = useState(0)
+  const onComboChangeRef  = useRef<((c: number) => void) | null>(null)
+  const onClippyMoveRef   = useRef<((xPct: number) => void) | null>(null)
+  const [liveCombo,  setLiveCombo]  = useState(0)
+  const [clippyXPct, setClippyXPct] = useState(0.5)  // 0→1 fraction de largeur écran
+  const [isMobileUI, setIsMobileUI] = useState(false)
 
-  // Toujours à jour — Phaser l'appelle depuis la closure
+  useEffect(() => {
+    setIsMobileUI(window.matchMedia('(pointer: coarse)').matches)
+  }, [])
+
+  // Toujours à jour — Phaser les appelle depuis la closure
   onComboChangeRef.current = (c: number) => setLiveCombo(c)
+  onClippyMoveRef.current  = (x: number) => setClippyXPct(x)
 
   const [postGame, setPostGame] = useState<{
     score: number; maxCombo: number; won: boolean; leader: LeaderEntry[]
@@ -221,6 +229,10 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
         private fever      = false
         private feverEnd   = 0
         private feverLevel = 0  // 0=off 1=×2 2=×3 3=×4
+        // Fenêtres de frappe effectives (mobile +10% par rapport au global)
+        private hitWin    = HIT_WIN_MS
+        private perfWin   = PERFECT_MS
+        private earlyG    = EARLY_GRACE
         private bmIdx    = 0
         private ended    = false
         private startTime = 0
@@ -283,6 +295,13 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
 
         create() {
           const W = this.scale.width, H = this.scale.height
+
+          // Mobile : fenêtres de frappe +10% (notes plus petites → tolérance proportionnelle)
+          if (this.isMobile) {
+            this.hitWin  = Math.round(HIT_WIN_MS  * 1.10)
+            this.perfWin = Math.round(PERFECT_MS  * 1.10)
+            this.earlyG  = Math.round(EARLY_GRACE * 1.10)
+          }
 
           // Desktop : overlay semi-transparent → arène visible derrière
           // Mobile  : overlay sombre → le setupMobile gère le fond Highway
@@ -476,13 +495,10 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           this.add.text(W / 2, 6, '★  DUEL DE DANSE  ★', {
             fontSize: '11px', color: '#cc88ff', fontFamily: 'monospace', letterSpacing: 3,
           }).setOrigin(0.5, 0)
-          const cSize = Math.round(Math.min(this.clippyZoneH * 0.94, W * 0.36))  // +20%
-          this.clippySprite = this.add.image(W / 2, this.clippyTopY, 'evil-clippy-disco')
-          this.clippySprite.setDisplaySize(cSize, cSize)
-          this.clippySprite.setDepth(5)   // 1er plan — devant les lanes flash
-          // Anti-pixelisation : filtrage texture linéaire
-          const clippyTex = this.textures.get('evil-clippy-disco')
-          if (clippyTex) clippyTex.setFilter(1)  // 1 = LINEAR (Phaser.Textures.FilterMode.LINEAR)
+          // Clippy rendu en <img> HTML (zéro pixel, qualité navigateur)
+          // Le sprite Phaser est invisible — React gère l'affichage via onClippyMoveRef
+          this.clippySprite = this.add.image(-9999, -9999, 'evil-clippy-disco').setVisible(false)
+          onClippyMoveRef.current?.(0.5)  // position initiale : centre
           // Separator glow
           const sepGfx = this.add.graphics()
           sepGfx.fillGradientStyle(0x7700ff, 0x7700ff, 0x000000, 0x000000, 0.35, 0.35, 0, 0)
@@ -551,7 +567,7 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           this.add.rectangle(W / 2, this.hitY, W, 1, 0xffffff).setAlpha(0.9)
 
           // ── Hit zone circles (Guitar Hero strum targets) ──────────────────
-          const circleR = Math.round(colW * 0.48)  // quasi plein-lane, hitbox max sans overlap
+          const circleR = Math.round(colW * 0.43)  // -10% de 0.48 (réduit de 10%)
           this.hitRings = COLS.map((dir, i) => {
             const x = this.colX[i], col = COL_HEX[dir]
 
@@ -691,7 +707,7 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
             if (n.judged) continue
             const tth = n.time - elapsed
             n.obj.setY(this.hitY - (tth / 1000) * NOTE_SPEED)
-            if (tth < -(HIT_WIN_MS + 10)) { n.judged = true; n.obj.destroy(); this.doMiss() }
+            if (tth < -(this.hitWin + 10)) { n.judged = true; n.obj.destroy(); this.doMiss() }
           }
           this.activeNotes = this.activeNotes.filter(n => !n.judged)
 
@@ -716,7 +732,7 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           for (const n of this.activeNotes) {
             if (n.judged) continue
             const tth = n.time - elapsed
-            if (tth >= -HIT_WIN_MS && tth <= AHEAD_MS) {
+            if (tth >= -this.hitWin && tth <= AHEAD_MS) {
               litDirs.add(n.dir)
               if (Math.abs(tth) < closestDist) { closestDist = Math.abs(tth); closestDir = n.dir }
             }
@@ -724,12 +740,11 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
 
           if (this.isMobile) {
             this.laneFlashBg.forEach((bg, i) => bg.setAlpha(litDirs.has(COLS[i]) ? 0.20 : 0))
-            // Clippy glides to the upcoming direction
+            // Clippy HTML img — notifier React de la nouvelle position X (% écran)
             if (closestDir && closestDir !== this.lastLitDir) {
               this.lastLitDir = closestDir
               const idx = COLS.indexOf(closestDir)
-              this.tweens.killTweensOf(this.clippySprite)
-              this.tweens.add({ targets: this.clippySprite, x: this.colX[idx], y: this.clippyTopY, duration: 80, ease: 'Power2' })
+              onClippyMoveRef.current?.(this.colX[idx] / this.scale.width)
             }
           } else {
             // Desktop: lane flash + mat tiles
@@ -751,9 +766,9 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           const col    = COL_HEX[dir]
           const dark   = COL_DARK[dir]
 
-          // Guitar Hero gem — notes élargies (+50% desktop grâce aux lanes)
-          const noteW = Math.round(this.laneW * 0.92)
-          const noteH = Math.round(noteW * (this.isMobile ? 0.52 : 0.48))  // +30% hauteur
+          // Guitar Hero gem — mobile -10% (notes légèrement plus petites)
+          const noteW = Math.round(this.laneW * (this.isMobile ? 0.83 : 0.92))
+          const noteH = Math.round(noteW * (this.isMobile ? 0.52 : 0.48))
           const r     = Math.round(noteH * 0.36)
 
           const container = this.add.container(x, -noteH * 2)
@@ -810,15 +825,14 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
             if (n.judged || n.dir !== dir) continue
             const tth = n.time - elapsed
             const d = Math.abs(tth)
-            // Note "proche" = encore à venir (dans EARLY_GRACE ms) ou légèrement passée
-            if (tth <= EARLY_GRACE && tth >= -HIT_WIN_MS) hasNoteNear = true
+            if (tth <= this.earlyG && tth >= -this.hitWin) hasNoteNear = true
             if (d < bestDelta) { bestDelta = d; best = n }
           }
 
-          if (best && bestDelta <= HIT_WIN_MS) {
+          if (best && bestDelta <= this.hitWin) {
             // ✅ SUCCÈS — note dans la fenêtre de frappe
             best.judged = true; best.obj.destroy()
-            const perfect = bestDelta <= PERFECT_MS
+            const perfect = bestDelta <= this.perfWin
             const mult = this.getMultiplier()
             this.score += (perfect ? 100 : 50) * mult
             finalScore.current = this.score
@@ -837,9 +851,10 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
               if (ring) { ring.setAlpha(0.85); this.tweens.add({ targets: ring, alpha: 0.28, duration: 180 }) }
             }
           } else {
-            // ❌ ERREUR — trop tôt, trop tard ou mauvaise lane → -1 HP
+            // ❌ Mauvaise touche ou trop tôt → brise le combo SEULEMENT (pas de HP perdu)
+            // Le HP est perdu uniquement quand la note touche le fond sans être cliquée
             this.showFeedback(hasNoteNear ? 'TROP TÔT !' : 'ERREUR !', '#ff9944')
-            this.applyMissPenalty()
+            this.breakComboOnly()
           }
         }
 
@@ -848,6 +863,15 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           if (this.feverLevel >= 2) return 3
           if (this.feverLevel >= 1) return 2
           return 1
+        }
+
+        private breakComboOnly() {
+          // Mauvaise touche ou trop tôt : brise le combo sans retirer de HP
+          this.combo = 0; this.feverLevel = 0; this.fever = false
+          onComboChangeRef.current?.(0)
+          this.comboTxt.setAlpha(0); this.feverLabel.setAlpha(0)
+          this.multiBadge.setAlpha(0); this.feverBarBg.setAlpha(0); this.feverBar.setAlpha(0)
+          if (this.feverOverlay) { this.tweens.killTweensOf(this.feverOverlay); this.feverOverlay.setAlpha(0) }
         }
 
         private applyMissPenalty() {
@@ -980,6 +1004,28 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
         tabIndex={-1}
         style={{ position: 'fixed', inset: 0, zIndex: 99985, outline: 'none' }}
       />
+
+      {/* ── Clippy HTML mobile : rendu natif navigateur, zéro pixelisation ── */}
+      {isMobileUI && (
+        <img
+          src="/evil-clippy-disco.png"
+          alt="Evil Clippy Disco"
+          style={{
+            position: 'fixed',
+            left: `${clippyXPct * 100}%`,
+            top: '26vh',                      // = clippyZoneH (H * 0.26)
+            transform: 'translate(-50%, -50%)',
+            width: 'min(22vh, 32vw)',          // taille après -10% (0.36*0.90 ≈ 0.32)
+            height: 'min(22vh, 32vw)',
+            objectFit: 'contain',
+            transition: 'left 0.09s cubic-bezier(.34,1.56,.64,1)',
+            zIndex: 99988,                     // au-dessus du canvas Phaser
+            pointerEvents: 'none',
+            imageRendering: 'auto',            // interpolation bicubique navigateur
+          }}
+        />
+      )}
+
       <FlameBorder combo={liveCombo} />
     </>
   )
