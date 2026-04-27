@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useTransition, useEffect } from 'react'
-import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/ToastProvider'
 import {
@@ -9,6 +8,27 @@ import {
   toggleWatchlistVisibility, removeFilmFromWatchlist, toggleWatched,
 } from '@/lib/actions'
 import Link from 'next/link'
+
+// Miniature d'affiche robuste : gère les URLs nulles et les erreurs de chargement
+function PosterThumb({ src, alt, opacity }: { src: string | null; alt: string; opacity?: number }) {
+  const [err, setErr] = useState(false)
+  if (!src || err) {
+    return (
+      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.75rem' }}>
+        🎬
+      </div>
+    )
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={alt}
+      style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: opacity ?? 1, transition: 'opacity .2s', display: 'block' }}
+      onError={() => setErr(true)}
+    />
+  )
+}
 
 const mobileStyles = `
   @media (max-width: 640px) {
@@ -353,10 +373,7 @@ export default function WatchlistClient({ watchlists: initial, watchedFilmIds: i
                       return (
                         <div key={item.film_id} style={{ display: 'flex', alignItems: 'center', gap: '.9rem', background: isWatched ? 'rgba(74,222,128,.04)' : 'var(--bg3)', border: `1px solid ${isWatched ? 'rgba(74,222,128,.2)' : 'var(--border)'}`, borderRadius: 'var(--r)', padding: '.65rem .9rem', transition: 'all .15s' }}>
                           <div style={{ width: 32, height: 48, borderRadius: 4, overflow: 'hidden', flexShrink: 0, background: 'var(--bg2)', position: 'relative' }}>
-                            {film.poster
-                              ? <Image src={film.poster} alt={film.titre} fill unoptimized style={{ objectFit: 'cover', opacity: isWatched ? 0.5 : 1, transition: 'opacity .2s' }} />
-                              : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.75rem' }}>🎬</div>
-                            }
+                            <PosterThumb src={film.poster} alt={film.titre} opacity={isWatched ? 0.5 : 1} />
                             {isWatched && (
                               <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,.35)', borderRadius: 4 }}>
                                 <span style={{ fontSize: '.9rem' }}>✓</span>
