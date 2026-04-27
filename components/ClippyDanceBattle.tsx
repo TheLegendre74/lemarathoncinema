@@ -22,12 +22,67 @@ const COL_CSS:    Record<Dir, string>    = { left: '#ff6699', down: '#6699ff', u
 const COL_DARK:   Record<Dir, number>    = { left: 0x661133, down: 0x112266, up: 0x116633, right: 0x664411 }
 
 const NOTE_SPEED    = 380
-const HIT_WIN_MS    = 170
-const PERFECT_MS    = 85
+const HIT_WIN_MS    = 65     // fenêtre de frappe stricte (~25px à 380px/s)
+const PERFECT_MS    = 28     // perfect ≈ note pile sur le récepteur
+const EARLY_GRACE   = 180    // ms max avant hitY pour "trop tôt" vs "rien"
 const MAX_HP        = 10
-const FEVER_AT      = 10     // combo threshold for fever
-const FEVER_MS      = 10000  // fever duration
-const AHEAD_MS      = 420    // ms before hit to light lane
+const FEVER_AT      = 10     // ×2
+const FEVER_X3      = 30     // ×3
+const FEVER_X4      = 50     // ×4
+const FLAME_AT      = 20     // flammes CSS apparaissent
+const FEVER_MS      = 10000  // durée fever (réinitialisée à chaque upgrade)
+const AHEAD_MS      = 420    // ms avant hit pour illuminer la lane
+
+// ── Flammes CSS autour de la zone de jeu (combo ≥ 20) ────────────────────────
+
+function FlameBorder({ combo }: { combo: number }) {
+  if (combo < FLAME_AT) return null
+  const lvl = combo >= FEVER_X4 ? 3 : combo >= FEVER_X3 ? 2 : 1
+  const fH   = lvl === 3 ? 130 : lvl === 2 ? 100 : 72
+  const fW   = lvl === 3 ? 26 : lvl === 2 ? 20 : 15
+  const bl   = lvl === 3 ? 7 : lvl === 2 ? 5 : 4
+  const op   = lvl === 3 ? 0.88 : lvl === 2 ? 0.72 : 0.52
+  const cnt  = lvl === 3 ? 18 : lvl === 2 ? 13 : 9
+
+  const BG = 'linear-gradient(to top, #ffffff 0%, #99ccff 8%, #2255ee 28%, #0022cc 58%, #000066 80%, transparent 100%)'
+  const anims = ['flm-a', 'flm-b', 'flm-c'] as const
+
+  const flames = (['left', 'right'] as const).flatMap(side =>
+    Array.from({ length: cnt }, (_, i) => {
+      const topPct = (i / cnt) * 100 + 50 / cnt
+      const dur = 0.44 + (i % 5) * 0.13
+      const del = -(i * 0.08)
+      const an  = anims[i % 3]
+      return (
+        <div key={`${side}-${i}`} style={{
+          position: 'fixed',
+          [side]: -Math.round(fW * 0.35),
+          top: `${topPct}vh`,
+          width: fW, height: fH,
+          borderRadius: '50% 50% 30% 30% / 60% 60% 40% 40%',
+          background: BG,
+          filter: `blur(${bl}px)`,
+          opacity: op,
+          transformOrigin: 'bottom center',
+          animation: `${an} ${dur}s ${del}s ease-in-out infinite alternate`,
+          pointerEvents: 'none',
+          zIndex: 99987,
+        }} />
+      )
+    })
+  )
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 99987 }}>
+      <style>{`
+        @keyframes flm-a { from { transform:scaleY(1) scaleX(1); } to { transform:scaleY(1.20) scaleX(0.86); } }
+        @keyframes flm-b { from { transform:scaleY(0.86) scaleX(1.14); } to { transform:scaleY(1.24) scaleX(0.82); } }
+        @keyframes flm-c { from { transform:scaleY(1.08) scaleX(0.92); } to { transform:scaleY(0.80) scaleX(1.18); } }
+      `}</style>
+      {flames}
+    </div>
+  )
+}
 
 // ── Post-game overlay ─────────────────────────────────────────────────────────
 
@@ -110,13 +165,18 @@ function PostGameOverlay({
 // ── Composant principal ───────────────────────────────────────────────────────
 
 export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, userId }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const onWinRef     = useRef(onWin)
-  const onLoseRef    = useRef(onLose)
-  const onMissRef    = useRef(onMiss)
-  const finalScore   = useRef(0)
-  const finalCombo   = useRef(0)
-  const finalWon     = useRef(false)
+  const containerRef     = useRef<HTMLDivElement>(null)
+  const onWinRef         = useRef(onWin)
+  const onLoseRef        = useRef(onLose)
+  const onMissRef        = useRef(onMiss)
+  const finalScore       = useRef(0)
+  const finalCombo       = useRef(0)
+  const finalWon         = useRef(false)
+  const onComboChangeRef = useRef<((c: number) => void) | null>(null)
+  const [liveCombo, setLiveCombo] = useState(0)
+
+  // Toujours à jour — Phaser l'appelle depuis la closure
+  onComboChangeRef.current = (c: number) => setLiveCombo(c)
 
   const [postGame, setPostGame] = useState<{
     score: number; maxCombo: number; won: boolean; leader: LeaderEntry[]
@@ -158,8 +218,9 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
         private score    = 0
         private combo    = 0
         private maxCombo = 0
-        private fever    = false
-        private feverEnd = 0
+        private fever      = false
+        private feverEnd   = 0
+        private feverLevel = 0  // 0=off 1=×2 2=×3 3=×4
         private bmIdx    = 0
         private ended    = false
         private startTime = 0
@@ -314,8 +375,8 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           this.add.rectangle(this.laneCenterX, this.hitY, totalLaneW + 18, 5, 0xffffff).setAlpha(0.08)
           this.add.rectangle(this.laneCenterX, this.hitY, totalLaneW + 18, 1, 0xffffff).setAlpha(0.65)
 
-          // ── Hit zone gems (même forme et esthétique que les notes) ─────────
-          const nW = Math.round(this.laneW * 0.92)  // même taille que les notes tombantes
+          // ── Hit zone gems (même forme et esthétique que les notes, taille maximale) ──
+          const nW = Math.round(this.laneW * 0.98)  // quasi plein-lane, identique aux notes
           const nH = Math.round(nW * 0.40)
           const nR = Math.round(nH * 0.38)
           this.colX.forEach((x, i) => {
@@ -341,8 +402,8 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           const laneRight = Math.round(W / 2 + totalLaneW / 2)
           const availW    = W - laneRight - 16
           const GAP       = 8
-          const maxTW     = Math.max(100, Math.min(Math.floor((availW * 0.85 - GAP * 4 - 24) / 3), 150))
-          const TW        = Math.min(maxTW, Math.round(H * 0.16))
+          const maxTW     = Math.max(115, Math.min(Math.floor((availW * 0.88 - GAP * 4 - 24) / 3), 175))
+          const TW        = Math.min(maxTW, Math.round(H * 0.19))  // +20% vs précédent
           const matPanelW = Math.round(TW * 3 + GAP * 4 + 24)
           const matPanelH = Math.round(TW * 3 + GAP * 4 + 50)
           this.matCenterX = Math.min(Math.round(laneRight + 42 + matPanelW / 2), W - Math.round(matPanelW / 2) - 10)
@@ -374,14 +435,15 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
 
           // Clippy agrandi (dépasse légèrement les cases)
           this.clippySprite = this.add.image(this.matCenterX, mY, 'evil-clippy-disco')
-          this.clippySprite.setDisplaySize(Math.round(TW * 1.50), Math.round(TW * 1.50))
+          this.clippySprite.setDisplaySize(Math.round(TW * 1.80), Math.round(TW * 1.80))  // +20%
+          this.clippySprite.setDepth(5)
 
           // VS
           const sepX = Math.round((laneRight + this.matCenterX - matPanelW/2) / 2)
           this.add.text(sepX, Math.round(H * 0.50), 'VS', { fontSize: '22px', color: '#cc88ff', fontFamily: 'monospace', fontStyle: 'bold' }).setOrigin(0.5).setAlpha(0.45)
 
-          // ── Lasers boîte de nuit (côté gauche uniquement, hors zone de jeu) ──
-          this.spawnLasers(W, H, laneX0)
+          // ── Lasers boîte de nuit (gauche + droite, symétriques) ──
+          this.spawnLasers(W, H, laneX0, laneRight)
 
           // HUD
           this.hpText  = this.add.text(14, 14, this.buildHpStr(), { fontSize: '16px', fontFamily: 'monospace' }).setAlpha(0)
@@ -411,12 +473,13 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           this.add.text(W / 2, 6, '★  DUEL DE DANSE  ★', {
             fontSize: '11px', color: '#cc88ff', fontFamily: 'monospace', letterSpacing: 3,
           }).setOrigin(0.5, 0)
-          const cSize = Math.round(Math.min(this.clippyZoneH * 0.78, W * 0.30))
+          const cSize = Math.round(Math.min(this.clippyZoneH * 0.94, W * 0.36))  // +20%
           this.clippySprite = this.add.image(W / 2, this.clippyTopY, 'evil-clippy-disco')
           this.clippySprite.setDisplaySize(cSize, cSize)
-          // Filtrage linéaire pour éviter la pixelisation sur mobile
+          this.clippySprite.setDepth(5)   // 1er plan — devant les lanes flash
+          // Anti-pixelisation : filtrage texture linéaire
           const clippyTex = this.textures.get('evil-clippy-disco')
-          if (clippyTex) clippyTex.setFilter(1)  // 1 = LINEAR
+          if (clippyTex) clippyTex.setFilter(1)  // 1 = LINEAR (Phaser.Textures.FilterMode.LINEAR)
           // Separator glow
           const sepGfx = this.add.graphics()
           sepGfx.fillGradientStyle(0x7700ff, 0x7700ff, 0x000000, 0x000000, 0.35, 0.35, 0, 0)
@@ -536,60 +599,53 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
         }
 
         // ── Lasers projecteurs boîte de nuit ─────────────────────────────────
-        // laneX0 = bord gauche des lanes (desktop) | -1 = mobile (pas de laneX0)
+        // laneX0 < 0 = mobile | laneRight = bord droit des lanes desktop (symétrie)
 
-        private spawnLasers(W: number, H: number, laneX0: number) {
-          const LASER_COLORS = [0xff2266, 0x2266ff, 0x22ffcc, 0xff9900, 0xcc22ff, 0x22ff44]
-          // Sur desktop : 3 lasers à gauche des lanes (zone libre)
-          // Sur mobile : 0 laser supplémentaire (les coins de la zone Clippy sont libres)
+        private spawnLasers(W: number, H: number, laneX0: number, laneRight = -1) {
+          const COLS_L = [0xff2266, 0x2266ff, 0x22ffcc, 0xff9900, 0xcc22ff, 0x22ff44]
           const isMob = laneX0 < 0
 
           const laserDefs = isMob
             ? [
-                // Mobile : coin haut-gauche et haut-droit (au-dessus des lanes, dans la zone Clippy)
-                { ox: W * 0.04, oy: this.clippyZoneH * 0.18, angle: 55, col: LASER_COLORS[0] },
-                { ox: W * 0.96, oy: this.clippyZoneH * 0.18, angle: 125, col: LASER_COLORS[1] },
-                { ox: W * 0.08, oy: this.clippyZoneH * 0.50, angle: 60, col: LASER_COLORS[4] },
-                { ox: W * 0.92, oy: this.clippyZoneH * 0.50, angle: 120, col: LASER_COLORS[2] },
+                { ox: W * 0.04, oy: this.clippyZoneH * 0.18, angle: 55, col: COLS_L[0] },
+                { ox: W * 0.96, oy: this.clippyZoneH * 0.18, angle: 125, col: COLS_L[1] },
+                { ox: W * 0.08, oy: this.clippyZoneH * 0.50, angle: 60, col: COLS_L[4] },
+                { ox: W * 0.92, oy: this.clippyZoneH * 0.50, angle: 120, col: COLS_L[2] },
               ]
             : [
-                // Desktop : 3 lasers dans la zone libre à gauche des lanes
-                { ox: laneX0 * 0.35, oy: H * 0.04, angle: 65, col: LASER_COLORS[0] },
-                { ox: laneX0 * 0.60, oy: H * 0.03, angle: 75, col: LASER_COLORS[2] },
-                { ox: laneX0 * 0.20, oy: H * 0.06, angle: 50, col: LASER_COLORS[4] },
+                // Gauche
+                { ox: laneX0 * 0.35, oy: H * 0.04, angle: 65, col: COLS_L[0] },
+                { ox: laneX0 * 0.60, oy: H * 0.03, angle: 75, col: COLS_L[2] },
+                { ox: laneX0 * 0.20, oy: H * 0.06, angle: 50, col: COLS_L[4] },
+                // Droite — symétriques (angle miroir)
+                { ox: laneRight + (W - laneRight) * 0.65, oy: H * 0.04, angle: 115, col: COLS_L[3] },
+                { ox: laneRight + (W - laneRight) * 0.40, oy: H * 0.03, angle: 105, col: COLS_L[5] },
+                { ox: laneRight + (W - laneRight) * 0.80, oy: H * 0.06, angle: 130, col: COLS_L[1] },
               ]
 
-          laserDefs.forEach(({ ox, oy, angle, col }) => {
-            const laserG = this.add.graphics()
-            laserG.setDepth(2)
-
-            // Durée de rotation aléatoire pour donner l'impression de projecteurs différents
+          laserDefs.forEach(({ ox, oy, angle, col }, idx) => {
+            const laserG = this.add.graphics().setDepth(2)
             const startAngle = angle
-            const speed = 18 + Math.random() * 22  // degrés/sec
-            let t = Math.random() * 360
+            const speed = 16 + (idx % 5) * 5  // vitesses variées mais déterministes
+            let t = idx * 42.7  // phase initiale distincte par laser
 
-            // Longueur laser : traverse toute la scène
-            const len = Math.max(W, H) * 1.4
+            const len = Math.max(W, H) * 1.5
 
             this.time.addEvent({
-              delay: 40,
-              loop: true,
+              delay: 40, loop: true,
               callback: () => {
                 if (this.ended) return
                 t += speed * 0.04
-                const rad = Phaser.Math.DegToRad(startAngle + Math.sin(Phaser.Math.DegToRad(t)) * 28)
+                const rad = Phaser.Math.DegToRad(startAngle + Math.sin(Phaser.Math.DegToRad(t)) * 30)
                 const ex = ox + Math.cos(rad) * len
                 const ey = oy + Math.sin(rad) * len
 
                 laserG.clear()
-                // Halo large (très transparent)
-                laserG.lineStyle(6, col, 0.04)
+                laserG.lineStyle(14, col, 0.06)   // halo large
                 laserG.beginPath(); laserG.moveTo(ox, oy); laserG.lineTo(ex, ey); laserG.strokePath()
-                // Faisceau principal (légèrement plus opaque)
-                laserG.lineStyle(2, col, 0.14)
+                laserG.lineStyle(5, col, 0.22)     // faisceau principal
                 laserG.beginPath(); laserG.moveTo(ox, oy); laserG.lineTo(ex, ey); laserG.strokePath()
-                // Core brillant (très fin)
-                laserG.lineStyle(1, 0xffffff, 0.18)
+                laserG.lineStyle(2, 0xffffff, 0.30) // core brillant
                 laserG.beginPath(); laserG.moveTo(ox, oy); laserG.lineTo(ex, ey); laserG.strokePath()
               },
             })
@@ -640,19 +696,15 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           if (this.feedbackTxt.alpha > 0) this.feedbackTxt.setAlpha(Math.max(0, this.feedbackTxt.alpha - 0.022))
           if (this.comboTxt.alpha > 0 && this.combo === 0) this.comboTxt.setAlpha(Math.max(0, this.comboTxt.alpha - 0.025))
 
-          // Fever timer
-          if (this.fever) {
-            const remaining = this.feverEnd - (this.time.now)
-            if (remaining <= 0) {
-              this.fever = false
-              this.feverLabel.setAlpha(0); this.multiBadge.setAlpha(0)
-              this.feverBarBg.setAlpha(0); this.feverBar.setAlpha(0)
-              if (this.feverOverlay) { this.tweens.killTweensOf(this.feverOverlay); this.feverOverlay.setAlpha(0) }
-            } else {
-              const ratio = remaining / FEVER_MS
-              const W = this.scale.width
-              this.feverBar.setDisplaySize((W - 40) * ratio, 6)
-            }
+          // Fever bar — progression par palier de combo (sans timer)
+          if (this.feverLevel > 0) {
+            const W = this.scale.width
+            const barW = W - 40
+            const ratio = this.feverLevel === 1 ? Math.min(1, (this.combo - FEVER_AT) / (FEVER_X3 - FEVER_AT))
+              : this.feverLevel === 2 ? Math.min(1, (this.combo - FEVER_X3) / (FEVER_X4 - FEVER_X3))
+              : 1
+            this.feverBarBg.setAlpha(0.35); this.feverBar.setAlpha(1)
+            this.feverBar.setDisplaySize(ratio * barW, 6)
           }
 
           // ── Lane highlight sync: light lane of note CLOSEST to hitY within AHEAD_MS ──
@@ -735,6 +787,7 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           }).setOrigin(0.5)
 
           container.add([g, arrow])
+          container.setDepth(6)  // au-dessus du sprite Clippy (depth 5)
           this.activeNotes.push({ obj: container, time: hitTime, dir, judged: false })
 
           if (!this.isMobile) {
@@ -746,76 +799,114 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
         // ── Input handling ──────────────────────────────────────────────────
 
         private handleInput(dir: Dir, elapsed: number) {
-          let best: typeof this.activeNotes[0] | null = null, bestDelta = Infinity
+          let best: typeof this.activeNotes[0] | null = null
+          let bestDelta = Infinity
+          let hasNoteNear = false  // note dans cette lane dans la fenêtre EARLY_GRACE
+
           for (const n of this.activeNotes) {
             if (n.judged || n.dir !== dir) continue
-            const d = Math.abs(n.time - elapsed)
+            const tth = n.time - elapsed
+            const d = Math.abs(tth)
+            // Note "proche" = encore à venir (dans EARLY_GRACE ms) ou légèrement passée
+            if (tth <= EARLY_GRACE && tth >= -HIT_WIN_MS) hasNoteNear = true
             if (d < bestDelta) { bestDelta = d; best = n }
           }
-          if (!best || bestDelta > HIT_WIN_MS) return
 
-          best.judged = true; best.obj.destroy()
-          const perfect = bestDelta <= PERFECT_MS
-          const multiplier = this.fever ? 2 : 1
-          const pts = (perfect ? 100 : 50) * multiplier
-          this.score += pts; finalScore.current = this.score
+          if (best && bestDelta <= HIT_WIN_MS) {
+            // ✅ SUCCÈS — note dans la fenêtre de frappe
+            best.judged = true; best.obj.destroy()
+            const perfect = bestDelta <= PERFECT_MS
+            const mult = this.getMultiplier()
+            this.score += (perfect ? 100 : 50) * mult
+            finalScore.current = this.score
 
-          // Combo
-          this.combo++
-          if (this.combo > this.maxCombo) { this.maxCombo = this.combo; finalCombo.current = this.maxCombo }
-          if (this.combo >= FEVER_AT && !this.fever) this.activateFever()
-          this.refreshComboDisplay()
+            this.combo++
+            if (this.combo > this.maxCombo) { this.maxCombo = this.combo; finalCombo.current = this.maxCombo }
+            this.updateFeverLevel()
+            this.refreshComboDisplay()
+            onComboChangeRef.current?.(this.combo)
 
-          this.showFeedback(perfect ? 'PERFECT !' : 'GOOD !', perfect ? '#4ade80' : '#ffcc44')
-          this.scoreTxt.setText(`Score: ${this.score}`)
+            this.showFeedback(perfect ? 'PERFECT !' : 'GOOD !', perfect ? '#4ade80' : '#ffcc44')
+            this.scoreTxt.setText(`Score: ${this.score}`)
 
-          // Flash hit ring (mobile)
-          if (this.isMobile) {
-            const ring = this.hitRings[COLS.indexOf(dir)]
-            if (ring) { ring.setAlpha(0.75); this.tweens.add({ targets: ring, alpha: 0.14, duration: 180 }) }
+            if (this.isMobile) {
+              const ring = this.hitRings[COLS.indexOf(dir)]
+              if (ring) { ring.setAlpha(0.85); this.tweens.add({ targets: ring, alpha: 0.28, duration: 180 }) }
+            }
+          } else {
+            // ❌ ERREUR — trop tôt, trop tard ou mauvaise lane → -1 HP
+            this.showFeedback(hasNoteNear ? 'TROP TÔT !' : 'ERREUR !', '#ff9944')
+            this.applyMissPenalty()
           }
         }
 
-        private doMiss() {
+        private getMultiplier(): number {
+          if (this.feverLevel >= 3) return 4
+          if (this.feverLevel >= 2) return 3
+          if (this.feverLevel >= 1) return 2
+          return 1
+        }
+
+        private applyMissPenalty() {
           this.hp = Math.max(0, this.hp - 1)
           this.hpText.setText(this.buildHpStr())
-          this.showFeedback('MISS !', '#e85a5a')
           onMissRef.current?.()
-          // Combo reset + extinction fever
-          this.combo = 0; this.fever = false
+          this.combo = 0; this.feverLevel = 0; this.fever = false
+          onComboChangeRef.current?.(0)
           this.comboTxt.setAlpha(0); this.feverLabel.setAlpha(0)
           this.multiBadge.setAlpha(0); this.feverBarBg.setAlpha(0); this.feverBar.setAlpha(0)
           if (this.feverOverlay) { this.tweens.killTweensOf(this.feverOverlay); this.feverOverlay.setAlpha(0) }
           if (this.hp <= 0) this.endGame('lose')
         }
 
+        private doMiss() {
+          this.showFeedback('MISS !', '#e85a5a')
+          this.applyMissPenalty()
+        }
+
         // ── Fever ───────────────────────────────────────────────────────────
 
+        private updateFeverLevel() {
+          const prev = this.feverLevel
+          if      (this.combo >= FEVER_X4 && this.feverLevel < 3) { this.feverLevel = 3; this.onFeverChange() }
+          else if (this.combo >= FEVER_X3 && this.feverLevel < 2) { this.feverLevel = 2; this.onFeverChange() }
+          else if (this.combo >= FEVER_AT && this.feverLevel < 1) { this.feverLevel = 1; this.onFeverChange() }
+          if (this.feverLevel > 0 && prev === 0) this.activateFever()
+        }
+
         private activateFever() {
-          this.fever = true; this.feverEnd = this.time.now + FEVER_MS
-          const W = this.scale.width
-          this.feverLabel.setText('🔥 FEVER !').setColor('#ff8800').setAlpha(1)
-          this.tweens.add({ targets: this.feverLabel, scaleX: 1.30, scaleY: 1.30, duration: 200, yoyo: true, ease: 'Back.Out' })
-          this.multiBadge.setText('×2').setAlpha(1)
-          this.feverBarBg.setAlpha(0.35); this.feverBar.setAlpha(1)
-          this.feverBar.setDisplaySize(W - 40, 6)
-          // Embrasement de la zone de jeu
+          this.fever = true
           if (this.feverOverlay) {
             this.tweens.killTweensOf(this.feverOverlay)
             this.feverOverlay.setAlpha(0.45)
-            this.tweens.add({
-              targets: this.feverOverlay, alpha: 0.10, duration: 900, ease: 'Power2',
-              onComplete: () => {
-                if (!this.feverOverlay) return
-                this.tweens.add({ targets: this.feverOverlay, alpha: { from: 0.08, to: 0.20 }, duration: 380, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
-              },
+            this.tweens.add({ targets: this.feverOverlay, alpha: 0.10, duration: 900, ease: 'Power2',
+              onComplete: () => { if (this.feverOverlay) this.tweens.add({ targets: this.feverOverlay, alpha: { from: 0.08, to: 0.20 }, duration: 380, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' }) }
+            })
+          }
+        }
+
+        private onFeverChange() {
+          const mult = this.getMultiplier()
+          const LABELS = ['', '🔥 FEVER ×2', '💥 SUPER ×3 !', '⚡ ULTRA ×4 !']
+          const COLORS = ['', '#ff8800', '#ff5500', '#ffdd00']
+          const SIZES  = [1.30, 1.30, 1.42, 1.55]
+          this.feverLabel.setText(LABELS[this.feverLevel] ?? '').setColor(COLORS[this.feverLevel] ?? '#fff').setAlpha(1)
+          this.tweens.add({ targets: this.feverLabel, scaleX: SIZES[this.feverLevel], scaleY: SIZES[this.feverLevel], duration: 220, yoyo: true, ease: 'Back.Out' })
+          this.multiBadge.setText(`×${mult}`).setColor(COLORS[this.feverLevel] ?? '#fff').setAlpha(1)
+          // Flash overlay plus intense à chaque upgrade
+          if (this.feverOverlay && this.feverLevel > 1) {
+            this.tweens.killTweensOf(this.feverOverlay)
+            this.feverOverlay.setAlpha(0.60)
+            const pulseAlpha = this.feverLevel === 3 ? { from: 0.18, to: 0.35 } : { from: 0.12, to: 0.28 }
+            this.tweens.add({ targets: this.feverOverlay, alpha: 0.14, duration: 600, ease: 'Power2',
+              onComplete: () => { if (this.feverOverlay) this.tweens.add({ targets: this.feverOverlay, alpha: pulseAlpha, duration: 320, yoyo: true, repeat: -1 }) }
             })
           }
         }
 
         private refreshComboDisplay() {
           if (this.combo < 2) { this.comboTxt.setAlpha(0); return }
-          const color = this.fever ? '#ff8800' : this.combo >= 20 ? '#cc88ff' : this.combo >= 10 ? '#ffcc44' : '#ffffff'
+          const color = this.feverLevel >= 3 ? '#ffdd00' : this.feverLevel === 2 ? '#ff5500' : this.feverLevel === 1 ? '#ff8800' : '#ffffff'
           this.comboTxt.setText(`COMBO  ×${this.combo}`).setColor(color).setAlpha(1)
           this.tweens.add({ targets: this.comboTxt, scaleX: 1.15, scaleY: 1.15, duration: 120, yoyo: true, ease: 'Back.Out' })
         }
@@ -880,10 +971,13 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
   }
 
   return (
-    <div
-      ref={containerRef}
-      tabIndex={-1}
-      style={{ position: 'fixed', inset: 0, zIndex: 99985, outline: 'none' }}
-    />
+    <>
+      <div
+        ref={containerRef}
+        tabIndex={-1}
+        style={{ position: 'fixed', inset: 0, zIndex: 99985, outline: 'none' }}
+      />
+      <FlameBorder combo={liveCombo} />
+    </>
   )
 }
