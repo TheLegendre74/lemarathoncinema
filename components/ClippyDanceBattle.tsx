@@ -268,7 +268,7 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           this.hitY     = Math.round(H * 0.82)
           this.spawnAdv = ((this.hitY + 80) / NOTE_SPEED) * 1000
 
-          const totalLaneW = Math.min(W * 0.38, 280)
+          const totalLaneW = Math.min(W * 0.46, 360)
           this.laneW       = Math.round(totalLaneW / 4)
           const laneX0     = Math.round(W / 2 - totalLaneW / 2)
           this.laneCenterX = Math.round(W / 2)
@@ -315,7 +315,7 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           this.add.rectangle(this.laneCenterX, this.hitY, totalLaneW + 18, 1, 0xffffff).setAlpha(0.65)
 
           // ── Hit zone gems (même forme et esthétique que les notes) ─────────
-          const nW = Math.round(this.laneW * 0.76)
+          const nW = Math.round(this.laneW * 0.92)  // même taille que les notes tombantes
           const nH = Math.round(nW * 0.40)
           const nR = Math.round(nH * 0.38)
           this.colX.forEach((x, i) => {
@@ -341,8 +341,8 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           const laneRight = Math.round(W / 2 + totalLaneW / 2)
           const availW    = W - laneRight - 16
           const GAP       = 8
-          const maxTW     = Math.max(90, Math.min(Math.floor((availW * 0.70 - GAP * 4 - 24) / 3), 130))
-          const TW        = Math.min(maxTW, Math.round(H * 0.13))
+          const maxTW     = Math.max(100, Math.min(Math.floor((availW * 0.85 - GAP * 4 - 24) / 3), 150))
+          const TW        = Math.min(maxTW, Math.round(H * 0.16))
           const matPanelW = Math.round(TW * 3 + GAP * 4 + 24)
           const matPanelH = Math.round(TW * 3 + GAP * 4 + 50)
           this.matCenterX = Math.min(Math.round(laneRight + 42 + matPanelW / 2), W - Math.round(matPanelW / 2) - 10)
@@ -374,7 +374,7 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
 
           // Clippy agrandi (dépasse légèrement les cases)
           this.clippySprite = this.add.image(this.matCenterX, mY, 'evil-clippy-disco')
-          this.clippySprite.setDisplaySize(Math.round(TW * 1.15), Math.round(TW * 1.15))
+          this.clippySprite.setDisplaySize(Math.round(TW * 1.50), Math.round(TW * 1.50))
 
           // VS
           const sepX = Math.round((laneRight + this.matCenterX - matPanelW/2) / 2)
@@ -482,7 +482,7 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           this.add.rectangle(W / 2, this.hitY, W, 1, 0xffffff).setAlpha(0.9)
 
           // ── Hit zone circles (Guitar Hero strum targets) ──────────────────
-          const circleR = Math.round(colW * 0.37)
+          const circleR = Math.round(colW * 0.46)  // diamètre = 92% colW = taille des notes
           this.hitRings = COLS.map((dir, i) => {
             const x = this.colX[i], col = COL_HEX[dir]
 
@@ -630,7 +630,7 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           const dark   = COL_DARK[dir]
 
           // Guitar Hero gem : légèrement rectangulaire, 3D
-          const noteW = this.isMobile ? Math.round(this.laneW * 0.82) : Math.round(this.laneW * 0.76)
+          const noteW = Math.round(this.laneW * 0.92)  // unifié desktop + mobile
           const noteH = Math.round(noteW * 0.40)
           const r     = Math.round(noteH * 0.38)  // moins arrondi = plus rectangulaire
 
