@@ -22,9 +22,9 @@ const COL_CSS:    Record<Dir, string>    = { left: '#ff6699', down: '#6699ff', u
 const COL_DARK:   Record<Dir, number>    = { left: 0x661133, down: 0x112266, up: 0x116633, right: 0x664411 }
 
 const NOTE_SPEED    = 380
-const HIT_WIN_MS    = 109    // +15% — légère souplesse sans perdre la difficulté
-const PERFECT_MS    = 48     // idem +15%
-const EARLY_GRACE   = 252    // +15%
+const HIT_WIN_MS    = 142    // timing assoupli (+30%)
+const PERFECT_MS    = 62     // idem
+const EARLY_GRACE   = 328    // idem
 const MAX_HP        = 20     // fallback si initialHP non fourni
 const FEVER_AT      = 10     // ×2
 const FEVER_X3      = 30     // ×3
@@ -33,53 +33,95 @@ const FLAME_AT      = 20     // flammes CSS apparaissent
 const FEVER_MS      = 10000  // durée fever (réinitialisée à chaque upgrade)
 const AHEAD_MS      = 420    // ms avant hit pour illuminer la lane
 
-// ── Flammes CSS autour de la zone de jeu (combo ≥ 20) ────────────────────────
+// ── Flammes CSS sur les 4 bords de la zone de jeu (combo ≥ 20) ───────────────
 
 function FlameBorder({ combo }: { combo: number }) {
-  if (combo < FLAME_AT) return null
-  const lvl = combo >= FEVER_X4 ? 3 : combo >= FEVER_X3 ? 2 : 1
-  const fH   = lvl === 3 ? 130 : lvl === 2 ? 100 : 72
-  const fW   = lvl === 3 ? 26 : lvl === 2 ? 20 : 15
-  const bl   = lvl === 3 ? 7 : lvl === 2 ? 5 : 4
-  const op   = lvl === 3 ? 0.88 : lvl === 2 ? 0.72 : 0.52
-  const cnt  = lvl === 3 ? 18 : lvl === 2 ? 13 : 9
+  const [zone, setZone] = useState<{ left: number; right: number; top: number; bottom: number } | null>(null)
+
+  useEffect(() => {
+    const measure = () => {
+      const W = window.innerWidth, H = window.innerHeight
+      const mob = window.matchMedia('(pointer: coarse)').matches
+      const half = Math.min(W * 0.29, 265)
+      setZone(mob
+        ? { left: 0, right: W, top: Math.round(H * 0.26), bottom: Math.round(H * 0.87) }
+        : { left: Math.round(W / 2 - half), right: Math.round(W / 2 + half), top: 0, bottom: Math.round(H * 0.82) }
+      )
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [])
+
+  if (combo < FLAME_AT || !zone) return null
+
+  const lvl  = combo >= FEVER_X4 ? 3 : combo >= FEVER_X3 ? 2 : 1
+  const fH   = lvl === 3 ? 120 : lvl === 2 ? 92 : 65
+  const fW   = lvl === 3 ? 24 : lvl === 2 ? 18 : 13
+  const bl   = lvl === 3 ? 7 : lvl === 2 ? 5 : 3
+  const op   = lvl === 3 ? 0.85 : lvl === 2 ? 0.68 : 0.48
+  const cntH = lvl === 3 ? 18 : lvl === 2 ? 13 : 9
+
+  const zW   = zone.right - zone.left
+  const zH   = zone.bottom - zone.top
+  const cntV = Math.max(5, Math.round(cntH * zH / Math.max(zW, 1)))
 
   const BG = 'linear-gradient(to top, #ffffff 0%, #99ccff 8%, #2255ee 28%, #0022cc 58%, #000066 80%, transparent 100%)'
-  const anims = ['flm-a', 'flm-b', 'flm-c'] as const
 
-  const flames = (['left', 'right'] as const).flatMap(side =>
-    Array.from({ length: cnt }, (_, i) => {
-      const topPct = (i / cnt) * 100 + 50 / cnt
-      const dur = 0.44 + (i % 5) * 0.13
-      const del = -(i * 0.08)
-      const an  = anims[i % 3]
+  // Rotation est incluse dans les keyframes pour éviter le conflit transform CSS
+  // pivot = 'bottom center' du div → base de la flamme, positionnée sur l'arête
+  const makeEdge = (
+    n: number,
+    pfx: '' | 'T' | 'L' | 'R',
+    px: (i: number) => number,
+    py: (i: number) => number,
+    id: string
+  ) =>
+    Array.from({ length: n }, (_, i) => {
+      const letter = ['a', 'b', 'c'][i % 3]
+      const an = pfx ? `flm-${pfx}-${letter}` : `flm-${letter}`
       return (
-        <div key={`${side}-${i}`} style={{
+        <div key={`${id}-${i}`} style={{
           position: 'fixed',
-          [side]: -Math.round(fW * 0.35),
-          top: `${topPct}vh`,
+          left: px(i) - fW / 2,
+          top:  py(i) - fH,
           width: fW, height: fH,
           borderRadius: '50% 50% 30% 30% / 60% 60% 40% 40%',
           background: BG,
           filter: `blur(${bl}px)`,
           opacity: op,
           transformOrigin: 'bottom center',
-          animation: `${an} ${dur}s ${del}s ease-in-out infinite alternate`,
+          animation: `${an} ${0.44 + (i % 5) * 0.13}s ${-(i * 0.08)}s ease-in-out infinite alternate both`,
           pointerEvents: 'none',
           zIndex: 99987,
         }} />
       )
     })
-  )
 
   return (
     <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 99987 }}>
       <style>{`
-        @keyframes flm-a { from { transform:scaleY(1) scaleX(1); } to { transform:scaleY(1.20) scaleX(0.86); } }
-        @keyframes flm-b { from { transform:scaleY(0.86) scaleX(1.14); } to { transform:scaleY(1.24) scaleX(0.82); } }
-        @keyframes flm-c { from { transform:scaleY(1.08) scaleX(0.92); } to { transform:scaleY(0.80) scaleX(1.18); } }
+        @keyframes flm-a   { from{transform:scaleY(1)    scaleX(1)   } to{transform:scaleY(1.20) scaleX(0.86)} }
+        @keyframes flm-b   { from{transform:scaleY(0.86) scaleX(1.14)} to{transform:scaleY(1.24) scaleX(0.82)} }
+        @keyframes flm-c   { from{transform:scaleY(1.08) scaleX(0.92)} to{transform:scaleY(0.80) scaleX(1.18)} }
+        @keyframes flm-T-a { from{transform:rotate(180deg) scaleY(1)    scaleX(1)   } to{transform:rotate(180deg) scaleY(1.20) scaleX(0.86)} }
+        @keyframes flm-T-b { from{transform:rotate(180deg) scaleY(0.86) scaleX(1.14)} to{transform:rotate(180deg) scaleY(1.24) scaleX(0.82)} }
+        @keyframes flm-T-c { from{transform:rotate(180deg) scaleY(1.08) scaleX(0.92)} to{transform:rotate(180deg) scaleY(0.80) scaleX(1.18)} }
+        @keyframes flm-L-a { from{transform:rotate(90deg)  scaleY(1)    scaleX(1)   } to{transform:rotate(90deg)  scaleY(1.20) scaleX(0.86)} }
+        @keyframes flm-L-b { from{transform:rotate(90deg)  scaleY(0.86) scaleX(1.14)} to{transform:rotate(90deg)  scaleY(1.24) scaleX(0.82)} }
+        @keyframes flm-L-c { from{transform:rotate(90deg)  scaleY(1.08) scaleX(0.92)} to{transform:rotate(90deg)  scaleY(0.80) scaleX(1.18)} }
+        @keyframes flm-R-a { from{transform:rotate(-90deg) scaleY(1)    scaleX(1)   } to{transform:rotate(-90deg) scaleY(1.20) scaleX(0.86)} }
+        @keyframes flm-R-b { from{transform:rotate(-90deg) scaleY(0.86) scaleX(1.14)} to{transform:rotate(-90deg) scaleY(1.24) scaleX(0.82)} }
+        @keyframes flm-R-c { from{transform:rotate(-90deg) scaleY(1.08) scaleX(0.92)} to{transform:rotate(-90deg) scaleY(0.80) scaleX(1.18)} }
       `}</style>
-      {flames}
+      {/* Bas : pivot=zone.bottom, flammes vers le HAUT */}
+      {makeEdge(cntH, '',  i => zone.left + (i + 0.5) * zW / cntH, () => zone.bottom, 'bot')}
+      {/* Haut : pivot=zone.top, flammes vers le BAS */}
+      {makeEdge(cntH, 'T', i => zone.left + (i + 0.5) * zW / cntH, () => zone.top,    'top')}
+      {/* Gauche : pivot=zone.left, flammes vers la DROITE */}
+      {makeEdge(cntV, 'L', () => zone.left,  i => zone.top + (i + 0.5) * zH / cntV, 'lft')}
+      {/* Droite : pivot=zone.right, flammes vers la GAUCHE */}
+      {makeEdge(cntV, 'R', () => zone.right, i => zone.top + (i + 0.5) * zH / cntV, 'rgt')}
     </div>
   )
 }
