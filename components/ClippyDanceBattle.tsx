@@ -187,6 +187,7 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
         private feverBar!:      Phaser.GameObjects.Rectangle
         private feverBarBg!:    Phaser.GameObjects.Rectangle
         private multiBadge!:    Phaser.GameObjects.Text  // "×2"
+        private feverOverlay?: Phaser.GameObjects.Rectangle  // flash orange fever
 
         // Desktop DDR mat
         private matTilePos: Record<Dir, { x: number; y: number }> = {} as any
@@ -222,10 +223,11 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
         create() {
           const W = this.scale.width, H = this.scale.height
 
-          // Fond très sombre façon Guitar Hero
-          this.add.rectangle(W / 2, H / 2, W, H, 0x000000).setAlpha(1)
+          // Desktop : overlay semi-transparent → arène visible derrière
+          // Mobile  : overlay sombre → le setupMobile gère le fond Highway
+          this.add.rectangle(W / 2, H / 2, W, H, 0x000000).setAlpha(this.isMobile ? 0.85 : 0.42)
           const bg = this.add.rectangle(W / 2, H / 2, W, H, 0x08001a).setAlpha(0)
-          this.tweens.add({ targets: bg, alpha: { from: 0, to: 0.60 }, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+          this.tweens.add({ targets: bg, alpha: { from: 0, to: this.isMobile ? 0.55 : 0.22 }, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
 
           if (this.isMobile) this.setupMobile(W, H)
           else               this.setupDesktop(W, H)
@@ -260,7 +262,7 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           this.time.addEvent({ delay: last.time + 2200, callback: () => { if (!this.ended) this.endGame('win') } })
         }
 
-        // ── Desktop layout ──────────────────────────────────────────────────
+        // ── Desktop layout — Guitar Hero + arène visible derrière ───────────
 
         private setupDesktop(W: number, H: number) {
           this.hitY     = Math.round(H * 0.82)
@@ -272,31 +274,78 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           this.laneCenterX = Math.round(W / 2)
           this.colX = COLS.map((_, i) => Math.round(laneX0 + (i + 0.5) * totalLaneW / this.colCount))
 
-          // Lane backdrops
-          this.add.rectangle(this.laneCenterX, H / 2, totalLaneW + 18, H, 0x000000).setAlpha(0.38)
-          this.colX.forEach((x, i) => {
-            const dir = COLS[i]
-            const g = this.add.graphics()
-            g.fillStyle(COL_HEX[dir], 0.07)
-            g.fillRect(x - this.laneW / 2 + 3, 0, this.laneW - 6, H)
-            if (i > 0) { const sep = this.add.rectangle(x - this.laneW / 2, H / 2, 1, H, 0xffffff); sep.setAlpha(0.06) }
-          })
-          // Hit-zone targets
-          this.colX.forEach((x, i) => {
-            const dir = COLS[i], col = COL_HEX[dir]
-            const ring = this.add.circle(x, this.hitY, 30, col, 0.12); ring.setStrokeStyle(2.5, col, 0.75)
-            this.tweens.add({ targets: ring, scaleX: 1.1, scaleY: 1.1, duration: 550, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
-            this.add.text(x, this.hitY, COL_ARROWS[dir], { fontSize: '28px', color: COL_CSS[dir], fontFamily: 'monospace', fontStyle: 'bold' }).setOrigin(0.5).setAlpha(0.35)
-          })
-          this.add.rectangle(this.laneCenterX, this.hitY, totalLaneW + 10, 2, 0xffffff).setAlpha(0.12)
+          // ── Lane backgrounds (Guitar Hero + arène visible) ─────────────────
+          // Panneau sombre derrière les lanes (semi-transparent pour laisser l'arène)
+          this.add.rectangle(this.laneCenterX, H / 2, totalLaneW + 18, H, 0x000000).setAlpha(0.40)
 
-          // DDR mat (Clippy, right of lanes)
-          const TW = Math.min(Math.max(72, H * 0.095), 100)
-          const GAP = 8
+          // Dégradé par bandes — couleur croissante vers le bas
+          this.colX.forEach((x, i) => {
+            const col = COL_HEX[COLS[i]]
+            const g = this.add.graphics()
+            g.fillStyle(col, 0.04); g.fillRect(x - this.laneW/2, 0, this.laneW, H/3)
+            g.fillStyle(col, 0.08); g.fillRect(x - this.laneW/2, H/3, this.laneW, H/3)
+            g.fillStyle(col, 0.13); g.fillRect(x - this.laneW/2, 2*H/3, this.laneW, H/3)
+            if (i > 0) {
+              const sg = this.add.graphics()
+              sg.lineStyle(1.5, 0xffffff, 0.10); sg.moveTo(x - this.laneW/2, 0); sg.lineTo(x - this.laneW/2, H); sg.strokePath()
+            }
+          })
+
+          // Lignes de frets (desktop)
+          const fretG = this.add.graphics()
+          for (let i = 1; i <= 10; i++) {
+            const y = i * this.hitY / 11
+            fretG.lineStyle(1, 0xffffff, 0.03 + (i / 11) * 0.07)
+            fretG.moveTo(laneX0, y); fretG.lineTo(laneX0 + totalLaneW, y); fretG.strokePath()
+          }
+
+          // Flash backgrounds (illumination couleur Guitar Hero)
+          this.laneFlashBg = COLS.map((dir, i) => {
+            const flash = this.add.rectangle(this.colX[i], H / 2, this.laneW, H, COL_HEX[dir])
+            flash.setAlpha(0)
+            return flash
+          })
+
+          // Fever overlay (flammes orange)
+          this.feverOverlay = this.add.rectangle(this.laneCenterX, H / 2, totalLaneW + 18, H, 0xff4400)
+          this.feverOverlay.setAlpha(0).setDepth(9)
+
+          // ── Strum bar ─────────────────────────────────────────────────────
+          this.add.rectangle(this.laneCenterX, this.hitY, totalLaneW + 18, 5, 0xffffff).setAlpha(0.08)
+          this.add.rectangle(this.laneCenterX, this.hitY, totalLaneW + 18, 1, 0xffffff).setAlpha(0.65)
+
+          // ── Hit zone gems (même forme et esthétique que les notes) ─────────
+          const nW = Math.round(this.laneW * 0.76)
+          const nH = Math.round(nW * 0.40)
+          const nR = Math.round(nH * 0.38)
+          this.colX.forEach((x, i) => {
+            const dir = COLS[i], col = COL_HEX[dir], dark = COL_DARK[dir]
+            // Pulsing outer glow (derrière le gem)
+            const glow = this.add.circle(x, this.hitY, Math.round(nW * 0.65), col, 0.10)
+            this.tweens.add({ targets: glow, scaleX: 1.18, scaleY: 1.18, alpha: { from: 0.10, to: 0.03 }, duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+            // Gem (identique aux notes tombantes)
+            const g = this.add.graphics()
+            g.fillStyle(col, 0.18); g.fillRoundedRect(x - nW/2 - 6, this.hitY - nH/2 - 4, nW + 12, nH + 8, nR + 4)
+            g.fillStyle(dark, 1);   g.fillRoundedRect(x - nW/2, this.hitY - nH/2, nW, nH, nR)
+            g.fillStyle(col, 1);    g.fillRoundedRect(x - nW/2, this.hitY - nH/2, nW, Math.round(nH * 0.70), nR)
+            g.lineStyle(2.5, 0xffffff, 0.55); g.strokeRoundedRect(x - nW/2, this.hitY - nH/2, nW, nH, nR)
+            g.fillStyle(0xffffff, 0.28); g.fillRoundedRect(x - nW/2 + 4, this.hitY - nH/2 + 3, nW - 8, Math.round(nH * 0.28), 3)
+            g.fillStyle(0xffffff, 0.12); g.fillRect(x - nW/2 + 1, this.hitY - nH/2 + nR, 3, nH - nR * 2)
+            this.add.text(x, this.hitY, COL_ARROWS[dir], {
+              fontSize: `${Math.round(nH * 1.0)}px`, color: COL_CSS[dir],
+              fontFamily: 'monospace', fontStyle: 'bold', stroke: '#00000077', strokeThickness: 2,
+            }).setOrigin(0.5).setAlpha(0.80)
+          })
+
+          // ── DDR mat (agrandi) ──────────────────────────────────────────────
+          const laneRight = Math.round(W / 2 + totalLaneW / 2)
+          const availW    = W - laneRight - 16
+          const GAP       = 8
+          const maxTW     = Math.max(90, Math.min(Math.floor((availW * 0.70 - GAP * 4 - 24) / 3), 130))
+          const TW        = Math.min(maxTW, Math.round(H * 0.13))
           const matPanelW = Math.round(TW * 3 + GAP * 4 + 24)
           const matPanelH = Math.round(TW * 3 + GAP * 4 + 50)
-          const laneRight  = Math.round(W / 2 + totalLaneW / 2)
-          this.matCenterX  = Math.min(Math.round(laneRight + 50 + matPanelW / 2), W - Math.round(matPanelW / 2) - 12)
+          this.matCenterX = Math.min(Math.round(laneRight + 42 + matPanelW / 2), W - Math.round(matPanelW / 2) - 10)
           const mY = Math.round(H * 0.50)
 
           this.matTilePos = {
@@ -305,37 +354,36 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
             left:  { x: this.matCenterX - TW - GAP, y: mY },
             right: { x: this.matCenterX + TW + GAP, y: mY },
           }
-          this.add.rectangle(this.matCenterX, mY, matPanelW, matPanelH, 0x060010).setAlpha(0.85)
-          const mborder = this.add.graphics(); mborder.lineStyle(1.5, 0x9966ff, 0.45)
-          mborder.strokeRect(this.matCenterX - matPanelW / 2, mY - matPanelH / 2, matPanelW, matPanelH)
+          this.add.rectangle(this.matCenterX, mY, matPanelW, matPanelH, 0x030010).setAlpha(0.88)
+          const mb = this.add.graphics(); mb.lineStyle(2, 0xaa55ff, 0.55)
+          mb.strokeRect(this.matCenterX - matPanelW / 2, mY - matPanelH / 2, matPanelW, matPanelH)
 
           this.matTileBg = {} as Record<Dir, Phaser.GameObjects.Rectangle>
           ;(['up','down','left','right'] as Dir[]).forEach(dir => {
             const pos = this.matTilePos[dir], col = COL_HEX[dir]
             const bg = this.add.rectangle(pos.x, pos.y, TW - 4, TW - 4, col).setAlpha(0.18)
             this.matTileBg[dir] = bg
-            const g = this.add.graphics(); g.lineStyle(1.5, col, 0.45)
+            const g = this.add.graphics(); g.lineStyle(2, col, 0.50)
             g.strokeRect(pos.x - (TW-4)/2, pos.y - (TW-4)/2, TW-4, TW-4)
-            this.add.text(pos.x, pos.y, COL_ARROWS[dir], { fontSize: `${Math.round(TW*.50)}px`, color: COL_CSS[dir], fontFamily: 'monospace', fontStyle: 'bold' }).setOrigin(0.5).setAlpha(0.5)
+            this.add.text(pos.x, pos.y, COL_ARROWS[dir], { fontSize: `${Math.round(TW*.52)}px`, color: COL_CSS[dir], fontFamily: 'monospace', fontStyle: 'bold' }).setOrigin(0.5).setAlpha(0.55)
           })
-          // Center tile
-          this.add.rectangle(this.matCenterX, mY, TW-4, TW-4, 0x1a0044).setAlpha(0.6)
-          const gc = this.add.graphics(); gc.lineStyle(1, 0x9966ff, 0.25)
+          this.add.rectangle(this.matCenterX, mY, TW-4, TW-4, 0x1a0044).setAlpha(0.65)
+          const gc = this.add.graphics(); gc.lineStyle(1.5, 0x9966ff, 0.30)
           gc.strokeRect(this.matCenterX - (TW-4)/2, mY - (TW-4)/2, TW-4, TW-4)
-          this.add.text(this.matCenterX, mY - matPanelH/2 - 12, '📎 CLIPPY', { fontSize: '13px', color: '#cc88ff', fontFamily: 'monospace' }).setOrigin(0.5, 1)
+          this.add.text(this.matCenterX, mY - matPanelH/2 - 14, '📎 CLIPPY', { fontSize: '14px', color: '#cc88ff', fontFamily: 'monospace', fontStyle: 'bold' }).setOrigin(0.5, 1)
 
+          // Clippy agrandi (dépasse légèrement les cases)
           this.clippySprite = this.add.image(this.matCenterX, mY, 'evil-clippy-disco')
-          this.clippySprite.setDisplaySize(TW * 0.88, TW * 0.88)
+          this.clippySprite.setDisplaySize(Math.round(TW * 1.15), Math.round(TW * 1.15))
 
-          // VS separator
-          const matLeft = this.matCenterX - matPanelW / 2
-          const sepX = Math.round((laneRight + matLeft) / 2)
+          // VS
+          const sepX = Math.round((laneRight + this.matCenterX - matPanelW/2) / 2)
           this.add.text(sepX, Math.round(H * 0.50), 'VS', { fontSize: '22px', color: '#cc88ff', fontFamily: 'monospace', fontStyle: 'bold' }).setOrigin(0.5).setAlpha(0.45)
 
           // HUD
           this.hpText  = this.add.text(14, 14, this.buildHpStr(), { fontSize: '16px', fontFamily: 'monospace' }).setAlpha(0)
-          this.scoreTxt = this.add.text(laneX0 - 6, 14, 'Score: 0', { fontSize: '13px', color: '#ccc', fontFamily: 'monospace' }).setOrigin(1, 0)
-          this.feedbackTxt = this.add.text(this.laneCenterX, Math.round(H * 0.61), '', { fontSize: '38px', fontStyle: 'bold', fontFamily: 'monospace' }).setOrigin(0.5)
+          this.scoreTxt = this.add.text(laneX0 - 6, 14, 'Score: 0', { fontSize: '14px', color: '#fff', fontFamily: 'monospace', fontStyle: 'bold', stroke: '#000', strokeThickness: 2 }).setOrigin(1, 0)
+          this.feedbackTxt = this.add.text(this.laneCenterX, Math.round(H * 0.61), '', { fontSize: '38px', fontStyle: 'bold', fontFamily: 'monospace', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5)
           this.add.text(this.laneCenterX, 14, '🎵  DUEL DE DANSE  🎵', { fontSize: '13px', color: '#cc88ff', letterSpacing: 3, fontFamily: 'monospace' }).setOrigin(0.5, 0)
         }
 
@@ -363,6 +411,9 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           const cSize = Math.round(Math.min(this.clippyZoneH * 0.78, W * 0.30))
           this.clippySprite = this.add.image(W / 2, this.clippyTopY, 'evil-clippy-disco')
           this.clippySprite.setDisplaySize(cSize, cSize)
+          // Filtrage linéaire pour éviter la pixelisation sur mobile
+          const clippyTex = this.textures.get('evil-clippy-disco')
+          if (clippyTex) clippyTex.setFilter(1)  // 1 = LINEAR
           // Separator glow
           const sepGfx = this.add.graphics()
           sepGfx.fillGradientStyle(0x7700ff, 0x7700ff, 0x000000, 0x000000, 0.35, 0.35, 0, 0)
@@ -529,6 +580,7 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
               this.fever = false
               this.feverLabel.setAlpha(0); this.multiBadge.setAlpha(0)
               this.feverBarBg.setAlpha(0); this.feverBar.setAlpha(0)
+              if (this.feverOverlay) { this.tweens.killTweensOf(this.feverOverlay); this.feverOverlay.setAlpha(0) }
             } else {
               const ratio = remaining / FEVER_MS
               const W = this.scale.width
@@ -558,11 +610,12 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
               this.tweens.add({ targets: this.clippySprite, x: this.colX[idx], y: this.clippyTopY, duration: 80, ease: 'Power2' })
             }
           } else {
-            // Desktop: mat tile lighting follows closest note (separate from Clippy movement on spawn)
+            // Desktop: lane flash + mat tiles
+            this.laneFlashBg.forEach((bg, i) => bg.setAlpha(litDirs.has(COLS[i]) ? 0.14 : 0))
             if (closestDir && closestDir !== this.lastLitDir) {
               this.lastLitDir = closestDir
               ;(['up','down','left','right'] as Dir[]).forEach(d => {
-                if (this.matTileBg[d]) this.matTileBg[d].setAlpha(d === closestDir ? 0.78 : 0.18)
+                if (this.matTileBg[d]) this.matTileBg[d].setAlpha(d === closestDir ? 0.82 : 0.18)
               })
             }
           }
@@ -661,10 +714,11 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           this.hpText.setText(this.buildHpStr())
           this.showFeedback('MISS !', '#e85a5a')
           onMissRef.current?.()
-          // Combo reset
+          // Combo reset + extinction fever
           this.combo = 0; this.fever = false
           this.comboTxt.setAlpha(0); this.feverLabel.setAlpha(0)
           this.multiBadge.setAlpha(0); this.feverBarBg.setAlpha(0); this.feverBar.setAlpha(0)
+          if (this.feverOverlay) { this.tweens.killTweensOf(this.feverOverlay); this.feverOverlay.setAlpha(0) }
           if (this.hp <= 0) this.endGame('lose')
         }
 
@@ -674,10 +728,22 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           this.fever = true; this.feverEnd = this.time.now + FEVER_MS
           const W = this.scale.width
           this.feverLabel.setText('🔥 FEVER !').setColor('#ff8800').setAlpha(1)
-          this.tweens.add({ targets: this.feverLabel, scaleX: 1.25, scaleY: 1.25, duration: 200, yoyo: true, ease: 'Back.Out' })
+          this.tweens.add({ targets: this.feverLabel, scaleX: 1.30, scaleY: 1.30, duration: 200, yoyo: true, ease: 'Back.Out' })
           this.multiBadge.setText('×2').setAlpha(1)
           this.feverBarBg.setAlpha(0.35); this.feverBar.setAlpha(1)
           this.feverBar.setDisplaySize(W - 40, 6)
+          // Embrasement de la zone de jeu
+          if (this.feverOverlay) {
+            this.tweens.killTweensOf(this.feverOverlay)
+            this.feverOverlay.setAlpha(0.45)
+            this.tweens.add({
+              targets: this.feverOverlay, alpha: 0.10, duration: 900, ease: 'Power2',
+              onComplete: () => {
+                if (!this.feverOverlay) return
+                this.tweens.add({ targets: this.feverOverlay, alpha: { from: 0.08, to: 0.20 }, duration: 380, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+              },
+            })
+          }
         }
 
         private refreshComboDisplay() {
@@ -711,13 +777,14 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
       }
 
       phaserGame = new Phaser.Game({
-        type: Phaser.AUTO,
+        type: Phaser.WEBGL,         // WebGL → meilleur filtrage texture (anti-pixelisation)
         parent: containerRef.current!,
         transparent: true,
         scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH },
         scene: [DDRScene],
         audio: { disableWebAudio: false },
         banner: false,
+        render: { antialias: true, antialiasGL: true, pixelArt: false },
       })
     })()
 
