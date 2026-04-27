@@ -12,7 +12,6 @@ const SouthParkEggs  = dynamic(() => import('./SouthParkEggs').then(m => ({ defa
 const SouthParkBus_  = dynamic(() => import('./SouthParkEggs').then(m => ({ default: m.SouthParkBus })), { ssr: false })
 const RandyMarsh_    = dynamic(() => import('./SouthParkEggs').then(m => ({ default: m.RandyMarsh   })), { ssr: false })
 const JokerCardEgg_  = dynamic(() => import('./JokerCardEgg').then(m => ({ default: m.JokerCardEgg  })), { ssr: false })
-const ConwayOverlay  = dynamic(() => import('./conway/overlay'),                                         { ssr: false })
 
 // ─── ANIMATIONS (partagées avec Forum et FilmsClient) ───────────────────────
 const EE_STYLES = `
@@ -964,8 +963,6 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
   const [ghostBoxMsg,    setGhostBoxMsg]    = useState('Hey! Ouvre moi!')
   const [ghostBoxWarn,   setGhostBoxWarn]   = useState(false)
   const [showTamagotchi, setShowTamagotchi] = useState(false)
-  const [showConway,     setShowConway]     = useState(false)
-  const conwayMiniRef = useRef(false)
   const keyBuf = useRef<string[]>([])
   const tarsShown = useRef(false)
   const noctambuleShown = useRef(false)
@@ -1008,7 +1005,7 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
     }
     else if (t.endsWith('gomu gomu no tipiak!')) { setShowTipiak(true) }
     else if (t.endsWith('boîte de pandore') || t.endsWith('boite de pandore') || t.endsWith('pandore')) { void discoverEgg('clippy').catch(() => {}); setShowPandora(true) }
-    else if (t.endsWith('la guerre des mondes') && !isGuest) { discoverEgg('conway'); conwayMiniRef.current = false; localStorage.setItem('conway_unlocked', '1'); window.dispatchEvent(new CustomEvent('conway:unlocked')); setShowConway(true) }
+    else if (t.endsWith('codex') && !isGuest) { discoverEgg('conway'); window.location.href = '/labo/life' }
     else { triggered = false }
     if (triggered) { setMobileVal(''); setShowMobileInput(false) }
   }
@@ -1018,7 +1015,7 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
   ghostBoxActiveRef.current = ghostBox !== null
   anyEggActiveRef.current   = showClipy || showPandora || showJoker || showMatrix || showMarvin ||
     showHal || showNolan || showBond || showFightClub || !!fightClubRule || showKenny || showSouthPark ||
-    showRandy || showKillBill || showAVP || showTipiak || showTamagotchi || showConway
+    showRandy || showKillBill || showAVP || showTipiak || showTamagotchi
 
   // ── Ghost box pré-pandore : gestionnaire de clics global (0,15% par clic) ──
   useEffect(() => {
@@ -1168,23 +1165,6 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
   }, [])
 
 
-  // Événement custom pour déclencher Conway (affiche triple-clic, page /conway mode flottant, etc.)
-  // Dispatcher : window.dispatchEvent(new CustomEvent('conway:invoke'))
-  // Mini mode   : window.dispatchEvent(new CustomEvent('conway:invoke', { detail: { mini: true } }))
-  useEffect(() => {
-    function onConwayInvoke(e: Event) {
-      if (isGuest) return
-      const mini = (e as CustomEvent).detail?.mini === true
-      conwayMiniRef.current = mini
-      discoverEgg('conway')
-      localStorage.setItem('conway_unlocked', '1')
-      window.dispatchEvent(new CustomEvent('conway:unlocked'))
-      setShowConway(true)
-    }
-    window.addEventListener('conway:invoke', onConwayInvoke)
-    return () => window.removeEventListener('conway:invoke', onConwayInvoke)
-  }, [isGuest])
-
   // Keyboard easter eggs
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -1314,15 +1294,11 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
         keyBuf.current = []
         return
       }
-      // "la guerre des mondes" → Jeu de la Vie de Conway (invités exclus)
-      const last20 = buf.slice(-20).join('').toLowerCase()
-      if (last20 === 'la guerre des mondes' && !isGuest) {
+      // "codex" → Life God Game
+      if (buf.slice(-5).join('').toLowerCase() === 'codex' && !isGuest) {
         discoverEgg('conway')
-        conwayMiniRef.current = false
-        localStorage.setItem('conway_unlocked', '1')
-        window.dispatchEvent(new CustomEvent('conway:unlocked'))
-        setShowConway(true)
         keyBuf.current = []
+        window.location.href = '/labo/life'
         return
       }
     }
@@ -1374,7 +1350,6 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
       {showKillBill   && <KillBillGame    onDone={() => setShowKillBill(false)}  endText={ee.killBillEnd} />}
       {showAVP        && <AVPEgg          onDone={() => { predSoundRef.current?.pause(); predSoundRef.current = null; setShowAVP(false) }} predSound={predSoundRef} />}
       {showTipiak     && <TipiakOverlay  onDone={() => setShowTipiak(false)} />}
-      {showConway     && <ConwayOverlay  onClose={() => setShowConway(false)} startMini={conwayMiniRef.current} />}
       {showTamagotchi && <TamagotchiKeyOverlay onClose={() => setShowTamagotchi(false)} isGuest={isGuest} />}
       {showPandora    && <PandoraBox onOpen={() => {
         setShowPandora(false)

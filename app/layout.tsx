@@ -48,7 +48,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   let hasRageuxEgg = false
   let hasTamagotchiEgg = false
   let hasClippyEgg = false
-  let hasConwayEgg = false
   let unreadMessages = 0
   let watchedCount = 0
   if (user) {
@@ -62,7 +61,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     hasRageuxEgg = (eggs ?? []).some((e: any) => e.egg_id === 'rageux')
     hasTamagotchiEgg = (eggs ?? []).some((e: any) => e.egg_id === 'tamagotchi')
     hasClippyEgg = (eggs ?? []).some((e: any) => e.egg_id === 'clippy')
-    hasConwayEgg = (eggs ?? []).some((e: any) => e.egg_id === 'conway')
     unreadMessages = unread
     watchedCount = count ?? 0
   }
@@ -95,7 +93,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <ToastProvider>
           <EasterEggs config={eeConfig} isGuest={!user} watchedCount={watchedCount} hasClippyEgg={hasClippyEgg} isAdmin={!!(profile as any)?.is_admin} userId={user?.id} />
-          <ClientShell profile={profile} hasRageuxEgg={hasRageuxEgg} hasTamagotchiEgg={hasTamagotchiEgg} hasConwayEgg={hasConwayEgg} unreadMessages={unreadMessages}>
+          <ClientShell profile={profile} hasRageuxEgg={hasRageuxEgg} hasTamagotchiEgg={hasTamagotchiEgg} unreadMessages={unreadMessages}>
             {children}
           </ClientShell>
           <a

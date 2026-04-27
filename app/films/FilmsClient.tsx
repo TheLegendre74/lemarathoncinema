@@ -112,28 +112,13 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
   // ── Easter eggs ─────────────────────────────────────────────
   const isInception       = film.titre.toLowerCase().includes('inception')
   const isGodfather       = film.titre.toLowerCase().includes('parrain') || film.titre.toLowerCase().includes('godfather')
-  const isGuerreDesMondes = film.titre.toLowerCase().includes('guerre des mondes')
-
   const [inceptionClicks, setInceptionClicks] = useState(0)
   const [inceptionTilt, setInceptionTilt]     = useState(false)
   const [godfatherOverlay, setGodfatherOverlay] = useState(false)
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const guerreClicksRef = useRef(0)
-  const guerreTimerRef  = useRef<ReturnType<typeof setTimeout>>()
 
   // Inception: 5 clicks on poster → tilt
-  // La Guerre des Mondes: 3 clicks rapides → Jeu de la Vie de Conway
   function handlePosterClick() {
-    if (isGuerreDesMondes) {
-      guerreClicksRef.current++
-      clearTimeout(guerreTimerRef.current)
-      guerreTimerRef.current = setTimeout(() => { guerreClicksRef.current = 0 }, 500)
-      if (guerreClicksRef.current >= 3) {
-        guerreClicksRef.current = 0
-        window.dispatchEvent(new CustomEvent('conway:invoke'))
-      }
-      return
-    }
     if (!isInception) return
     const n = inceptionClicks + 1
     setInceptionClicks(n)

@@ -151,10 +151,10 @@ const EGGS = [
   },
   {
     id: 'conway',
-    icon: '◼',
-    name: 'La Guerre des Mondes',
+    icon: '▣',
+    name: 'Life God Game',
     category: 'Clavier',
-    condition: 'Taper "la guerre des mondes" au clavier, ou triple-cliquer rapidement sur l\'affiche du film. Le Jeu de la Vie de Conway se réveille — et il reste accessible en section Secret.',
+    condition: 'Taper "codex" au clavier pour ouvrir le Life God Game avec les AM autonomes.',
   },
   {
     id: 'watcher',
