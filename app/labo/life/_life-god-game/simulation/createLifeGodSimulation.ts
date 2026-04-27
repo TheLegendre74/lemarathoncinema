@@ -1,4 +1,15 @@
 import { LIFE_GOD_AM_PATTERNS } from './amPatterns'
+import {
+  RuleBasedPolicyProvider,
+  HybridPolicyProvider,
+  applyPolicyToMovementScoring,
+  buildAmPolicyInput,
+  createAmPolicyDebugSnapshot,
+  type AmPolicyProvider,
+  type AmPolicyWorldState,
+} from './policy/amPolicy'
+import { LearnedPolicyProvider } from './policy/learnedPolicyProvider'
+import { AM_POLICY_MODEL_PATH } from './policy/amPolicyModelContract'
 import type {
   LifeGodAmEntity,
   LifeGodAmBehaviorState,
@@ -92,6 +103,9 @@ const PLAYER_PATTERN_COLOR_HINTS: Record<LifeGodPlayerPatternType, string> = {
 }
 const TIME_SCALES: LifeGodTimeScale[] = [0.25, 0.5, 1, 2, 4, 8]
 const LINEAGE_COLORS = ['#69f0c1', '#ff8ad8', '#7ab6ff']
+const useLearnedAmPolicy = false
+const learnedPolicyModelPath = AM_POLICY_MODEL_PATH
+const AM_POLICY_MOVEMENT_WEIGHT = 6
 const BUILD_PILE_OFFSETS: LifeGodRelativeCell[] = [
   { x: 0, y: 0 },
   { x: 1, y: 0 },
@@ -202,6 +216,12 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   let frozenMatterGrid: Uint8Array | null = null
   let stabilityGrid = createGrid()  // nombre de ticks consécutifs où chaque cellule est restée vivante
   let prevGrid = createGrid()       // snapshot de la grille au tick précédent (pour calculer la stabilité)
+  const ruleBasedAmPolicyProvider = new RuleBasedPolicyProvider()
+  const learnedAmPolicyProvider = new LearnedPolicyProvider(learnedPolicyModelPath)
+  if (useLearnedAmPolicy) void learnedAmPolicyProvider.load()
+  const amPolicyProvider: AmPolicyProvider = useLearnedAmPolicy
+    ? new HybridPolicyProvider(ruleBasedAmPolicyProvider, learnedAmPolicyProvider)
+    : ruleBasedAmPolicyProvider
   const listeners = new Set<(state: LifeGodSimulationState) => void>()
 
   function createGrid() {
@@ -686,6 +706,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       knownDangerHints: [],
       independenceScore: 1,
       totalReward: 0,
+      lastRewardAmount: 0,
       lastRewardReason: null,
       terraformStuckTicks: 0,
       failedTerraformTargets: [],
@@ -720,6 +741,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       memory: {
         ...am.memory,
         totalReward: am.memory.totalReward + amount,
+        lastRewardAmount: amount,
         lastRewardReason: reason,
       },
     }
@@ -1678,15 +1700,92 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     return influencePoint.mode === 'attract' ? clamped * 7 : -clamped * 7
   }
 
+  function countLocalGridDensity(grid: Uint8Array | null, center: LifeGodRelativeCell, radius: number, match: (value: number) => boolean) {
+    if (!grid) return 0
+    let matching = 0
+    let total = 0
+    const cx = Math.round(center.x)
+    const cy = Math.round(center.y)
+    for (let y = cy - radius; y <= cy + radius; y += 1) {
+      for (let x = cx - radius; x <= cx + radius; x += 1) {
+        if (x <= 0 || y <= 0 || x >= GRID_WIDTH - 1 || y >= GRID_HEIGHT - 1) continue
+        total += 1
+        if (match(grid[indexAt(x, y)])) matching += 1
+      }
+    }
+    return total > 0 ? matching / total : 0
+  }
+
+  function getLocalTerrainInfo(am: LifeGodAmEntity) {
+    const center = getAmCenter(am)
+    return {
+      0: countLocalGridDensity(terrainGrid, center, 6, (value) => value === 0),
+      1: countLocalGridDensity(terrainGrid, center, 6, (value) => value === 1),
+      2: countLocalGridDensity(terrainGrid, center, 6, (value) => value === 2),
+      3: countLocalGridDensity(terrainGrid, center, 6, (value) => value === 3),
+      4: countLocalGridDensity(terrainGrid, center, 6, (value) => value === 4),
+    }
+  }
+
+  function getAmWallDistances(am: LifeGodAmEntity) {
+    const bounds = am.absoluteCells.reduce(
+      (acc, cell) => ({
+        minX: Math.min(acc.minX, cell.x),
+        minY: Math.min(acc.minY, cell.y),
+        maxX: Math.max(acc.maxX, cell.x),
+        maxY: Math.max(acc.maxY, cell.y),
+      }),
+      { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity }
+    )
+    return {
+      left: Math.max(0, bounds.minX),
+      right: Math.max(0, GRID_WIDTH - 1 - bounds.maxX),
+      top: Math.max(0, bounds.minY),
+      bottom: Math.max(0, GRID_HEIGHT - 1 - bounds.maxY),
+    }
+  }
+
+  function createAmPolicyWorldState(): AmPolicyWorldState {
+    return {
+      currentMission,
+      getWallDistances: getAmWallDistances,
+      getDistanceToTargetCell: (am) => am.targetCell ? distanceBetweenCells(getAmCenter(am), am.targetCell) : null,
+      getDistanceToBuildSite: (am) => am.buildSite ? distanceBetweenCells(getAmCenter(am), am.buildSite) : null,
+      getDistanceToNearestAm: (am) => getMinDistanceToOtherAms(am.position, am),
+      getDensityAroundAm: (am) => getLivingDensityAt(am.position, am),
+      getStableCellDensity: (am) => countLocalGridDensity(stabilityGrid, getAmCenter(am), 6, (value) => value >= STABILITY_THRESHOLD),
+      getFrozenMatterDensity: (am) => countLocalGridDensity(frozenMatterGrid, getAmCenter(am), 6, (value) => value === 1),
+      getTerrainInfoLocal: getLocalTerrainInfo,
+      isOvercrowded: (am) => getCrowdingAt(am.position, am).closeCount > 0 || am.memory.overcrowdedTicks > 0,
+    }
+  }
+
+  function getPolicyOutputForAm(am: LifeGodAmEntity) {
+    const input = buildAmPolicyInput(am, createAmPolicyWorldState())
+    const output = amPolicyProvider.scoreActions(input)
+    return {
+      input,
+      output,
+      debug: createAmPolicyDebugSnapshot(input, output),
+    }
+  }
+
   function findBehaviorTarget(am: LifeGodAmEntity) {
     const candidates = getMovementCandidates(am).filter((position) => canMoveAmTo(am, position))
     if (candidates.length === 0) return null
+    const policy = getPolicyOutputForAm(am)
 
-    const scored = candidates
+    const scored = applyPolicyToMovementScoring(
+      am,
+      policy.output,
+      candidates
       .map((position) => ({
         position,
+        step: { x: position.x - am.position.x, y: position.y - am.position.y },
         score: scoreMovement(am, position),
-      }))
+      })),
+      AM_POLICY_MOVEMENT_WEIGHT
+    )
       .sort((a, b) => b.score - a.score)
 
     return scored[0]?.position ?? null
@@ -2155,8 +2254,12 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     const currentDistance = Math.abs(getAmCenter(am).x - targetPosition.x) + Math.abs(getAmCenter(am).y - targetPosition.y)
     const candidates = getMovementCandidates(am).filter((position) => canMoveAmTo(am, position))
     if (candidates.length === 0) return moveAwayFromWallOrObstacle(am)
+    const policy = getPolicyOutputForAm(am)
 
-    const scored = candidates
+    const scored = applyPolicyToMovementScoring(
+      am,
+      policy.output,
+      candidates
       .map((position) => {
         const center = getAmCenter(am, position)
         const distance = Math.abs(center.x - targetPosition.x) + Math.abs(center.y - targetPosition.y)
@@ -2188,7 +2291,9 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
             stuckEscapeScore +
             getInfluenceScore(position, am),
         }
-      })
+      }),
+      AM_POLICY_MOVEMENT_WEIGHT
+    )
       .sort((a, b) => b.score - a.score)
 
     const best = scored[0]
@@ -2200,6 +2305,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       targetPosition,
       movementDirection: best.step,
       behaviorCooldown: ROLE_CONFIG[am.role].movementInterval,
+      policyDebug: policy.debug,
     }
   }
 
@@ -2853,6 +2959,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
   }
 
   function wanderAm(am: LifeGodAmEntity): LifeGodAmEntity {
+    const policy = getPolicyOutputForAm({ ...am, behaviorState: 'wandering' as const })
     const roamingTarget = findBehaviorTarget({ ...am, behaviorState: 'wandering' as const })
     if (!roamingTarget || (roamingTarget.x === am.position.x && roamingTarget.y === am.position.y)) {
       return {
@@ -2860,6 +2967,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
         behaviorState: 'wandering' as const,
         targetPosition: roamingTarget,
         behaviorCooldown: 0,
+        policyDebug: policy.debug,
       }
     }
     return {
@@ -2869,6 +2977,7 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
       behaviorState: 'wandering' as const,
       targetPosition: roamingTarget,
       behaviorCooldown: ROLE_CONFIG[am.role].movementInterval,
+      policyDebug: policy.debug,
     }
   }
 

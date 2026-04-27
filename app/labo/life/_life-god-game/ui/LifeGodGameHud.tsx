@@ -185,6 +185,12 @@ export function LifeGodGameHud({
                   <div>Escaping stuck area : {selectedAm.behaviorState === 'escapingStuckArea' ? 'oui' : 'non'}</div>
                   <div>Last useful action : {selectedAm.memory.lastUsefulActionTick}</div>
                   <div>Last stuck reason : {selectedAm.memory.lastStuckReason ?? 'aucune'}</div>
+                  <div>Policy provider : {selectedAm.policyDebug?.providerName ?? 'rule-based'}</div>
+                  <div>Learned policy : {selectedAm.policyDebug?.learnedStatus ?? 'disabled'}</div>
+                  <div>Top policy action : {selectedAm.policyDebug?.topSuggestedAction ?? 'aucune'}</div>
+                  <div>Policy confidence : {selectedAm.policyDebug ? selectedAm.policyDebug.confidence.toFixed(2) : '0.00'}</div>
+                  <div>Policy error : {selectedAm.policyDebug?.lastError ?? 'aucune'}</div>
+                  <div>Policy input : {selectedAm.policyDebug?.lastInputSummary ?? 'aucun'}</div>
                   {selectedSite && (
                     <div>Chantier : {selectedSite.depositedCells.length} / {selectedSite.requiredCellCount}</div>
                   )}

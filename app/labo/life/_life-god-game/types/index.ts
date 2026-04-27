@@ -145,6 +145,7 @@ export interface LifeGodAmEntity {
     knownDangerHints: LifeGodRelativeCell[]
     independenceScore: number
     totalReward: number
+    lastRewardAmount: number
     lastRewardReason: string | null
     terraformStuckTicks: number
     failedTerraformTargets: LifeGodRelativeCell[]
@@ -166,6 +167,14 @@ export interface LifeGodAmEntity {
   behaviorCooldown: number
   formationDurationCycles: number
   adaptationDurationCycles: number
+  policyDebug?: {
+    providerName: string
+    learnedStatus: string
+    topSuggestedAction: string
+    confidence: number
+    lastError: string | null
+    lastInputSummary: string
+  }
 }
 
 export interface LifeGodConstructionSite {
