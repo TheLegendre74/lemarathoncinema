@@ -222,9 +222,10 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
         create() {
           const W = this.scale.width, H = this.scale.height
 
-          this.add.rectangle(W / 2, H / 2, W, H, 0x000000).setAlpha(0.55)
-          const bg = this.add.rectangle(W / 2, H / 2, W, H, 0x150025).setAlpha(0)
-          this.tweens.add({ targets: bg, alpha: { from: 0, to: 0.32 }, duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+          // Fond très sombre façon Guitar Hero
+          this.add.rectangle(W / 2, H / 2, W, H, 0x000000).setAlpha(1)
+          const bg = this.add.rectangle(W / 2, H / 2, W, H, 0x08001a).setAlpha(0)
+          this.tweens.add({ targets: bg, alpha: { from: 0, to: 0.60 }, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
 
           if (this.isMobile) this.setupMobile(W, H)
           else               this.setupDesktop(W, H)
@@ -338,65 +339,143 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           this.add.text(this.laneCenterX, 14, '🎵  DUEL DE DANSE  🎵', { fontSize: '13px', color: '#cc88ff', letterSpacing: 3, fontFamily: 'monospace' }).setOrigin(0.5, 0)
         }
 
-        // ── Mobile layout (Guitar Hero) ─────────────────────────────────────
+        // ── Mobile layout — Guitar Hero Highway ──────────────────────────────
 
         private setupMobile(W: number, H: number) {
-          this.clippyZoneH = Math.round(H * 0.28)
-          this.clippyTopY  = this.clippyZoneH   // Clippy centré sur la barre
+          this.clippyZoneH = Math.round(H * 0.26)
+          this.clippyTopY  = this.clippyZoneH
           this.hitY        = Math.round(H * 0.87)
           this.spawnAdv    = (this.hitY - this.clippyZoneH) / NOTE_SPEED * 1000
 
           const colW = Math.round(W / 4)
           this.laneW = colW
           this.colX  = COLS.map((_, i) => Math.round((i + 0.5) * W / this.colCount))
+          const laneZoneH = H - this.clippyZoneH
+          const laneZoneY = this.clippyZoneH + laneZoneH / 2
 
-          // Clippy zone
-          this.add.rectangle(W / 2, this.clippyZoneH / 2, W, this.clippyZoneH, 0x080018).setAlpha(0.90)
-          this.add.rectangle(W / 2, this.clippyZoneH, W, 2, 0x9966ff).setAlpha(0.55)
-          this.add.text(W / 2, 7, '🎵 DUEL DE DANSE 🎵', { fontSize: '11px', color: '#cc88ff', fontFamily: 'monospace', letterSpacing: 1 }).setOrigin(0.5, 0)
-
+          // ── Zone Clippy ──────────────────────────────────────────────────
+          const clipBg = this.add.graphics()
+          clipBg.fillGradientStyle(0x0c001e, 0x0c001e, 0x04000e, 0x04000e, 1)
+          clipBg.fillRect(0, 0, W, this.clippyZoneH)
+          this.add.text(W / 2, 6, '★  DUEL DE DANSE  ★', {
+            fontSize: '11px', color: '#cc88ff', fontFamily: 'monospace', letterSpacing: 3,
+          }).setOrigin(0.5, 0)
           const cSize = Math.round(Math.min(this.clippyZoneH * 0.78, W * 0.30))
           this.clippySprite = this.add.image(W / 2, this.clippyTopY, 'evil-clippy-disco')
           this.clippySprite.setDisplaySize(cSize, cSize)
+          // Separator glow
+          const sepGfx = this.add.graphics()
+          sepGfx.fillGradientStyle(0x7700ff, 0x7700ff, 0x000000, 0x000000, 0.35, 0.35, 0, 0)
+          sepGfx.fillRect(0, this.clippyZoneH - 8, W, 8)
+          this.add.rectangle(W / 2, this.clippyZoneH, W, 2, 0xaa44ff).setAlpha(0.85)
 
-          // Lanes with colored gradient-ish backgrounds
-          const laneZoneH = H - this.clippyZoneH
-          const laneZoneY = this.clippyZoneH + laneZoneH / 2
-          this.laneFlashBg = COLS.map((dir, i) => {
+          // ── Highway background ────────────────────────────────────────────
+          // Ultra-dark base
+          this.add.rectangle(W / 2, laneZoneY, W, laneZoneH, 0x01000a).setAlpha(1)
+
+          // Gradient depth: dark at top (vanishing), slightly lit at bottom (player)
+          const depthGfx = this.add.graphics()
+          depthGfx.fillGradientStyle(0x000000, 0x000000, 0x0c0030, 0x0c0030, 0.0, 0.0, 0.45, 0.45)
+          depthGfx.fillRect(0, this.clippyZoneH, W, laneZoneH)
+
+          // ── Colored lane fills (gradient by thirds) ──────────────────────
+          COLS.forEach((dir, i) => {
             const x = this.colX[i], col = COL_HEX[dir]
-            // Lane tint background
             const g = this.add.graphics()
-            g.fillStyle(col, 0.06); g.fillRect(x - colW / 2 + 2, this.clippyZoneH, colW - 4, laneZoneH)
-            // Separator
-            if (i > 0) { const sep = this.add.rectangle(x - colW / 2, laneZoneY, 1, laneZoneH, 0x9966ff); sep.setAlpha(0.18) }
-            // Direction label at top of lane
-            this.add.text(x, this.clippyZoneH + 9, COL_ARROWS[dir], { fontSize: `${Math.round(colW * 0.28)}px`, color: COL_CSS[dir], fontFamily: 'monospace', fontStyle: 'bold' }).setOrigin(0.5, 0).setAlpha(0.38)
-            // Flash background (opacity controlled per-frame)
-            const flash = this.add.rectangle(x, laneZoneY, colW - 4, laneZoneH, col); flash.setAlpha(0)
+            // 3 bands: very subtle → moderate (depth effect)
+            g.fillStyle(col, 0.03); g.fillRect(x - colW/2, this.clippyZoneH,            colW, laneZoneH/3)
+            g.fillStyle(col, 0.07); g.fillRect(x - colW/2, this.clippyZoneH+laneZoneH/3, colW, laneZoneH/3)
+            g.fillStyle(col, 0.12); g.fillRect(x - colW/2, this.clippyZoneH+2*laneZoneH/3, colW, laneZoneH/3)
+          })
+
+          // ── Lane separators (chrome lines) ────────────────────────────────
+          for (let i = 1; i < 4; i++) {
+            const x = Math.round(i * W / 4)
+            const sepG = this.add.graphics()
+            sepG.lineStyle(3, 0xffffff, 0.05); sepG.moveTo(x, this.clippyZoneH); sepG.lineTo(x, H); sepG.strokePath()
+            sepG.lineStyle(1, 0xffffff, 0.18); sepG.moveTo(x, this.clippyZoneH); sepG.lineTo(x, H); sepG.strokePath()
+          }
+
+          // ── Horizontal fret lines ─────────────────────────────────────────
+          const fretG = this.add.graphics()
+          for (let i = 1; i <= 12; i++) {
+            const y = this.clippyZoneH + i * laneZoneH / 13
+            const a = 0.03 + (i / 13) * 0.10  // brighter toward player
+            fretG.lineStyle(1, 0xffffff, a)
+            fretG.moveTo(0, y); fretG.lineTo(W, y); fretG.strokePath()
+          }
+
+          // Small lane arrows near top (dim)
+          COLS.forEach((dir, i) => {
+            this.add.text(this.colX[i], this.clippyZoneH + 10, COL_ARROWS[dir], {
+              fontSize: `${Math.round(colW * 0.22)}px`, color: COL_CSS[dir], fontFamily: 'monospace',
+            }).setOrigin(0.5, 0).setAlpha(0.25)
+          })
+
+          // Lane flash (updated per-frame)
+          this.laneFlashBg = COLS.map((dir, i) => {
+            const flash = this.add.rectangle(this.colX[i], laneZoneY, colW, laneZoneH, COL_HEX[dir])
+            flash.setAlpha(0)
             return flash
           })
 
-          // Hit line
-          this.add.rectangle(W / 2, this.hitY, W, 2, 0xffffff).setAlpha(0.14)
+          // ── Strum zone (above hit line) ───────────────────────────────────
+          // Shadow above strum bar
+          const strumShadow = this.add.graphics()
+          strumShadow.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0, 0, 0.6, 0.6)
+          strumShadow.fillRect(0, this.hitY - 55, W, 55)
 
-          // Hit zone targets (rings + arrows)
+          // Strum line (bright hairline + soft glow)
+          this.add.rectangle(W / 2, this.hitY, W, 6, 0xffffff).setAlpha(0.08)
+          this.add.rectangle(W / 2, this.hitY, W, 2, 0xffffff).setAlpha(0.35)
+          this.add.rectangle(W / 2, this.hitY, W, 1, 0xffffff).setAlpha(0.9)
+
+          // ── Hit zone circles (Guitar Hero strum targets) ──────────────────
+          const circleR = Math.round(colW * 0.37)
           this.hitRings = COLS.map((dir, i) => {
             const x = this.colX[i], col = COL_HEX[dir]
-            const r = Math.round(colW * 0.34)
-            // Outer glow ring (pulsing)
-            const outerRing = this.add.circle(x, this.hitY, r + 6, col, 0.06); outerRing.setStrokeStyle(2, col, 0.35)
-            this.tweens.add({ targets: outerRing, scaleX: 1.10, scaleY: 1.10, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
-            // Inner ring (hit target)
-            const ring = this.add.circle(x, this.hitY, r, col, 0.14); ring.setStrokeStyle(2.5, col, 0.80)
-            // Arrow
-            this.add.text(x, this.hitY, COL_ARROWS[dir], { fontSize: `${Math.round(r * 1.05)}px`, color: COL_CSS[dir], fontFamily: 'monospace', fontStyle: 'bold' }).setOrigin(0.5).setAlpha(0.55)
+
+            // Large outer glow (very transparent, pulsing)
+            const outerGlow = this.add.circle(x, this.hitY, circleR + 20, col, 0.07)
+            this.tweens.add({ targets: outerGlow, scaleX: 1.14, scaleY: 1.14, duration: 750, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+
+            // Mid glow ring
+            const midRing = this.add.circle(x, this.hitY, circleR + 9, col, 0.12)
+            midRing.setStrokeStyle(2, col, 0.30)
+
+            // Main circle (semi-transparent fill + strong border)
+            const ring = this.add.circle(x, this.hitY, circleR, col, 0.28)
+            ring.setStrokeStyle(3, col, 1.0)
+
+            // Dark inner center
+            this.add.circle(x, this.hitY, Math.round(circleR * 0.48), 0x000000, 0.60)
+
+            // Inner glow dot
+            this.add.circle(x, this.hitY, Math.round(circleR * 0.22), col, 0.50)
+
+            // Arrow inside
+            this.add.text(x, this.hitY, COL_ARROWS[dir], {
+              fontSize: `${Math.round(circleR * 0.95)}px`, color: COL_CSS[dir],
+              fontFamily: 'monospace', fontStyle: 'bold',
+              stroke: '#000000', strokeThickness: 3,
+            }).setOrigin(0.5).setAlpha(0.85)
+
+            // Platform shadow below circle
+            this.add.ellipse(x, this.hitY + circleR * 0.7, circleR * 2, circleR * 0.4, col, 0.10)
+
             return ring
           })
 
-          // HUD
-          this.hpText  = this.add.text(6, this.clippyZoneH - 20, this.buildHpStr(), { fontSize: '12px', fontFamily: 'monospace' }).setAlpha(0)
-          this.scoreTxt = this.add.text(W - 6, 8, 'Score: 0', { fontSize: '11px', color: '#ccc', fontFamily: 'monospace' }).setOrigin(1, 0)
-          this.feedbackTxt = this.add.text(W / 2, Math.round(H * 0.73), '', { fontSize: '36px', fontStyle: 'bold', fontFamily: 'monospace' }).setOrigin(0.5)
+          // ── HUD ──────────────────────────────────────────────────────────
+          this.hpText  = this.add.text(6, this.clippyZoneH - 22, this.buildHpStr(), { fontSize: '12px', fontFamily: 'monospace' }).setAlpha(0)
+          this.scoreTxt = this.add.text(W - 6, 8, 'Score: 0', {
+            fontSize: '14px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+            stroke: '#000000', strokeThickness: 3,
+          }).setOrigin(1, 0)
+          this.feedbackTxt = this.add.text(W / 2, Math.round(H * 0.73), '', {
+            fontSize: '40px', fontStyle: 'bold', fontFamily: 'monospace',
+            stroke: '#000000', strokeThickness: 5,
+          }).setOrigin(0.5)
         }
 
         // ── HUD helpers ─────────────────────────────────────────────────────
@@ -495,37 +574,49 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           const colIdx = COLS.indexOf(dir)
           const x      = this.colX[colIdx]
           const col    = COL_HEX[dir]
-          const W      = this.scale.width
+          const dark   = COL_DARK[dir]
 
-          const noteW = this.isMobile ? Math.round(W / 4 * 0.76) : Math.round(this.laneW * 0.74)
+          // Guitar Hero gem : légèrement rectangulaire, 3D
+          const noteW = this.isMobile ? Math.round(this.laneW * 0.82) : Math.round(this.laneW * 0.76)
           const noteH = Math.round(noteW * 0.40)
-          const r     = Math.round(noteH / 2)
+          const r     = Math.round(noteH * 0.38)  // moins arrondi = plus rectangulaire
 
           const container = this.add.container(x, -noteH * 2)
+          const g = this.add.graphics()
 
-          // Glow
-          const gfxGlow = this.add.graphics()
-          gfxGlow.fillStyle(col, 0.20)
-          gfxGlow.fillRoundedRect(-noteW / 2 - 5, -noteH / 2 - 5, noteW + 10, noteH + 10, r + 5)
+          // ── Outer glow (aura diffuse) ──
+          g.fillStyle(col, 0.16)
+          g.fillRoundedRect(-noteW/2 - 8, -noteH/2 - 6, noteW + 16, noteH + 12, r + 6)
 
-          // Body
-          const gfxBody = this.add.graphics()
-          gfxBody.fillStyle(col, 1)
-          gfxBody.fillRoundedRect(-noteW / 2, -noteH / 2, noteW, noteH, r)
-          // Highlight strip
-          gfxBody.fillStyle(0xffffff, 0.22)
-          gfxBody.fillRoundedRect(-noteW / 2 + 4, -noteH / 2 + 3, noteW - 8, Math.round(noteH * 0.38), Math.min(r, 4))
+          // ── Face sombre du bas (ombre 3D) ──
+          g.fillStyle(dark, 1)
+          g.fillRoundedRect(-noteW/2, -noteH/2, noteW, noteH, r)
 
-          const arrow = this.add.text(0, 0, COL_ARROWS[dir], {
-            fontSize: `${Math.round(noteH * 1.15)}px`, color: '#ffffff',
+          // ── Face principale (2/3 supérieurs) ──
+          g.fillStyle(col, 1)
+          g.fillRoundedRect(-noteW/2, -noteH/2, noteW, Math.round(noteH * 0.70), r)
+
+          // ── Bordure chrome ──
+          g.lineStyle(2.5, 0xffffff, 0.60)
+          g.strokeRoundedRect(-noteW/2, -noteH/2, noteW, noteH, r)
+
+          // ── Reflet en haut (shine) ──
+          g.fillStyle(0xffffff, 0.38)
+          g.fillRoundedRect(-noteW/2 + 5, -noteH/2 + 4, noteW - 10, Math.round(noteH * 0.26), Math.min(r - 2, 5))
+
+          // ── Reflet latéral gauche ──
+          g.fillStyle(0xffffff, 0.12)
+          g.fillRect(-noteW/2 + 1, -noteH/2 + r, 3, noteH - r * 2)
+
+          const arrow = this.add.text(0, 1, COL_ARROWS[dir], {
+            fontSize: `${Math.round(noteH * 1.05)}px`, color: '#ffffff',
             fontFamily: 'monospace', fontStyle: 'bold',
-            stroke: '#00000033', strokeThickness: 2,
+            stroke: '#00000077', strokeThickness: 3,
           }).setOrigin(0.5)
 
-          container.add([gfxGlow, gfxBody, arrow])
+          container.add([g, arrow])
           this.activeNotes.push({ obj: container, time: hitTime, dir, judged: false })
 
-          // Desktop: Clippy moves on spawn (shows upcoming direction)
           if (!this.isMobile) {
             this.tweens.killTweensOf(this.clippySprite)
             this.tweens.add({ targets: this.clippySprite, x: this.matTilePos[dir].x, y: this.matTilePos[dir].y, duration: 90, ease: 'Back.Out' })
