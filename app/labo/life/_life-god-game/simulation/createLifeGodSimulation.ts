@@ -2319,10 +2319,15 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
     const center = averageRecentTimedPositions(am.memory.recentTimedPositions) ?? getAmCenter(am)
     const escapeTarget = chooseEscapeTarget(am, center) ?? { x: GRID_WIDTH / 2, y: GRID_HEIGHT / 2 }
     if (am.currentGoal === 'terraforming') releaseTerraformReservation(am.id)
+    const escapingWall = reason === 'wall_hugging'
+    if (escapingWall && am.carriedCell) releaseGatheredCells(am)
     return penalizeAm({
       ...am,
       behaviorState: 'escapingStuckArea',
       targetCell: null,
+      buildTarget: escapingWall ? null : am.buildTarget,
+      carriedCell: escapingWall ? null : am.carriedCell,
+      gatheredCells: escapingWall ? [] : am.gatheredCells,
       targetPosition: escapeTarget,
       movementDirection: null,
       behaviorCooldown: 0,
@@ -2944,6 +2949,13 @@ export function createLifeGodSimulation(): LifeGodSimulationController {
             ? 'repeated_path_loop'
             : 'stuck_in_local_area'
         return startEscapingStuckArea(am, stuckReason)
+      }
+
+      if (
+        getWallDangerAt(am.position, am) > 0 &&
+        am.memory.wallStickTicks > WALL_HUGGING_TICK_LIMIT
+      ) {
+        return startEscapingStuckArea(am, 'wall_hugging')
       }
 
       if (currentMission === 'requestingPlayerPatterns') {
