@@ -274,6 +274,9 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
         private laneFlashBg: Phaser.GameObjects.Rectangle[] = []
         private hitRings:    Phaser.GameObjects.Arc[] = []
 
+        // Laser timers — nettoyés à la fin du jeu
+        private laserTimers: Phaser.Time.TimerEvent[] = []
+
         // Sync tracking
         private lastLitDir: Dir | null = null
 
@@ -650,10 +653,10 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
 
             const len = Math.max(W, H) * 1.5
 
-            this.time.addEvent({
+            const timer = this.time.addEvent({
               delay: 40, loop: true,
               callback: () => {
-                if (this.ended) return
+                if (this.ended) { this.time.removeEvent(timer); return }
                 t += speed * 0.04
                 const rad = Phaser.Math.DegToRad(startAngle + Math.sin(Phaser.Math.DegToRad(t)) * 30)
                 const ex = ox + Math.cos(rad) * len
@@ -668,6 +671,7 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
                 laserG.beginPath(); laserG.moveTo(ox, oy); laserG.lineTo(ex, ey); laserG.strokePath()
               },
             })
+            this.laserTimers.push(timer)
           })
         }
 
@@ -954,6 +958,9 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           finalScore.current = this.score
           finalCombo.current = this.maxCombo
           this.sound.stopAll()
+          // Tuer tous les timers laser (évite 150+ callbacks/sec post-jeu)
+          this.laserTimers.forEach(t => this.time.removeEvent(t))
+          this.laserTimers = []
           this.time.addEvent({
             delay: result === 'win' ? 900 : 600,
             callback: () => { if (result === 'win') onWinRef.current(); else onLoseRef.current() },

@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { initOrGetTamagotchi } from '@/lib/actions'
 import TamagotchiClient from './TamagotchiClient'
 
-export const revalidate = 0
+export const revalidate = 10
 
 export default async function TamagotchiPage() {
   const supabase = await createClient()

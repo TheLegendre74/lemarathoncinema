@@ -24,12 +24,33 @@ export const viewport: Viewport = {
   maximumScale: 1,
 }
 import './globals.css'
-import { createClient } from '@/lib/supabase/server'
+import { unstable_cache } from 'next/cache'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import ClientShell from '@/components/ClientShell'
 import { ToastProvider } from '@/components/ToastProvider'
 import EasterEggs from '@/components/EasterEggs'
 import { getServerConfig } from '@/lib/serverConfig'
 import { getUnreadMessageCount } from '@/lib/actions'
+
+// Données layout par utilisateur — 60s de cache ISR
+// Le client admin bypass les cookies (compatible avec unstable_cache)
+const getCachedUserData = unstable_cache(
+  async (userId: string) => {
+    const admin = createAdminClient()
+    const [{ data: profile }, { data: eggs }, { count }] = await Promise.all([
+      admin.from('profiles').select('*').eq('id', userId).single(),
+      admin.from('discovered_eggs').select('egg_id').eq('user_id', userId),
+      admin.from('watched').select('*', { count: 'exact', head: true }).eq('user_id', userId),
+    ])
+    return {
+      profile:      profile ?? null,
+      eggs:         (eggs ?? []) as Array<{ egg_id: string }>,
+      watchedCount: count ?? 0,
+    }
+  },
+  ['layout-user'],
+  { revalidate: 60, tags: ['layout-user'] }
+)
 
 export async function generateMetadata(): Promise<Metadata> {
   const cfg = await getServerConfig()
@@ -51,18 +72,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   let unreadMessages = 0
   let watchedCount = 0
   if (user) {
-    const [{ data: profileData }, { data: eggs }, unread, { count }] = await Promise.all([
-      supabase.from('profiles').select('*').eq('id', user.id).single(),
-      supabase.from('discovered_eggs').select('egg_id').eq('user_id', user.id),
+    // Profil + eggs + watched en cache 60s / messages non cachés (temps réel)
+    const [userData, unread] = await Promise.all([
+      getCachedUserData(user.id),
       getUnreadMessageCount(),
-      supabase.from('watched').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
     ])
-    profile = profileData
-    hasRageuxEgg = (eggs ?? []).some((e: any) => e.egg_id === 'rageux')
-    hasTamagotchiEgg = (eggs ?? []).some((e: any) => e.egg_id === 'tamagotchi')
-    hasClippyEgg = (eggs ?? []).some((e: any) => e.egg_id === 'clippy')
+    profile        = userData.profile
+    hasRageuxEgg   = userData.eggs.some((e) => e.egg_id === 'rageux')
+    hasTamagotchiEgg = userData.eggs.some((e) => e.egg_id === 'tamagotchi')
+    hasClippyEgg   = userData.eggs.some((e) => e.egg_id === 'clippy')
     unreadMessages = unread
-    watchedCount = count ?? 0
+    watchedCount   = userData.watchedCount
   }
 
   const eeConfig = {

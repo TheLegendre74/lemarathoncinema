@@ -189,7 +189,7 @@ function TarsNotif({ onDone, line1, line2 }: { onDone: () => void; line1: string
       position: 'fixed', bottom: '2rem', right: '2rem', zIndex: 9997,
       background: 'rgba(12,12,20,.97)', border: '1px solid rgba(255,255,255,.12)',
       borderRadius: 'var(--rl)', padding: '1rem 1.4rem', maxWidth: 300,
-      backdropFilter: 'blur(12px)',
+      backdropFilter: 'blur(4px)',
       animation: leaving ? 'ee-tars-out .7s ease forwards' : 'ee-tars-in .4s ease',
     }}>
       <div style={{ fontSize: '.65rem', color: 'var(--text3)', letterSpacing: '2.5px', textTransform: 'uppercase', marginBottom: '.5rem' }}>
@@ -243,7 +243,7 @@ function MarvinOverlay({ onDone, line1, line2 }: { onDone: () => void; line1: st
       <div style={{
         background: 'rgba(12,12,20,.97)', border: '1px solid rgba(255,255,255,.12)',
         borderRadius: 'var(--rl)', padding: '.9rem 1.2rem', maxWidth: 270,
-        backdropFilter: 'blur(12px)', marginBottom: '1.2rem', position: 'relative',
+        backdropFilter: 'blur(4px)', marginBottom: '1.2rem', position: 'relative',
       }}>
         <div style={{ fontSize: '.65rem', color: '#888', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '.3rem' }}>Marvin</div>
         <div style={{ color: 'var(--text)', fontSize: '.85rem', lineHeight: 1.5 }}>
@@ -316,7 +316,7 @@ function NolanOverlay({ onDone, quote }: { onDone: () => void; quote: string }) 
       onClick={() => { setLeaving(true); setTimeout(onDone, 700) }}
       style={{
         position: 'fixed', inset: 0, zIndex: 9999,
-        background: 'rgba(4,4,10,.95)', backdropFilter: 'blur(8px)',
+        background: 'rgba(4,4,10,.95)', backdropFilter: 'blur(4px)',
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         animation: leaving ? 'ee-hal-out .7s ease forwards' : 'ee-hal-in .5s ease',
         cursor: 'pointer',
@@ -688,7 +688,7 @@ function NoctambuleNotif({ onDone, line1, line2 }: { onDone: () => void; line1: 
       position: 'fixed', bottom: '2rem', right: '2rem', zIndex: 9997,
       background: 'rgba(8,8,20,.97)', border: '1px solid rgba(150,100,255,.25)',
       borderRadius: 'var(--rl)', padding: '1rem 1.4rem', maxWidth: 300,
-      backdropFilter: 'blur(12px)',
+      backdropFilter: 'blur(4px)',
       animation: leaving ? 'ee-noctambule-out .7s ease forwards' : 'ee-noctambule-in .4s ease',
     }}>
       <div style={{ fontSize: '.65rem', color: 'rgba(150,100,255,.7)', letterSpacing: '2.5px', textTransform: 'uppercase', marginBottom: '.5rem' }}>

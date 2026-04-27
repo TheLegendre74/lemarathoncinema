@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import ForumTopicClient from './ForumTopicClient'
 
-export const revalidate = 0
+export const revalidate = 20
 
 interface Props { params: Promise<{ topicId: string }> }
 

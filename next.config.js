@@ -1,7 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  compress: true,          // gzip/brotli des assets JS/CSS
+  poweredByHeader: false,  // retire X-Powered-By inutile
   images: {
     formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 3600, // cache images CDN 1h minimum
     remotePatterns: [
       {
         protocol: 'https',
@@ -22,6 +25,15 @@ const nextConfig = {
 
   async headers() {
     return [
+      // Cache agressif pour assets statiques (JS, CSS, fonts, images)
+      {
+        source: '/_next/static/:path*',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+      },
+      {
+        source: '/(.*)\\.(png|jpg|jpeg|gif|webp|avif|svg|ico|woff2|woff|ttf)',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=3600' }],
+      },
       {
         source: '/:path*',
         headers: [

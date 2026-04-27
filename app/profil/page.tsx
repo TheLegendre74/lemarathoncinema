@@ -10,7 +10,7 @@ import PseudoEditor from '@/components/PseudoEditor'
 import MessagesSection from '@/components/MessagesSection'
 import { getMyConversations, getConversationMessages } from '@/lib/actions'
 
-export const revalidate = 0
+export const revalidate = 30
 
 export default async function ProfilPage({ searchParams }: { searchParams: Promise<{ with?: string }> }) {
   const supabase = await createClient()

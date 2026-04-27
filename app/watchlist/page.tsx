@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { getUserWatchlists } from '@/lib/actions'
 import WatchlistClient from './WatchlistClient'
 
-export const revalidate = 0
+export const revalidate = 30
 
 export default async function WatchlistPage() {
   const supabase = await createClient()

@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import ForumPageClient from './ForumPageClient'
 
-export const revalidate = 0
+export const revalidate = 30
 
 export default async function ForumPage() {
   const supabase = await createClient()
