@@ -968,7 +968,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
     if (p === 5) return 5
     if (p === 4) return 5
     if (p === 3) return 10
-    return 15
+    return 20  // phases 1-2 : 20 HP pour le mini-jeu de danse
   }
 
   const PARRY_WINDOW_MS = calcParryWindow(effectivePhase)

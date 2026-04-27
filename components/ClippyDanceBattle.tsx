@@ -22,10 +22,10 @@ const COL_CSS:    Record<Dir, string>    = { left: '#ff6699', down: '#6699ff', u
 const COL_DARK:   Record<Dir, number>    = { left: 0x661133, down: 0x112266, up: 0x116633, right: 0x664411 }
 
 const NOTE_SPEED    = 380
-const HIT_WIN_MS    = 65     // fenêtre de frappe stricte (~25px à 380px/s)
-const PERFECT_MS    = 28     // perfect ≈ note pile sur le récepteur
-const EARLY_GRACE   = 180    // ms max avant hitY pour "trop tôt" vs "rien"
-const MAX_HP        = 10
+const HIT_WIN_MS    = 95     // fenêtre proportionnelle aux notes +50% (~36px à 380px/s)
+const PERFECT_MS    = 42     // perfect ≈ note pile sur le récepteur
+const EARLY_GRACE   = 220    // ms max avant hitY pour "trop tôt" vs "rien"
+const MAX_HP        = 20     // fallback si initialHP non fourni
 const FEVER_AT      = 10     // ×2
 const FEVER_X3      = 30     // ×3
 const FEVER_X4      = 50     // ×4
@@ -329,7 +329,8 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           this.hitY     = Math.round(H * 0.82)
           this.spawnAdv = ((this.hitY + 80) / NOTE_SPEED) * 1000
 
-          const totalLaneW = Math.min(W * 0.46, 360)
+          // Lanes élargies de ~50% : laneW ~135px vs ~90px avant
+          const totalLaneW = Math.min(W * 0.58, 530)
           this.laneW       = Math.round(totalLaneW / 4)
           const laneX0     = Math.round(W / 2 - totalLaneW / 2)
           this.laneCenterX = Math.round(W / 2)
@@ -376,7 +377,7 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           this.add.rectangle(this.laneCenterX, this.hitY, totalLaneW + 18, 1, 0xffffff).setAlpha(0.65)
 
           // ── Hit zone gems (même forme et esthétique que les notes, taille maximale) ──
-          const nW = Math.round(this.laneW * 0.98)  // quasi plein-lane, identique aux notes
+          const nW = Math.round(this.laneW * 0.96)  // plein-lane, identique aux notes élargies
           const nH = Math.round(nW * 0.40)
           const nR = Math.round(nH * 0.38)
           this.colX.forEach((x, i) => {
@@ -400,10 +401,12 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
 
           // ── DDR mat (agrandi) ──────────────────────────────────────────────
           const laneRight = Math.round(W / 2 + totalLaneW / 2)
-          const availW    = W - laneRight - 16
+          // Espace disponible à droite des lanes (garantit aucun chevauchement)
+          const availW    = W - laneRight - 24  // 24px de gap minimum lanes↔mat
           const GAP       = 8
-          const maxTW     = Math.max(115, Math.min(Math.floor((availW * 0.88 - GAP * 4 - 24) / 3), 175))
-          const TW        = Math.min(maxTW, Math.round(H * 0.19))  // +20% vs précédent
+          // TW adaptatif : utilise tout l'espace droit disponible, plafonné
+          const maxTW     = Math.max(72, Math.min(Math.floor((availW * 0.90 - GAP * 4 - 24) / 3), 155))
+          const TW        = Math.min(maxTW, Math.round(H * 0.18))
           const matPanelW = Math.round(TW * 3 + GAP * 4 + 24)
           const matPanelH = Math.round(TW * 3 + GAP * 4 + 50)
           this.matCenterX = Math.min(Math.round(laneRight + 42 + matPanelW / 2), W - Math.round(matPanelW / 2) - 10)
@@ -548,7 +551,7 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           this.add.rectangle(W / 2, this.hitY, W, 1, 0xffffff).setAlpha(0.9)
 
           // ── Hit zone circles (Guitar Hero strum targets) ──────────────────
-          const circleR = Math.round(colW * 0.46)  // diamètre = 92% colW = taille des notes
+          const circleR = Math.round(colW * 0.48)  // quasi plein-lane, hitbox max sans overlap
           this.hitRings = COLS.map((dir, i) => {
             const x = this.colX[i], col = COL_HEX[dir]
 
@@ -748,10 +751,10 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           const col    = COL_HEX[dir]
           const dark   = COL_DARK[dir]
 
-          // Guitar Hero gem : légèrement rectangulaire, 3D
-          const noteW = Math.round(this.laneW * 0.92)  // unifié desktop + mobile
-          const noteH = Math.round(noteW * 0.40)
-          const r     = Math.round(noteH * 0.38)  // moins arrondi = plus rectangulaire
+          // Guitar Hero gem — notes élargies (+50% desktop grâce aux lanes)
+          const noteW = Math.round(this.laneW * 0.92)
+          const noteH = Math.round(noteW * (this.isMobile ? 0.52 : 0.48))  // +30% hauteur
+          const r     = Math.round(noteH * 0.36)
 
           const container = this.add.container(x, -noteH * 2)
           const g = this.add.graphics()
