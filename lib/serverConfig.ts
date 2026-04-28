@@ -1,5 +1,6 @@
 import { cache } from 'react'
-import { createClient } from './supabase/server'
+import { unstable_cache } from 'next/cache'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { CONFIG } from './config'
 
 export type ServerConfig = typeof CONFIG & {
@@ -25,6 +26,22 @@ function safeDate(str: string | undefined, fallback: Date): Date {
   const d = new Date(str)
   return isNaN(d.getTime()) ? fallback : d
 }
+
+const getSiteConfigRows = unstable_cache(
+  async () => {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (!url || !anonKey) return []
+
+    const supabase = createSupabaseClient(url, anonKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+    const { data } = await supabase.from('site_config').select('key, value')
+    return data ?? []
+  },
+  ['site-config'],
+  { revalidate: 60 }
+)
 
 export const getServerConfig = cache(async (): Promise<ServerConfig> => {
   const defaults: ServerConfig = {
@@ -54,8 +71,7 @@ export const getServerConfig = cache(async (): Promise<ServerConfig> => {
   }
 
   try {
-    const supabase = await createClient()
-    const { data } = await supabase.from('site_config').select('key, value')
+    const data = await getSiteConfigRows()
     if (!data?.length) return defaults
 
     const db: Record<string, string> = {}

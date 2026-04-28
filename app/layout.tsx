@@ -27,9 +27,9 @@ import './globals.css'
 import { createClient } from '@/lib/supabase/server'
 import ClientShell from '@/components/ClientShell'
 import { ToastProvider } from '@/components/ToastProvider'
-import EasterEggs from '@/components/EasterEggs'
+import EasterEggsLoader from '@/components/EasterEggsLoader'
 import { getServerConfig } from '@/lib/serverConfig'
-import { getUnreadMessageCount } from '@/lib/actions'
+import { getUnreadMessageCountForUser } from '@/lib/messages'
 
 export async function generateMetadata(): Promise<Metadata> {
   const cfg = await getServerConfig()
@@ -52,10 +52,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   let watchedCount = 0
   if (user) {
     const [{ data: profileData }, { data: eggs }, unread, { count }] = await Promise.all([
-      supabase.from('profiles').select('*').eq('id', user.id).single(),
-      supabase.from('discovered_eggs').select('egg_id').eq('user_id', user.id),
-      getUnreadMessageCount(),
-      supabase.from('watched').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+      supabase.from('profiles').select('id, pseudo, avatar_url, exp, active_badge, is_admin, saison, created_at, updated_at, marathon_blocked_until').eq('id', user.id).single(),
+      supabase.from('discovered_eggs').select('egg_id').eq('user_id', user.id).in('egg_id', ['rageux', 'tamagotchi', 'clippy']),
+      getUnreadMessageCountForUser(user.id, supabase),
+      supabase.from('watched').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
     ])
     profile = profileData
     hasRageuxEgg = (eggs ?? []).some((e: any) => e.egg_id === 'rageux')
@@ -92,7 +92,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="fr" className={`${playfairDisplay.variable} ${syne.variable}`}>
       <body>
         <ToastProvider>
-          <EasterEggs config={eeConfig} isGuest={!user} watchedCount={watchedCount} hasClippyEgg={hasClippyEgg} isAdmin={!!(profile as any)?.is_admin} userId={user?.id} />
+          <EasterEggsLoader config={eeConfig} isGuest={!user} watchedCount={watchedCount} hasClippyEgg={hasClippyEgg} isAdmin={!!(profile as any)?.is_admin} userId={user?.id} />
           <ClientShell profile={profile} hasRageuxEgg={hasRageuxEgg} hasTamagotchiEgg={hasTamagotchiEgg} unreadMessages={unreadMessages}>
             {children}
           </ClientShell>
@@ -103,7 +103,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             title="Rejoindre le Discord"
             className="discord-fab"
           >
-            <Image src="/discord.png" alt="Discord" width={26} height={26} style={{ objectFit: 'contain' }} priority />
+            <Image src="/discord.png" alt="Discord" width={26} height={26} style={{ objectFit: 'contain' }} />
           </a>
         </ToastProvider>
       </body>

@@ -20,7 +20,7 @@ export default async function HomePage() {
   // News (public)
   const { data: newsList } = await (supabase as any)
     .from('news')
-    .select('*, profiles(pseudo)')
+    .select('id, title, content, pinned, created_at, profiles(pseudo)')
     .order('pinned', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(5)
@@ -28,8 +28,8 @@ export default async function HomePage() {
   // Guest homepage
   if (!user) {
     const [{ count: totalFilmsCount }, { count: playerCount }] = await Promise.all([
-      supabase.from('films').select('*', { count: 'exact', head: true }).eq('saison', 1),
-      supabase.from('profiles').select('*', { count: 'exact', head: true }),
+      supabase.from('films').select('id', { count: 'exact', head: true }).eq('saison', 1),
+      supabase.from('profiles').select('id', { count: 'exact', head: true }),
     ])
     return (
       <div>
@@ -63,12 +63,12 @@ export default async function HomePage() {
     )
   }
 
-  const [{ data: profile }, { data: watched }, { data: votes }, { data: weekFilm }, { data: activeDuel }] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', user.id).single(),
-    supabase.from('watched').select('film_id').eq('user_id', user.id),
-    supabase.from('votes').select('duel_id').eq('user_id', user.id),
-    supabase.from('week_films').select('*, films(*)').eq('active', true).single(),
-    supabase.from('duels').select('*, film1:films!duels_film1_id_fkey(*), film2:films!duels_film2_id_fkey(*)').eq('closed', false).order('created_at', { ascending: false }).limit(1).single(),
+  const [{ data: profile }, { count: watchedCountResult }, { count: votesCount }, { data: weekFilm }, { data: activeDuel }] = await Promise.all([
+    (supabase as any).from('profiles').select('id, pseudo, exp, saison, notify_marathon, active_badge').eq('id', user.id).single(),
+    supabase.from('watched').select('film_id', { count: 'exact', head: true }).eq('user_id', user.id),
+    supabase.from('votes').select('duel_id', { count: 'exact', head: true }).eq('user_id', user.id),
+    supabase.from('week_films').select('id, active, films(id, titre, annee, poster)').eq('active', true).single(),
+    supabase.from('duels').select('id, week_num, film1:films!duels_film1_id_fkey(id, titre, annee, poster), film2:films!duels_film2_id_fkey(id, titre, annee, poster)').eq('closed', false).order('created_at', { ascending: false }).limit(1).single(),
   ])
 
   if (!profile) {
@@ -82,13 +82,13 @@ export default async function HomePage() {
   }
 
   const [{ count: totalS1Count }, { count: rankCount }, { data: recentWatched }] = await Promise.all([
-    supabase.from('films').select('*', { count: 'exact', head: true }).eq('saison', 1),
-    supabase.from('profiles').select('*', { count: 'exact', head: true }).gte('exp', profile.exp),
+    supabase.from('films').select('id', { count: 'exact', head: true }).eq('saison', 1),
+    supabase.from('profiles').select('id', { count: 'exact', head: true }).gte('exp', profile.exp),
     supabase.from('watched').select('film_id, watched_at, pre, films(titre)').eq('user_id', user.id).order('watched_at', { ascending: false }).limit(5),
   ])
   const totalS1 = totalS1Count ?? 0
   const rank = rankCount ?? 1
-  const watchedCount = watched?.length ?? 0
+  const watchedCount = watchedCountResult ?? 0
   const pct = totalS1 ? Math.round((watchedCount / totalS1) * 100) : 0
   const level = levelFromExp(profile.exp)
   const badge = getBadge(profile.exp)
@@ -136,7 +136,7 @@ export default async function HomePage() {
         {[
           { label: 'EXP Totale', value: profile.exp, cls: 'gold' },
           { label: 'Films vus', value: watchedCount, cls: 'green' },
-          { label: 'Votes duels', value: votes?.length ?? 0, cls: 'blue' },
+          { label: 'Votes duels', value: votesCount ?? 0, cls: 'blue' },
           { label: 'Progression', value: `${pct}%`, cls: 'gold' },
           { label: 'Classement', value: `#${rank}`, cls: '' },
         ].map(s => (

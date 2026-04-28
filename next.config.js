@@ -4,7 +4,7 @@ const nextConfig = {
   poweredByHeader: false,  // retire X-Powered-By inutile
   images: {
     formats: ['image/avif', 'image/webp'],
-    minimumCacheTTL: 3600, // cache images CDN 1h minimum
+    minimumCacheTTL: 86400, // posters et avatars changent rarement
     remotePatterns: [
       {
         protocol: 'https',
@@ -28,7 +28,7 @@ const nextConfig = {
       // Cache des assets publics. Next/Vercel gere deja /_next/static avec des noms hashes.
       {
         source: '/(.*)\\.(png|jpg|jpeg|gif|webp|avif|svg|ico|woff2|woff|ttf)',
-        headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=3600' }],
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=604800, stale-while-revalidate=86400' }],
       },
       {
         source: '/:path*',
