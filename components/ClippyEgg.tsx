@@ -1530,10 +1530,6 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
         if (activeGodPhase > 0) {
           // God mode : juste reset après la séquence
           resetToNormal()
-        } else if (ddrVictoryRef.current) {
-          // Victoire DDR → épreuve de force : on passe à la phase suivante sans quitter
-          ddrVictoryRef.current = false
-          resetToNormal()
         } else if (defeatsRef.current >= 5) {
           try { localStorage.setItem(LS_MASTERED, '1'); localStorage.removeItem(LS_ACTIVE) } catch {}
           unlockClippyMaster().catch(() => {})

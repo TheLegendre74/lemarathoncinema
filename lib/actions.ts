@@ -1431,6 +1431,7 @@ export async function adminRefreshMissingPosters() {
     .from('films')
     .select('id, titre, annee, tmdb_id')
     .is('poster', null)
+    .order('id')
     .limit(30)
 
   if (!films?.length) return { success: true, count: 0 }
@@ -1446,7 +1447,9 @@ export async function adminRefreshMissingPosters() {
           `https://api.themoviedb.org/3/movie/${film.tmdb_id}?api_key=${key}`,
           { cache: 'no-store' }
         )
+        if (!res.ok) continue
         movie = await res.json()
+        if (movie?.status_code) continue
       } else {
         movie = await tmdbSearchMovie(film.titre, film.annee, key)
       }
@@ -1693,10 +1696,11 @@ export async function adminForceRefreshAllPosters(fromId: number = 0) {
   const key = process.env.TMDB_API_KEY
   if (!key) return { error: 'Clé TMDB_API_KEY manquante dans les variables d\'environnement.' }
 
-  // Fetch next 50 films starting from fromId
+  // Uniquement les films sans affiche (poster IS NULL) — ne jamais écraser les affiches existantes
   const { data: films } = await supabase
     .from('films')
     .select('id, titre, annee, tmdb_id')
+    .is('poster', null)
     .gt('id', fromId)
     .order('id')
     .limit(50)
@@ -1714,7 +1718,9 @@ export async function adminForceRefreshAllPosters(fromId: number = 0) {
           `https://api.themoviedb.org/3/movie/${film.tmdb_id}?api_key=${key}`,
           { cache: 'no-store' }
         )
+        if (!res.ok) continue
         movie = await res.json()
+        if (movie?.status_code) continue   // erreur applicative TMDB (film introuvable, etc.)
       } else {
         movie = await tmdbSearchMovie(film.titre, film.annee, key)
       }

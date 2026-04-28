@@ -1311,17 +1311,9 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
 
       {/* Films */}
       <Section icon="🎥" title={`Films (${films.length})`}>
-        <div style={{ display: 'flex', gap: '.6rem', flexWrap: 'wrap', marginBottom: '.8rem' }}>
+        <div style={{ display: 'flex', gap: '.6rem', flexWrap: 'wrap', marginBottom: '.4rem' }}>
           <button className="btn btn-outline" style={{ fontSize: '.78rem' }} onClick={refreshAllPosters}>
-            🔄 Affiches manquantes (lot de 30)
-          </button>
-          <button
-            className="btn btn-outline"
-            style={{ fontSize: '.78rem' }}
-            disabled={allPostersRunning || allPostersNextId === null || autoRunning}
-            onClick={forceRefreshAll}
-          >
-            {allPostersRunning ? '…' : allPostersNextId === null ? '✅ Tout traité' : '🔄 Tout rafraîchir depuis TMDB (lot de 50)'}
+            🔍 Récupérer affiches manquantes (lot de 30)
           </button>
           <button
             className="btn btn-gold"
@@ -1329,7 +1321,7 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
             disabled={autoRunning}
             onClick={forceRefreshAllAuto}
           >
-            {autoRunning ? `⏳ ${autoProgress}` : '⚡ Tout rafraîchir automatiquement'}
+            {autoRunning ? `⏳ ${autoProgress}` : '⚡ Remplir toutes les affiches manquantes (auto)'}
           </button>
           <button
             className="btn btn-outline"
@@ -1337,7 +1329,7 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
             disabled={verifyRunning || verifyNextId === null}
             onClick={verifyPostersBatch}
           >
-            {verifyRunning ? '…' : verifyNextId === null ? `✅ Vérifié (${brokenPosters.length} cassée(s))` : `🔍 Vérifier les URLs (lot de 40)`}
+            {verifyRunning ? '…' : verifyNextId === null ? `✅ Vérifié (${brokenPosters.length} cassée(s))` : `🔗 Vérifier URLs cassées (lot de 40)`}
           </button>
           <button
             className="btn btn-outline"
@@ -1345,7 +1337,7 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
             disabled={frenchPostersRunning}
             onClick={fetchFrenchPostersAuto}
           >
-            {frenchPostersRunning ? '⏳ Affiches FR en cours…' : '🇫🇷 Récupérer affiches françaises'}
+            {frenchPostersRunning ? '⏳ Affiches FR en cours…' : '🇫🇷 Récupérer affiches françaises (écrase les existantes)'}
           </button>
           <button
             className="btn btn-outline"
@@ -1359,6 +1351,9 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
           >
             📝 Remplir les synopsis (TMDB)
           </button>
+        </div>
+        <div style={{ fontSize: '.68rem', color: 'var(--text3)', marginBottom: '.8rem' }}>
+          💡 Les boutons ci-dessus n&apos;affectent que les films <strong>sans affiche</strong> — exception : affiches françaises qui écrasent les existantes.
         </div>
         {brokenPosters.length > 0 && (
           <div style={{ background: 'rgba(232,90,90,.07)', border: '1px solid rgba(232,90,90,.3)', borderRadius: 'var(--r)', padding: '.75rem', marginBottom: '.6rem' }}>
