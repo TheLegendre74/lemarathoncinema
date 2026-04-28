@@ -769,10 +769,7 @@ export async function adminVerifyPosters(fromId: number = 0) {
   const broken: { id: number; titre: string; poster: string }[] = []
 
   await Promise.all(films.map(async (f) => {
-    try {
-      const res = await fetch(f.poster!, { method: 'HEAD', signal: AbortSignal.timeout(4000) })
-      if (!res.ok) broken.push({ id: f.id, titre: f.titre, poster: f.poster! })
-    } catch {
+    if (await isPosterUrlBroken(f.poster)) {
       broken.push({ id: f.id, titre: f.titre, poster: f.poster! })
     }
   }))
@@ -809,25 +806,11 @@ export async function adminRepairBrokenPosters(ids: number[]) {
   let count = 0
   for (const film of films) {
     try {
-      let movie: any = null
-      if (film.tmdb_id) {
-        const res = await fetch(
-          `https://api.themoviedb.org/3/movie/${film.tmdb_id}?api_key=${key}`,
-          { cache: 'no-store' }
-        )
-        if (!res.ok) continue
-        movie = await res.json()
-        if (movie?.status_code) continue
-      } else {
-        movie = await tmdbSearchMovie(film.titre, film.annee, key)
-      }
-      const poster = movie?.poster_path
-        ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-        : movie?._omdbPoster ?? null
+      const { posterUrl: poster, tmdbId } = await findBestPosterForFilm(film, key)
       if (poster) {
         await adminClient.from('films').update({
           poster,
-          ...(movie?.id && !film.tmdb_id ? { tmdb_id: movie.id } : {}),
+          ...(tmdbId && !film.tmdb_id ? { tmdb_id: tmdbId } : {}),
         }).eq('id', film.id)
         count++
       }
@@ -1393,6 +1376,89 @@ async function tmdbSearchMovie(titre: string, annee: number, key: string) {
   return null
 }
 
+type PosterLookupResult = {
+  posterUrl: string | null
+  tmdbId?: number | null
+}
+
+async function isPosterUrlBroken(posterUrl: string | null | undefined): Promise<boolean> {
+  if (!posterUrl) return true
+  try {
+    let res = await fetch(posterUrl, { method: 'HEAD', signal: AbortSignal.timeout(5000), cache: 'no-store' })
+    if (res.ok) return false
+
+    // Some image hosts reject HEAD even when the image works.
+    if ([403, 405, 501].includes(res.status)) {
+      res = await fetch(posterUrl, {
+        method: 'GET',
+        headers: { Range: 'bytes=0-0' },
+        signal: AbortSignal.timeout(6000),
+        cache: 'no-store',
+      })
+      return !res.ok
+    }
+
+    return true
+  } catch {
+    return true
+  }
+}
+
+function tmdbImageUrl(path: string | null | undefined) {
+  return path ? `https://image.tmdb.org/t/p/w500${path}` : null
+}
+
+async function findBestPosterForFilm(
+  film: { titre: string; annee: number; tmdb_id?: number | null },
+  key: string
+): Promise<PosterLookupResult> {
+  let tmdbId = film.tmdb_id ?? null
+  let movie: any = null
+
+  if (tmdbId) {
+    const detailRes = await fetch(
+      `https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${key}&language=fr-FR`,
+      { cache: 'no-store' }
+    )
+    if (detailRes.ok) {
+      movie = await detailRes.json()
+      if (movie?.status_code) movie = null
+    }
+  }
+
+  if (!movie) {
+    movie = await tmdbSearchMovie(film.titre, film.annee, key)
+    tmdbId = movie?.id ?? tmdbId
+  }
+
+  if (tmdbId) {
+    try {
+      const imgRes = await fetch(
+        `https://api.themoviedb.org/3/movie/${tmdbId}/images?api_key=${key}&include_image_language=fr,null,en`,
+        { cache: 'no-store' }
+      )
+      if (imgRes.ok) {
+        const imgData = await imgRes.json()
+        const posters: any[] = imgData.posters ?? []
+        // TMDB poster images expose a language code, not a country. The fr-FR detail
+        // request above plus iso_639_1=fr is the closest signal for France-first artwork.
+        const sorted = [...posters].sort((a: any, b: any) => {
+          const langScore = (p: any) => p.iso_639_1 === 'fr' ? 0 : p.iso_639_1 === null ? 1 : p.iso_639_1 === 'en' ? 2 : 3
+          const voteScore = (b.vote_average ?? 0) - (a.vote_average ?? 0)
+          return langScore(a) - langScore(b) || voteScore || ((b.vote_count ?? 0) - (a.vote_count ?? 0))
+        })
+        const bestPath = sorted[0]?.file_path
+        if (bestPath) return { posterUrl: tmdbImageUrl(bestPath), tmdbId }
+      }
+    } catch { /* fallback below */ }
+  }
+
+  return {
+    posterUrl: tmdbImageUrl(movie?.poster_path) ?? movie?._omdbPoster ?? null,
+    tmdbId,
+  }
+}
+
 export async function adminFetchFilmPoster(filmId: number) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -1407,27 +1473,14 @@ export async function adminFetchFilmPoster(filmId: number) {
   if (!key) return { error: 'Clé TMDB_API_KEY manquante dans les variables d\'environnement.' }
 
   try {
-    let movie: any = null
-    if (film.tmdb_id) {
-      const res = await fetch(
-        `https://api.themoviedb.org/3/movie/${film.tmdb_id}?api_key=${key}&language=fr-FR`,
-        { cache: 'no-store' }
-      )
-      movie = await res.json()
-    } else {
-      movie = await tmdbSearchMovie(film.titre, film.annee, key)
-    }
-
-    const posterUrl = movie?.poster_path
-      ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-      : movie?._omdbPoster ?? null
+    const { posterUrl, tmdbId } = await findBestPosterForFilm(film, key)
 
     if (!posterUrl) return { error: 'Aucune affiche trouvée sur TMDB/IMDB pour ce film.' }
 
     const adminClient = createAdminClient()
     await adminClient.from('films').update({
       poster: posterUrl,
-      ...(movie?.id && !film.tmdb_id ? { tmdb_id: movie.id } : {}),
+      ...(tmdbId && !film.tmdb_id ? { tmdb_id: tmdbId } : {}),
     }).eq('id', filmId)
 
     revalidatePath('/films')
@@ -1499,25 +1552,11 @@ export async function adminRefreshMissingPosters() {
 
   for (const film of films) {
     try {
-      let movie: any = null
-      if (film.tmdb_id) {
-        const res = await fetch(
-          `https://api.themoviedb.org/3/movie/${film.tmdb_id}?api_key=${key}`,
-          { cache: 'no-store' }
-        )
-        if (!res.ok) continue
-        movie = await res.json()
-        if (movie?.status_code) continue
-      } else {
-        movie = await tmdbSearchMovie(film.titre, film.annee, key)
-      }
-      const poster = movie?.poster_path
-        ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-        : movie?._omdbPoster ?? null
+      const { posterUrl: poster, tmdbId } = await findBestPosterForFilm(film, key)
       if (poster) {
         await adminClient.from('films').update({
           poster,
-          ...(movie?.id && !film.tmdb_id ? { tmdb_id: movie.id } : {}),
+          ...(tmdbId && !film.tmdb_id ? { tmdb_id: tmdbId } : {}),
         }).eq('id', film.id)
         count++
       }
@@ -1754,52 +1793,47 @@ export async function adminForceRefreshAllPosters(fromId: number = 0) {
   const key = process.env.TMDB_API_KEY
   if (!key) return { error: 'Clé TMDB_API_KEY manquante dans les variables d\'environnement.' }
 
-  // Uniquement les films sans affiche (poster IS NULL) — ne jamais écraser les affiches existantes
-  const { data: films } = await supabase
+  // Scan all films in batches, but only replace missing or broken poster URLs.
+  const adminClient = createAdminClient()
+  const { data: films, error: filmsErr } = await adminClient
     .from('films')
-    .select('id, titre, annee, tmdb_id')
-    .is('poster', null)
+    .select('id, titre, annee, tmdb_id, poster')
+    .eq('pending_admin_approval', false)
     .gt('id', fromId)
     .order('id')
-    .limit(50)
+    .limit(30)
 
-  if (!films?.length) return { success: true, count: 0, nextId: null }
+  if (filmsErr) return { error: `Erreur DB : ${filmsErr.message}` }
+  if (!films?.length) return { success: true, count: 0, checked: 0, broken: 0, missing: 0, nextId: null }
 
-  const adminClient = createAdminClient()
   let count = 0
+  let broken = 0
+  let missing = 0
 
   for (const film of films) {
     try {
-      let movie: any = null
-      if (film.tmdb_id) {
-        const res = await fetch(
-          `https://api.themoviedb.org/3/movie/${film.tmdb_id}?api_key=${key}`,
-          { cache: 'no-store' }
-        )
-        if (!res.ok) continue
-        movie = await res.json()
-        if (movie?.status_code) continue   // erreur applicative TMDB (film introuvable, etc.)
-      } else {
-        movie = await tmdbSearchMovie(film.titre, film.annee, key)
-      }
-      const poster = movie?.poster_path
-        ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-        : movie?._omdbPoster ?? null
+      const hasPoster = !!film.poster
+      const needsPoster = !hasPoster || await isPosterUrlBroken(film.poster)
+      if (!needsPoster) continue
+      if (hasPoster) broken++
+      else missing++
+
+      const { posterUrl: poster, tmdbId } = await findBestPosterForFilm(film, key)
       if (poster) {
         await adminClient.from('films').update({
           poster,
-          ...(movie?.id && !film.tmdb_id ? { tmdb_id: movie.id } : {}),
+          ...(tmdbId && !film.tmdb_id ? { tmdb_id: tmdbId } : {}),
         }).eq('id', film.id)
         count++
       }
     } catch { /* skip */ }
   }
 
-  const nextId = films.length === 50 ? films[films.length - 1].id : null
+  const nextId = films.length === 30 ? films[films.length - 1].id : null
 
   revalidatePath('/films')
   revalidatePath('/admin')
-  return { success: true, count, nextId }
+  return { success: true, count, checked: films.length, broken, missing, nextId }
 }
 
 // ── WATCH PROVIDERS (public — appelé depuis FilmsClient) ──────

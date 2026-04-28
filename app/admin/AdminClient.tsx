@@ -801,6 +801,9 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
       const result = await adminForceRefreshAllPosters(nextId)
       if (result.error) { addToast(result.error, '⚠️'); break }
       totalCount += result.count ?? 0
+      const checked = result.checked ?? 0
+      const targeted = (result.missing ?? 0) + (result.broken ?? 0)
+      setAutoProgress(`Lot ${lot} : ${result.count ?? 0}/${targeted} réparées (${checked} scannés)`)
       nextId = result.nextId ?? null
       lot++
       if (nextId !== null) await new Promise(r => setTimeout(r, 800))
