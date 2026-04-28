@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminBatchFlaggedDecisions, adminSet18Flag, adminApproveAllPending, adminSetFilmCategory, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, adminFetchFrenchPosters, adminScanAgeRestrictions, adminTestFilmCertification, adminDiagnostic, updateFilm, adminResolveReport, adminSetConfig, adminVerifyPosters, adminSetAdmin, adminAddNews, adminDeleteNews, adminAddRecommendation, adminDeleteRecommendation, deleteForumTopic, adminEndSeason, adminApproveFilmRequest, adminRejectFilmRequest, adminFetchOverviews, adminReviewMarathonRequest } from '@/lib/actions'
+import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminBatchFlaggedDecisions, adminSet18Flag, adminApproveAllPending, adminSetFilmCategory, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, adminFetchFrenchPosters, adminScanAgeRestrictions, adminTestFilmCertification, adminDiagnostic, updateFilm, adminResolveReport, adminSetConfig, adminVerifyPosters, adminRepairBrokenPosters, adminSetAdmin, adminAddNews, adminDeleteNews, adminAddRecommendation, adminDeleteRecommendation, deleteForumTopic, adminEndSeason, adminApproveFilmRequest, adminRejectFilmRequest, adminFetchOverviews, adminReviewMarathonRequest } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
 import { CONFIG } from '@/lib/config'
 import type { Film, Profile } from '@/lib/supabase/types'
@@ -514,6 +514,7 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
   const [brokenPosters, setBrokenPosters] = useState<{ id: number; titre: string; poster: string }[]>([])
   const [verifyNextId, setVerifyNextId] = useState<number | null>(0)
   const [verifyRunning, setVerifyRunning] = useState(false)
+  const [repairRunning, setRepairRunning] = useState(false)
   const [savingConfig, setSavingConfig] = useState(false)
   const [manualFilm1, setManualFilm1] = useState('')
   const [manualFilm2, setManualFilm2] = useState('')
@@ -663,7 +664,7 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
     addToast('Recherche en cours…', '🔄')
     const result = await adminRefreshMissingPosters()
     if (result.error) addToast(result.error, '⚠️')
-    else if (result.count === 0) addToast('Toutes les affiches sont déjà renseignées', 'ℹ️')
+    else if (result.count === 0) addToast('Aucune affiche nulle trouvée. Si des affiches sont cassées (URL morte), utilise "Vérifier URLs cassées" puis "Réparer".', 'ℹ️')
     else { addToast(`${result.count} affiche(s) récupérée(s) !`, '🖼️'); router.refresh() }
   }
 
@@ -699,6 +700,19 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
       ? `${newBroken.length} affiche(s) cassée(s) trouvée(s) sur ${result.checked ?? 0} vérifiées — cliquer pour continuer`
       : `Vérification terminée — ${brokenPosters.length + newBroken.length} affiche(s) cassée(s) au total`
     addToast(msg, newBroken.length ? '⚠️' : '✅')
+  }
+
+  async function repairAllBroken() {
+    if (!brokenPosters.length) return
+    setRepairRunning(true)
+    const ids = brokenPosters.map(b => b.id)
+    const result = await adminRepairBrokenPosters(ids)
+    setRepairRunning(false)
+    if (result.error) { addToast(result.error, '⚠️'); return }
+    addToast(`${result.count ?? 0}/${result.total ?? ids.length} affiches réparées depuis TMDB`, result.count ? '🖼️' : 'ℹ️')
+    setBrokenPosters([])
+    setVerifyNextId(0)
+    router.refresh()
   }
 
   async function forceRefreshAll() {
@@ -1357,8 +1371,18 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
         </div>
         {brokenPosters.length > 0 && (
           <div style={{ background: 'rgba(232,90,90,.07)', border: '1px solid rgba(232,90,90,.3)', borderRadius: 'var(--r)', padding: '.75rem', marginBottom: '.6rem' }}>
-            <div style={{ fontSize: '.72rem', color: 'var(--red)', fontWeight: 600, marginBottom: '.4rem' }}>
-              ⚠️ {brokenPosters.length} affiche(s) avec URL cassée — utilise 🔄 TMDB pour les corriger
+            <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem', marginBottom: '.5rem', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '.72rem', color: 'var(--red)', fontWeight: 600 }}>
+                ⚠️ {brokenPosters.length} affiche(s) avec URL cassée
+              </span>
+              <button
+                className="btn btn-gold"
+                style={{ fontSize: '.7rem', padding: '.25rem .7rem' }}
+                disabled={repairRunning}
+                onClick={repairAllBroken}
+              >
+                {repairRunning ? '⏳ Réparation…' : `⚡ Réparer les ${brokenPosters.length} depuis TMDB`}
+              </button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '.25rem' }}>
               {brokenPosters.map(b => (

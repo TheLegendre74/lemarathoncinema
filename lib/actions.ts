@@ -781,6 +781,64 @@ export async function adminVerifyPosters(fromId: number = 0) {
   return { success: true, broken, nextId, checked: films.length }
 }
 
+export async function adminRepairBrokenPosters(ids: number[]) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Non autorisé.' }
+
+  const key = process.env.TMDB_API_KEY
+  if (!key) return { error: 'Clé TMDB_API_KEY manquante.' }
+
+  if (!ids.length) return { success: true, count: 0 }
+
+  const adminClient = createAdminClient()
+
+  // 1. Remettre poster = null pour forcer la réparation
+  await adminClient.from('films').update({ poster: null }).in('id', ids)
+
+  // 2. Récupérer les métadonnées de ces films
+  const { data: films } = await supabase
+    .from('films')
+    .select('id, titre, annee, tmdb_id')
+    .in('id', ids)
+
+  if (!films?.length) return { success: true, count: 0 }
+
+  let count = 0
+  for (const film of films) {
+    try {
+      let movie: any = null
+      if (film.tmdb_id) {
+        const res = await fetch(
+          `https://api.themoviedb.org/3/movie/${film.tmdb_id}?api_key=${key}`,
+          { cache: 'no-store' }
+        )
+        if (!res.ok) continue
+        movie = await res.json()
+        if (movie?.status_code) continue
+      } else {
+        movie = await tmdbSearchMovie(film.titre, film.annee, key)
+      }
+      const poster = movie?.poster_path
+        ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+        : movie?._omdbPoster ?? null
+      if (poster) {
+        await adminClient.from('films').update({
+          poster,
+          ...(movie?.id && !film.tmdb_id ? { tmdb_id: movie.id } : {}),
+        }).eq('id', film.id)
+        count++
+      }
+    } catch { /* skip */ }
+  }
+
+  revalidatePath('/films')
+  revalidatePath('/admin')
+  return { success: true, count, total: ids.length }
+}
+
 // ── FILMS ────────────────────────────────────────────────────
 
 export async function updateFilm(filmId: number, updates: {
