@@ -14,9 +14,10 @@ interface PosterProps {
   style?: React.CSSProperties
   priority?: boolean
   sizes?: string
+  objectFit?: React.CSSProperties['objectFit']
 }
 
-export default function Poster({ film, fill, width = 300, height = 450, className, style, priority = false, sizes }: PosterProps) {
+export default function Poster({ film, fill, width = 300, height = 450, className, style, priority = false, sizes, objectFit = 'cover' }: PosterProps) {
   const [err, setErr] = useState(false)
   const fb = FALLBACKS[film.id % FALLBACKS.length]
 
@@ -44,7 +45,7 @@ export default function Poster({ film, fill, width = 300, height = 450, classNam
           src={film.poster}
           alt={film.titre}
           fill
-          style={{ objectFit: 'cover' }}
+          style={{ objectFit }}
           onError={() => setErr(true)}
           sizes={sizes ?? '(max-width: 768px) 50vw, 200px'}
           priority={priority}
@@ -60,7 +61,7 @@ export default function Poster({ film, fill, width = 300, height = 450, classNam
       alt={film.titre}
       width={width}
       height={height}
-      style={{ objectFit: 'cover', ...style }}
+      style={{ objectFit, ...style }}
       className={className}
       onError={() => setErr(true)}
       priority={priority}

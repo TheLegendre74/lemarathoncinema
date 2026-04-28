@@ -233,7 +233,7 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
           title={isInception ? 'Cliquer 5 fois...' : undefined}
         >
           {film.poster
-            ? <Image src={film.poster} alt={film.titre} fill style={{ objectFit: 'contain', objectPosition: 'center' }} sizes="500px" />
+            ? <Image src={film.poster} alt={film.titre} fill style={{ objectFit: 'contain', objectPosition: 'center' }} sizes="500px" unoptimized />
             : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem' }}>🎬</div>
           }
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 60%, var(--bg2) 100%)' }} />
