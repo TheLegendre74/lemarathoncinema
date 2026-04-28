@@ -25,11 +25,7 @@ const nextConfig = {
 
   async headers() {
     return [
-      // Cache agressif pour assets statiques (JS, CSS, fonts, images)
-      {
-        source: '/_next/static/:path*',
-        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
-      },
+      // Cache des assets publics. Next/Vercel gere deja /_next/static avec des noms hashes.
       {
         source: '/(.*)\\.(png|jpg|jpeg|gif|webp|avif|svg|ico|woff2|woff|ttf)',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=3600' }],
