@@ -1262,13 +1262,13 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
     setBubble(true)
   }
   useEffect(() => {
-    timerRef.current = setInterval(rotateMsg, 5500)
+    timerRef.current = setInterval(rotateMsg, 10000)
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   function resetMsgTimer() {
     if (timerRef.current) clearInterval(timerRef.current)
-    timerRef.current = setInterval(rotateMsg, 5500)
+    timerRef.current = setInterval(rotateMsg, 10000)
   }
 
   // ── Auto-attaque (Phase 2+) ────────────────────────────────────────────────
@@ -1516,6 +1516,16 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
     }
   }
 
+  // ── Auto-avance la séquence enfer après 10 secondes ──────────────────────
+  const hellDialogAdvanceRef = useRef<() => void>(() => {})
+  useEffect(() => {
+    if (hellPhase !== 'dialog') return
+    hellDialogAdvanceRef.current = handleHellDialogClick
+    const t = setTimeout(() => hellDialogAdvanceRef.current(), 10000)
+    return () => clearTimeout(t)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hellPhase, hellDialogIdx])
+
   function handleHellDialogClick() {
     if (hellPhase !== 'dialog') return
     const next = hellDialogIdx + 1
@@ -1690,10 +1700,14 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
   // Hors combat : taille originale inchangée sur tous les appareils.
   const isMobileUI = window.matchMedia('(pointer: coarse)').matches
   const wCombat = isMobileUI ? Math.round(W_COMBAT * 1.10) : W_COMBAT  // 176 mobile / 160 desktop
-  const wNormal = W_NORMAL                                              // 140 partout
+  const wNormal = isMobileUI ? W_NORMAL : Math.round(W_NORMAL * 1.2)    // +20% desktop hors combat
   const wShield = isMobileUI ? Math.round(W_SHIELD * 1.10) : W_SHIELD
   const wSword  = isMobileUI ? Math.round(W_SWORD  * 1.10) : W_SWORD
   const hSword  = isMobileUI ? Math.round(H_SWORD  * 1.10) : H_SWORD
+  const normalBubbleScale = !isMobileUI && phase === 'normal' ? 1.2 : 1
+  const bubbleWidth = Math.round(230 * normalBubbleScale)
+  const bubbleFont = 12 * normalBubbleScale
+  const bubblePadding = `${Math.round(9 * normalBubbleScale)}px ${Math.round(12 * normalBubbleScale)}px`
 
   // Barres HP réduites de 20% sur mobile
   const hpScale  = isMobileUI ? 0.80 : 1
@@ -1757,11 +1771,8 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
           }}
           onWin={() => {
             ddrPhaseRef.current = 'idle'; setDdrPhase('idle')
-            ddrVictoryRef.current = true  // marque : l'épreuve de force qui suit vient du DDR
-            const selected = shuffle([...REPLIES_DDR_WIN]).slice(0, 5)
-            setDdrTauntLines(selected)
-            setDdrTauntIdx(0)
-            setDdrTauntActive(true)
+            // Directement : écrans de score déjà montrés par PostGameOverlay, on envoie Clippy en enfer
+            startHellSequence()
           }}
           onLose={() => {
             ddrPhaseRef.current = 'idle'; setDdrPhase('idle')
@@ -2112,7 +2123,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
         onClick={phase==='normal' ? handleNormalClick : handleCombatClick}
       >
         {(bubble || forcedMessage) && (
-          <div style={{ position:'absolute', bottom:phase==='combat'?wCombat*1.4+20:wNormal*.7+16, [bubbleLeft?'right':'left']:0, width:230, background: forcedMessage ? '#1a0a2e' : phase==='combat'?'#120505':'#fffde7', border:`2px solid ${forcedMessage ? '#a855f7' : phase==='combat'?'#e85a5a':'#c4a030'}`, borderRadius:10, padding:'9px 12px', fontSize:12, color: forcedMessage ? '#e9d5ff' : phase==='combat'?'#ffaaaa':'#1a1a1a', lineHeight:1.5, boxShadow:`0 4px 20px ${forcedMessage ? 'rgba(168,85,247,.35)' : phase==='combat'?'rgba(232,90,90,.3)':'rgba(0,0,0,.3)'}`, animation:'clippy-bubble-in .2s ease', zIndex:10000 }}
+          <div style={{ position:'absolute', bottom:phase==='combat'?wCombat*1.4+20:wNormal*.7+16, [bubbleLeft?'right':'left']:0, width:bubbleWidth, background: forcedMessage ? '#1a0a2e' : phase==='combat'?'#120505':'#fffde7', border:`2px solid ${forcedMessage ? '#a855f7' : phase==='combat'?'#e85a5a':'#c4a030'}`, borderRadius:10, padding:bubblePadding, fontSize:bubbleFont, color: forcedMessage ? '#e9d5ff' : phase==='combat'?'#ffaaaa':'#1a1a1a', lineHeight:1.5, boxShadow:`0 4px 20px ${forcedMessage ? 'rgba(168,85,247,.35)' : phase==='combat'?'rgba(232,90,90,.3)':'rgba(0,0,0,.3)'}`, animation:'clippy-bubble-in .2s ease', zIndex:10000 }}
             onClick={e => { e.stopPropagation(); if (!forcedMessage) setBubble(false) }}>
             {forcedMessage ?? message}
             {!forcedMessage && isLarbin && phase === 'normal' && <span style={{ display:'block', marginTop:4, fontSize:10, color:'rgba(0,0,0,.25)', fontStyle:'italic' }}>— Clippy, ton maître</span>}

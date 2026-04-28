@@ -1041,7 +1041,6 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
         won={postGame.won}
         leader={postGame.leader}
         onContinue={() => {
-          setPostGame(null)
           if (finalWon.current) onWin(); else onLose()
         }}
       />
