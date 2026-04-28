@@ -1,5 +1,4 @@
 import { cache } from 'react'
-import { unstable_cache } from 'next/cache'
 import { createClient } from './supabase/server'
 import { CONFIG } from './config'
 
@@ -27,10 +26,8 @@ function safeDate(str: string | undefined, fallback: Date): Date {
   return isNaN(d.getTime()) ? fallback : d
 }
 
-// Fetch persisté entre les requêtes (ISR 1h) — invalider via revalidateTag('server-config')
-const _fetchConfig = unstable_cache(
-  async (): Promise<ServerConfig> => {
-    const defaults: ServerConfig = {
+export const getServerConfig = cache(async (): Promise<ServerConfig> => {
+  const defaults: ServerConfig = {
     ...CONFIG,
     ACCUEIL_SOUS_TITRE:  'Le marathon cinématographique collaboratif',
     MARATHON_RULES:      null,
@@ -104,13 +101,7 @@ const _fetchConfig = unstable_cache(
   } catch {
     return defaults
   }
-},
-  ['server-config'],
-  { revalidate: 3600, tags: ['server-config'] }   // 1h, invalider via revalidateTag('server-config')
-)
-
-// React.cache() déduplique les appels dans la même requête
-export const getServerConfig = cache(() => _fetchConfig())
+})
 
 export function isMarathonLiveFromConfig(cfg: ServerConfig) {
   return new Date() >= cfg.MARATHON_START
