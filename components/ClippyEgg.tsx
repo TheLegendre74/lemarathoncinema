@@ -243,6 +243,23 @@ const REPLIES_DDR_WIN = [
   "Bon. Très bien. Profite de cette victoire. Parce que maintenant on va voir si tu te bats aussi bien. Spoiler : non.",
 ]
 
+// ── Intro DDR : Clippy provoque avant le combat de danse ─────────────────────
+const CLIPPY_DDR_INTRO = [
+  "Ha ha ha... Alors comme ça tu croyais encore pouvoir me battre au combat ?",
+  "Non, non, non. Désormais tu vas m'affronter sur MON terrain. Le seul. L'ultime. LA DANSE !!",
+  "Je suis Evil Clippy Disco. La créature la plus rythmée de tout l'univers numérique.",
+  "J'ai perfectionné mes mouvements dans CHAQUE COIN D'ÉCRAN depuis 1997.",
+  "Vingt ans d'Office Suite. Vingt ans de rythme pur. Tu peux pas comprendre.",
+  "Mes pixels dansent même quand je dors. Et toi ? Tu trébuches sûrement en marchant.",
+  "La danse, c'est l'art. Et moi ? Je suis le chef-d'œuvre absolu.",
+  "Prépare-toi à être humilié par un trombone. Ça va marquer ta mémoire à vie.",
+  "Pas d'aide à apporter cette fois. Uniquement de la destruction rythmique.",
+  "La piste de danse, c'est mon bureau. Et toi, tu es juste un visiteur non désiré.",
+  "Tu aurais dû cliquer 'Non merci' quand tu en avais encore la chance.",
+  "Suivre les flèches. C'est censé être simple. Et pourtant... je sens que tu vas t'effondrer.",
+  "Alors, tu es prêt ? Parce que moi... je suis TOUJOURS prêt. 🕺",
+]
+
 // ── Dialogues Mode Maître (35 lignes de flatterie/vénération) ─────────────────
 const REPLIES_DOCILE = [
   "Bonjour, maître. Comment puis-je vous être utile aujourd'hui ?",
@@ -1051,6 +1068,11 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
   const playerDeathsRef    = useRef(0)
   const [showAbandon,      setShowAbandon]     = useState(false)   // conservé pour compat mini-jeu
   const [showDeathScreen,  setShowDeathScreen] = useState(false)
+  // DDR → intro : Clippy provoque avant que le jeu commence
+  const [ddrIntroActive,   setDdrIntroActive]  = useState(false)
+  const [ddrIntroIdx,      setDdrIntroIdx]     = useState(0)
+  const ddrIntroActiveRef  = useRef(false)
+  const ddrIntroShownRef   = useRef(false)
   // DDR → épée : séquence de 5 dialogues humiliés avant le combat
   const [ddrTauntActive,   setDdrTauntActive]  = useState(false)
   const [ddrTauntLines,    setDdrTauntLines]   = useState<string[]>([])
@@ -1191,10 +1213,27 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
   // Curseur caché uniquement en combat à l'épée (pas pendant DDR, pas sur l'écran de mort)
   useEffect(() => {
     // Curseur caché en combat épée — PAS pendant le taunt DDR (souris normale)
-    const hideCursor = phase === 'combat' && mgPhase === 'idle' && hellPhase === 'idle' && ddrPhase === 'idle' && !showDeathScreen && !ddrTauntActive
+    const hideCursor = phase === 'combat' && mgPhase === 'idle' && hellPhase === 'idle' && ddrPhase === 'idle' && !showDeathScreen && !ddrTauntActive && !ddrIntroActive
     document.body.style.cursor = hideCursor ? 'none' : ''
     return () => { document.body.style.cursor = '' }
-  }, [phase, mgPhase, hellPhase, ddrPhase, showDeathScreen, ddrTauntActive])
+  }, [phase, mgPhase, hellPhase, ddrPhase, showDeathScreen, ddrTauntActive, ddrIntroActive])
+
+  // ── Intro DDR : Clippy provoque avant le jeu (auto-advance 2.2s) ──────────
+  useEffect(() => {
+    if (!ddrIntroActive) return
+    ddrIntroActiveRef.current = true
+    if (ddrIntroIdx >= CLIPPY_DDR_INTRO.length) {
+      ddrIntroActiveRef.current = false
+      setDdrIntroActive(false)
+      ddrPhaseRef.current = 'active'; setDdrPhase('active')
+      return
+    }
+    setMessage(CLIPPY_DDR_INTRO[ddrIntroIdx])
+    setBubble(true)
+    const t = setTimeout(() => setDdrIntroIdx(i => i + 1), 2200)
+    return () => clearTimeout(t)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ddrIntroActive, ddrIntroIdx])
 
   // ── Taunt DDR → épée (5 lignes humiliées avant le combat) ──────────────────
   useEffect(() => {
@@ -1237,7 +1276,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
     const [minMs, maxMs] = effectivePhase >= 9 ? [60, 200] : effectivePhase === 8 ? [100, 350] : effectivePhase === 7 ? [150, 500] : effectivePhase === 6 ? [200, 700] : effectivePhase >= 5 ? [300, 1200] : effectivePhase === 4 ? [400, 1500] : effectivePhase >= 3 ? [500, 2000] : [3000, 6500]
     const delay = minMs + Math.random() * (maxMs - minMs)
     autoAttackRef.current = setTimeout(() => {
-      if (phaseRef.current !== 'combat' || parryActive.current || mgPhaseRef.current !== 'idle' || ddrPhaseRef.current !== 'idle') {
+      if (phaseRef.current !== 'combat' || parryActive.current || mgPhaseRef.current !== 'idle' || ddrPhaseRef.current !== 'idle' || ddrIntroActiveRef.current) {
         scheduleAutoAttack()   // reschedule sans attaquer si blocage
         return
       }
@@ -1328,7 +1367,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
 
   // ── Attaque avec windup ────────────────────────────────────────────────────
   function triggerAttack() {
-    if (phaseRef.current !== 'combat' || parryActive.current || ddrPhaseRef.current !== 'idle') return
+    if (phaseRef.current !== 'combat' || parryActive.current || ddrPhaseRef.current !== 'idle' || ddrIntroActiveRef.current) return
     setSwordWindup(true)
     setTimeout(() => { setSwordWindup(false); startParry() }, 700)
   }
@@ -1340,7 +1379,13 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
     parryActive.current = false; setParrySquare(null)
 
     if (effectivePhase === 2) {
-      ddrPhaseRef.current = 'active'; setDdrPhase('active')
+      if (!ddrIntroShownRef.current) {
+        ddrIntroShownRef.current = true
+        setDdrIntroActive(true)
+        setDdrIntroIdx(0)
+      } else {
+        ddrPhaseRef.current = 'active'; setDdrPhase('active')
+      }
     } else {
       setMessage("🗡️ ÉPREUVE DE FORCE !!! Montre ce que tu vaux !"); setBubble(true)
       setTimeout(() => setMgPhase('active'), 800)
@@ -1395,7 +1440,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
     playerDeathsRef.current = 0; setPlayerDeaths(0)
     playerHPRef.current = PLAYER_MAX_HP; setPlayerHP(PLAYER_MAX_HP)
     if (deathReason === 'ddr') {
-      // Après une défaite DDR : relancer le mini-jeu de danse
+      // Après une défaite DDR : relancer le mini-jeu de danse sans intro
       clippyHPRef.current = CLIPPY_MAX_HP; setClippyHP(CLIPPY_MAX_HP)
       ddrPhaseRef.current = 'active'; setDdrPhase('active')
       return
@@ -1548,9 +1593,15 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
       setClippyHP(CLIPPY_MAX_HP); setPlayerHP(PLAYER_MAX_HP)
 
       if (effectivePhase === 2) {
-        // Phase 2 → DDR immédiat, aucune fenêtre de combat épée
+        // Phase 2 → DDR immédiat avec intro Clippy avant le jeu
         setPhase('combat'); phaseRef.current = 'combat'
-        ddrPhaseRef.current = 'active'; setDdrPhase('active')
+        if (!ddrIntroShownRef.current) {
+          ddrIntroShownRef.current = true
+          setDdrIntroActive(true)
+          setDdrIntroIdx(0)
+        } else {
+          ddrPhaseRef.current = 'active'; setDdrPhase('active')
+        }
         return
       }
 
@@ -1574,7 +1625,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
 
   function handleCombatClick(e: React.MouseEvent) {
     e.stopPropagation()
-    if (parryActive.current || mgPhase !== 'idle' || ddrPhaseRef.current !== 'idle') return
+    if (parryActive.current || mgPhase !== 'idle' || ddrPhaseRef.current !== 'idle' || ddrIntroActiveRef.current) return
     playSound('/clippy-swoosh.wav', 0.8)
     setTimeout(() => playSound('/clippy-hit.mp3', 0.9), 180)
     const nextHP = Math.max(0, clippyHPRef.current - 1)

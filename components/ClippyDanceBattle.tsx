@@ -37,12 +37,14 @@ const AHEAD_MS      = 420    // ms avant hit pour illuminer la lane
 
 function FlameBorder({ combo }: { combo: number }) {
   const [zone, setZone] = useState<{ left: number; right: number; top: number; bottom: number } | null>(null)
+  const [isMob, setIsMob] = useState(false)
 
   useEffect(() => {
     const measure = () => {
       const W = window.innerWidth, H = window.innerHeight
       const mob = window.matchMedia('(pointer: coarse)').matches
       const half = Math.min(W * 0.29, 265)
+      setIsMob(mob)
       setZone(mob
         ? { left: 0, right: W, top: Math.round(H * 0.26), bottom: Math.round(H * 0.87) }
         : { left: Math.round(W / 2 - half), right: Math.round(W / 2 + half), top: 0, bottom: Math.round(H * 0.82) }
@@ -56,15 +58,16 @@ function FlameBorder({ combo }: { combo: number }) {
   if (combo < FLAME_AT || !zone) return null
 
   const lvl  = combo >= FEVER_X4 ? 3 : combo >= FEVER_X3 ? 2 : 1
-  const fH   = lvl === 3 ? 120 : lvl === 2 ? 92 : 65
-  const fW   = lvl === 3 ? 24 : lvl === 2 ? 18 : 13
+  const fH   = isMob ? (lvl === 3 ? 76 : lvl === 2 ? 58 : 42) : (lvl === 3 ? 120 : lvl === 2 ? 92 : 65)
+  const fW   = isMob ? (lvl === 3 ? 16 : lvl === 2 ? 12 : 9)  : (lvl === 3 ? 24  : lvl === 2 ? 18 : 13)
   const bl   = lvl === 3 ? 7 : lvl === 2 ? 5 : 3
   const op   = lvl === 3 ? 0.85 : lvl === 2 ? 0.68 : 0.48
   const cntH = lvl === 3 ? 18 : lvl === 2 ? 13 : 9
 
   const zW   = zone.right - zone.left
   const zH   = zone.bottom - zone.top
-  const cntV = Math.max(5, Math.round(cntH * zH / Math.max(zW, 1)))
+  const cntVRaw = Math.max(5, Math.round(cntH * zH / Math.max(zW, 1)))
+  const cntV    = isMob ? Math.min(cntVRaw, 4) : cntVRaw
 
   const BG = 'linear-gradient(to top, #ffffff 0%, #99ccff 8%, #2255ee 28%, #0022cc 58%, #000066 80%, transparent 100%)'
 
@@ -114,8 +117,8 @@ function FlameBorder({ combo }: { combo: number }) {
         @keyframes flm-R-b { from{transform:rotate(-90deg) scaleY(0.86) scaleX(1.14)} to{transform:rotate(-90deg) scaleY(1.24) scaleX(0.82)} }
         @keyframes flm-R-c { from{transform:rotate(-90deg) scaleY(1.08) scaleX(0.92)} to{transform:rotate(-90deg) scaleY(0.80) scaleX(1.18)} }
       `}</style>
-      {/* Bas : pivot=zone.bottom, flammes vers le HAUT */}
-      {makeEdge(cntH, '',  i => zone.left + (i + 0.5) * zW / cntH, () => zone.bottom, 'bot')}
+      {/* Bas : pivot=zone.bottom, flammes vers le HAUT — masqué sur mobile */}
+      {!isMob && makeEdge(cntH, '',  i => zone.left + (i + 0.5) * zW / cntH, () => zone.bottom, 'bot')}
       {/* Haut : pivot=zone.top, flammes vers le BAS */}
       {makeEdge(cntH, 'T', i => zone.left + (i + 0.5) * zW / cntH, () => zone.top,    'top')}
       {/* Gauche : pivot=zone.left, flammes vers la DROITE */}

@@ -77,6 +77,7 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
   const [tab, setTab] = useState<'info' | 'streaming' | 'forum'>('info')
   const [hov, setHov] = useState(0)
   const [negHov, setNegHov] = useState(0)
+  const [posterErr, setPosterErr] = useState(false)
   const [ratePrompt, setRatePrompt] = useState(false)
   const [promptHov, setPromptHov] = useState(0)
   const [promptRating, setPromptRating] = useState(0)
@@ -232,8 +233,8 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
           onClick={handlePosterClick}
           title={isInception ? 'Cliquer 5 fois...' : undefined}
         >
-          {film.poster
-            ? <Image src={film.poster} alt={film.titre} fill style={{ objectFit: 'contain', objectPosition: 'center' }} sizes="500px" unoptimized />
+          {film.poster && !posterErr
+            ? <Image src={film.poster} alt={film.titre} fill style={{ objectFit: 'contain', objectPosition: 'center' }} sizes="500px" unoptimized onError={() => setPosterErr(true)} />
             : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem' }}>🎬</div>
           }
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 60%, var(--bg2) 100%)' }} />
