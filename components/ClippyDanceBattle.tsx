@@ -117,8 +117,7 @@ function FlameBorder({ combo }: { combo: number }) {
         @keyframes flm-R-b { from{transform:rotate(-90deg) scaleY(0.86) scaleX(1.14)} to{transform:rotate(-90deg) scaleY(1.24) scaleX(0.82)} }
         @keyframes flm-R-c { from{transform:rotate(-90deg) scaleY(1.08) scaleX(0.92)} to{transform:rotate(-90deg) scaleY(0.80) scaleX(1.18)} }
       `}</style>
-      {/* Bas : pivot=zone.bottom, flammes vers le HAUT — masqué sur mobile */}
-      {!isMob && makeEdge(cntH, '',  i => zone.left + (i + 0.5) * zW / cntH, () => zone.bottom, 'bot')}
+      {/* Bas supprimé — trop chargé visuellement */}
       {/* Haut : pivot=zone.top, flammes vers le BAS */}
       {makeEdge(cntH, 'T', i => zone.left + (i + 0.5) * zW / cntH, () => zone.top,    'top')}
       {/* Gauche : pivot=zone.left, flammes vers la DROITE */}

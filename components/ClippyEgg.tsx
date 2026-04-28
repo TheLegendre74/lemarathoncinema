@@ -1073,11 +1073,12 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
   const [ddrIntroIdx,      setDdrIntroIdx]     = useState(0)
   const ddrIntroActiveRef  = useRef(false)
   const ddrIntroShownRef   = useRef(false)
+  const ddrVictoryRef      = useRef(false)  // épreuve de force issue du DDR win
   // DDR → épée : séquence de 5 dialogues humiliés avant le combat
   const [ddrTauntActive,   setDdrTauntActive]  = useState(false)
   const [ddrTauntLines,    setDdrTauntLines]   = useState<string[]>([])
   const [ddrTauntIdx,      setDdrTauntIdx]     = useState(0)
-  const [deathReason,      setDeathReason]     = useState<'hp'|'duel'|'ddr'>('hp')
+  const [deathReason,      setDeathReason]     = useState<'hp'|'duel'|'ddr'|'ddr_duel'>('hp')
   const [showLarbinMsg,    setShowLarbinMsg]   = useState(false)
   const [showLarbinModal,  setShowLarbinModal] = useState(false)
   const [hellPhase,        setHellPhase]       = useState<'idle'|'flames'|'grab'|'dialog'|'drag'|'scream'|'fade'>('idle')
@@ -1218,11 +1219,12 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
     return () => { document.body.style.cursor = '' }
   }, [phase, mgPhase, hellPhase, ddrPhase, showDeathScreen, ddrTauntActive, ddrIntroActive])
 
-  // ── Intro DDR : Clippy provoque avant le jeu (auto-advance 2.2s) ──────────
+  // ── Intro DDR : Clippy provoque avant le jeu (10s par dialogue, clic = avancer) ──
+  const DDR_INTRO_MAX = 4
   useEffect(() => {
     if (!ddrIntroActive) return
     ddrIntroActiveRef.current = true
-    if (ddrIntroIdx >= CLIPPY_DDR_INTRO.length) {
+    if (ddrIntroIdx >= DDR_INTRO_MAX) {
       ddrIntroActiveRef.current = false
       setDdrIntroActive(false)
       ddrPhaseRef.current = 'active'; setDdrPhase('active')
@@ -1230,7 +1232,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
     }
     setMessage(CLIPPY_DDR_INTRO[ddrIntroIdx])
     setBubble(true)
-    const t = setTimeout(() => setDdrIntroIdx(i => i + 1), 2200)
+    const t = setTimeout(() => setDdrIntroIdx(i => i + 1), 10000)
     return () => clearTimeout(t)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ddrIntroActive, ddrIntroIdx])
@@ -1425,7 +1427,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
         setTimeout(() => { setMgPhase('idle'); startHellSequence() }, 800)
       } else {
         setMgPhase('lose')
-        setDeathReason('duel')
+        setDeathReason(ddrVictoryRef.current ? 'ddr_duel' : 'duel')
         setTimeout(() => { setMgPhase('idle'); setShowDeathScreen(true) }, 1500)
       }
     }
@@ -1443,6 +1445,13 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
       // Après une défaite DDR : relancer le mini-jeu de danse sans intro
       clippyHPRef.current = CLIPPY_MAX_HP; setClippyHP(CLIPPY_MAX_HP)
       ddrPhaseRef.current = 'active'; setDdrPhase('active')
+      return
+    }
+    if (deathReason === 'ddr_duel') {
+      // Après échec de l'épreuve de force post-DDR : retenter l'épreuve uniquement
+      mgPlayerRef.current = 0; mgClippyRef.current = 0
+      setPlayerPresses(0); setClippyPresses(0)
+      setMgPhase('active')
       return
     }
     if (deathReason === 'duel') {
@@ -1520,6 +1529,10 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
         setHellPhase('idle')
         if (activeGodPhase > 0) {
           // God mode : juste reset après la séquence
+          resetToNormal()
+        } else if (ddrVictoryRef.current) {
+          // Victoire DDR → épreuve de force : on passe à la phase suivante sans quitter
+          ddrVictoryRef.current = false
           resetToNormal()
         } else if (defeatsRef.current >= 5) {
           try { localStorage.setItem(LS_MASTERED, '1'); localStorage.removeItem(LS_ACTIVE) } catch {}
@@ -1625,7 +1638,8 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
 
   function handleCombatClick(e: React.MouseEvent) {
     e.stopPropagation()
-    if (parryActive.current || mgPhase !== 'idle' || ddrPhaseRef.current !== 'idle' || ddrIntroActiveRef.current) return
+    if (ddrIntroActiveRef.current) { setDdrIntroIdx(i => i + 1); return }
+    if (parryActive.current || mgPhase !== 'idle' || ddrPhaseRef.current !== 'idle') return
     playSound('/clippy-swoosh.wav', 0.8)
     setTimeout(() => playSound('/clippy-hit.mp3', 0.9), 180)
     const nextHP = Math.max(0, clippyHPRef.current - 1)
@@ -1727,6 +1741,14 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
         }
       `}</style>
 
+      {/* ── Zone de clic intro DDR (plein écran, en dessous de Clippy) ── */}
+      {ddrIntroActive && (
+        <div
+          onClick={() => setDdrIntroIdx(i => i + 1)}
+          style={{ position:'fixed', inset:0, zIndex:99992, cursor:'pointer' }}
+        />
+      )}
+
       {/* ── DDR mini-jeu (phase 2) ── */}
       {ddrPhase === 'active' && (
         <ClippyDanceBattle
@@ -1739,7 +1761,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
           }}
           onWin={() => {
             ddrPhaseRef.current = 'idle'; setDdrPhase('idle')
-            // Sélectionner 5 lignes uniques parmi les 20, sans doublon
+            ddrVictoryRef.current = true  // marque : l'épreuve de force qui suit vient du DDR
             const selected = shuffle([...REPLIES_DDR_WIN]).slice(0, 5)
             setDdrTauntLines(selected)
             setDdrTauntIdx(0)
@@ -1824,10 +1846,12 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
             <div style={{ fontSize:'3rem', marginBottom:'0.8rem' }}>📎</div>
             <div style={{ fontFamily:'var(--font-display)', fontSize:'clamp(.9rem,2vw,1.1rem)', color:'#ffaaaa', lineHeight:1.7 }}>
               {isLarbin
-                ? larbinMsg(deathReason === 'duel' ? '"HAHAHAHA ! Tu as perdu le duel, [NAME] ! Tu veux vraiment continuer avec 10 PV ou t\'avoues-tu vaincu ?"' : '"HAHAHAHA ! Tu es mort, [NAME] ! Tu veux vraiment continuer cette mascarade ou t\'avoues-tu enfin vaincu ?"')
-                : deathReason === 'duel'
-                  ? '"HAHAHAHA ! Tu as perdu le duel final. Tu peux réessayer avec 10 PV ou t\'avouer vaincu, petite chose."'
-                  : '"HAHAHAHA ! Tu es mort. Tu veux vraiment continuer ou t\'avoues-tu vaincu, petite chose ?"'}
+                ? larbinMsg(deathReason === 'duel' || deathReason === 'ddr_duel' ? '"HAHAHAHA ! Tu as perdu le duel, [NAME] ! Tu veux vraiment continuer avec 10 PV ou t\'avoues-tu vaincu ?"' : '"HAHAHAHA ! Tu es mort, [NAME] ! Tu veux vraiment continuer cette mascarade ou t\'avoues-tu enfin vaincu ?"')
+                : deathReason === 'ddr_duel'
+                  ? '"HAHAHAHA ! Tu as perdu l\'épreuve de force ! Tu peux réessayer ou reconnaître ta défaite, petite chose."'
+                  : deathReason === 'duel'
+                    ? '"HAHAHAHA ! Tu as perdu le duel final. Tu peux réessayer avec 10 PV ou t\'avouer vaincu, petite chose."'
+                    : '"HAHAHAHA ! Tu es mort. Tu veux vraiment continuer ou t\'avoues-tu vaincu, petite chose ?"'}
             </div>
           </div>
           <div style={{ display:'flex', gap:'1rem', flexWrap:'wrap', justifyContent:'center' }}>
