@@ -1,17 +1,24 @@
 import { createClient } from '@/lib/supabase/server'
 import { getUserCached } from '@/lib/auth'
+import { withCache } from '@/lib/redis'
 import Countdown from '@/components/Countdown'
 import ExpBar from '@/components/ExpBar'
 import Poster from '@/components/Poster'
 import MarathonNotifyToggle from '@/components/MarathonNotifyToggle'
 import WelcomeBanner from '@/components/WelcomeBanner'
-import RankDisplay from '@/components/RankDisplay'
 import { getBadge, levelFromExp, CONFIG } from '@/lib/config'
 import { getServerConfig } from '@/lib/serverConfig'
 import type { ServerConfig } from '@/lib/serverConfig'
 import Link from 'next/link'
 
 export const revalidate = 60
+
+function withTimeout<T>(promise: PromiseLike<T>, ms = 3000): Promise<T | null> {
+  return Promise.race([
+    promise,
+    new Promise<null>(resolve => setTimeout(() => resolve(null), ms)),
+  ])
+}
 
 export default async function HomePage() {
   // auth dédupliqué (partagé avec layout, zéro roundtrip supplémentaire)
@@ -22,13 +29,16 @@ export default async function HomePage() {
   ])
   const live = new Date() >= cfg.MARATHON_START
 
-  // News + auth en parallèle (news ne dépend pas de l'auth)
-  const { data: newsList } = await (supabase as any)
-    .from('news')
-    .select('id, title, content, pinned, created_at, profiles(pseudo)')
-    .order('pinned', { ascending: false })
-    .order('created_at', { ascending: false })
-    .limit(5)
+  // News cachées 5 min — identiques pour tous les utilisateurs
+  const newsList = await withCache('news:latest', 300, async () => {
+    const { data } = await (supabase as any)
+      .from('news')
+      .select('id, title, content, pinned, created_at, profiles(pseudo)')
+      .order('pinned', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(5)
+    return data ?? []
+  })
 
   // Guest homepage
   if (!user) {
@@ -62,7 +72,7 @@ export default async function HomePage() {
           </Link>
         </div>
 
-        <NewsSection newsList={newsList ?? []} />
+        <NewsSection newsList={(newsList as any[]) ?? []} />
         <RulesSection cfg={cfg} />
       </div>
     )
@@ -91,14 +101,19 @@ export default async function HomePage() {
     return (
       <div>
         <Countdown marathonStart={cfg.MARATHON_START.toISOString()} />
-        <NewsSection newsList={newsList ?? []} />
+        <NewsSection newsList={(newsList as any[]) ?? []} />
         <RulesSection cfg={cfg} />
       </div>
     )
   }
 
+  const rankResult = await withTimeout(supabase
+    .from('profiles')
+    .select('id', { count: 'exact', head: true })
+    .gte('exp', profile.exp))
+
   const totalS1 = totalS1Count ?? 0
-  const rank = 1 // affiché côté client via RankDisplay (élimine 1 roundtrip séquentiel)
+  const rank = rankResult?.count ?? 1
   const watchedCount = watchedCountResult ?? 0
   const pct = totalS1 ? Math.round((watchedCount / totalS1) * 100) : 0
   const level = levelFromExp(profile.exp)
@@ -128,7 +143,7 @@ export default async function HomePage() {
           Bonjour, {profile.pseudo} 👋
         </div>
         <div style={{ color: 'var(--text2)', fontSize: '.83rem', marginTop: '.35rem', display: 'flex', alignItems: 'center', gap: '.6rem', flexWrap: 'wrap' }}>
-          Niveau {level} · {profile.exp} EXP · <RankDisplay fallback={rank} /> au classement
+          Niveau {level} · {profile.exp} EXP · #{rank} au classement
           {badge && (
             <span className={`badge-pill ${badge.cls}`} style={{ fontSize: '.7rem' }}>
               {badge.icon} {badge.label}
@@ -157,7 +172,7 @@ export default async function HomePage() {
         ))}
         <div className="stat">
           <div className="stat-l">Classement</div>
-          <div className="stat-v"><RankDisplay fallback={1} /></div>
+          <div className="stat-v">#{rank}</div>
         </div>
       </div>
 

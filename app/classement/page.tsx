@@ -1,15 +1,19 @@
 import { createClient } from '@/lib/supabase/server'
 import { getBadge } from '@/lib/config'
 import { getServerConfig } from '@/lib/serverConfig'
+import { getUserCached } from '@/lib/auth'
+import { withCache } from '@/lib/redis'
 import Countdown from '@/components/Countdown'
 import ClassementClient from './ClassementClient'
 
 export const revalidate = 60
 
 export default async function ClassementPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  const cfg = await getServerConfig()
+  const [user, cfg, supabase] = await Promise.all([
+    getUserCached(),
+    getServerConfig(),
+    createClient(),
+  ])
 
   const marathonLive = new Date() >= cfg.MARATHON_START
 
@@ -32,21 +36,34 @@ export default async function ClassementPage() {
     )
   }
 
-  const [{ data: ranked }, { data: marathonRanked }, { data: archives }, { data: activeBadges }] = await Promise.all([
-    (supabase as any).rpc('leaderboard', { limit_n: 100 }),
-    (supabase as any).rpc('marathon_leaderboard', { limit_n: 100 }),
-    (supabase as any).from('season_archives').select('*').order('saison', { ascending: false }).order('rank_global'),
-    supabase.from('profiles').select('id, active_badge'),
+  // Données publiques cachées — même pour tous les utilisateurs
+  const [ranked, marathonRanked, archives, activeBadges] = await Promise.all([
+    withCache('leaderboard:global', 60, async () => {
+      const { data } = await (supabase as any).rpc('leaderboard', { limit_n: 100 })
+      return data ?? []
+    }),
+    withCache('leaderboard:marathon', 60, async () => {
+      const { data } = await (supabase as any).rpc('marathon_leaderboard', { limit_n: 100 })
+      return data ?? []
+    }),
+    withCache('archives:all', 600, async () => {
+      const { data } = await (supabase as any).from('season_archives').select('*').order('saison', { ascending: false }).order('rank_global')
+      return data ?? []
+    }),
+    withCache('profiles:badges', 60, async () => {
+      const { data } = await supabase.from('profiles').select('id, active_badge')
+      return data ?? []
+    }),
   ])
 
   const activeBadgeMap: Record<string, string | null> = {}
-  ;(activeBadges ?? []).forEach((p: any) => { activeBadgeMap[p.id] = p.active_badge })
-  const rankedWithBadge = (ranked ?? []).map((u: any) => ({ ...u, active_badge: activeBadgeMap[u.id] ?? null }))
-  const marathonWithBadge = (marathonRanked ?? []).map((u: any) => ({ ...u, active_badge: activeBadgeMap[u.id] ?? null }))
+  ;(activeBadges as any[] ?? []).forEach((p: any) => { activeBadgeMap[p.id] = p.active_badge })
+  const rankedWithBadge = (ranked as any[] ?? []).map((u: any) => ({ ...u, active_badge: activeBadgeMap[u.id] ?? null }))
+  const marathonWithBadge = (marathonRanked as any[] ?? []).map((u: any) => ({ ...u, active_badge: activeBadgeMap[u.id] ?? null }))
 
   // Regrouper les archives par saison
   const archivesBySaison: Record<number, any[]> = {}
-  ;(archives ?? []).forEach((row: any) => {
+  ;(archives as any[] ?? []).forEach((row: any) => {
     if (!archivesBySaison[row.saison]) archivesBySaison[row.saison] = []
     archivesBySaison[row.saison].push(row)
   })
