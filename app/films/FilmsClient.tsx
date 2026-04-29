@@ -78,12 +78,21 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
   const [hov, setHov] = useState(0)
   const [negHov, setNegHov] = useState(0)
   const [posterErr, setPosterErr] = useState(false)
+  const [overview, setOverview] = useState<string | null>(null)
   const [ratePrompt, setRatePrompt] = useState(false)
   const [promptHov, setPromptHov] = useState(0)
   const [promptRating, setPromptRating] = useState(0)
   const [editingGenre, setEditingGenre] = useState(false)
   const [genreVal, setGenreVal] = useState(film.genre)
   const [reporting, setReporting] = useState(false)
+
+  // Lazy-load du synopsis — non inclus dans le chargement initial (450 films)
+  useEffect(() => {
+    fetch(`/api/films/${film.id}/overview`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.overview) setOverview(d.overview) })
+      .catch(() => {})
+  }, [film.id])
   const [reportReason, setReportReason] = useState('')
   const [wlDropOpen, setWlDropOpen] = useState(false)
   const [wlModalNewName, setWlModalNewName] = useState('')
@@ -279,10 +288,10 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
             {isWeekFilm && <span className="tag" style={{ color: 'var(--gold)', borderColor: 'rgba(232,196,106,.4)', fontWeight: 600 }}>⭐ Film de la semaine · +{CONFIG.EXP_FDLS} EXP</span>}
           </div>
 
-          {/* Synopsis */}
-          {(film as any).overview && (
+          {/* Synopsis — chargé à la demande */}
+          {overview && (
             <p style={{ fontSize: '.82rem', color: 'var(--text2)', lineHeight: 1.6, margin: '0 0 1.2rem', fontStyle: 'italic' }}>
-              {(film as any).overview}
+              {overview}
             </p>
           )}
 

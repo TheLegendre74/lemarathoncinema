@@ -21,7 +21,11 @@ export default async function FilmsPage() {
   // Données publiques cachées — identiques pour tous les utilisateurs
   const [films, profileCount, weekFilm, statsRows] = await Promise.all([
     withCache('films:list', 300, async () => {
-      const { data } = await supabase.from('films').select('*').eq('pending_admin_approval', false).order('titre')
+      const { data } = await supabase
+        .from('films')
+        .select('id, titre, annee, realisateur, genre, sousgenre, poster, saison, added_by, tmdb_id, flagged_18plus, flagged_16plus, flagged_18_pending, flagged_18strange, pending_admin_approval')
+        .eq('pending_admin_approval', false)
+        .order('titre')
       return data ?? []
     }),
     withCache('profiles:count', 300, async () => {

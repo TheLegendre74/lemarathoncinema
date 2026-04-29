@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { isMarathonLive, CONFIG } from '@/lib/config'
 import { getUnreadMessageCount as getUnreadMessageCountFromMessages } from '@/lib/messages'
+import { deleteCacheKeys } from '@/lib/redis'
 
 // ── TMDB VERIFICATION ────────────────────────────────────────
 
@@ -817,8 +818,7 @@ export async function adminRepairBrokenPosters(ids: number[]) {
     } catch { /* skip */ }
   }
 
-  revalidatePath('/films')
-  revalidatePath('/admin')
+  await invalidatePosterCaches()
   return { success: true, count, total: ids.length }
 }
 
@@ -1381,15 +1381,30 @@ type PosterLookupResult = {
   tmdbId?: number | null
 }
 
+const POSTER_CACHE_KEYS = ['films:list', 'film_stats', 'week_film:full', 'week_film:active']
+
+function hasUsablePosterValue(poster: string | null | undefined): poster is string {
+  return typeof poster === 'string' && poster.trim().length > 0
+}
+
+async function invalidatePosterCaches() {
+  revalidatePath('/films')
+  revalidatePath('/admin')
+  revalidatePath('/')
+  revalidatePath('/semaine')
+  await deleteCacheKeys(POSTER_CACHE_KEYS)
+}
+
 async function isPosterUrlBroken(posterUrl: string | null | undefined): Promise<boolean> {
-  if (!posterUrl) return true
+  if (!hasUsablePosterValue(posterUrl)) return true
+  const url = (posterUrl as string).trim()
   try {
-    let res = await fetch(posterUrl, { method: 'HEAD', signal: AbortSignal.timeout(5000), cache: 'no-store' })
+    let res = await fetch(url, { method: 'HEAD', signal: AbortSignal.timeout(5000), cache: 'no-store' })
     if (res.ok) return false
 
     // Some image hosts reject HEAD even when the image works.
     if ([403, 405, 501].includes(res.status)) {
-      res = await fetch(posterUrl, {
+      res = await fetch(url, {
         method: 'GET',
         headers: { Range: 'bytes=0-0' },
         signal: AbortSignal.timeout(6000),
@@ -1483,8 +1498,7 @@ export async function adminFetchFilmPoster(filmId: number) {
       ...(tmdbId && !film.tmdb_id ? { tmdb_id: tmdbId } : {}),
     }).eq('id', filmId)
 
-    revalidatePath('/films')
-    revalidatePath('/admin')
+    await invalidatePosterCaches()
     return { success: true, posterUrl }
   } catch {
     return { error: 'Erreur réseau lors de la recherche TMDB.' }
@@ -1523,8 +1537,7 @@ export async function adminUploadFilmPoster(filmId: number, formData: FormData) 
 
   await adminClient.from('films').update({ poster: publicUrl }).eq('id', filmId)
 
-  revalidatePath('/films')
-  revalidatePath('/admin')
+  await invalidatePosterCaches()
   return { success: true, posterUrl: publicUrl }
 }
 
@@ -1540,17 +1553,21 @@ export async function adminRefreshMissingPosters() {
 
   const { data: films } = await supabase
     .from('films')
-    .select('id, titre, annee, tmdb_id')
-    .is('poster', null)
+    .select('id, titre, annee, tmdb_id, poster')
+    .eq('pending_admin_approval', false)
     .order('id')
-    .limit(30)
+    .limit(80)
 
-  if (!films?.length) return { success: true, count: 0 }
+  const missingPosterFilms = (films ?? [])
+    .filter(film => !hasUsablePosterValue(film.poster))
+    .slice(0, 30)
+
+  if (!missingPosterFilms.length) return { success: true, count: 0 }
 
   const adminClient = createAdminClient()
   let count = 0
 
-  for (const film of films) {
+  for (const film of missingPosterFilms) {
     try {
       const { posterUrl: poster, tmdbId } = await findBestPosterForFilm(film, key)
       if (poster) {
@@ -1563,8 +1580,7 @@ export async function adminRefreshMissingPosters() {
     } catch { /* skip */ }
   }
 
-  revalidatePath('/films')
-  revalidatePath('/admin')
+  await invalidatePosterCaches()
   return { success: true, count }
 }
 
@@ -1638,8 +1654,7 @@ export async function adminFetchFrenchPosters(fromId: number = 0) {
   }
 
   const nextId = films.length === 40 ? films[films.length - 1].id : null
-  revalidatePath('/films')
-  revalidatePath('/admin')
+  await invalidatePosterCaches()
   return { success: true, count, nextId }
 }
 
@@ -1812,7 +1827,7 @@ export async function adminForceRefreshAllPosters(fromId: number = 0) {
 
   for (const film of films) {
     try {
-      const hasPoster = !!film.poster
+      const hasPoster = hasUsablePosterValue(film.poster)
       const needsPoster = !hasPoster || await isPosterUrlBroken(film.poster)
       if (!needsPoster) continue
       if (hasPoster) broken++
@@ -1831,8 +1846,7 @@ export async function adminForceRefreshAllPosters(fromId: number = 0) {
 
   const nextId = films.length === 30 ? films[films.length - 1].id : null
 
-  revalidatePath('/films')
-  revalidatePath('/admin')
+  await invalidatePosterCaches()
   return { success: true, count, checked: films.length, broken, missing, nextId }
 }
 
