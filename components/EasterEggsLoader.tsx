@@ -22,13 +22,34 @@ export default function EasterEggsLoader(props: EasterEggsLoaderProps) {
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    if ('requestIdleCallback' in window) {
-      const id = window.requestIdleCallback(() => setReady(true), { timeout: 1200 })
-      return () => window.cancelIdleCallback(id)
+    // Clippy actif → charger immédiatement (doit s'afficher dès le départ)
+    if (
+      localStorage.getItem('clippy_active') === '1' ||
+      localStorage.getItem('clippy_is_larbin') === '1'
+    ) {
+      setReady(true)
+      return
     }
 
-    const id = globalThis.setTimeout(() => setReady(true), 800)
-    return () => globalThis.clearTimeout(id)
+    const load = () => setReady(true)
+
+    // Charger au premier keystroke (l'utilisateur est en train de taper un code)
+    window.addEventListener('keydown', load, { once: true, capture: true })
+
+    // Fallback : charger après 5s d'inactivité max
+    let cancelIdle: () => void
+    if ('requestIdleCallback' in window) {
+      const id = window.requestIdleCallback(load, { timeout: 5000 })
+      cancelIdle = () => window.cancelIdleCallback(id)
+    } else {
+      const id = globalThis.setTimeout(load, 5000)
+      cancelIdle = () => globalThis.clearTimeout(id)
+    }
+
+    return () => {
+      window.removeEventListener('keydown', load, true)
+      cancelIdle()
+    }
   }, [])
 
   return ready ? <EasterEggs {...props} /> : null

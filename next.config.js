@@ -1,7 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  compress: true,          // gzip/brotli des assets JS/CSS
-  poweredByHeader: false,  // retire X-Powered-By inutile
+  compress: true,
+  poweredByHeader: false,
+  experimental: {
+    optimizePackageImports: ['phaser', 'pixi.js', '@pixi/core', '@pixi/display', '@pixi/renderer'],
+  },
   images: {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 86400, // posters et avatars changent rarement
