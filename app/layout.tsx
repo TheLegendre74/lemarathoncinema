@@ -31,6 +31,8 @@ import EasterEggsLoader from '@/components/EasterEggsLoader'
 import { getServerConfig } from '@/lib/serverConfig'
 import { getUnreadMessageCountForUser } from '@/lib/messages'
 import { getUserCached } from '@/lib/auth'
+import { Analytics } from '@vercel/analytics/next'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 
 export async function generateMetadata(): Promise<Metadata> {
   const cfg = await getServerConfig()
@@ -109,6 +111,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <Image src="/discord.png" alt="Discord" width={26} height={26} style={{ objectFit: 'contain' }} />
           </a>
         </ToastProvider>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   )
