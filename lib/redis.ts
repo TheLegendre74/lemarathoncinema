@@ -63,3 +63,22 @@ export async function withCache<T>(
 
   return data
 }
+
+export async function deleteCacheKeys(keys: string[]) {
+  let client: Awaited<ReturnType<typeof getClient>> = null
+  try {
+    client = await Promise.race([
+      getClient(),
+      new Promise<null>(resolve => setTimeout(() => resolve(null), 500)),
+    ])
+  } catch {}
+
+  if (!client) return
+
+  try {
+    await Promise.race([
+      client.del(keys),
+      new Promise<null>(resolve => setTimeout(() => resolve(null), 400)),
+    ])
+  } catch {}
+}
