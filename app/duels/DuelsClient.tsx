@@ -70,7 +70,7 @@ function DuelCard({ duel, profile, myVote, v1, v2, allVotes }: {
               <div style={SideStyle(f.id)} onClick={() => handleVote(f.id)}>
                 <div style={{ width: 120, height: 180, borderRadius: 'var(--r)', overflow: 'hidden', background: 'var(--bg3)', border: `2px solid ${myVote === f.id ? 'var(--gold)' : winner?.id === f.id ? 'var(--green)' : 'var(--border)'}`, transition: 'border-color .2s' }}>
                   {f.poster
-                    ? <Image src={f.poster} alt={f.titre} width={120} height={180} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
+                    ? <Image src={f.poster} alt={f.titre} width={120} height={180} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized />
                     : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>🎬</div>
                   }
                 </div>

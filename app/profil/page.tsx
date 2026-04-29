@@ -181,7 +181,7 @@ export default async function ProfilPage({ searchParams }: { searchParams: Promi
                     <div key={`pre-${w.film_id}`} style={{ display: 'flex', alignItems: 'center', gap: '.9rem', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.65rem .9rem' }}>
                       <div style={{ width: 30, height: 45, borderRadius: 4, overflow: 'hidden', flexShrink: 0, background: 'var(--bg3)' }}>
                         {film.poster
-                          ? <Image src={film.poster} alt={film.titre} width={30} height={45} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
+                          ? <Image src={film.poster} alt={film.titre} width={30} height={45} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized />
                           : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.8rem' }}>🎬</div>
                         }
                       </div>
@@ -218,7 +218,7 @@ export default async function ProfilPage({ searchParams }: { searchParams: Promi
                     <div key={`marathon-${w.film_id}`} style={{ display: 'flex', alignItems: 'center', gap: '.9rem', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.65rem .9rem' }}>
                       <div style={{ width: 30, height: 45, borderRadius: 4, overflow: 'hidden', flexShrink: 0, background: 'var(--bg3)' }}>
                         {film.poster
-                          ? <Image src={film.poster} alt={film.titre} width={30} height={45} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
+                          ? <Image src={film.poster} alt={film.titre} width={30} height={45} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized />
                           : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.8rem' }}>🎬</div>
                         }
                       </div>

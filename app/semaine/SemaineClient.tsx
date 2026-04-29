@@ -101,7 +101,7 @@ export default function SemaineClient({ profile, weekFilm, film, isWatched, watc
                     <>
                       {watchProviders.flatrate?.map((p) => (
                         <a key={p.provider_id} href={`https://www.justwatch.com/fr/films?q=${encodeURIComponent(film.titre)}`} target="_blank" rel="noopener noreferrer" className="streaming-platform">
-                          <Image src={`https://image.tmdb.org/t/p/original${p.logo_path}`} alt={p.provider_name} width={32} height={32} style={{ borderRadius: 6, objectFit: 'cover' }} />
+                          <Image src={`https://image.tmdb.org/t/p/w92${p.logo_path}`} alt={p.provider_name} width={32} height={32} style={{ borderRadius: 6, objectFit: 'cover' }} unoptimized />
                           <span style={{ flex: 1, fontSize: '.88rem', fontWeight: 500, color: 'var(--text)' }}>{p.provider_name}</span>
                           <span className="sp-type svod">Abonnement</span>
                           <span style={{ fontSize: '.8rem', color: 'var(--text3)' }}>↗</span>
@@ -112,7 +112,7 @@ export default function SemaineClient({ profile, weekFilm, film, isWatched, watc
                         const seen = new Set<number>()
                         return rentBuy.filter(p => { if (seen.has(p.provider_id)) return false; seen.add(p.provider_id); return true }).map((p) => (
                           <a key={p.provider_id} href={`https://www.justwatch.com/fr/films?q=${encodeURIComponent(film.titre)}`} target="_blank" rel="noopener noreferrer" className="streaming-platform">
-                            <Image src={`https://image.tmdb.org/t/p/original${p.logo_path}`} alt={p.provider_name} width={32} height={32} style={{ borderRadius: 6, objectFit: 'cover' }} />
+                            <Image src={`https://image.tmdb.org/t/p/w92${p.logo_path}`} alt={p.provider_name} width={32} height={32} style={{ borderRadius: 6, objectFit: 'cover' }} unoptimized />
                             <span style={{ flex: 1, fontSize: '.88rem', fontWeight: 500, color: 'var(--text)' }}>{p.provider_name}</span>
                             <span className="sp-type tvod">Location/Achat</span>
                             <span style={{ fontSize: '.8rem', color: 'var(--text3)' }}>↗</span>

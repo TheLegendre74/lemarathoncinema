@@ -7,7 +7,7 @@ const nextConfig = {
   },
   images: {
     formats: ['image/avif', 'image/webp'],
-    minimumCacheTTL: 86400, // posters et avatars changent rarement
+    minimumCacheTTL: 604800, // 7 jours — posters et avatars changent très rarement
     remotePatterns: [
       {
         protocol: 'https',

@@ -158,7 +158,7 @@ function FilmRow({ film, avg, count, rank, mode }: { film: Film; avg: number; co
       </div>
       <div style={{ width: 36, height: 54, borderRadius: 5, overflow: 'hidden', flexShrink: 0, background: 'var(--bg3)' }}>
         {film.poster
-          ? <Image src={film.poster} alt={film.titre} width={36} height={54} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
+          ? <Image src={film.poster} alt={film.titre} width={36} height={54} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized />
           : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>🎬</div>
         }
       </div>
