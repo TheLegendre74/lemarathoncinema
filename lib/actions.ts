@@ -554,6 +554,7 @@ export async function markWatched(filmId: number, pre: boolean) {
     if (!pre) {
       await supabase.rpc('decrement_exp', { user_id: user.id, amount: CONFIG.EXP_FILM })
     }
+    await deleteCacheKeys([`user:${user.id}:watched_count`, `user:${user.id}:profile`])
     revalidatePath('/films')
     return { action: 'removed' }
   }
@@ -572,6 +573,7 @@ export async function markWatched(filmId: number, pre: boolean) {
   if (!pre) {
     await supabase.rpc('increment_exp', { user_id: user.id, amount: CONFIG.EXP_FILM })
   }
+  await deleteCacheKeys([`user:${user.id}:watched_count`, `user:${user.id}:profile`])
   revalidatePath('/films')
   return { action: 'added', pre }
 }
@@ -605,6 +607,7 @@ export async function toggleWatched(filmId: number, filmTitre: string) {
     if (!existing.pre) {
       await supabase.rpc('decrement_exp', { user_id: user.id, amount: CONFIG.EXP_FILM })
     }
+    await deleteCacheKeys([`user:${user.id}:watched_count`, `user:${user.id}:profile`])
     revalidatePath('/films')
     return { action: 'removed' }
   } else {
@@ -618,6 +621,7 @@ export async function toggleWatched(filmId: number, filmTitre: string) {
       const exp = wf ? CONFIG.EXP_FDLS : (duel ? CONFIG.EXP_DUEL_WIN : CONFIG.EXP_FILM)
       await supabase.rpc('increment_exp', { user_id: user.id, amount: exp })
     }
+    await deleteCacheKeys([`user:${user.id}:watched_count`, `user:${user.id}:profile`])
     revalidatePath('/films')
     return { action: 'added', pre }
   }
@@ -987,6 +991,7 @@ export async function setActiveBadge(badgeId: string | null) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non connecté' }
   await supabase.from('profiles').update({ active_badge: badgeId } as any).eq('id', user.id)
+  await deleteCacheKeys([`user:${user.id}:profile`])
   revalidatePath('/profil')
   revalidatePath('/classement')
   return { success: true }
@@ -1140,6 +1145,7 @@ export async function adminGrantExp(userId: string, amount: number) {
   if (!profile?.is_admin) return { error: 'Non autorisé.' }
 
   await supabase.rpc('increment_exp', { user_id: userId, amount })
+  await deleteCacheKeys([`user:${userId}:profile`])
   revalidatePath('/admin')
   revalidatePath('/classement')
   return { success: true }
@@ -1880,6 +1886,7 @@ export async function discoverEgg(eggId: string) {
     { user_id: user.id, egg_id: eggId },
     { onConflict: 'user_id,egg_id', ignoreDuplicates: true }
   )
+  await deleteCacheKeys([`user:${user.id}:eggs`])
 }
 
 export async function unlockAgentOfChaos() {
@@ -1899,6 +1906,7 @@ export async function unlockAgentOfChaos() {
   if (!hasSpecialEquipped) {
     await supabase.from('profiles').update({ active_badge: 'agent-of-chaos' } as any).eq('id', user.id)
   }
+  await deleteCacheKeys([`user:${user.id}:eggs`, `user:${user.id}:profile`])
   revalidatePath('/profil')
   revalidatePath('/classement')
   revalidatePath('/marathoniens')
@@ -1920,6 +1928,7 @@ export async function unlockClippyMaster() {
   if (!hasHigherPriority) {
     await supabase.from('profiles').update({ active_badge: 'legende-vivante' } as any).eq('id', user.id)
   }
+  await deleteCacheKeys([`user:${user.id}:eggs`, `user:${user.id}:profile`])
   revalidatePath('/profil')
   revalidatePath('/classement')
   revalidatePath('/marathoniens')
@@ -3040,6 +3049,7 @@ export async function sendMessage(recipientId: string, content: string) {
     .insert({ sender_id: user.id, recipient_id: recipientId, content: safe })
   if (error) return { error: error.message }
 
+  await deleteCacheKeys([`user:${recipientId}:unread`])
   revalidatePath('/profil')
   revalidatePath('/messages')
   return { success: true }

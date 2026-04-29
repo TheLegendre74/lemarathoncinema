@@ -31,6 +31,7 @@ import EasterEggsLoader from '@/components/EasterEggsLoader'
 import { getServerConfig } from '@/lib/serverConfig'
 import { getUnreadMessageCountForUser } from '@/lib/messages'
 import { getUserCached } from '@/lib/auth'
+import { withCache } from '@/lib/redis'
 
 export async function generateMetadata(): Promise<Metadata> {
   const cfg = await getServerConfig()
@@ -54,18 +55,29 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   let unreadMessages = 0
   let watchedCount = 0
   if (user) {
-    const [{ data: profileData }, { data: eggs }, unread, { count }] = await Promise.all([
-      supabase.from('profiles').select('id, pseudo, avatar_url, exp, active_badge, is_admin, saison, created_at, updated_at, marathon_blocked_until').eq('id', user.id).single(),
-      supabase.from('discovered_eggs').select('egg_id').eq('user_id', user.id).in('egg_id', ['rageux', 'tamagotchi', 'clippy']),
-      getUnreadMessageCountForUser(user.id, supabase),
-      supabase.from('watched').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+    const [profileData, eggs, unread, watchedResult] = await Promise.all([
+      withCache(`user:${user.id}:profile`, 60, async () => {
+        const { data } = await supabase.from('profiles').select('id, pseudo, avatar_url, exp, active_badge, is_admin, saison, created_at, updated_at, marathon_blocked_until').eq('id', user.id).single()
+        return data
+      }),
+      withCache(`user:${user.id}:eggs`, 60, async () => {
+        const { data } = await supabase.from('discovered_eggs').select('egg_id').eq('user_id', user.id).in('egg_id', ['rageux', 'tamagotchi', 'clippy'])
+        return data ?? []
+      }),
+      withCache(`user:${user.id}:unread`, 15, () =>
+        getUnreadMessageCountForUser(user.id, supabase)
+      ),
+      withCache(`user:${user.id}:watched_count`, 60, async () => {
+        const { count } = await supabase.from('watched').select('id', { count: 'exact', head: true }).eq('user_id', user.id)
+        return count ?? 0
+      }),
     ])
     profile = profileData
     hasRageuxEgg = (eggs ?? []).some((e: any) => e.egg_id === 'rageux')
     hasTamagotchiEgg = (eggs ?? []).some((e: any) => e.egg_id === 'tamagotchi')
     hasClippyEgg = (eggs ?? []).some((e: any) => e.egg_id === 'clippy')
-    unreadMessages = unread
-    watchedCount = count ?? 0
+    unreadMessages = unread ?? 0
+    watchedCount = watchedResult ?? 0
   }
 
   const eeConfig = {
