@@ -1,46 +1,53 @@
-import { Redis } from '@upstash/redis'
+import { createClient } from 'redis'
 
-function createRedisClient(): Redis | null {
-  // Format standard Upstash (UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN)
-  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
-    return new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN,
-    })
+// Connexion réutilisée entre les requêtes (Vercel Fluid Compute)
+let _client: ReturnType<typeof createClient> | null = null
+
+async function getClient() {
+  if (!process.env.REDIS_URL) return null
+
+  if (_client?.isReady) return _client
+
+  try {
+    const client = createClient({ url: process.env.REDIS_URL })
+    client.on('error', () => {}) // erreurs silencieuses
+
+    await Promise.race([
+      client.connect(),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000)),
+    ])
+
+    _client = client
+    return _client
+  } catch {
+    _client = null
+    return null
   }
-
-  // Format Vercel Storage : rediss://default:TOKEN@HOST.upstash.io:PORT
-  if (process.env.REDIS_URL) {
-    try {
-      const parsed = new URL(process.env.REDIS_URL)
-      const token = parsed.password          // le token est dans le mot de passe
-      const restUrl = `https://${parsed.hostname}`  // REST API = même host, https
-      if (token && parsed.hostname.includes('upstash')) {
-        return new Redis({ url: restUrl, token })
-      }
-    } catch {}
-  }
-
-  return null
 }
 
-export const redis = createRedisClient()
-
-// Cache avec fallback silencieux — si Redis est down, on fetch directement
-// Ne cache jamais null/undefined (timeout Supabase, erreur réseau)
+// Cache avec fallback silencieux — si Redis est down, on fetch directement Supabase
+// Ne cache jamais null/undefined (timeout ou erreur)
 export async function withCache<T>(
   key: string,
   ttlSeconds: number,
   fn: () => Promise<T>
 ): Promise<T> {
-  if (!redis) return fn()
+  let client: Awaited<ReturnType<typeof getClient>> = null
+  try {
+    client = await Promise.race([
+      getClient(),
+      new Promise<null>(resolve => setTimeout(() => resolve(null), 500)),
+    ])
+  } catch {}
+
+  if (!client) return fn()
 
   try {
     const cached = await Promise.race([
-      redis.get<T>(key),
+      client.get(key),
       new Promise<null>(resolve => setTimeout(() => resolve(null), 400)),
-    ]) as T | null
-    if (cached !== null && cached !== undefined) return cached
+    ])
+    if (cached) return JSON.parse(cached) as T
   } catch {}
 
   const data = await fn()
@@ -48,7 +55,7 @@ export async function withCache<T>(
   if (data !== null && data !== undefined) {
     try {
       await Promise.race([
-        redis.set(key, data, { ex: ttlSeconds }),
+        client.setEx(key, ttlSeconds, JSON.stringify(data)),
         new Promise<null>(resolve => setTimeout(() => resolve(null), 400)),
       ])
     } catch {}

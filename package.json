@@ -21,6 +21,7 @@
     "pixi.js": "^8.18.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "redis": "^5.12.1",
     "resend": "^6.10.0"
   },
   "devDependencies": {
