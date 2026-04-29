@@ -88,6 +88,7 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
 
   // Lazy-load du synopsis — non inclus dans le chargement initial (450 films)
   useEffect(() => {
+    setOverview(null)
     fetch(`/api/films/${film.id}/overview`)
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.overview) setOverview(d.overview) })

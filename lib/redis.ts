@@ -2,27 +2,52 @@ import { createClient } from 'redis'
 
 // Connexion réutilisée entre les requêtes (Vercel Fluid Compute)
 let _client: ReturnType<typeof createClient> | null = null
+let _connectPromise: Promise<ReturnType<typeof createClient> | null> | null = null
+let _disabledUntil = 0
+
+const CONNECT_TIMEOUT_MS = 250
+const OP_TIMEOUT_MS = 250
+const FAILURE_COOLDOWN_MS = 15_000
+
+function timeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>(resolve => setTimeout(() => resolve(fallback), ms)),
+  ])
+}
 
 async function getClient() {
   if (!process.env.REDIS_URL) return null
+  if (Date.now() < _disabledUntil) return null
 
   if (_client?.isReady) return _client
+  if (_connectPromise) return _connectPromise
 
-  try {
+  _connectPromise = (async () => {
     const client = createClient({ url: process.env.REDIS_URL })
     client.on('error', () => {}) // erreurs silencieuses
 
-    await Promise.race([
-      client.connect(),
-      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000)),
-    ])
+    try {
+      const connected = await timeout(
+        client.connect().then(() => client).catch(() => null),
+        CONNECT_TIMEOUT_MS,
+        null
+      )
 
-    _client = client
-    return _client
-  } catch {
-    _client = null
-    return null
-  }
+      if (!connected?.isReady) {
+        try { await client.disconnect() } catch {}
+        _disabledUntil = Date.now() + FAILURE_COOLDOWN_MS
+        return null
+      }
+
+      _client = connected
+      return _client
+    } finally {
+      _connectPromise = null
+    }
+  })()
+
+  return _connectPromise
 }
 
 // Cache avec fallback silencieux — si Redis est down, on fetch directement Supabase
@@ -34,19 +59,21 @@ export async function withCache<T>(
 ): Promise<T> {
   let client: Awaited<ReturnType<typeof getClient>> = null
   try {
-    client = await Promise.race([
+    client = await timeout(
       getClient(),
-      new Promise<null>(resolve => setTimeout(() => resolve(null), 500)),
-    ])
+      OP_TIMEOUT_MS,
+      null
+    )
   } catch {}
 
   if (!client) return fn()
 
   try {
-    const cached = await Promise.race([
+    const cached = await timeout(
       client.get(key),
-      new Promise<null>(resolve => setTimeout(() => resolve(null), 400)),
-    ])
+      OP_TIMEOUT_MS,
+      null
+    )
     if (cached) return JSON.parse(cached) as T
   } catch {}
 
@@ -54,10 +81,11 @@ export async function withCache<T>(
 
   if (data !== null && data !== undefined) {
     try {
-      await Promise.race([
+      await timeout(
         client.setEx(key, ttlSeconds, JSON.stringify(data)),
-        new Promise<null>(resolve => setTimeout(() => resolve(null), 400)),
-      ])
+        OP_TIMEOUT_MS,
+        null
+      )
     } catch {}
   }
 
@@ -67,18 +95,20 @@ export async function withCache<T>(
 export async function deleteCacheKeys(keys: string[]) {
   let client: Awaited<ReturnType<typeof getClient>> = null
   try {
-    client = await Promise.race([
+    client = await timeout(
       getClient(),
-      new Promise<null>(resolve => setTimeout(() => resolve(null), 500)),
-    ])
+      OP_TIMEOUT_MS,
+      null
+    )
   } catch {}
 
   if (!client) return
 
   try {
-    await Promise.race([
+    await timeout(
       client.del(keys),
-      new Promise<null>(resolve => setTimeout(() => resolve(null), 400)),
-    ])
+      OP_TIMEOUT_MS,
+      null
+    )
   } catch {}
 }
