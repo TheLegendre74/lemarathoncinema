@@ -1,9 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
+import { getUserCached } from '@/lib/auth'
 import Countdown from '@/components/Countdown'
 import ExpBar from '@/components/ExpBar'
 import Poster from '@/components/Poster'
 import MarathonNotifyToggle from '@/components/MarathonNotifyToggle'
 import WelcomeBanner from '@/components/WelcomeBanner'
+import RankDisplay from '@/components/RankDisplay'
 import { getBadge, levelFromExp, CONFIG } from '@/lib/config'
 import { getServerConfig } from '@/lib/serverConfig'
 import type { ServerConfig } from '@/lib/serverConfig'
@@ -12,12 +14,15 @@ import Link from 'next/link'
 export const revalidate = 60
 
 export default async function HomePage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  const cfg = await getServerConfig()
+  // auth dédupliqué (partagé avec layout, zéro roundtrip supplémentaire)
+  const [user, cfg, supabase] = await Promise.all([
+    getUserCached(),
+    getServerConfig(),
+    createClient(),
+  ])
   const live = new Date() >= cfg.MARATHON_START
 
-  // News (public)
+  // News + auth en parallèle (news ne dépend pas de l'auth)
   const { data: newsList } = await (supabase as any)
     .from('news')
     .select('id, title, content, pinned, created_at, profiles(pseudo)')
@@ -92,13 +97,8 @@ export default async function HomePage() {
     )
   }
 
-  // rankCount dépend de profile.exp → requête seule (inévitable)
-  const { count: rankCount } = await supabase
-    .from('profiles')
-    .select('id', { count: 'exact', head: true })
-    .gte('exp', profile.exp)
   const totalS1 = totalS1Count ?? 0
-  const rank = rankCount ?? 1
+  const rank = 1 // affiché côté client via RankDisplay (élimine 1 roundtrip séquentiel)
   const watchedCount = watchedCountResult ?? 0
   const pct = totalS1 ? Math.round((watchedCount / totalS1) * 100) : 0
   const level = levelFromExp(profile.exp)
@@ -128,7 +128,7 @@ export default async function HomePage() {
           Bonjour, {profile.pseudo} 👋
         </div>
         <div style={{ color: 'var(--text2)', fontSize: '.83rem', marginTop: '.35rem', display: 'flex', alignItems: 'center', gap: '.6rem', flexWrap: 'wrap' }}>
-          Niveau {level} · {profile.exp} EXP · #{rank} au classement
+          Niveau {level} · {profile.exp} EXP · <RankDisplay fallback={rank} /> au classement
           {badge && (
             <span className={`badge-pill ${badge.cls}`} style={{ fontSize: '.7rem' }}>
               {badge.icon} {badge.label}
@@ -149,13 +149,16 @@ export default async function HomePage() {
           { label: 'Films vus', value: watchedCount, cls: 'green' },
           { label: 'Votes duels', value: votesCount ?? 0, cls: 'blue' },
           { label: 'Progression', value: `${pct}%`, cls: 'gold' },
-          { label: 'Classement', value: `#${rank}`, cls: '' },
         ].map(s => (
           <div key={s.label} className="stat">
             <div className="stat-l">{s.label}</div>
             <div className={`stat-v ${s.cls}`}>{s.value}</div>
           </div>
         ))}
+        <div className="stat">
+          <div className="stat-l">Classement</div>
+          <div className="stat-v"><RankDisplay fallback={1} /></div>
+        </div>
       </div>
 
       {/* Progress bar */}
@@ -308,8 +311,8 @@ function RulesSection({ cfg }: { cfg?: ServerConfig }) {
 
   const resolvedCfg = cfg ?? ({ ...CONFIG, ACCUEIL_SOUS_TITRE: '', MARATHON_RULES: null } as any)
 
-  const card = (children: React.ReactNode) => (
-    <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '1.1rem 1.3rem', marginBottom: '.7rem' }}>
+  const card = (children: React.ReactNode, key?: React.Key) => (
+    <div key={key} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '1.1rem 1.3rem', marginBottom: '.7rem' }}>
       {children}
     </div>
   )
@@ -337,7 +340,7 @@ function RulesSection({ cfg }: { cfg?: ServerConfig }) {
     <div style={{ marginBottom: '2rem' }}>
       <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', marginBottom: '1.2rem' }}>Les règles du jeu</div>
       {cards.map((c, i) => card(
-        <div key={i}>
+        <div>
           {h(c.emoji, c.title)}
           {c.text  && p(c.text)}
           {c.intro && p(c.intro)}
@@ -348,7 +351,8 @@ function RulesSection({ cfg }: { cfg?: ServerConfig }) {
           )}
           {c.after && p(c.after)}
           {c.table && c.table.length > 0 && renderTable(c.table)}
-        </div>
+        </div>,
+        `${c.title}-${i}`,
       ))}
     </div>
   )

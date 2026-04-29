@@ -30,6 +30,7 @@ import { ToastProvider } from '@/components/ToastProvider'
 import EasterEggsLoader from '@/components/EasterEggsLoader'
 import { getServerConfig } from '@/lib/serverConfig'
 import { getUnreadMessageCountForUser } from '@/lib/messages'
+import { getUserCached } from '@/lib/auth'
 
 export async function generateMetadata(): Promise<Metadata> {
   const cfg = await getServerConfig()
@@ -40,9 +41,11 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  const cfg = await getServerConfig()
+  const [user, cfg, supabase] = await Promise.all([
+    getUserCached(),
+    getServerConfig(),
+    createClient(),
+  ])
 
   let profile = null
   let hasRageuxEgg = false
