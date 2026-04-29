@@ -36,7 +36,10 @@ export async function withCache<T>(
   if (!redis) return fn()
 
   try {
-    const cached = await redis.get<T>(key)
+    const cached = await Promise.race([
+      redis.get<T>(key),
+      new Promise<null>(resolve => setTimeout(() => resolve(null), 400)),
+    ]) as T | null
     if (cached !== null && cached !== undefined) return cached
   } catch {}
 
@@ -44,7 +47,10 @@ export async function withCache<T>(
 
   if (data !== null && data !== undefined) {
     try {
-      await redis.set(key, data, { ex: ttlSeconds })
+      await Promise.race([
+        redis.set(key, data, { ex: ttlSeconds }),
+        new Promise<null>(resolve => setTimeout(() => resolve(null), 400)),
+      ])
     } catch {}
   }
 
