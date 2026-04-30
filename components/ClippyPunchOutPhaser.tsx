@@ -13,7 +13,7 @@ const P_GLOVE_LEFT    = 'pGloveLeft'
 const P_GLOVE_RIGHT   = 'pGloveRight'
 
 // ── Timing (tutoriel = délais généreux) ───────────────────────────────────────
-const COUNTER_WIN_MS  = 1100   // fenêtre de contre
+const COUNTER_WIN_MS  = 1500   // fenêtre de contre
 const PLAYER_MAX_HP   = 30
 
 // ── Séquence tutoriel : 5 attaques scriptées ──────────────────────────────────
@@ -60,12 +60,12 @@ const DODGE_FOR: Record<Attack, string> = { left: 'right', right: 'left', body: 
 
 type Diff = { telMs: number; atkMs: number; dmgMin: number; dmgMax: number; label: string }
 function getDiff(hp: number, maxHP: number): Diff {
-  if (hp <= 3)                       return { telMs: 1800, atkMs: 1500, dmgMin: 5, dmgMax: 7,  label: '⚠️ RAGE MODE' }
-  if (hp <= Math.ceil(maxHP * 0.35)) return { telMs: 2200, atkMs: 1800, dmgMin: 4, dmgMax: 5,  label: '🔥 DANGER'    }
-  return                                    { telMs: 2800, atkMs: 2200, dmgMin: 3, dmgMax: 4,  label: ''            }
+  if (hp <= 3)                       return { telMs: 1000, atkMs: 1500, dmgMin: 5, dmgMax: 7,  label: '⚠️ RAGE MODE' }
+  if (hp <= Math.ceil(maxHP * 0.35)) return { telMs: 1000, atkMs: 1500, dmgMin: 4, dmgMax: 5,  label: '🔥 DANGER'    }
+  return                                    { telMs: 1000, atkMs: 1500, dmgMin: 3, dmgMax: 4,  label: ''            }
 }
-// Tutoriel : fenêtres très larges pour apprendre sans pression
-const TUT_DIFF: Diff = { telMs: 3400, atkMs: 2800, dmgMin: 0, dmgMax: 0, label: 'ENTRAÎNEMENT' }
+// Tutoriel : flèche 2 s, fenêtre 2 s pour apprendre
+const TUT_DIFF: Diff = { telMs: 2000, atkMs: 2000, dmgMin: 0, dmgMax: 0, label: 'ENTRAÎNEMENT' }
 
 const TAUNTS_IDLE = [
   'Veux-tu de l\'aide pour PERDRE ?',
@@ -222,8 +222,8 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
           const guardRatio = guardSrc.naturalHeight && guardSrc.naturalWidth
             ? guardSrc.naturalHeight / guardSrc.naturalWidth
             : 0.38
-          const guardH = Math.round(W * guardRatio)
-          const guardY = Math.round(H - guardH * 0.42)
+          const guardH = Math.round(W * guardRatio * 0.62)   // réduit de ~38 %
+          const guardY = Math.round(H - guardH * 0.38)
           this.pGloveGuard = this.add.image(W / 2, guardY, P_GLOVE_DEFAULT)
             .setDisplaySize(W, guardH).setDepth(7)
 
@@ -392,18 +392,9 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
         refreshCtrl() {
           const s = this.gs, a = this.atk
           if (s === 'telegraph') {
-            const names: Record<Attack, string> = {
-              left:  '🥊  CROCHET GAUCHE',
-              right: '🥊  CROCHET DROIT',
-              body:  '💥  DIRECT AU CORPS',
-            }
-            const hints: Record<Attack, string> = {
-              left:  'Esquivez à DROITE  →  [ D / → ]',
-              right: 'Esquivez à GAUCHE  ←  [ A / ← ]',
-              body:  'Baissez la tête    ↓  [ S / ↓ ]',
-            }
-            this.tAction.setText(a ? names[a] : '').setColor('#ffaa00')
-            this.tHint.setText(a ? hints[a] : '').setColor('#ffee55')
+            // Pas de texte — la flèche visuelle suffit
+            this.tAction.setText('')
+            this.tHint.setText('')
           } else if (s === 'attack') {
             const hints: Record<Attack, string> = {
               left:  '→  [ D / → ]',
@@ -755,33 +746,41 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
           })
         }
 
-        // Flèches d'esquive latérales — indiquent la direction à appuyer
+        // Flèches d'esquive — petites en repos, grande flèche centrale pendant telegraph/attack
         drawDodgeArrows() {
           const g = this.gArrows
-          const active   = this.gs === 'telegraph' || this.gs === 'attack'
           const W = this.W, H = this.H
-          const midY = Math.round(H * 0.50)
-          const arrowSize = Math.round(W * 0.040)
+          const isTel    = this.gs === 'telegraph'
+          const isAtk    = this.gs === 'attack'
+          const active   = isTel || isAtk
+          const midY     = Math.round(H * 0.50)
+          const smallSz  = Math.round(W * 0.030)
 
-          // Quelle flèche doit briller ?
-          const leftActive  = active && this.atk === 'right'  // dodge gauche
-          const rightActive = active && this.atk === 'left'   // dodge droite
-          const downActive  = active && this.atk === 'body'   // dodge bas
+          // Petites flèches guides aux bords (toujours visibles, très discrètes)
+          this.drawArrow(g, Math.round(W * 0.038), midY, 'left',  smallSz, 0x445566, 0.22)
+          this.drawArrow(g, Math.round(W * 0.962), midY, 'right', smallSz, 0x445566, 0.22)
+          this.drawArrow(g, Math.round(W * 0.500), Math.round(H * 0.60), 'down', smallSz, 0x445566, 0.22)
 
-          // ← gauche
-          const laAlpha = leftActive  ? 0.90 : 0.18
-          const laCol   = leftActive  ? 0x44ccff : 0x556677
-          this.drawArrow(g, Math.round(W * 0.040), midY, 'left',  arrowSize, laCol, laAlpha)
+          if (!active || !this.atk) return
 
-          // → droite
-          const raAlpha = rightActive ? 0.90 : 0.18
-          const raCol   = rightActive ? 0x44ccff : 0x556677
-          this.drawArrow(g, Math.round(W * 0.960), midY, 'right', arrowSize, raCol, raAlpha)
+          // Grande flèche centrale qui indique la direction d'esquive
+          const dir: 'left'|'right'|'down' =
+            this.atk === 'right' ? 'left' :
+            this.atk === 'left'  ? 'right' : 'down'
 
-          // ↓ bas (centré)
-          const daAlpha = downActive  ? 0.90 : 0.18
-          const daCol   = downActive  ? 0x44ccff : 0x556677
-          this.drawArrow(g, Math.round(W * 0.500), Math.round(H * 0.61), 'down', arrowSize, daCol, daAlpha)
+          const sz     = Math.round(W * 0.095)   // grande
+          const col    = isAtk ? 0xff3300 : 0xffcc00
+          const alpha  = isAtk ? 0.95 : 0.80 + Math.sin(this.eyePulse * Math.PI) * 0.18
+
+          // Position : centré horizontalement, verticalement entre Clippy et le HUD
+          const cx = W / 2
+          const cy = Math.round(H * (dir === 'down' ? 0.60 : 0.52))
+
+          // Halo derrière la flèche
+          g.fillStyle(col, (isAtk ? 0.18 : 0.12))
+          g.fillCircle(cx, cy, sz * 1.6)
+
+          this.drawArrow(g, cx, cy, dir, sz, col, alpha)
         }
 
         drawArrow(g: Phaser.GameObjects.Graphics, x: number, y: number, dir: 'left'|'right'|'down', size: number, col: number, alpha: number) {
