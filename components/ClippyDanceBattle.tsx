@@ -34,6 +34,12 @@ const FEVER_X4      = 50     // ×4
 const FLAME_AT      = 20     // flammes CSS apparaissent
 const FEVER_MS      = 10000  // durée fever (réinitialisée à chaque upgrade)
 const AHEAD_MS      = 420    // ms avant hit pour illuminer la lane
+const FEVER_CHALLENGE_MS = 30000
+const FEVER_BEAT_MS = 545
+const FEVER_BASE_DENSITY_MULTIPLIER = 2
+const FEVER_SURVIVAL_STEP_MS = 15000
+const FEVER_SURVIVAL_STEP_MULTIPLIER = 1.5
+const FEVER_TRACK_END_FALLBACK_MS = 180000
 
 // ── Dialogues Clippy quand le joueur fait un run parfait ──────────────────────
 const PERFECT_RAGE_LINES = [
@@ -46,7 +52,7 @@ const PERFECT_RAGE_LINES = [
 
 // ── Beatmap Fever Night (30 sec, 110 BPM, densité ×3, chords) ─────────────────
 const FEVER_BEATMAP: DanceNote[] = (() => {
-  const B = 545
+  const B = FEVER_BEAT_MS
   const D = ['left', 'down', 'up', 'right'] as const
   const seq  = [0, 2, 1, 3, 0, 3, 1, 2, 2, 0, 3, 1, 1, 3, 0, 2] as const
   const cseq = [2, 0, 3, 1, 2, 1, 3, 0, 0, 3, 1, 2, 3, 1, 2, 0] as const
@@ -67,6 +73,9 @@ const FEVER_BEATMAP: DanceNote[] = (() => {
   }
   return notes.filter(n => n.time > 0 && n.time <= 30000).sort((a, b) => a.time - b.time)
 })()
+
+const FEVER_SEQ  = [0, 2, 1, 3, 0, 3, 1, 2, 2, 0, 3, 1, 1, 3, 0, 2] as const
+const FEVER_CSEQ = [2, 0, 3, 1, 2, 1, 3, 0, 0, 3, 1, 2, 3, 1, 2, 0] as const
 
 // ── Flammes CSS sur les 4 bords de la zone de jeu (combo ≥ 20) ───────────────
 
@@ -1252,9 +1261,14 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
         private score     = 0
         private combo     = 0
         private maxCombo  = 0
-        private bmIdx     = 0
+        private beatIdx    = 0
         private ended     = false
         private feverStartTime = 0
+        private pausedAtMs = 0
+        private awaitingSurvivalChoice = false
+        private survivalMode = false
+        private challengeCleared = false
+        private trackDurationMs = FEVER_TRACK_END_FALLBACK_MS
         private hitWin    = HIT_WIN_MS
         private perfWin   = PERFECT_MS
         private earlyG    = EARLY_GRACE
@@ -1271,6 +1285,8 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
         private comboTxt!:    Phaser.GameObjects.Text
         private countdownTxt!:Phaser.GameObjects.Text
         private scoreTxt!:    Phaser.GameObjects.Text
+        private survivalTxt!: Phaser.GameObjects.Text
+        private survivalPrompt?: Phaser.GameObjects.Container
         private laneFlashBg:  Phaser.GameObjects.Rectangle[] = []
         private clippySprite!: Phaser.GameObjects.Image
         private hitRings:     Phaser.GameObjects.Arc[] = []
@@ -1286,8 +1302,8 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
         }
 
         private getElapsed(): number {
-          const seek = ((this.music as any)?.seek ?? 0) * 1000
-          return seek > 50 ? seek : Math.max(0, this.time.now - this.feverStartTime)
+          if (this.awaitingSurvivalChoice) return this.pausedAtMs
+          return Math.max(0, this.time.now - this.feverStartTime)
         }
 
         create() {
@@ -1328,6 +1344,10 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           this.scoreTxt = this.add.text(W - 6, 8, 'Score: 0', {
             fontSize: '14px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold', stroke: '#000', strokeThickness: 3,
           }).setOrigin(1, 0)
+          this.survivalTxt = this.add.text(W/2, this.isMobile ? this.clippyZoneH - 48 : 74, '', {
+            fontSize: this.isMobile ? '12px' : '14px', color: '#ffdd66',
+            fontFamily: 'monospace', fontStyle: 'bold', stroke: '#000', strokeThickness: 3,
+          }).setOrigin(0.5).setDepth(20).setAlpha(0)
 
           // Keyboard
           const kbMap: Record<string, Dir> = { ArrowLeft: 'left', ArrowDown: 'down', ArrowUp: 'up', ArrowRight: 'right' }
@@ -1346,10 +1366,13 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
             })
           }
 
-          this.music = this.sound.add('fever-music', { loop: true, volume: 0.9 })
+          this.music = this.sound.add('fever-music', { loop: false, volume: 0.9 })
           this.music.play()
+          const durationSeconds = Number((this.music as any).totalDuration || (this.music as any).duration || 0)
+          if (Number.isFinite(durationSeconds) && durationSeconds > 35) {
+            this.trackDurationMs = Math.round(durationSeconds * 1000)
+          }
           this.feverStartTime = this.time.now
-          this.time.addEvent({ delay: 30500, callback: () => { if (!this.ended) this.endGame('win') } })
         }
 
         private setupDesktop(W: number, H: number) {
@@ -1372,6 +1395,12 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
               sg.lineStyle(1.5, 0xffffff, 0.10); sg.moveTo(x - this.laneW/2, 0); sg.lineTo(x - this.laneW/2, H); sg.strokePath()
             }
           })
+          const fretG = this.add.graphics()
+          for (let i = 1; i < 13; i++) {
+            const y = i * H / 13
+            fretG.lineStyle(i % 4 === 0 ? 2.2 : 1.2, 0xffffff, i % 4 === 0 ? 0.20 : 0.10)
+            fretG.beginPath(); fretG.moveTo(laneX0, y); fretG.lineTo(laneRight, y); fretG.strokePath()
+          }
           this.laneFlashBg = COLS.map((dir, i) => this.add.rectangle(this.colX[i], H/2, this.laneW, H, COL_HEX[dir]).setAlpha(0))
           this.add.rectangle(W/2, this.hitY, totalLaneW + 18, 5, 0xffffff).setAlpha(0.08)
           this.add.rectangle(W/2, this.hitY, totalLaneW + 18, 1, 0xffffff).setAlpha(0.65)
@@ -1421,6 +1450,13 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
             g.fillStyle(col, 0.07); g.fillRect(x - colW/2, this.clippyZoneH + lH/3, colW, lH/3)
             g.fillStyle(col, 0.12); g.fillRect(x - colW/2, this.clippyZoneH + 2*lH/3, colW, lH/3)
           })
+          const fretG = this.add.graphics()
+          const laneZoneH = H - this.clippyZoneH
+          for (let i = 1; i < 13; i++) {
+            const y = this.clippyZoneH + i * laneZoneH / 13
+            fretG.lineStyle(i % 4 === 0 ? 2.0 : 1.0, 0xffffff, i % 4 === 0 ? 0.20 : 0.10)
+            fretG.beginPath(); fretG.moveTo(0, y); fretG.lineTo(W, y); fretG.strokePath()
+          }
           this.laneFlashBg = COLS.map((dir, i) => {
             const lH = H - this.clippyZoneH
             return this.add.rectangle(this.colX[i], this.clippyZoneH + lH/2, colW, lH, COL_HEX[dir]).setAlpha(0)
@@ -1488,20 +1524,32 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           const elapsed = this.getElapsed()
 
           // Compte à rebours
-          const remaining = Math.max(0, 30 - Math.floor(elapsed / 1000))
-          this.countdownTxt.setText(String(remaining))
+          if (this.awaitingSurvivalChoice) return
+          const remainingMs = Math.max(0, FEVER_CHALLENGE_MS - elapsed)
+          const remaining = Math.ceil(remainingMs / 1000)
+          this.countdownTxt.setText(this.survivalMode ? 'SURVIE' : `0:${String(remaining).padStart(2, '0')}`)
           this.countdownTxt.setColor(remaining <= 5 ? '#ff0000' : remaining <= 10 ? '#ff6600' : '#ff4400')
-          if (remaining <= 5) {
+          if (!this.survivalMode && remaining <= 5) {
             const pulse = 1 + 0.25 * ((1000 - (elapsed % 1000)) / 1000)
             this.countdownTxt.setScale(pulse)
+          } else {
+            this.countdownTxt.setScale(1)
           }
 
-          if (elapsed >= 30000) { this.endGame('win'); return }
+          if (!this.challengeCleared && elapsed >= FEVER_CHALLENGE_MS) { this.showSurvivalPrompt(); return }
+          if (this.survivalMode && elapsed >= this.trackDurationMs) { this.endGame('win'); return }
+          if (this.survivalMode) {
+            this.survivalTxt
+              .setText(`JUSQU A CE QUE MORT S ENSUIVE - DENSITE x${this.getDensityMultiplier(elapsed).toFixed(1)}`)
+              .setAlpha(1)
+          }
 
-          while (this.bmIdx < FEVER_BEATMAP.length && FEVER_BEATMAP[this.bmIdx].time - elapsed < this.spawnAdv) {
-            const note = FEVER_BEATMAP[this.bmIdx]
-            if (note.time >= elapsed - 200) this.spawnNote(note.direction, note.time)
-            this.bmIdx++
+          while (this.nextBeatTime() - elapsed < this.spawnAdv && this.nextBeatTime() <= this.trackDurationMs) {
+            const beatTime = this.nextBeatTime()
+            for (const note of this.buildFeverNotes(this.beatIdx, beatTime)) {
+              if (note.time >= elapsed - 200) this.spawnNote(note.direction, note.time)
+            }
+            this.beatIdx++
           }
 
           for (const n of this.activeNotes) {
@@ -1533,6 +1581,59 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
 
           if (this.feedbackTxt.alpha > 0) this.feedbackTxt.setAlpha(Math.max(0, this.feedbackTxt.alpha - 0.022))
           if (this.comboTxt.alpha > 0 && this.combo === 0) this.comboTxt.setAlpha(Math.max(0, this.comboTxt.alpha - 0.025))
+        }
+
+        private nextBeatTime() {
+          return (this.beatIdx + 2) * FEVER_BEAT_MS
+        }
+
+        private getDensityMultiplier(hitTime: number) {
+          if (hitTime < FEVER_CHALLENGE_MS || !this.survivalMode) return FEVER_BASE_DENSITY_MULTIPLIER
+          const steps = Math.floor((hitTime - FEVER_CHALLENGE_MS) / FEVER_SURVIVAL_STEP_MS)
+          return FEVER_BASE_DENSITY_MULTIPLIER * Math.pow(FEVER_SURVIVAL_STEP_MULTIPLIER, steps)
+        }
+
+        private buildFeverNotes(beatIndex: number, beatTime: number): DanceNote[] {
+          const si = beatIndex % FEVER_SEQ.length
+          const base: DanceNote[] = [{ time: beatTime, direction: COLS[FEVER_SEQ[si]] }]
+          const chordDir = COLS[FEVER_CSEQ[si]]
+          if (beatIndex % 2 === 1 && chordDir !== base[0].direction) {
+            base.push({ time: beatTime, direction: chordDir })
+          }
+          if (beatIndex > 4 && beatIndex % 3 === 0) {
+            base.push({ time: beatTime + Math.round(FEVER_BEAT_MS * 0.5), direction: COLS[(FEVER_SEQ[si] + 1) % 4] })
+          }
+
+          const density = this.getDensityMultiplier(beatTime)
+          const fullCopies = Math.max(0, Math.floor(density) - 1)
+          const addFractional = beatIndex % 2 === 0 && density - Math.floor(density) >= 0.45
+          const offsets = [
+            Math.round(FEVER_BEAT_MS * 0.25),
+            Math.round(FEVER_BEAT_MS * 0.75),
+            Math.round(FEVER_BEAT_MS * 0.125),
+            Math.round(FEVER_BEAT_MS * 0.625),
+          ]
+          const notes = [...base]
+          for (let copy = 0; copy < fullCopies; copy++) {
+            const offset = offsets[copy % offsets.length]
+            for (const note of base) {
+              notes.push({
+                time: note.time + offset,
+                direction: COLS[(COLS.indexOf(note.direction) + copy + 1) % COLS.length],
+              })
+            }
+          }
+          if (addFractional) {
+            for (const note of base) {
+              notes.push({
+                time: note.time + Math.round(FEVER_BEAT_MS * 0.375),
+                direction: COLS[(COLS.indexOf(note.direction) + 2) % COLS.length],
+              })
+            }
+          }
+          return notes
+            .filter((note) => note.time <= this.trackDurationMs)
+            .sort((a, b) => a.time - b.time)
         }
 
         private spawnNote(dir: Dir, hitTime: number) {
@@ -1580,7 +1681,7 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
             if (!hasEarlySameLane) {
               this.hp = Math.max(0, this.hp - 1)
               onMissRef.current?.()
-              if (this.hp <= 0) this.endGame('lose')
+              if (this.hp <= 0) this.endGame(this.survivalMode ? 'win' : 'lose')
             }
           }
         }
@@ -1590,7 +1691,64 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           this.hp = Math.max(0, this.hp - 1)
           onMissRef.current?.()
           this.combo = 0; this.comboTxt.setAlpha(0)
-          if (this.hp <= 0) this.endGame('lose')
+          if (this.hp <= 0) this.endGame(this.survivalMode ? 'win' : 'lose')
+        }
+
+        private showSurvivalPrompt() {
+          if (this.awaitingSurvivalChoice || this.ended) return
+          this.challengeCleared = true
+          this.awaitingSurvivalChoice = true
+          this.pausedAtMs = FEVER_CHALLENGE_MS
+          this.feverStartTime = this.time.now - this.pausedAtMs
+          this.music.pause()
+          this.activeNotes.forEach((note) => note.obj.setAlpha(0.22))
+
+          const W = this.scale.width, H = this.scale.height
+          const panelW = Math.min(W - 28, 620)
+          const prompt = this.add.container(W / 2, H / 2).setDepth(60)
+          const bg = this.add.rectangle(0, 0, panelW, 300, 0x080012, 0.96)
+          bg.setStrokeStyle(2, 0xff66cc, 0.65)
+          const title = this.add.text(0, -104, 'BRAVO !', {
+            fontSize: '30px', color: '#ffdd66', fontFamily: 'monospace', fontStyle: 'bold',
+            stroke: '#000', strokeThickness: 5,
+          }).setOrigin(0.5)
+          const body = this.add.text(0, -42, "Vous avez reussi le mode Fever Night.\nSouhaitez-vous continuer jusqu'a ce que mort s'en suive ?", {
+            fontSize: '15px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+            align: 'center', lineSpacing: 8, wordWrap: { width: panelW - 64 },
+            stroke: '#000', strokeThickness: 3,
+          }).setOrigin(0.5)
+          const yes = this.makePromptButton(-panelW * 0.22, 92, 'CONTINUER', 0xff3366, () => this.startSurvival())
+          const no = this.makePromptButton(panelW * 0.22, 92, 'ARRETER', 0x33ccff, () => this.endGame('win'))
+          prompt.add([bg, title, body, yes, no])
+          this.survivalPrompt = prompt
+        }
+
+        private makePromptButton(x: number, y: number, label: string, color: number, onClick: () => void) {
+          const button = this.add.container(x, y)
+          const bg = this.add.rectangle(0, 0, 174, 54, color, 0.18)
+          bg.setStrokeStyle(2, color, 0.85)
+          const txt = this.add.text(0, 0, label, {
+            fontSize: '14px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+            stroke: '#000', strokeThickness: 3,
+          }).setOrigin(0.5)
+          bg.setInteractive({ useHandCursor: true })
+          bg.on('pointerdown', onClick)
+          bg.on('pointerover', () => bg.setAlpha(0.34))
+          bg.on('pointerout', () => bg.setAlpha(1))
+          button.add([bg, txt])
+          return button
+        }
+
+        private startSurvival() {
+          if (!this.awaitingSurvivalChoice || this.ended) return
+          this.survivalMode = true
+          this.awaitingSurvivalChoice = false
+          this.feverStartTime = this.time.now - this.pausedAtMs
+          this.survivalPrompt?.destroy()
+          this.survivalPrompt = undefined
+          this.activeNotes.forEach((note) => note.obj.setAlpha(1))
+          this.survivalTxt.setText('JUSQU A CE QUE MORT S ENSUIVE - DENSITE x2').setAlpha(1)
+          this.music.resume()
         }
 
         private endGame(result: 'win' | 'lose') {
