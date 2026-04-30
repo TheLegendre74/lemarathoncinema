@@ -46,6 +46,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
   const [mobileCtrlsOn,    setMobileCtrlsOn]    = useState(false)
   const [gameReady,        setGameReady]        = useState(false)
   const [isMobile,         setIsMobile]         = useState(false)
+  const [isPortrait,       setIsPortrait]       = useState(false)
   const [lbData,           setLbData]           = useState<LBEntry[]>([])
   const [existingLB,       setExistingLB]       = useState<LBEntry[]>([])
   const [nameVal,          setNameVal]          = useState('')
@@ -61,7 +62,23 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
   }, [])
 
   useEffect(() => {
-    setIsMobile('ontouchstart' in window || navigator.maxTouchPoints > 0)
+    const mobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+    setIsMobile(mobile)
+    if (!mobile) return
+    // Essaye de verrouiller l'orientation en paysage (Android Chrome)
+    try {
+      if (screen.orientation && (screen.orientation as any).lock) {
+        ;(screen.orientation as any).lock('landscape').catch(() => {})
+      }
+    } catch (_) {}
+    // Détecte mode portrait pour afficher l'overlay "tournez votre appareil"
+    const mq = window.matchMedia('(orientation: portrait)')
+    const upd = (e: MediaQueryListEvent | MediaQueryList) => setIsPortrait(e.matches)
+    upd(mq); mq.addEventListener('change', upd)
+    return () => {
+      mq.removeEventListener('change', upd)
+      try { if (screen.orientation && (screen.orientation as any).unlock) (screen.orientation as any).unlock() } catch (_) {}
+    }
   }, [])
 
   async function confirmName() {
@@ -872,7 +889,19 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           const adj = (key: 'music' | 'sfx', delta: number, lbl: any) => {
             VOL[key] = Math.max(0, Math.min(100, VOL[key] + delta))
             lbl.setText(`${VOL[key]}%`); drawBars()
-            if (key === 'music' && currentMusic) { try { currentMusic.setVolume(VOL.music / 100) } catch (_) {} }
+            if (key === 'music') {
+              const vol = VOL.music / 100
+              // Itère sur tous les sons actifs pour trouver et mettre à jour la musique
+              try {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const sounds = (this.sound as any).sounds as any[]
+                sounds.forEach((s: any) => {
+                  if (s && s.key === 'theme' && !s.destroyed) { try { s.setVolume(vol) } catch (_) {} }
+                })
+              } catch (_) {}
+              // Fallback sur la référence directe
+              if (currentMusic) { try { currentMusic.setVolume(vol) } catch (_) {} }
+            }
           }
           makeBtn(this, GW / 2 - 175, 114, 32, '−', () => adj('music', -5, mvT),  0xcc6633)
           makeBtn(this, GW / 2 + 140, 114, 32, '+', () => adj('music',  5, mvT),  0xcc6633)
@@ -2801,6 +2830,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
           closeBtn.on('pointerdown', close)
           this.time.delayedCall(14000, close)
           this.input.keyboard!.once('keydown', close)
+          this.input.once('pointerdown', close)  // clic n'importe où ferme le tuto
         }
 
         showBossIntro() {
@@ -3228,6 +3258,26 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
     fontSize: '0.65rem', fontFamily: 'Impact, serif', letterSpacing: '1px',
     cursor: 'pointer', userSelect: 'none', touchAction: 'none',
     backdropFilter: 'blur(2px)',
+  }
+
+  // Overlay portrait mobile
+  if (isMobile && isPortrait) {
+    return (
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 99999, background: '#06060c',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        gap: '1.4rem', color: '#cc8833', fontFamily: 'Impact, serif',
+      }}>
+        <div style={{ fontSize: 72, animation: 'fc-rotate 2s ease-in-out infinite' }}>↻</div>
+        <div style={{ fontSize: 'clamp(1.2rem,5vw,1.8rem)', letterSpacing: 4, textAlign: 'center', padding: '0 2rem' }}>
+          TOURNEZ VOTRE APPAREIL
+        </div>
+        <div style={{ fontSize: '.85rem', color: '#664422', letterSpacing: 2, fontFamily: 'monospace' }}>
+          Fight Club nécessite le mode paysage
+        </div>
+        <style>{`@keyframes fc-rotate { 0%{transform:rotate(0deg)} 40%{transform:rotate(90deg)} 60%{transform:rotate(90deg)} 100%{transform:rotate(0deg)} }`}</style>
+      </div>
+    )
   }
 
   return (
