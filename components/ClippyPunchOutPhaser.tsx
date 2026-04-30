@@ -729,20 +729,12 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
             g.fillStyle(0xff5500, 0.20 + this.eyePulse * 0.30)
             g.fillCircle(gx, gy, Math.round(this.W * 0.060))
           }
-          g.lineStyle(isLunging ? 28 : 23, 0xaabbc8, 1)
+          // Bras de Clippy — ligne seulement, pas de cercle au bout
+          const armW = isLunging ? 26 : 20
+          g.lineStyle(armW, 0x8899a8, 1)
           g.beginPath(); g.moveTo(sx, sy); g.lineTo(gx, gy); g.strokePath()
-          g.lineStyle(3, 0x334455, 0.6)
+          g.lineStyle(3, 0x223344, 0.5)
           g.beginPath(); g.moveTo(sx, sy); g.lineTo(gx, gy); g.strokePath()
-
-          const r   = isLunging ? 34 : isUpper ? 30 : 28
-          const col = isUpper ? 0xffcc00 : isLunging ? 0xff2200 : (isActive && isThisArm) ? 0xff5500 : 0xcc2222
-          g.fillStyle(col, 1); g.lineStyle(4, 0x441111, 1)
-          g.fillCircle(gx, gy, r); g.strokeCircle(gx, gy, r)
-          g.lineStyle(2, 0x661111, 0.7)
-          for (let i = -1; i <= 1; i++) {
-            g.beginPath(); g.moveTo(gx - 11 + i * 9, gy - 9); g.lineTo(gx - 11 + i * 9, gy + 9); g.strokePath()
-          }
-          g.fillStyle(0xffffff, 0.15); g.fillEllipse(gx - 8, gy - 9, 15, 9)
         }
 
         drawHUD() {
