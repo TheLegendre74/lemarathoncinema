@@ -14,7 +14,7 @@ const P_GLOVE_RIGHT   = 'pGloveRight'
 
 // ── Timing (tutoriel = délais généreux) ───────────────────────────────────────
 const COUNTER_WIN_MS  = 1500   // fenêtre de contre
-const PLAYER_MAX_HP   = 30
+const PLAYER_MAX_HP   = 60
 
 // ── Séquence tutoriel : 5 attaques scriptées ──────────────────────────────────
 const TUT_SEQUENCE: Attack[] = ['left', 'right', 'body', 'left', 'right']
@@ -60,11 +60,17 @@ const DODGE_FOR: Record<Attack, string> = { left: 'right', right: 'left', body: 
 
 type Diff = { telMs: number; atkMs: number; dmgMin: number; dmgMax: number; label: string }
 function getDiff(hp: number, maxHP: number): Diff {
-  if (hp <= 3)                       return { telMs: 1000, atkMs: 1500, dmgMin: 5, dmgMax: 7,  label: '⚠️ RAGE MODE' }
-  if (hp <= Math.ceil(maxHP * 0.35)) return { telMs: 1000, atkMs: 1500, dmgMin: 4, dmgMax: 5,  label: '🔥 DANGER'    }
-  return                                    { telMs: 1000, atkMs: 1500, dmgMin: 3, dmgMax: 4,  label: ''            }
+  // pct = 1 (plein HP, facile) → 0 (presque mort, dur)
+  const pct   = Math.max(0, Math.min(1, hp / maxHP))
+  // Fenêtre d'esquive : 1500 ms (facile) → 800 ms (max vitesse), linéaire
+  const atkMs = Math.round(800 + 700 * pct)
+  // Dégâts : croissent avec la difficulté
+  const dmgMin = Math.round(3 + (1 - pct) * 5)   // 3 → 8
+  const dmgMax = Math.round(5 + (1 - pct) * 6)   // 5 → 11
+  const label  = pct <= 0.15 ? '⚠️ RAGE MODE' : pct <= 0.35 ? '🔥 DANGER' : ''
+  return { telMs: 1000, atkMs, dmgMin, dmgMax, label }
 }
-// Tutoriel : flèche 2 s, fenêtre 2 s pour apprendre
+// Tutoriel : flèche 2 s, fenêtre 2 s pour apprendre sans pression
 const TUT_DIFF: Diff = { telMs: 2000, atkMs: 2000, dmgMin: 0, dmgMax: 0, label: 'ENTRAÎNEMENT' }
 
 const TAUNTS_IDLE = [
@@ -91,8 +97,10 @@ const TAUNTS_DODGE = [
 ]
 
 interface Props { onWin: () => void; onLose: () => void; initialHP?: number }
+// HP de base pour la Phase 3 (70 = 20 base + 50 ajoutés)
+const CLIPPY_PHASE3_HP = 70
 
-export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: Props) {
+export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY_PHASE3_HP }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const gameRef      = useRef<any>(null)
 
@@ -222,7 +230,7 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
           const guardRatio = guardSrc.naturalHeight && guardSrc.naturalWidth
             ? guardSrc.naturalHeight / guardSrc.naturalWidth
             : 0.38
-          const guardH = Math.round(W * guardRatio * 0.62)   // réduit de ~38 %
+          const guardH = Math.round(W * guardRatio * 0.527)  // réduit de ~47 % au total (−15 % de plus)
           const guardY = Math.round(H - guardH * 0.38)
           this.pGloveGuard = this.add.image(W / 2, guardY, P_GLOVE_DEFAULT)
             .setDisplaySize(W, guardH).setDepth(7)

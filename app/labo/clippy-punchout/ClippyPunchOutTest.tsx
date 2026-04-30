@@ -17,7 +17,7 @@ export default function ClippyPunchOutTest() {
           key={key}
           onWin={() => setResult('win')}
           onLose={() => setResult('lose')}
-          initialHP={20}
+          initialHP={70}
         />
       )}
 

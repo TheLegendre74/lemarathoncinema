@@ -1827,7 +1827,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
       {/* TODO TEMP — supprimer avant lancement prod */}
       {punchPhase === 'active' && (
         <ClippyPunchOutPhaser
-          initialHP={clippyHP}
+          initialHP={70}
           onWin={() => {
             punchPhaseRef.current = 'idle'; setPunchPhase('idle')
             startHellSequence()
