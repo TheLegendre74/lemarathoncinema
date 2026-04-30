@@ -23,7 +23,7 @@ const COL_CSS:    Record<Dir, string>    = { left: '#ff6699', down: '#6699ff', u
 const COL_DARK:   Record<Dir, number>    = { left: 0x661133, down: 0x112266, up: 0x116633, right: 0x664411 }
 
 const NOTE_SPEED    = 380
-const FEVER_NOTE_SPEED = NOTE_SPEED * 2  // 760 px/s
+const FEVER_NOTE_SPEED = NOTE_SPEED * 2 * 0.85  // 646 px/s (-15% vs Fever initial)
 
 const HIT_WIN_MS    = 142    // timing assoupli (+30%)
 const PERFECT_MS    = 62     // idem
@@ -1598,7 +1598,7 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           const si = beatIndex % FEVER_SEQ.length
           const base: DanceNote[] = [{ time: beatTime, direction: COLS[FEVER_SEQ[si]] }]
           const chordDir = COLS[FEVER_CSEQ[si]]
-          if (beatIndex % 2 === 1 && chordDir !== base[0].direction) {
+          if (beatIndex > 6 && beatIndex % 4 === 3 && chordDir !== base[0].direction) {
             base.push({ time: beatTime, direction: chordDir })
           }
           if (beatIndex > 4 && beatIndex % 3 === 0) {
