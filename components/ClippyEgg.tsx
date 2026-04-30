@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
-import { unlockClippyMaster, getClippyDefeats, setClippyDefeatsDB } from '@/lib/actions'
+import { unlockClippyMaster, getClippyDefeats, setClippyDefeatsDB, getDanceLeaderboard } from '@/lib/actions'
 
 const ClippyDanceBattle    = dynamic(() => import('./ClippyDanceBattle'), { ssr: false })
 // TODO TEMP — supprimer avant lancement prod
@@ -1087,6 +1087,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
   const playerDeathsRef    = useRef(0)
   const [showAbandon,      setShowAbandon]     = useState(false)   // conservé pour compat mini-jeu
   const [showDeathScreen,  setShowDeathScreen] = useState(false)
+  const [feverScores, setFeverScores] = useState<{pseudo:string;score:number;max_combo:number}[]|null>(null)
   // DDR → intro : Clippy provoque avant que le jeu commence
   const [ddrIntroActive,   setDdrIntroActive]  = useState(false)
   const [ddrIntroIdx,      setDdrIntroIdx]     = useState(0)
@@ -1754,8 +1755,8 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
 
   // Taille combat : phase 1 mobile −15%, autres phases mobile +10%, DDR intro P2 desktop +20%
   const isMobileUI = window.matchMedia('(pointer: coarse)').matches
-  // Phase 2 DDR intro (desktop) : Clippy +20%. Phase 2 n'a ni bouclier ni épée.
-  const ddrIntroScale = ddrIntroActive && effectivePhase === 2 && !isMobileUI ? 1.20 : 1
+  // Phase 2 DDR intro (desktop) : Clippy +30%. Phase 2 n'a ni bouclier ni épée.
+  const ddrIntroScale = ddrIntroActive && effectivePhase === 2 && !isMobileUI ? 1.30 : 1
   const wCombat = isMobileUI
     ? (effectivePhase === 1 ? Math.round(W_COMBAT * 0.85) : Math.round(W_COMBAT * 1.10))
     : Math.round(W_COMBAT * ddrIntroScale)
@@ -1763,7 +1764,9 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
   const wShield = isMobileUI ? Math.round(W_SHIELD * 1.10) : W_SHIELD  // phase 2 : pas de bouclier
   const wSword  = isMobileUI ? Math.round(W_SWORD  * 1.10) : W_SWORD   // phase 2 : pas d'épée
   const hSword  = isMobileUI ? Math.round(H_SWORD  * 1.10) : H_SWORD
-  const normalBubbleScale = !isMobileUI && phase === 'normal' ? 1.2 : 1
+  const normalBubbleScale = ddrIntroActive && effectivePhase === 2 && !isMobileUI
+    ? 1.5
+    : (!isMobileUI && phase === 'normal' ? 1.2 : 1)
   const bubbleWidth = Math.round(230 * normalBubbleScale)
   const bubbleFont = 12 * normalBubbleScale
   const bubblePadding = `${Math.round(9 * normalBubbleScale)}px ${Math.round(12 * normalBubbleScale)}px`
@@ -1946,10 +1949,12 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
                 🎵 Continuer
               </button>
               <button
-                onClick={() => { setShowDeathScreen(false); startHellSequence() }}
+                onClick={async () => {
+                  try { const ldr = await getDanceLeaderboard(); setFeverScores(ldr) } catch { setFeverScores([]) }
+                }}
                 style={{ padding:'.9rem 2rem', borderRadius:8, background:'linear-gradient(135deg,rgba(232,196,106,.2),rgba(232,196,106,.08))', border:'2px solid rgba(232,196,106,.5)', color:'#e8c46a', fontSize:'.95rem', fontWeight:700, cursor:'pointer', letterSpacing:2 }}
               >
-                🏆 Gagner
+                🏆 Voir les scores
               </button>
             </>) : (<>
               <button
@@ -1969,6 +1974,32 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
           <div style={{ fontSize:'.65rem', color:'rgba(255,255,255,.15)', letterSpacing:2 }}>
             Phase {effectivePhase}{effectivePhase >= 6 ? ' — God Mode' : effectivePhase >= 3 ? ' — Clippy à pleine puissance' : ''}
           </div>
+        </div>
+      )}
+
+      {/* ══════════════ FEVER NIGHT — TABLEAU DES SCORES ══════════════ */}
+      {feverScores !== null && (
+        <div style={{ position:'fixed', inset:0, zIndex:100000, background:'rgba(4,0,16,.97)', backdropFilter:'blur(8px)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'1.4rem', animation:'death-in .4s ease' }}>
+          <div style={{ fontSize:'2.5rem' }}>⚡</div>
+          <div style={{ fontFamily:'var(--font-display)', fontSize:'1.6rem', color:'#ff9944', letterSpacing:3, textShadow:'0 0 30px rgba(255,153,68,.6)' }}>FEVER NIGHT — SCORES</div>
+          <div style={{ maxWidth:400, width:'90%', background:'rgba(20,0,40,.8)', border:'2px solid rgba(255,153,68,.4)', borderRadius:12, padding:'1.2rem 1.6rem', maxHeight:'50vh', overflowY:'auto' }}>
+            {feverScores.length === 0 ? (
+              <div style={{ color:'rgba(255,255,255,.4)', textAlign:'center', fontSize:'.85rem' }}>Aucun score enregistré</div>
+            ) : feverScores.map((e, i) => (
+              <div key={i} style={{ display:'flex', alignItems:'center', gap:'1rem', padding:'.5rem 0', borderBottom:i < feverScores.length-1 ? '1px solid rgba(255,255,255,.07)' : 'none' }}>
+                <span style={{ fontSize:'.75rem', color:'#ff9944', fontWeight:700, minWidth:24 }}>#{i+1}</span>
+                <span style={{ flex:1, fontSize:'.85rem' }}>{e.pseudo}</span>
+                <span style={{ fontSize:'.75rem', color:'#ff9944', fontWeight:600 }}>{e.score.toLocaleString()}</span>
+                <span style={{ fontSize:'.68rem', color:'rgba(255,255,255,.4)' }}>×{e.max_combo}</span>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={() => { setFeverScores(null); setShowDeathScreen(false); startHellSequence() }}
+            style={{ padding:'.9rem 2.5rem', borderRadius:8, background:'linear-gradient(135deg,rgba(255,153,68,.3),rgba(255,153,68,.1))', border:'2px solid rgba(255,153,68,.6)', color:'#ff9944', fontSize:'1rem', fontWeight:800, cursor:'pointer', letterSpacing:3 }}
+          >
+            TERMINER ➜
+          </button>
         </div>
       )}
 
@@ -2209,8 +2240,17 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
       )}
 
       {/* ── Corps Clippy ── */}
+      {/* Intro DDR phase 2 : centré horizontalement, positionné à 20% de hauteur */}
+      {(() => {
+        const clippyX = ddrIntroActive && effectivePhase === 2
+          ? Math.round(window.innerWidth / 2 - wCombat / 2)
+          : pos.x
+        const clippyY = ddrIntroActive && effectivePhase === 2
+          ? Math.round(window.innerHeight * 0.20)
+          : pos.y
+        return (
       <div
-        style={{ position:'fixed', left:pos.x, top:pos.y, zIndex:99993, cursor:(phase==='combat'&&!ddrTauntActive&&!ddrIntroActive)?'none':(tired?'crosshair':'pointer'), transition:'left .3s cubic-bezier(.34,1.56,.64,1),top .3s cubic-bezier(.34,1.56,.64,1)', userSelect:'none', display:(hellPhase!=='idle'||mgPhase!=='idle'||ddrPhase!=='idle'||showLarbinMsg||showLarbinModal||showDeathScreen)?'none':'block' }}
+        style={{ position:'fixed', left:clippyX, top:clippyY, zIndex:99993, cursor:(phase==='combat'&&!ddrTauntActive&&!ddrIntroActive)?'none':(tired?'crosshair':'pointer'), transition:'left .3s cubic-bezier(.34,1.56,.64,1),top .3s cubic-bezier(.34,1.56,.64,1)', userSelect:'none', display:(hellPhase!=='idle'||mgPhase!=='idle'||ddrPhase!=='idle'||showLarbinMsg||showLarbinModal||showDeathScreen)?'none':'block' }}
         onClick={phase==='normal' ? handleNormalClick : handleCombatClick}
       >
         {(bubble || forcedMessage) && (
@@ -2242,6 +2282,8 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
           </div>
         )}
       </div>
+        )
+      })()}
     </>
   )
 }

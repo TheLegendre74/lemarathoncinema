@@ -36,8 +36,9 @@ const FLAME_AT      = 20     // flammes CSS apparaissent
 const FEVER_MS      = 10000  // durée fever (réinitialisée à chaque upgrade)
 const AHEAD_MS      = 420    // ms avant hit pour illuminer la lane
 const FEVER_CHALLENGE_MS = 30000
-const FEVER_BEAT_MS    = 627   // +15% vs original 545ms → plus jouable
-const FEVER_WARMUP_MS  = 3000  // 3s de préparation avant les premières notes
+const FEVER_BEAT_MS    = 545                          // tempo original 110 BPM — synco musique
+const FEVER_NOTE_STEP  = Math.round(545 * 1.5)        // 817ms entre groupes (> 0.8s, atterrit sur la grille 3/2)
+const FEVER_WARMUP_MS  = 3000                         // 3s de préparation avant les premières notes
 const FEVER_BASE_DENSITY_MULTIPLIER = 2
 const FEVER_SURVIVAL_STEP_MS = 15000
 const FEVER_SURVIVAL_STEP_MULTIPLIER = 1.5
@@ -448,11 +449,16 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
         setFeverLeader(ldr)
         setInnerPhase('fever_post')
       } else {
-        // Fever perdu : post-game normal (DDR était gagné)
-        let ldr: LeaderEntry[] = []
-        try { ldr = await getDanceLeaderboard() } catch {}
-        finalWon.current = true
-        setPostGame({ score: finalScore.current, maxCombo: finalCombo.current, won: true, leader: ldr })
+        if (startInFeverNight) {
+          // Fever night direct → défaite = écran de mort ClippyEgg
+          onLoseRef.current()
+        } else {
+          // Fever perdu dans le flux DDR normal : post-game normal (DDR était gagné)
+          let ldr: LeaderEntry[] = []
+          try { ldr = await getDanceLeaderboard() } catch {}
+          finalWon.current = true
+          setPostGame({ score: finalScore.current, maxCombo: finalCombo.current, won: true, leader: ldr })
+        }
       }
     }
   }, [userId])
@@ -595,7 +601,7 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           this.startTime = this.time.now
 
           const last = DANCE_BEATMAP[DANCE_BEATMAP.length - 1]
-          this.time.addEvent({ delay: last.time + 2200, callback: () => { if (!this.ended) this.endGame('win') } })
+          this.time.addEvent({ delay: last.time + 2200, callback: () => { if (!this.ended) this.endGame(this.score > 0 ? 'win' : 'lose') } })
         }
 
         // ── Desktop layout — Guitar Hero + arène visible derrière ───────────
@@ -1611,7 +1617,7 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
         }
 
         private nextBeatTime() {
-          return (this.beatIdx + 2) * FEVER_BEAT_MS
+          return (this.beatIdx + 2) * FEVER_NOTE_STEP
         }
 
         private getDensityMultiplier(hitTime: number) {
@@ -1621,46 +1627,23 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
         }
 
         private buildFeverNotes(beatIndex: number, beatTime: number): DanceNote[] {
-          const si = beatIndex % FEVER_SEQ.length
-          const base: DanceNote[] = [{ time: beatTime, direction: COLS[FEVER_SEQ[si]] }]
-          const chordDir = COLS[FEVER_CSEQ[si]]
-          if (beatIndex > 6 && beatIndex % 4 === 3 && chordDir !== base[0].direction) {
-            base.push({ time: beatTime, direction: chordDir })
+          // Toutes les notes tombent au beat exact — pas de sub-beat, max 4 simultanées
+          const density   = this.getDensityMultiplier(beatTime)
+          const maxNotes  = Math.min(4, Math.floor(density))  // 2 en base, +1 par palier survie
+          const si  = beatIndex % FEVER_SEQ.length
+          const csi = beatIndex % FEVER_CSEQ.length
+          const used  = new Set<string>()
+          const notes: DanceNote[] = []
+          // Note principale
+          notes.push({ time: beatTime, direction: COLS[FEVER_SEQ[si]] })
+          used.add(COLS[FEVER_SEQ[si]])
+          // Notes chord : piochées dans CSEQ puis rotations pour remplir
+          const pool = [COLS[FEVER_CSEQ[csi]], COLS[(FEVER_SEQ[si] + 2) % 4], COLS[(FEVER_SEQ[si] + 3) % 4]]
+          for (const dir of pool) {
+            if (notes.length >= maxNotes) break
+            if (!used.has(dir)) { notes.push({ time: beatTime, direction: dir }); used.add(dir) }
           }
-          if (beatIndex > 4 && beatIndex % 3 === 0) {
-            base.push({ time: beatTime + Math.round(FEVER_BEAT_MS * 0.5), direction: COLS[(FEVER_SEQ[si] + 1) % 4] })
-          }
-
-          const density = this.getDensityMultiplier(beatTime)
-          const fullCopies = Math.max(0, Math.floor(density) - 1)
-          const addFractional = beatIndex % 2 === 0 && density - Math.floor(density) >= 0.45
-          const offsets = [
-            Math.round(FEVER_BEAT_MS * 0.25),
-            Math.round(FEVER_BEAT_MS * 0.75),
-            Math.round(FEVER_BEAT_MS * 0.125),
-            Math.round(FEVER_BEAT_MS * 0.625),
-          ]
-          const notes = [...base]
-          for (let copy = 0; copy < fullCopies; copy++) {
-            const offset = offsets[copy % offsets.length]
-            for (const note of base) {
-              notes.push({
-                time: note.time + offset,
-                direction: COLS[(COLS.indexOf(note.direction) + copy + 1) % COLS.length],
-              })
-            }
-          }
-          if (addFractional) {
-            for (const note of base) {
-              notes.push({
-                time: note.time + Math.round(FEVER_BEAT_MS * 0.375),
-                direction: COLS[(COLS.indexOf(note.direction) + 2) % COLS.length],
-              })
-            }
-          }
-          return notes
-            .filter((note) => note.time <= this.trackDurationMs)
-            .sort((a, b) => a.time - b.time)
+          return notes.filter(n => n.time <= this.trackDurationMs)
         }
 
         private spawnNote(dir: Dir, hitTime: number) {
