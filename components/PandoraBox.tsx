@@ -12,7 +12,11 @@ export default function PandoraBox({ onOpen, onClose }: PandoraBoxProps) {
 
   function handleYes() {
     setPhase('opening')
-    // Après l'animation d'ouverture (~2.2s), Clippy apparaît
+    try {
+      const snd = new Audio('/sons/zelda-item.m4a')
+      snd.volume = 0.7
+      snd.play().catch(() => {})
+    } catch {}
     setTimeout(() => {
       setPhase('done')
       onOpen()
@@ -55,9 +59,10 @@ export default function PandoraBox({ onOpen, onClose }: PandoraBoxProps) {
         {phase === 'opening' && (
           <>
             <div style={{
-              position: 'absolute', left: '50%', bottom: '100%',
+              position: 'absolute', left: '50%', bottom: '90px',
               transform: 'translateX(-50%)',
-              width: 80, height: 200,
+              transformOrigin: 'center bottom',
+              width: 100, height: 220,
               background: 'linear-gradient(to top, rgba(232,196,106,.9) 0%, rgba(220,160,255,.6) 40%, transparent 100%)',
               animation: 'light-burst 2s ease forwards',
               pointerEvents: 'none', zIndex: 2,

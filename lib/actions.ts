@@ -1913,6 +1913,24 @@ export async function unlockAgentOfChaos() {
   return { success: true }
 }
 
+export async function getClippyDefeats(): Promise<number> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return 0
+  const { data } = await supabase.from('profiles').select('clippy_defeats').eq('id', user.id).single()
+  return (data as any)?.clippy_defeats ?? 0
+}
+
+export async function setClippyDefeatsDB(defeats: number): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  await supabase.from('profiles')
+    .update({ clippy_defeats: defeats } as any)
+    .eq('id', user.id)
+    .lt('clippy_defeats', defeats)  // n'écrase jamais une progression supérieure
+}
+
 export async function unlockClippyMaster() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

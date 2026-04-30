@@ -85,10 +85,11 @@ export default function AuthPageClient({ marathonStart, saisonLabel, saisonNumer
       const { data: existing } = await supabase.from('profiles').select('id').ilike('pseudo', pseudo).single()
       if (existing) { setErr('Ce pseudo est déjà pris.'); setLoading(false); return }
 
+      const saison = live ? saisonNumero + 1 : saisonNumero
       const { error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { pseudo } }
+        options: { data: { pseudo, saison } }
       })
       if (error) { setErr(error.message); setLoading(false); return }
       document.cookie = 'guest_mode=; path=/; max-age=0'

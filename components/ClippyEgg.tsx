@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
-import { unlockClippyMaster } from '@/lib/actions'
+import { unlockClippyMaster, getClippyDefeats, setClippyDefeatsDB } from '@/lib/actions'
 
 const ClippyDanceBattle    = dynamic(() => import('./ClippyDanceBattle'), { ssr: false })
 // TODO TEMP — supprimer avant lancement prod
@@ -859,9 +859,23 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
 
   // ── Données persistantes ───────────────────────────────────────────────────
   const defeatsRef    = useRef(getDefeats())
-  const defeats       = defeatsRef.current
+  const [defeatsState, setDefeatsState] = useState(getDefeats)
+  const defeats       = defeatsState
   const isVeteran     = defeats > 0
   const combatPhase   = getPhaseFromDefeats(defeats)   // 1 | 2 | 3 | 4 | 5
+
+  // Sync DB → local au montage (prend le max pour ne jamais régresser)
+  useEffect(() => {
+    if (!userId) return
+    getClippyDefeats().then(dbDefeats => {
+      const local = getDefeats()
+      if (dbDefeats > local) {
+        setDefeatsLS(dbDefeats)
+        defeatsRef.current = dbDefeats
+        setDefeatsState(dbDefeats)
+      }
+    }).catch(() => {})
+  }, [userId])
 
   // ── God Mode ──────────────────────────────────────────────────────────────
   const [activeGodPhase, setActiveGodPhase] = useState<number>(() => {
@@ -1510,7 +1524,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
   function activateLarbin() {
     try { localStorage.setItem(LS_LARBIN, '1') } catch {}
     setIsLarbin(true)
-    defeatsRef.current = 0; setDefeatsLS(0)   // retour phase 1 si larbin revient
+    defeatsRef.current = 0; setDefeatsLS(0); setDefeatsState(0)   // retour phase 1 si larbin revient
     clearAutoAttack()
     if (atkTimer.current) clearTimeout(atkTimer.current)
     stopMusic()
@@ -1546,7 +1560,8 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
     // Incrémenter defeats uniquement hors god mode
     if (activeGodPhase === 0) {
       const newD = defeatsRef.current + 1
-      defeatsRef.current = newD; setDefeatsLS(newD)
+      defeatsRef.current = newD; setDefeatsLS(newD); setDefeatsState(newD)
+      setClippyDefeatsDB(newD).catch(() => {})
     }
   }
 
@@ -1737,13 +1752,16 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
 
   const bubbleLeft = pos.x > window.innerWidth / 2
 
-  // En combat sur mobile : Clippy +10% (cible tactile plus grande).
-  // Hors combat : taille originale inchangée sur tous les appareils.
+  // Taille combat : phase 1 mobile −15%, autres phases mobile +10%, DDR intro P2 desktop +20%
   const isMobileUI = window.matchMedia('(pointer: coarse)').matches
-  const wCombat = isMobileUI ? Math.round(W_COMBAT * 1.10) : W_COMBAT  // 176 mobile / 160 desktop
-  const wNormal = isMobileUI ? W_NORMAL : Math.round(W_NORMAL * 1.2)    // +20% desktop hors combat
-  const wShield = isMobileUI ? Math.round(W_SHIELD * 1.10) : W_SHIELD
-  const wSword  = isMobileUI ? Math.round(W_SWORD  * 1.10) : W_SWORD
+  // Phase 2 DDR intro (desktop) : Clippy +20%. Phase 2 n'a ni bouclier ni épée.
+  const ddrIntroScale = ddrIntroActive && effectivePhase === 2 && !isMobileUI ? 1.20 : 1
+  const wCombat = isMobileUI
+    ? (effectivePhase === 1 ? Math.round(W_COMBAT * 0.85) : Math.round(W_COMBAT * 1.10))
+    : Math.round(W_COMBAT * ddrIntroScale)
+  const wNormal = isMobileUI ? W_NORMAL : Math.round(W_NORMAL * 1.2)
+  const wShield = isMobileUI ? Math.round(W_SHIELD * 1.10) : W_SHIELD  // phase 2 : pas de bouclier
+  const wSword  = isMobileUI ? Math.round(W_SWORD  * 1.10) : W_SWORD   // phase 2 : pas d'épée
   const hSword  = isMobileUI ? Math.round(H_SWORD  * 1.10) : H_SWORD
   const normalBubbleScale = !isMobileUI && phase === 'normal' ? 1.2 : 1
   const bubbleWidth = Math.round(230 * normalBubbleScale)
@@ -1920,18 +1938,33 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
             </div>
           </div>
           <div style={{ display:'flex', gap:'1rem', flexWrap:'wrap', justifyContent:'center' }}>
-            <button
-              onClick={handleDeathContinue}
-              style={{ padding:'.9rem 2rem', borderRadius:8, background:'linear-gradient(135deg,rgba(79,217,138,.2),rgba(79,217,138,.1))', border:'2px solid rgba(79,217,138,.5)', color:'#4fd98a', fontSize:'.95rem', fontWeight:800, cursor:'pointer', letterSpacing:2 }}
-            >
-              ⚔️ Continuer ?
-            </button>
-            <button
-              onClick={handleDeathAbandon}
-              style={{ padding:'.9rem 2rem', borderRadius:8, background:'linear-gradient(135deg,rgba(232,90,90,.15),rgba(232,90,90,.08))', border:'2px solid rgba(232,90,90,.4)', color:'#e85a5a', fontSize:'.95rem', fontWeight:700, cursor:'pointer', letterSpacing:2 }}
-            >
-              🏳️ J&apos;abandonne…
-            </button>
+            {deathReason === 'ddr' && startInFeverNight ? (<>
+              <button
+                onClick={handleDeathContinue}
+                style={{ padding:'.9rem 2rem', borderRadius:8, background:'linear-gradient(135deg,rgba(79,217,138,.2),rgba(79,217,138,.1))', border:'2px solid rgba(79,217,138,.5)', color:'#4fd98a', fontSize:'.95rem', fontWeight:800, cursor:'pointer', letterSpacing:2 }}
+              >
+                🎵 Continuer
+              </button>
+              <button
+                onClick={() => { setShowDeathScreen(false); startHellSequence() }}
+                style={{ padding:'.9rem 2rem', borderRadius:8, background:'linear-gradient(135deg,rgba(232,196,106,.2),rgba(232,196,106,.08))', border:'2px solid rgba(232,196,106,.5)', color:'#e8c46a', fontSize:'.95rem', fontWeight:700, cursor:'pointer', letterSpacing:2 }}
+              >
+                🏆 Gagner
+              </button>
+            </>) : (<>
+              <button
+                onClick={handleDeathContinue}
+                style={{ padding:'.9rem 2rem', borderRadius:8, background:'linear-gradient(135deg,rgba(79,217,138,.2),rgba(79,217,138,.1))', border:'2px solid rgba(79,217,138,.5)', color:'#4fd98a', fontSize:'.95rem', fontWeight:800, cursor:'pointer', letterSpacing:2 }}
+              >
+                ⚔️ Continuer ?
+              </button>
+              <button
+                onClick={handleDeathAbandon}
+                style={{ padding:'.9rem 2rem', borderRadius:8, background:'linear-gradient(135deg,rgba(232,90,90,.15),rgba(232,90,90,.08))', border:'2px solid rgba(232,90,90,.4)', color:'#e85a5a', fontSize:'.95rem', fontWeight:700, cursor:'pointer', letterSpacing:2 }}
+              >
+                🏳️ J&apos;abandonne…
+              </button>
+            </>)}
           </div>
           <div style={{ fontSize:'.65rem', color:'rgba(255,255,255,.15)', letterSpacing:2 }}>
             Phase {effectivePhase}{effectivePhase >= 6 ? ' — God Mode' : effectivePhase >= 3 ? ' — Clippy à pleine puissance' : ''}

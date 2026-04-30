@@ -36,7 +36,8 @@ const FLAME_AT      = 20     // flammes CSS apparaissent
 const FEVER_MS      = 10000  // durée fever (réinitialisée à chaque upgrade)
 const AHEAD_MS      = 420    // ms avant hit pour illuminer la lane
 const FEVER_CHALLENGE_MS = 30000
-const FEVER_BEAT_MS = 545
+const FEVER_BEAT_MS    = 627   // +15% vs original 545ms → plus jouable
+const FEVER_WARMUP_MS  = 3000  // 3s de préparation avant les premières notes
 const FEVER_BASE_DENSITY_MULTIPLIER = 2
 const FEVER_SURVIVAL_STEP_MS = 15000
 const FEVER_SURVIVAL_STEP_MULTIPLIER = 1.5
@@ -1266,6 +1267,8 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
         private ended     = false
         private feverStartTime = 0
         private pausedAtMs = 0
+        private isWarmup   = true
+        private warmupTxt?: Phaser.GameObjects.Text
         private awaitingSurvivalChoice = false
         private survivalMode = false
         private challengeCleared = false
@@ -1374,6 +1377,12 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
             this.trackDurationMs = Math.round(durationSeconds * 1000)
           }
           this.feverStartTime = this.time.now
+          // Texte de compte à rebours warmup (3…2…1…GO !)
+          const W2 = this.scale.width, H2 = this.scale.height
+          this.warmupTxt = this.add.text(W2 / 2, H2 / 2, '3', {
+            fontFamily: 'monospace', fontSize: '120px', color: '#ff9944',
+            stroke: '#000', strokeThickness: 8, align: 'center',
+          }).setOrigin(0.5).setDepth(200)
         }
 
         private setupDesktop(W: number, H: number) {
@@ -1522,6 +1531,23 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
 
         update() {
           if (this.ended) return
+
+          // ── Warmup 3s ─────────────────────────────────────────────────────
+          if (this.isWarmup) {
+            const real = this.time.now - this.feverStartTime
+            const left = Math.ceil((FEVER_WARMUP_MS - real) / 1000)
+            if (real < FEVER_WARMUP_MS) {
+              if (this.warmupTxt) {
+                const label = left <= 0 ? 'GO !' : String(left)
+                if (this.warmupTxt.text !== label) this.warmupTxt.setText(label)
+              }
+              return
+            }
+            this.isWarmup = false
+            if (this.warmupTxt) { this.warmupTxt.destroy(); this.warmupTxt = undefined }
+            this.feverStartTime = this.time.now  // repart de 0 après le warmup
+          }
+
           const elapsed = this.getElapsed()
 
           // Compte à rebours
