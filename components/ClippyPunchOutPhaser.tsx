@@ -147,6 +147,8 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
         gHUD!:       Phaser.GameObjects.Graphics
         gFlash!:     Phaser.GameObjects.Graphics
         gArrows!:    Phaser.GameObjects.Graphics   // flèches d'esquive
+        gKeys!:      Phaser.GameObjects.Graphics   // indicateurs touches
+        tK!:         Phaser.GameObjects.Text[]     // labels touches
         tAction!:    Phaser.GameObjects.Text       // nom du coup
         tHint!:      Phaser.GameObjects.Text       // touche à appuyer
         tMsg!:       Phaser.GameObjects.Text       // taunts / feedback
@@ -203,6 +205,7 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
           this.gArrows = this.add.graphics().setDepth(1)
           this.gArms   = this.add.graphics().setDepth(2)
           this.gHUD    = this.add.graphics().setDepth(8)
+          this.gKeys   = this.add.graphics().setDepth(9)
           this.gFlash  = this.add.graphics().setDepth(10)
 
           // Clippy — ratio préservé, 20 % plus petit
@@ -244,6 +247,24 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
           // Indicateur tutoriel (haut centre) + instruction (sous le round)
           this.tTut      = this.add.text(W/2, 30, '', { ...tfB, fontSize: '13px', color: '#88ccff', align: 'center', letterSpacing: 2 }).setOrigin(0.5, 0).setDepth(9)
           this.tTutInstr = this.add.text(W/2, 50, '', { ...tf,  fontSize: '11px', color: '#ffcc88', align: 'center', wordWrap: { width: Math.round(W * 0.6) } }).setOrigin(0.5, 0).setDepth(9)
+
+          // ── Indicateurs touches (bas centre, entre les gants) ──────────
+          const keyLabels = ['A / ←', 'S / ↓', 'D / →', 'J / ⎵']
+          const kBoxW = Math.round(W * 0.085)
+          const kBoxH = Math.round(H * 0.055)
+          const kGap  = Math.round(W * 0.012)
+          const kTotalW = keyLabels.length * kBoxW + (keyLabels.length - 1) * kGap
+          const kStartX = (W - kTotalW) / 2
+          const kY = Math.round(H * 0.935)
+          this.tK = keyLabels.map((lbl, i) => {
+            const bx = kStartX + i * (kBoxW + kGap) + kBoxW / 2
+            return this.add.text(bx, kY, lbl, {
+              fontFamily: '"Courier New", Courier, monospace',
+              fontSize: `${Math.round(H * 0.022)}px`,
+              color: '#777777', align: 'center', fontStyle: 'bold',
+              stroke: '#000', strokeThickness: 3,
+            }).setOrigin(0.5, 0.5).setDepth(10)
+          })
 
           // Clavier
           const kb = this.input.keyboard!
@@ -647,6 +668,7 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
           this.gArms.clear()
           this.gHUD.clear()
           this.gArrows.clear()
+          this.gKeys.clear()
 
           const dy = cy - this.CY
           const lSX = cx + this.SH_LX, lSY = cy + this.SH_LY
@@ -657,6 +679,7 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
           this.drawArm(lSX, lSY, lGx, lGy, 'left')
           this.drawArm(rSX, rSY, rGx, rGy, 'right')
           this.drawDodgeArrows()
+          this.drawKeyHints()
           this.drawHUD()
 
           if (this.flashA > 0.01) {
@@ -666,6 +689,51 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
           } else {
             this.gFlash.clear()
           }
+        }
+
+        // Indicateurs touches en temps réel
+        drawKeyHints() {
+          const g = this.gKeys
+          const W = this.W, H = this.H
+
+          // État actuel de chaque groupe de touches
+          const pressed = [
+            this.kA.isDown    || this.kLeft.isDown,   // A / ←
+            this.kS.isDown    || this.kDown.isDown,   // S / ↓
+            this.kD.isDown    || this.kRight.isDown,  // D / →
+            this.kJ.isDown    || this.kSpace.isDown,  // J / ⎵
+          ]
+          const colors = [0x44aaff, 0xffaa00, 0x44aaff, 0x44ff88]
+
+          const kBoxW = Math.round(W * 0.085)
+          const kBoxH = Math.round(H * 0.055)
+          const kGap  = Math.round(W * 0.012)
+          const kTotalW = pressed.length * kBoxW + (pressed.length - 1) * kGap
+          const kStartX = (W - kTotalW) / 2
+          const kY = Math.round(H * 0.935)
+
+          pressed.forEach((isDown, i) => {
+            const bx = kStartX + i * (kBoxW + kGap)
+            const col = colors[i]
+            if (isDown) {
+              // Fond coloré lumineux + halo
+              g.fillStyle(col, 0.85)
+              g.fillRoundedRect(bx, kY - kBoxH / 2, kBoxW, kBoxH, 5)
+              g.lineStyle(2, col, 1)
+              g.strokeRoundedRect(bx, kY - kBoxH / 2, kBoxW, kBoxH, 5)
+              // Halo extérieur
+              g.lineStyle(4, col, 0.30)
+              g.strokeRoundedRect(bx - 2, kY - kBoxH / 2 - 2, kBoxW + 4, kBoxH + 4, 7)
+            } else {
+              // Fond sombre discret
+              g.fillStyle(0x0a0a14, 0.75)
+              g.fillRoundedRect(bx, kY - kBoxH / 2, kBoxW, kBoxH, 5)
+              g.lineStyle(1.5, 0x334466, 0.50)
+              g.strokeRoundedRect(bx, kY - kBoxH / 2, kBoxW, kBoxH, 5)
+            }
+            // Couleur du label selon l'état
+            this.tK[i].setColor(isDown ? '#ffffff' : '#555577')
+          })
         }
 
         // Flèches d'esquive latérales — indiquent la direction à appuyer
