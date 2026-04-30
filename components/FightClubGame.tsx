@@ -37,6 +37,7 @@ function addToLB(d: string, name: string, score: number): LBEntry[] {
 }
 
 export default function FightClubGame({ onDone }: { onDone: () => void }) {
+  const rootRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [uiScale,          setUiScale]          = useState(1)
   const [showName,         setShowName]         = useState(false)
@@ -47,6 +48,8 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
   const [gameReady,        setGameReady]        = useState(false)
   const [isMobile,         setIsMobile]         = useState(false)
   const [isPortrait,       setIsPortrait]       = useState(false)
+  const [deviceChecked,    setDeviceChecked]    = useState(false)
+  const [mobileLaunchOk,   setMobileLaunchOk]   = useState(false)
   const [lbData,           setLbData]           = useState<LBEntry[]>([])
   const [existingLB,       setExistingLB]       = useState<LBEntry[]>([])
   const [nameVal,          setNameVal]          = useState('')
@@ -56,21 +59,31 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
   const cancelDoorRef   = useRef<(() => void) | null>(null)
 
   useEffect(() => {
-    const upd = () => setUiScale(Math.min(window.innerWidth / GW, window.innerHeight / GH, 1.6))
-    upd(); window.addEventListener('resize', upd)
-    return () => window.removeEventListener('resize', upd)
+    const upd = () => {
+      const vv = window.visualViewport
+      const w = vv?.width ?? window.innerWidth
+      const h = vv?.height ?? window.innerHeight
+      setUiScale(Math.min(w / GW, h / GH, 1.6))
+    }
+    upd()
+    window.addEventListener('resize', upd)
+    window.addEventListener('orientationchange', upd)
+    window.visualViewport?.addEventListener('resize', upd)
+    return () => {
+      window.removeEventListener('resize', upd)
+      window.removeEventListener('orientationchange', upd)
+      window.visualViewport?.removeEventListener('resize', upd)
+    }
   }, [])
 
   useEffect(() => {
     const mobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0
     setIsMobile(mobile)
-    if (!mobile) return
-    // Essaye de verrouiller l'orientation en paysage (Android Chrome)
-    try {
-      if (screen.orientation && (screen.orientation as any).lock) {
-        ;(screen.orientation as any).lock('landscape').catch(() => {})
-      }
-    } catch (_) {}
+    setDeviceChecked(true)
+    if (!mobile) {
+      setMobileLaunchOk(true)
+      return
+    }
     // Détecte mode portrait pour afficher l'overlay "tournez votre appareil"
     const mq = window.matchMedia('(orientation: portrait)')
     const upd = (e: MediaQueryListEvent | MediaQueryList) => setIsPortrait(e.matches)
@@ -80,6 +93,22 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
       try { if (screen.orientation && (screen.orientation as any).unlock) (screen.orientation as any).unlock() } catch (_) {}
     }
   }, [])
+
+  async function requestMobileLaunch() {
+    const el = rootRef.current ?? document.documentElement
+    try {
+      if (!document.fullscreenElement && el.requestFullscreen) {
+        await el.requestFullscreen({ navigationUI: 'hide' } as FullscreenOptions)
+      }
+    } catch (_) {}
+    try {
+      if (screen.orientation && (screen.orientation as any).lock) {
+        await (screen.orientation as any).lock('landscape')
+      }
+    } catch (_) {}
+    setMobileLaunchOk(true)
+    setTimeout(() => window.dispatchEvent(new Event('resize')), 80)
+  }
 
   async function confirmName() {
     const res = gameResult.current; if (!res) return
@@ -103,7 +132,10 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
     })
   }, [showName])
 
+  const canLaunchGame = deviceChecked && (!isMobile || (mobileLaunchOk && !isPortrait))
+
   useEffect(() => {
+    if (!canLaunchGame) return
     discoverEgg('fightclub')
     if (!containerRef.current) return
     // Steal focus from any page element (e.g. forum input) so game keys don't go there
@@ -3240,7 +3272,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
     })()
 
     return () => { phaserGame?.destroy(true); phaserGame = null; setGameReady(false) }
-  }, [onDone])
+  }, [onDone, canLaunchGame])
 
   const lbDiff = (gameResult.current?.diff ?? 'normal') as Diff
 
@@ -3259,6 +3291,7 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
     cursor: 'pointer', userSelect: 'none', touchAction: 'none',
     backdropFilter: 'blur(2px)',
   }
+  const showMobileLaunchGate = deviceChecked && isMobile && !isPortrait && !mobileLaunchOk
 
   // Overlay portrait mobile
   if (isMobile && isPortrait) {
@@ -3281,11 +3314,38 @@ export default function FightClubGame({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <div style={{
+    <div ref={rootRef} style={{
       position: 'fixed', inset: 0, zIndex: 10000, background: '#000',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
+      width: '100dvw', height: '100dvh', overflow: 'hidden', touchAction: 'none',
     }}>
-      <div ref={containerRef} style={{ transform: `scale(${uiScale})`, transformOrigin: 'center center' }} />
+      <div ref={containerRef} style={{ transform: `scale(${uiScale})`, transformOrigin: 'center center', opacity: canLaunchGame ? 1 : 0 }} />
+
+      {showMobileLaunchGate && (
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 500, background: '#06060c',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          gap: '1.2rem', color: '#cc8833', fontFamily: 'Impact, serif', padding: '2rem', textAlign: 'center',
+        }}>
+          <div style={{ fontSize: 'clamp(1.4rem,5vw,2rem)', letterSpacing: 5 }}>
+            FIGHT CLUB
+          </div>
+          <div style={{ maxWidth: 420, color: '#775533', fontFamily: 'monospace', fontSize: '.8rem', letterSpacing: 2, lineHeight: 1.6 }}>
+            Mode paysage detecte. Lancez le jeu en plein ecran pour masquer la barre du navigateur.
+          </div>
+          <button
+            onPointerDown={e => { e.preventDefault(); requestMobileLaunch() }}
+            style={{
+              marginTop: '.4rem', padding: '14px 28px', borderRadius: 8,
+              border: '2px solid rgba(204,136,51,.7)', background: 'rgba(204,17,17,.22)',
+              color: '#ffcc88', fontFamily: 'Impact, serif', fontSize: '1rem',
+              letterSpacing: 3, cursor: 'pointer', touchAction: 'none',
+            }}
+          >
+            LANCER EN PLEIN ECRAN
+          </button>
+        </div>
+      )}
 
       {/* Name entry overlay */}
       {showName && (
