@@ -140,8 +140,9 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
 
         // ── Phaser objects ─────────────────────────────────────────────────
         sprClipy!:   Phaser.GameObjects.Image
-        pGloveL!:    Phaser.GameObjects.Image
-        pGloveR!:    Phaser.GameObjects.Image
+        pGloveGuard!: Phaser.GameObjects.Image   // garde : 1 sprite pleine largeur
+        pGloveL!:     Phaser.GameObjects.Image   // frappe gauche (caché en garde)
+        pGloveR!:     Phaser.GameObjects.Image   // frappe droite (caché en garde)
         lastPunchHand: 'left' | 'right' = 'right'
         gArms!:      Phaser.GameObjects.Graphics
         gHUD!:       Phaser.GameObjects.Graphics
@@ -215,14 +216,25 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
           this.sprClipy = this.add.image(this.CX, this.CY, 'evilClipy')
             .setDisplaySize(clipW, clipH).setDepth(3)
 
-          // Gants joueur POV — grands, bords d'écran
+          // ── Gant garde : 1 sprite pleine largeur ──────────────────────
+          // Le sprite est étiré à W px de large → ses bords touchent les bords écran
+          const guardSrc   = this.textures.get(P_GLOVE_DEFAULT).getSourceImage() as HTMLImageElement
+          const guardRatio = guardSrc.naturalHeight && guardSrc.naturalWidth
+            ? guardSrc.naturalHeight / guardSrc.naturalWidth
+            : 0.38
+          const guardH = Math.round(W * guardRatio)
+          const guardY = Math.round(H - guardH * 0.42)
+          this.pGloveGuard = this.add.image(W / 2, guardY, P_GLOVE_DEFAULT)
+            .setDisplaySize(W, guardH).setDepth(7)
+
+          // ── Gants de frappe (invisibles en garde) ─────────────────────
           const gW = Math.round(W * 0.28)
           const gH = Math.round(gW * 1.15)
           const gY = Math.round(H * 0.82)
-          this.pGloveL = this.add.image(Math.round(W * 0.10), gY, P_GLOVE_DEFAULT)
-            .setDisplaySize(gW, gH).setDepth(7)
-          this.pGloveR = this.add.image(Math.round(W * 0.90), gY, P_GLOVE_DEFAULT)
-            .setDisplaySize(gW, gH).setDepth(7).setFlipX(true)
+          this.pGloveL = this.add.image(Math.round(W * 0.10), gY, P_GLOVE_LEFT)
+            .setDisplaySize(gW, gH).setDepth(7).setVisible(false)
+          this.pGloveR = this.add.image(Math.round(W * 0.90), gY, P_GLOVE_RIGHT)
+            .setDisplaySize(gW, gH).setDepth(7).setVisible(false).setFlipX(true)
 
           // ── Textes ─────────────────────────────────────────────────────
           const tf  = { fontFamily: '"Courier New", Courier, monospace', stroke: '#000', strokeThickness: 4 }
@@ -584,20 +596,26 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
         }
 
         punchGlove(hand: 'left' | 'right') {
-          const isLeft  = hand === 'left'
-          const glove   = isLeft ? this.pGloveL : this.pGloveR
-          const txPunch = isLeft ? P_GLOVE_LEFT : P_GLOVE_RIGHT
+          const isLeft = hand === 'left'
+          const glove  = isLeft ? this.pGloveL : this.pGloveR
+          // Cacher la garde, montrer le gant de frappe
+          this.pGloveGuard.setVisible(false)
+          glove.setVisible(true).setFlipX(!isLeft)
+          // Positions
           const gx = isLeft ? Math.round(this.W * 0.10) : Math.round(this.W * 0.90)
           const gy = Math.round(this.H * 0.82)
           const tx = isLeft ? Math.round(this.W * 0.38) : Math.round(this.W * 0.62)
           const ty = Math.round(this.H * 0.56)
-          glove.setTexture(txPunch).setFlipX(false)
+          glove.setPosition(gx, gy)
           this.tweens.killTweensOf(glove)
           this.tweens.add({
             targets: glove, x: tx, y: ty, duration: 130, ease: 'Power2',
             onComplete: () => this.tweens.add({
               targets: glove, x: gx, y: gy, duration: 300, ease: 'Power2',
-              onComplete: () => { glove.setTexture(P_GLOVE_DEFAULT); if (!isLeft) glove.setFlipX(true) },
+              onComplete: () => {
+                glove.setVisible(false)
+                this.pGloveGuard.setVisible(true)
+              },
             }),
           })
         }
@@ -610,17 +628,18 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
           const gloveGuardY = Math.round(this.H * 0.82)
           this.lGTX = this.CX - Math.round(this.W * 0.025); this.lGTY = this.CY - Math.round(this.H * 0.212)
           this.rGTX = this.CX + Math.round(this.W * 0.025); this.rGTY = this.CY - Math.round(this.H * 0.212)
+          this.pGloveGuard.setVisible(false)
           ;[
-            { g: this.pGloveL, tx: P_GLOVE_LEFT,  sx: Math.round(this.W * 0.10), px: Math.round(this.W * 0.38), flip: false },
-            { g: this.pGloveR, tx: P_GLOVE_RIGHT, sx: Math.round(this.W * 0.90), px: Math.round(this.W * 0.62), flip: true  },
-          ].forEach(({ g, tx, sx, px, flip }) => {
-            g.setTexture(tx).setFlipX(false)
+            { g: this.pGloveL, sx: Math.round(this.W * 0.10), px: Math.round(this.W * 0.38), flip: false },
+            { g: this.pGloveR, sx: Math.round(this.W * 0.90), px: Math.round(this.W * 0.62), flip: true  },
+          ].forEach(({ g, sx, px, flip }) => {
+            g.setVisible(true).setFlipX(flip).setPosition(sx, gloveGuardY)
             this.tweens.killTweensOf(g)
             this.tweens.add({
               targets: g, x: px, y: upperY, duration: 180, ease: 'Power2',
               onComplete: () => this.tweens.add({
                 targets: g, x: sx, y: gloveGuardY, duration: 500, ease: 'Power2',
-                onComplete: () => { g.setTexture(P_GLOVE_DEFAULT); if (flip) g.setFlipX(true) },
+                onComplete: () => { g.setVisible(false); this.pGloveGuard.setVisible(true) },
               }),
             })
           })
