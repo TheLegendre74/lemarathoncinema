@@ -35,7 +35,7 @@ const EGGS = [
     icon: '👁️',
     name: 'Je suis désolé, Dave',
     category: 'Clavier',
-    condition: 'Taper "hal" au clavier',
+    condition: 'Taper "open the door" ou "ouvre la porte" au clavier',
   },
   {
     id: 'nolan',

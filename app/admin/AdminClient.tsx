@@ -309,7 +309,7 @@ function ConfigSection({ serverConfig, siteConfig, onSave, saving }: {
         ))}
       </div>
 
-      <Sub label="Easter eggs — HAL 9000 (taper 'hal')" />
+      <Sub label="Easter eggs — HAL 9000 (taper 'open the door' ou 'ouvre la porte')" />
       <div style={{ display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
         {[['Ligne 1', 'hal_line1'], ['Ligne 2', 'hal_line2']].map(([label, key]) => (
           <div key={key} style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '.5rem', alignItems: 'center' }}>

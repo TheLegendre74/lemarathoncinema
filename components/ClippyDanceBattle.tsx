@@ -13,6 +13,7 @@ interface Props {
   onMiss?: () => void
   initialHP?: number
   userId?: string
+  startInFeverNight?: boolean
 }
 
 const COLS: Dir[] = ['left', 'down', 'up', 'right']
@@ -373,7 +374,7 @@ function FeverPostGameOverlay({
 
 // ── Composant principal ───────────────────────────────────────────────────────
 
-export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, userId }: Props) {
+export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, userId, startInFeverNight = false }: Props) {
   const containerRef     = useRef<HTMLDivElement>(null)
   const onWinRef         = useRef(onWin)
   const onLoseRef        = useRef(onLose)
@@ -400,7 +401,7 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
   } | null>(null)
 
   // ── Perfect / Fever flow ──────────────────────────────────────────────────
-  const [innerPhase,  setInnerPhase]  = useState<'ddr'|'rage'|'choice'|'fever'|'fever_post'>('ddr')
+  const [innerPhase,  setInnerPhase]  = useState<'ddr'|'rage'|'choice'|'fever'|'fever_post'>(() => startInFeverNight ? 'fever' : 'ddr')
   const [rageIdx,     setRageIdx]     = useState(0)
   const [feverLeader, setFeverLeader] = useState<LeaderEntry[]>([])
   const missCountRef     = useRef(0)

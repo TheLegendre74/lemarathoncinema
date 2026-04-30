@@ -866,6 +866,8 @@ const GHOST_BOX_REPLIES = [
 
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
 const KONAMI = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a']
+const HAL_TRIGGERS = ['open the door', 'ouvre la porte']
+const isHalTrigger = (text: string) => HAL_TRIGGERS.some((trigger) => text.endsWith(trigger))
 
 export interface EasterEggsConfig {
   matrixLine1?: string; matrixLine2?: string; matrixLine3?: string
@@ -954,6 +956,7 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
   const [showPandora,    setShowPandora]    = useState(false)
   // TODO TEMP — supprimer avant lancement prod
   const [showPunchTest,  setShowPunchTest]  = useState(false)
+  const [adminFeverTestId, setAdminFeverTestId] = useState(0)
   const [showClipy,      setShowClipy]      = useState(() => {
     if (typeof window === 'undefined') return false
     return localStorage.getItem('clippy_active') === '1' || localStorage.getItem('clippy_is_larbin') === '1'
@@ -984,9 +987,10 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
     const t = text.toLowerCase().trimEnd()
     let triggered = true
     if      (t.endsWith('konami') || t.endsWith('joker')) { setShowJoker(true); discoverEgg('joker') }
+    else if (isAdmin && t.endsWith('fever night')) { setAdminFeverTestId((id) => id + 1); setShowClipy(true) }
     else if (t.endsWith('red pill'))  { setShowMatrix(true); discoverEgg('matrix') }
     else if (t.endsWith('42'))        { setShowMarvin(true); discoverEgg('marvin') }
-    else if (t.endsWith('hal'))       { setShowHal(true); discoverEgg('hal') }
+    else if (isHalTrigger(t))         { setShowHal(true); discoverEgg('hal') }
     else if (t.endsWith('nolan'))     { setShowNolan(true); discoverEgg('nolan') }
     else if (t.endsWith('bond'))      { setShowBond(true); discoverEgg('bond') }
     else if (t.endsWith('n4'))        { discoverEgg('fightclub'); setShowFightClub(true) }
@@ -1196,9 +1200,16 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
         return
       }
       // "hal" → HAL 9000
-      if (buf.slice(-3).join('').toLowerCase() === 'hal') {
+      if (isHalTrigger(buf.join('').toLowerCase())) {
         setShowHal(true)
         discoverEgg('hal')
+        keyBuf.current = []
+        return
+      }
+      // Admin only: "fever night" â†’ test direct Fever Night
+      if (isAdmin && buf.slice(-11).join('').toLowerCase() === 'fever night') {
+        setAdminFeverTestId((id) => id + 1)
+        setShowClipy(true)
         keyBuf.current = []
         return
       }
@@ -1371,11 +1382,13 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
       }} onClose={() => setShowPandora(false)} />}
       {showClipy && (
         <ClippyEgg
-          onDismiss={() => { localStorage.removeItem('clippy_is_larbin'); setIsMastered(localStorage.getItem('clippy_mastered') === '1'); setShowClipy(false) }}
+          key={`clippy-${adminFeverTestId}`}
+          onDismiss={() => { localStorage.removeItem('clippy_is_larbin'); setIsMastered(localStorage.getItem('clippy_mastered') === '1'); setAdminFeverTestId(0); setShowClipy(false) }}
           customReplies={config.clippyReplies}
           forcedMessage={showPlea && !pleaDone ? PLEA_CITATIONS[pleaIdx] : undefined}
           isAdmin={isAdmin}
           userId={userId}
+          startInFeverNight={adminFeverTestId > 0}
         />
       )}
 

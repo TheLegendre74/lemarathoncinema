@@ -853,9 +853,9 @@ function getPhaseFromDefeats(d: number): 1|2|3|4|5 {
 }
 
 // ── Interface ─────────────────────────────────────────────────────────────────
-interface ClippyProps { onDismiss: () => void; customReplies?: string[]; forcedMessage?: string; isAdmin?: boolean; userId?: string }
+interface ClippyProps { onDismiss: () => void; customReplies?: string[]; forcedMessage?: string; isAdmin?: boolean; userId?: string; startInFeverNight?: boolean }
 
-export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isAdmin = false, userId }: ClippyProps) {
+export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isAdmin = false, userId, startInFeverNight = false }: ClippyProps) {
 
   // ── Données persistantes ───────────────────────────────────────────────────
   const defeatsRef    = useRef(getDefeats())
@@ -1060,8 +1060,8 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
   const [parriedAnim,      setParriedAnim]     = useState(false)
   const [mousePos,         setMousePos]        = useState({ x:-300, y:-300 })
   const [mgPhase,          setMgPhase]         = useState<'idle'|'active'|'win'|'lose'>('idle')
-  const [ddrPhase,         setDdrPhase]        = useState<'idle'|'active'>('idle')
-  const ddrPhaseRef        = useRef<'idle'|'active'>('idle')
+  const [ddrPhase,         setDdrPhase]        = useState<'idle'|'active'>(() => startInFeverNight ? 'active' : 'idle')
+  const ddrPhaseRef        = useRef<'idle'|'active'>(startInFeverNight ? 'active' : 'idle')
   // TODO TEMP — supprimer avant lancement prod
   const [punchPhase,       setPunchPhase]      = useState<'idle'|'active'>('idle')
   const punchPhaseRef      = useRef<'idle'|'active'>('idle')
@@ -1805,6 +1805,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
         <ClippyDanceBattle
           initialHP={PLAYER_MAX_HP}
           userId={userId}
+          startInFeverNight={startInFeverNight}
           onMiss={() => {
             const next = Math.max(0, playerHPRef.current - 1)
             playerHPRef.current = next
