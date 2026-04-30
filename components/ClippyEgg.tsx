@@ -1116,6 +1116,9 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
   const parryCountRef  = useRef(0)
   const parryThreshRef = useRef(5 + Math.floor(Math.random() * 6))
   const refreshQueue   = useRef<string[]>([])
+  const ddrTauntActiveRef = useRef(false)
+  const hellPhaseRef   = useRef<'idle'|'flames'|'grab'|'dialog'|'drag'|'scream'|'fade'>('idle')
+  const showDeathScreenRef = useRef(false)
 
   // Sync refs
   phaseRef.current    = phase
@@ -1123,6 +1126,9 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
   clippyHPRef.current = clippyHP
   playerHPRef.current = playerHP
   mgPhaseRef.current  = mgPhase
+  ddrTauntActiveRef.current = ddrTauntActive
+  hellPhaseRef.current = hellPhase
+  showDeathScreenRef.current = showDeathScreen
 
   // ── Persistance cross-session ──────────────────────────────────────────────
   useEffect(() => {
@@ -1151,6 +1157,20 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
   // ── Audio ──────────────────────────────────────────────────────────────────
   function playSound(src: string, vol = 1) {
     try { const a = new Audio(src); a.volume = vol; a.play().catch(() => {}) } catch {}
+  }
+  function isSwordCombatActive() {
+    return phaseRef.current === 'combat'
+      && mgPhaseRef.current === 'idle'
+      && ddrPhaseRef.current === 'idle'
+      && punchPhaseRef.current === 'idle'
+      && hellPhaseRef.current === 'idle'
+      && !ddrIntroActiveRef.current
+      && !ddrTauntActiveRef.current
+      && !showDeathScreenRef.current
+  }
+  function playSwordCombatSound(src: string, vol = 1) {
+    if (!isSwordCombatActive()) return
+    playSound(src, vol)
   }
   function startMusic() {
     if (musicRef.current) return
@@ -1325,8 +1345,8 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
       if (!parryActive.current) return
       parryActive.current = false; setParrySquare(null)
       if (parryRAF.current) cancelAnimationFrame(parryRAF.current)
-      playSound('/clippy-hit.mp3', 0.9)
-      setTimeout(() => playSound('/clippy-coup.mp3', 1), 120)
+      playSwordCombatSound('/clippy-hit.mp3', 0.9)
+      setTimeout(() => playSwordCombatSound('/clippy-coup.mp3', 1), 120)
       const nextHP = Math.max(0, playerHPRef.current - 1)
       playerHPRef.current = nextHP; setPlayerHP(nextHP)
       setHpFlash(true); setTimeout(() => setHpFlash(false), 450)
@@ -1374,7 +1394,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
 
   // ── Attaque avec windup ────────────────────────────────────────────────────
   function triggerAttack() {
-    if (phaseRef.current !== 'combat' || parryActive.current || ddrPhaseRef.current !== 'idle' || ddrIntroActiveRef.current) return
+    if (!isSwordCombatActive() || parryActive.current) return
     setSwordWindup(true)
     setTimeout(() => { setSwordWindup(false); startParry() }, 700)
   }
@@ -1667,8 +1687,8 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
     e.stopPropagation()
     if (ddrIntroActiveRef.current) { setDdrIntroIdx(i => i + 1); return }
     if (parryActive.current || mgPhase !== 'idle' || ddrPhaseRef.current !== 'idle') return
-    playSound('/clippy-swoosh.wav', 0.8)
-    setTimeout(() => playSound('/clippy-hit.mp3', 0.9), 180)
+    playSwordCombatSound('/clippy-swoosh.wav', 0.8)
+    setTimeout(() => playSwordCombatSound('/clippy-hit.mp3', 0.9), 180)
     const nextHP = Math.max(0, clippyHPRef.current - 1)
     clippyHPRef.current = nextHP; setClippyHP(nextHP)
     setClippyHit(true); setTimeout(() => setClippyHit(false), 250)
