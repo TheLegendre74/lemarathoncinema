@@ -14,7 +14,7 @@ const P_GLOVE_RIGHT   = 'pGloveRight'
 
 // ── Timing (tutoriel = délais généreux) ───────────────────────────────────────
 const COUNTER_WIN_MS  = 1500   // fenêtre de contre
-const PLAYER_MAX_HP   = 60
+const PLAYER_MAX_HP   = 30
 
 // ── Séquence tutoriel : 5 attaques scriptées ──────────────────────────────────
 const TUT_SEQUENCE: Attack[] = ['left', 'right', 'body', 'left', 'right']
@@ -65,8 +65,8 @@ function getDiff(hp: number, maxHP: number): Diff {
   // Fenêtre d'esquive : 1500 ms (facile) → 800 ms (max vitesse), linéaire
   const atkMs = Math.round(800 + 700 * pct)
   // Dégâts : croissent avec la difficulté
-  const dmgMin = Math.round(3 + (1 - pct) * 5)   // 3 → 8
-  const dmgMax = Math.round(5 + (1 - pct) * 6)   // 5 → 11
+  const dmgMin = 1
+  const dmgMax = 1
   const label  = pct <= 0.15 ? '⚠️ RAGE MODE' : pct <= 0.35 ? '🔥 DANGER' : ''
   return { telMs: 1000, atkMs, dmgMin, dmgMax, label }
 }
@@ -589,7 +589,7 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
             return
           }
 
-          this.clippyHP = Math.max(0, this.clippyHP - 3)
+          this.clippyHP = Math.max(0, this.clippyHP - 1)
           if (this.clippyHP <= 0) { this.t1 = this.time.delayedCall(400, () => this.doWin()); return }
           this.t1 = this.time.delayedCall(900, () => this.startIdle())
         }
@@ -642,7 +642,7 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
               }),
             })
           })
-          this.clippyHP = Math.max(0, this.clippyHP - 8)
+          this.clippyHP = Math.max(0, this.clippyHP - 3)
           if (this.clippyHP <= 0) { this.t1 = this.time.delayedCall(500, () => this.doWin()); return }
           this.t1 = this.time.delayedCall(1400, () => { this.armsGuard(); this.startIdle() })
         }
