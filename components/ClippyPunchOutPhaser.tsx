@@ -12,10 +12,27 @@ const CLIPPY_CY = 195   // centre Y du sprite dans le canvas
 const SH_LX = -58; const SH_LY = -18   // épaule gauche
 const SH_RX =  58; const SH_RY = -18   // épaule droite
 
-// ── Sprites gants : mettre les fichiers dans public/ puis USE_GLOVE_SPRITES = true
+// ── Sprites gants Clippy (bras de Clippy)
 const GLOVE_LEFT_KEY  = 'gant-gauche'
 const GLOVE_RIGHT_KEY = 'gant-droite'
-const USE_GLOVE_SPRITES = false  // → true quand les fichiers sont là
+const USE_GLOVE_SPRITES = false
+
+// ── Sprites gants joueur POV ──────────────────────────────────────────────────
+const P_GLOVE_DEFAULT = 'pGloveDefault'  // garde / repos
+const P_GLOVE_LEFT    = 'pGloveLeft'     // poing gauche
+const P_GLOVE_RIGHT   = 'pGloveRight'    // poing droit
+
+// Positions de garde (bas de l'écran, perspective FPP)
+const PG_LX = 190; const PG_LY = 470   // gant gauche
+const PG_RX = 610; const PG_RY = 470   // gant droit
+// Position de frappe (lunge vers Clippy)
+const PG_LPUNCH_X = 340; const PG_LPUNCH_Y = 320
+const PG_RPUNCH_X = 460; const PG_RPUNCH_Y = 320
+// Uppercut (étoile) — les deux mains montent
+const PG_UPPER_LX = 330; const PG_UPPER_LY = 200
+const PG_UPPER_RX = 470; const PG_UPPER_RY = 200
+// Taille d'affichage des gants joueur
+const PG_W = 200; const PG_H = 210
 
 // ── Timing de base (écrasé dynamiquement selon la difficulté) ────────────────
 const COUNTER_WIN_MS = 650
@@ -112,9 +129,12 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
         currentAtkMs = 1400   // durée de la fenêtre d'esquive en cours
 
         // ── Phaser objects ─────────────────────────────────────────────────
-        sprClipy!: Phaser.GameObjects.Image
-        sprLeft!:  Phaser.GameObjects.Image
-        sprRight!: Phaser.GameObjects.Image
+        sprClipy!:  Phaser.GameObjects.Image
+        sprLeft!:   Phaser.GameObjects.Image
+        sprRight!:  Phaser.GameObjects.Image
+        pGloveL!:   Phaser.GameObjects.Image   // gant gauche joueur POV
+        pGloveR!:   Phaser.GameObjects.Image   // gant droit joueur POV
+        lastPunchHand: 'left' | 'right' = 'right'
         gArms!:    Phaser.GameObjects.Graphics
         gHUD!:     Phaser.GameObjects.Graphics
         gFlash!:   Phaser.GameObjects.Graphics
@@ -144,6 +164,10 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
             this.load.image(GLOVE_LEFT_KEY,  `/${GLOVE_LEFT_KEY}.png`)
             this.load.image(GLOVE_RIGHT_KEY, `/${GLOVE_RIGHT_KEY}.png`)
           }
+          // Gants joueur POV
+          this.load.image(P_GLOVE_DEFAULT, '/gant-joueur.png')
+          this.load.image(P_GLOVE_LEFT,    '/gant-joueur-gauche.png')
+          this.load.image(P_GLOVE_RIGHT,   '/gant-joueur-droit.png')
         }
 
         // ── CREATE ─────────────────────────────────────────────────────────
@@ -163,11 +187,17 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
             .setDisplaySize(CLIPPY_W, CLIPPY_H)
             .setDepth(3)
 
-          // Sprites gants (si disponibles)
+          // Sprites gants Clippy (si disponibles)
           if (USE_GLOVE_SPRITES) {
             this.sprLeft  = this.add.image(this.lGX, this.lGY, GLOVE_LEFT_KEY).setDisplaySize(70, 70).setDepth(4)
             this.sprRight = this.add.image(this.rGX, this.rGY, GLOVE_RIGHT_KEY).setDisplaySize(70, 70).setDepth(4)
           }
+
+          // Gants joueur POV — visibles en bas de l'écran
+          this.pGloveL = this.add.image(PG_LX, PG_LY, P_GLOVE_DEFAULT)
+            .setDisplaySize(PG_W, PG_H).setDepth(7)
+          this.pGloveR = this.add.image(PG_RX, PG_RY, P_GLOVE_DEFAULT)
+            .setDisplaySize(PG_W, PG_H).setDepth(7).setFlipX(true)
 
           // Textes
           const tf  = { fontFamily: '"Courier New", Courier, monospace', stroke: '#000000', strokeThickness: 5 }
@@ -401,18 +431,57 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
           this.clearT(); this.set('countered')
           this.flash(0xffee22, 0.5); this.shake(20); this.snd('snd_hit')
           this.msg('💥 TOUCHÉ !')
+
+          // Alterne main gauche / main droite
+          this.lastPunchHand = this.lastPunchHand === 'right' ? 'left' : 'right'
+          this.punchGlove(this.lastPunchHand)
+
           this.clippyHP = Math.max(0, this.clippyHP - 3)
           if (this.clippyHP <= 0) { this.t1 = this.time.delayedCall(400, () => this.doWin()); return }
           this.t1 = this.time.delayedCall(900, () => this.startIdle())
+        }
+
+        punchGlove(hand: 'left' | 'right') {
+          const isLeft  = hand === 'left'
+          const glove   = isLeft ? this.pGloveL : this.pGloveR
+          const txPunch = isLeft ? P_GLOVE_LEFT : P_GLOVE_RIGHT
+          const tx  = isLeft ? PG_LPUNCH_X : PG_RPUNCH_X
+          const ty  = isLeft ? PG_LPUNCH_Y : PG_RPUNCH_Y
+          const gx  = isLeft ? PG_LX : PG_RX
+          const gy  = isLeft ? PG_LY : PG_RY
+          glove.setTexture(txPunch).setFlipX(false)
+          this.tweens.killTweensOf(glove)
+          this.tweens.add({
+            targets: glove, x: tx, y: ty, duration: 130, ease: 'Power2',
+            onComplete: () => {
+              this.tweens.add({
+                targets: glove, x: gx, y: gy, duration: 280, ease: 'Power2',
+                onComplete: () => {
+                  glove.setTexture(P_GLOVE_DEFAULT)
+                  if (!isLeft) glove.setFlipX(true)
+                },
+              })
+            },
+          })
         }
 
         doStarPunch() {
           this.stars = 0; this.set('starpunch')
           this.flash(0xffffff, 0.75); this.shake(28); this.snd('snd_hit')
           this.msg('⭐⭐⭐  UPPERCUT ÉTOILE !!!')
-          // Les deux gants montent vers le haut
+          // Bras Clippy montent
           this.lGTX = 380; this.lGTY = CLIPPY_CY - 110
           this.rGTX = 420; this.rGTY = CLIPPY_CY - 110
+          // Les deux gants joueur montent (uppercut)
+          this.pGloveL.setTexture(P_GLOVE_LEFT).setFlipX(false)
+          this.pGloveR.setTexture(P_GLOVE_RIGHT).setFlipX(false)
+          this.tweens.killTweensOf(this.pGloveL); this.tweens.killTweensOf(this.pGloveR)
+          this.tweens.add({ targets: this.pGloveL, x: PG_UPPER_LX, y: PG_UPPER_LY, duration: 180, ease: 'Power2',
+            onComplete: () => this.tweens.add({ targets: this.pGloveL, x: PG_LX, y: PG_LY, duration: 500, ease: 'Power2',
+              onComplete: () => { this.pGloveL.setTexture(P_GLOVE_DEFAULT).setFlipX(false) } }) })
+          this.tweens.add({ targets: this.pGloveR, x: PG_UPPER_RX, y: PG_UPPER_RY, duration: 180, ease: 'Power2',
+            onComplete: () => this.tweens.add({ targets: this.pGloveR, x: PG_RX, y: PG_RY, duration: 500, ease: 'Power2',
+              onComplete: () => { this.pGloveR.setTexture(P_GLOVE_DEFAULT).setFlipX(true) } }) })
           this.clippyHP = Math.max(0, this.clippyHP - 8)
           if (this.clippyHP <= 0) { this.t1 = this.time.delayedCall(500, () => this.doWin()); return }
           this.t1 = this.time.delayedCall(1400, () => { this.armsGuard(); this.startIdle() })
