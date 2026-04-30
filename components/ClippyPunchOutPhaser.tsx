@@ -1,52 +1,31 @@
 'use client'
 import { useEffect, useRef } from 'react'
 
-// ── Canvas ────────────────────────────────────────────────────────────────────
-const W = 800, H = 520
+// ── Offsets épaules Clippy (relatifs à son centre, proportions fixes) ─────────
+const SH_LX_PCT = -0.0725   // -58 / 800
+const SH_LY_PCT = -0.0346   // -18 / 520
+const SH_RX_PCT =  0.0725
+const SH_RY_PCT = -0.0346
 
-// ── Sprite geometry (à ajuster au besoin après test visuel) ──────────────────
-const CLIPPY_W  = 200   // largeur affichée du sprite evil-clippy
-const CLIPPY_H  = 270   // hauteur affichée
-const CLIPPY_CY = 195   // centre Y du sprite dans le canvas
-// Décalages des épaules par rapport au centre du sprite
-const SH_LX = -58; const SH_LY = -18   // épaule gauche
-const SH_RX =  58; const SH_RY = -18   // épaule droite
-
-// ── Sprites gants Clippy (bras de Clippy)
+// ── Sprites gants Clippy (non utilisés pour l'instant) ───────────────────────
 const GLOVE_LEFT_KEY  = 'gant-gauche'
 const GLOVE_RIGHT_KEY = 'gant-droite'
 const USE_GLOVE_SPRITES = false
 
 // ── Sprites gants joueur POV ──────────────────────────────────────────────────
-const P_GLOVE_DEFAULT = 'pGloveDefault'  // garde / repos
-const P_GLOVE_LEFT    = 'pGloveLeft'     // poing gauche
-const P_GLOVE_RIGHT   = 'pGloveRight'    // poing droit
+const P_GLOVE_DEFAULT = 'pGloveDefault'
+const P_GLOVE_LEFT    = 'pGloveLeft'
+const P_GLOVE_RIGHT   = 'pGloveRight'
 
-// Positions de garde (bas de l'écran, perspective FPP)
-const PG_LX = 190; const PG_LY = 470   // gant gauche
-const PG_RX = 610; const PG_RY = 470   // gant droit
-// Position de frappe (lunge vers Clippy)
-const PG_LPUNCH_X = 340; const PG_LPUNCH_Y = 320
-const PG_RPUNCH_X = 460; const PG_RPUNCH_Y = 320
-// Uppercut (étoile) — les deux mains montent
-const PG_UPPER_LX = 330; const PG_UPPER_LY = 200
-const PG_UPPER_RX = 470; const PG_UPPER_RY = 200
-// Taille d'affichage des gants joueur
-const PG_W = 200; const PG_H = 210
+// ── Timing ────────────────────────────────────────────────────────────────────
+const COUNTER_WIN_MS = 900
+const PLAYER_MAX_HP  = 30
 
-// ── Timing de base (écrasé dynamiquement selon la difficulté) ────────────────
-const COUNTER_WIN_MS = 650
-const PLAYER_MAX_HP  = 30   // plus de vie pour le joueur
-
-// Paliers de difficulté basés sur les HP restants de Clippy
-//   Easy    HP > 3+(threshold): telegraph=2200ms, dodge=1400ms
-//   Medium  HP entre 4 et threshold: 1700ms / 1200ms
-//   Hard    HP <= 3 (3 derniers coups): 1300ms / 1100ms  ← minimum garanti 1.1s
 type Diff = { telMs: number; atkMs: number; dmgMin: number; dmgMax: number; label: string }
 function getDiff(hp: number, maxHP: number): Diff {
-  if (hp <= 3)                  return { telMs: 1300, atkMs: 1100, dmgMin: 5, dmgMax: 7,  label: '⚠️ RAGE MODE' }
-  if (hp <= Math.ceil(maxHP * 0.35)) return { telMs: 1700, atkMs: 1200, dmgMin: 4, dmgMax: 5,  label: '🔥 DANGER'    }
-  return                               { telMs: 2200, atkMs: 1400, dmgMin: 3, dmgMax: 4,  label: ''            }
+  if (hp <= 3)                       return { telMs: 1800, atkMs: 1600, dmgMin: 5, dmgMax: 7,  label: '⚠️ RAGE MODE' }
+  if (hp <= Math.ceil(maxHP * 0.35)) return { telMs: 2300, atkMs: 1900, dmgMin: 4, dmgMax: 5,  label: '🔥 DANGER'    }
+  return                                    { telMs: 2800, atkMs: 2300, dmgMin: 3, dmgMax: 4,  label: ''            }
 }
 
 type Attack = 'left' | 'right' | 'body'
@@ -100,6 +79,13 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
       if (!mounted || !containerRef.current) return
 
       class PunchScene extends Phaser.Scene {
+        // ── Dimensions dynamiques (set dans create) ────────────────────────
+        W = 800; H = 520
+        CX = 400; CY = 195   // centre Clippy
+        // Offsets épaules en pixels (calculés depuis les PCT dans create)
+        SH_LX = -58; SH_LY = -18
+        SH_RX =  58; SH_RY = -18
+
         // ── State ──────────────────────────────────────────────────────────
         gs: GS = 'intro'
         playerHP = PLAYER_MAX_HP
@@ -109,11 +95,8 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
         hitDone  = false
 
         // ── Arm lerp ───────────────────────────────────────────────────────
-        // Positions absolues des gants
-        lGX = 400 + SH_LX - 155; lGY = CLIPPY_CY + SH_LY
-        rGX = 400 + SH_RX + 155; rGY = CLIPPY_CY + SH_RY
-        lGTX = 400 + SH_LX - 155; lGTY = CLIPPY_CY + SH_LY
-        rGTX = 400 + SH_RX + 155; rGTY = CLIPPY_CY + SH_RY
+        lGX = 0; lGY = 0; lGTX = 0; lGTY = 0
+        rGX = 0; rGY = 0; rGTX = 0; rGTY = 0
 
         // ── Visual ─────────────────────────────────────────────────────────
         shakeX   = 0
@@ -121,26 +104,24 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
         telPct   = 0
         bounceT  = 0
         eyePulse = 0
-        sprAngle = 0  // rotation du sprite clippy
 
         // ── Timers ─────────────────────────────────────────────────────────
         t1: Phaser.Time.TimerEvent | null = null
         t2: Phaser.Time.TimerEvent | null = null
-        currentAtkMs = 1400   // durée de la fenêtre d'esquive en cours
+        currentAtkMs = 2300
 
         // ── Phaser objects ─────────────────────────────────────────────────
         sprClipy!:  Phaser.GameObjects.Image
         sprLeft!:   Phaser.GameObjects.Image
         sprRight!:  Phaser.GameObjects.Image
-        pGloveL!:   Phaser.GameObjects.Image   // gant gauche joueur POV
-        pGloveR!:   Phaser.GameObjects.Image   // gant droit joueur POV
+        pGlove!:    Phaser.GameObjects.Image   // gant joueur POV (unique, centré)
         lastPunchHand: 'left' | 'right' = 'right'
         gArms!:    Phaser.GameObjects.Graphics
         gHUD!:     Phaser.GameObjects.Graphics
         gFlash!:   Phaser.GameObjects.Graphics
-        tAction!:  Phaser.GameObjects.Text   // nom du coup — grand, coloré
-        tHint!:    Phaser.GameObjects.Text   // touche à presser — highlight
-        tMsg!:     Phaser.GameObjects.Text   // taunts / feedback — petit
+        tAction!:  Phaser.GameObjects.Text
+        tHint!:    Phaser.GameObjects.Text
+        tMsg!:     Phaser.GameObjects.Text
         tPHPL!:    Phaser.GameObjects.Text
         tCHPL!:    Phaser.GameObjects.Text
         tRound!:   Phaser.GameObjects.Text
@@ -164,7 +145,6 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
             this.load.image(GLOVE_LEFT_KEY,  `/${GLOVE_LEFT_KEY}.png`)
             this.load.image(GLOVE_RIGHT_KEY, `/${GLOVE_RIGHT_KEY}.png`)
           }
-          // Gants joueur POV
           this.load.image(P_GLOVE_DEFAULT, '/gant-joueur.png')
           this.load.image(P_GLOVE_LEFT,    '/gant-joueur-gauche.png')
           this.load.image(P_GLOVE_RIGHT,   '/gant-joueur-droit.png')
@@ -173,46 +153,70 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
         // ── CREATE ─────────────────────────────────────────────────────────
 
         create() {
-          // Background
-          this.add.image(W/2, H/2, 'arena').setDisplaySize(W, H).setAlpha(0.8)
-          this.add.graphics().fillStyle(0x040412, 0.5).fillRect(0, 0, W, H)
+          // Dimensions réelles de la scène
+          this.W   = this.scale.width
+          this.H   = this.scale.height
+          this.CX  = this.W / 2
+          this.CY  = Math.round(this.H * 0.375)   // 195 / 520 ≈ 0.375
 
-          // Graphics layers
+          // Offsets épaules en pixels proportionnels
+          this.SH_LX = Math.round(SH_LX_PCT * this.W)
+          this.SH_LY = Math.round(SH_LY_PCT * this.H)
+          this.SH_RX = Math.round(SH_RX_PCT * this.W)
+          this.SH_RY = Math.round(SH_RY_PCT * this.H)
+
+          // Positions initiales des gants Clippy
+          this.lGX  = this.CX + this.SH_LX - Math.round(this.W * 0.194)
+          this.lGY  = this.CY + this.SH_LY
+          this.rGX  = this.CX + this.SH_RX + Math.round(this.W * 0.194)
+          this.rGY  = this.CY + this.SH_RY
+          this.lGTX = this.lGX; this.lGTY = this.lGY
+          this.rGTX = this.rGX; this.rGTY = this.rGY
+
+          const W = this.W, H = this.H
+
+          // ── Background arène plein écran ───────────────────────────────
+          this.add.image(W/2, H/2, 'arena').setDisplaySize(W, H)
+          this.add.graphics().fillStyle(0x040412, 0.42).fillRect(0, 0, W, H)
+
+          // ── Graphics layers ────────────────────────────────────────────
           this.gArms  = this.add.graphics().setDepth(2)
           this.gHUD   = this.add.graphics().setDepth(8)
           this.gFlash = this.add.graphics().setDepth(10)
 
-          // Sprite evil-clippy (derrière les bras)
-          this.sprClipy = this.add.image(400, CLIPPY_CY, 'evilClipy')
-            .setDisplaySize(CLIPPY_W, CLIPPY_H)
+          // ── Sprite Clippy — 20 % plus petit qu'avant ──────────────────
+          const clipW = Math.round(W * 0.200)   // 200/800 * 0.8 = 20 %
+          const clipH = Math.round(H * 0.415)   // 270/520 * 0.8 ≈ 41.5 %
+          this.sprClipy = this.add.image(this.CX, this.CY, 'evilClipy')
+            .setDisplaySize(clipW, clipH)
             .setDepth(3)
 
-          // Sprites gants Clippy (si disponibles)
           if (USE_GLOVE_SPRITES) {
             this.sprLeft  = this.add.image(this.lGX, this.lGY, GLOVE_LEFT_KEY).setDisplaySize(70, 70).setDepth(4)
             this.sprRight = this.add.image(this.rGX, this.rGY, GLOVE_RIGHT_KEY).setDisplaySize(70, 70).setDepth(4)
           }
 
-          // Gants joueur POV — visibles en bas de l'écran
-          this.pGloveL = this.add.image(PG_LX, PG_LY, P_GLOVE_DEFAULT)
-            .setDisplaySize(PG_W, PG_H).setDepth(7)
-          this.pGloveR = this.add.image(PG_RX, PG_RY, P_GLOVE_DEFAULT)
-            .setDisplaySize(PG_W, PG_H).setDepth(7).setFlipX(true)
+          // ── Gant joueur POV — UN seul, centré en bas ──────────────────
+          const gW = Math.round(W * 0.20)
+          const gH = Math.round(H * 0.28)
+          this.pGlove = this.add.image(W / 2, Math.round(H * 0.86), P_GLOVE_DEFAULT)
+            .setDisplaySize(gW, gH)
+            .setDepth(7)
 
-          // Textes
+          // ── Textes ─────────────────────────────────────────────────────
           const tf  = { fontFamily: '"Courier New", Courier, monospace', stroke: '#000000', strokeThickness: 5 }
           const tfB = { ...tf, strokeThickness: 6 }
-          // Nom du coup — grand, coloré, centré sous Clippy
-          this.tAction = this.add.text(W/2, 348, '', { ...tfB, fontSize: '26px', color: '#ffaa00', align: 'center', fontStyle: 'bold' }).setOrigin(0.5, 0).setDepth(9)
-          // Touche à presser — plus petite mais highlight jaune
-          this.tHint   = this.add.text(W/2, 384, '', { ...tf, fontSize: '17px', color: '#ffee55', align: 'center' }).setOrigin(0.5, 0).setDepth(9)
-          // Taunts / feedback — petit, en dessous
-          this.tMsg    = this.add.text(W/2, 416, '', { ...tf, fontSize: '13px', color: '#cccccc', align: 'center', wordWrap: { width: 540 } }).setOrigin(0.5, 0).setDepth(9)
-          this.tPHPL   = this.add.text(14,  10,  '❤️ VOUS',   { ...tf, fontSize: '10px', color: '#88ee88' }).setDepth(9)
+          const msgY    = Math.round(H * 0.695)
+          const actionY = Math.round(H * 0.635)
+          const hintY   = Math.round(H * 0.665)
+          this.tAction = this.add.text(W/2, actionY, '', { ...tfB, fontSize: '26px', color: '#ffaa00', align: 'center', fontStyle: 'bold' }).setOrigin(0.5, 0).setDepth(9)
+          this.tHint   = this.add.text(W/2, hintY,   '', { ...tf,  fontSize: '17px', color: '#ffee55', align: 'center' }).setOrigin(0.5, 0).setDepth(9)
+          this.tMsg    = this.add.text(W/2, msgY,    '', { ...tf,  fontSize: '13px', color: '#cccccc', align: 'center', wordWrap: { width: Math.round(W * 0.68) } }).setOrigin(0.5, 0).setDepth(9)
+          this.tPHPL   = this.add.text(14,  10, '❤️ VOUS',   { ...tf, fontSize: '10px', color: '#88ee88' }).setDepth(9)
           this.tCHPL   = this.add.text(W-14, 10, '📎 CLIPPY', { ...tf, fontSize: '10px', color: '#ee8888' }).setOrigin(1, 0).setDepth(9)
-          this.tRound  = this.add.text(W/2, 5,   'ROUND 1',   { ...tf, fontSize: '12px', color: '#ffcc44' }).setOrigin(0.5, 0).setDepth(9)
+          this.tRound  = this.add.text(W/2,   5, 'ROUND 1',   { ...tf, fontSize: '12px', color: '#ffcc44' }).setOrigin(0.5, 0).setDepth(9)
 
-          // Clavier
+          // ── Clavier ────────────────────────────────────────────────────
           const kb = this.input.keyboard!
           this.kLeft  = kb.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT)
           this.kRight = kb.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT)
@@ -231,24 +235,19 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
         update(time: number, delta: number) {
           const dt = delta / 1000
 
-          // Bounce en idle
           this.bounceT += this.gs === 'idle' ? dt * 3.5 : 0
 
-          // Pulsation des yeux pendant telegraph / attack
           if (this.gs === 'telegraph' || this.gs === 'attack') {
             this.eyePulse = 0.5 + 0.5 * Math.sin(time * 0.009)
           } else {
             this.eyePulse = Math.max(0, this.eyePulse - dt * 4)
           }
 
-          // Déclin du shake
           this.shakeX *= 0.75
           if (Math.abs(this.shakeX) < 0.3) this.shakeX = 0
 
-          // Déclin du flash
           this.flashA = Math.max(0, this.flashA - dt * 5)
 
-          // Barre telegraph / attack
           if (this.gs === 'telegraph') {
             this.telPct = Math.min(1, this.telPct + delta / getDiff(this.clippyHP, initialHP).telMs)
           } else if (this.gs === 'attack') {
@@ -259,15 +258,14 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
             this.telPct *= 0.85
           }
 
-          // Lerp des gants
+          // Lerp des gants Clippy
           const ls = 0.16
           this.lGX += (this.lGTX - this.lGX) * ls; this.lGY += (this.lGTY - this.lGY) * ls
           this.rGX += (this.rGTX - this.rGX) * ls; this.rGY += (this.rGTY - this.rGY) * ls
 
-          // Mise à jour du sprite Clippy
           const bounceOff = (this.gs === 'idle') ? Math.sin(this.bounceT) * 9 : 0
-          const cx = 400 + this.shakeX
-          const cy = CLIPPY_CY + bounceOff
+          const cx = this.CX + this.shakeX
+          const cy = this.CY + bounceOff
 
           this.sprClipy.setPosition(cx, cy)
           this.sprClipy.angle = this.gs === 'win'
@@ -275,7 +273,6 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
             : (this.gs === 'countered' || this.gs === 'starpunch')
             ? Math.sin(time * 0.025) * 6
             : 0
-          // Tinte selon l'état
           this.sprClipy.clearTint()
           if (this.gs === 'countered' || this.gs === 'starpunch') this.sprClipy.setTint(0xffee88)
           else if (this.gs === 'win')  this.sprClipy.setTint(0x888888)
@@ -284,10 +281,10 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
             this.sprClipy.setTint(Phaser.Display.Color.GetColor(255, 255 - v, 255 - v))
           }
 
-          // Sync sprites gants
           if (USE_GLOVE_SPRITES) {
-            this.sprLeft.setPosition(this.lGX + (cx - 400), this.lGY + (cy - CLIPPY_CY))
-            this.sprRight.setPosition(this.rGX + (cx - 400), this.rGY + (cy - CLIPPY_CY))
+            const dx = cx - this.CX, dy = cy - this.CY
+            this.sprLeft.setPosition(this.lGX + dx, this.lGY + dy)
+            this.sprRight.setPosition(this.rGX + dx, this.rGY + dy)
           }
 
           this.handleInput()
@@ -328,19 +325,21 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
         rand<T>(a: T[]): T { return a[Math.floor(Math.random() * a.length)] }
 
         armsGuard() {
-          this.lGTX = 400 + SH_LX - 155; this.lGTY = CLIPPY_CY + SH_LY
-          this.rGTX = 400 + SH_RX + 155; this.rGTY = CLIPPY_CY + SH_RY
+          this.lGTX = this.CX + this.SH_LX - Math.round(this.W * 0.194)
+          this.lGTY = this.CY + this.SH_LY
+          this.rGTX = this.CX + this.SH_RX + Math.round(this.W * 0.194)
+          this.rGTY = this.CY + this.SH_RY
         }
 
         refreshCtrl() {
           const s = this.gs, a = this.atk
           if (s === 'telegraph') {
-            const names: Record<Attack, string>  = { left: '🥊 CROCHET GAUCHE', right: '🥊 CROCHET DROIT', body: '💥 DIRECT AU CORPS' }
-            const hints: Record<Attack, string>  = { left: '→ Esquiver droite  [ D / → ]', right: '← Esquiver gauche  [ A / ← ]', body: '↓ Baisser la tête  [ S / ↓ ]' }
+            const names: Record<Attack, string> = { left: '🥊 CROCHET GAUCHE', right: '🥊 CROCHET DROIT', body: '💥 DIRECT AU CORPS' }
+            const hints: Record<Attack, string> = { left: '→ Esquiver droite  [ D / → ]', right: '← Esquiver gauche  [ A / ← ]', body: '↓ Baisser la tête  [ S / ↓ ]' }
             this.tAction.setText(a ? names[a] : '').setColor('#ffaa00')
             this.tHint.setText(a ? hints[a] : '').setColor('#ffee55')
           } else if (s === 'attack') {
-            const hints: Record<Attack, string>  = { left: '→  [ D / → ]  MAINTENANT !', right: '←  [ A / ← ]  MAINTENANT !', body: '↓  [ S / ↓ ]  MAINTENANT !' }
+            const hints: Record<Attack, string> = { left: '→  [ D / → ]  MAINTENANT !', right: '←  [ A / ← ]  MAINTENANT !', body: '↓  [ S / ↓ ]  MAINTENANT !' }
             this.tAction.setText('⚡ ESQUIVEZ !').setColor('#ff4422')
             this.tHint.setText(a ? hints[a] : '').setColor('#ffcc00')
           } else if (s === 'counter') {
@@ -387,15 +386,20 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
           this.atk = attacks[Math.floor(Math.random() * 3)]
           this.set('telegraph'); this.telPct = 0; this.hitDone = false
           this.msg('')
-          // Affiche le label de difficulté dans tRound
           const diff = getDiff(this.clippyHP, initialHP)
           this.tRound.setText(diff.label || 'ROUND 1')
           this.tRound.setColor(diff.label === '⚠️ RAGE MODE' ? '#ff2222' : diff.label === '🔥 DANGER' ? '#ff8800' : '#ffcc44')
-          // Arm tension pendant telegraph
-          const cx = 400; const cy = CLIPPY_CY
-          if (this.atk === 'left')       { this.lGTX = cx + SH_LX - 120; this.lGTY = cy + SH_LY + 10 }
-          else if (this.atk === 'right') { this.rGTX = cx + SH_RX + 120; this.rGTY = cy + SH_RY + 10 }
-          else { this.lGTX = cx + SH_LX - 90; this.lGTY = cy + SH_LY + 20; this.rGTX = cx + SH_RX + 90; this.rGTY = cy + SH_RY + 20 }
+          // Tension des bras pendant telegraph
+          const spread = Math.round(this.W * 0.15)
+          if (this.atk === 'left') {
+            this.lGTX = this.CX + this.SH_LX - spread; this.lGTY = this.CY + this.SH_LY + Math.round(this.H * 0.019)
+          } else if (this.atk === 'right') {
+            this.rGTX = this.CX + this.SH_RX + spread; this.rGTY = this.CY + this.SH_RY + Math.round(this.H * 0.019)
+          } else {
+            const bodySpread = Math.round(this.W * 0.113)
+            this.lGTX = this.CX + this.SH_LX - bodySpread; this.lGTY = this.CY + this.SH_LY + Math.round(this.H * 0.038)
+            this.rGTX = this.CX + this.SH_RX + bodySpread; this.rGTY = this.CY + this.SH_RY + Math.round(this.H * 0.038)
+          }
           this.t1 = this.time.delayedCall(diff.telMs, () => this.startAttack())
         }
 
@@ -404,11 +408,16 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
           const atkMs = getDiff(this.clippyHP, initialHP).atkMs
           this.currentAtkMs = atkMs
           this.set('attack'); this.msg(''); this.telPct = 1; this.snd('snd_swoosh')
-          const cx = 400; const cy = CLIPPY_CY
-          // Lunge vers le joueur
-          if (this.atk === 'left')       { this.lGTX = cx + 60; this.lGTY = cy + 50 }
-          else if (this.atk === 'right') { this.rGTX = cx - 60; this.rGTY = cy + 50 }
-          else { this.lGTX = cx - 30; this.lGTY = cy + 110; this.rGTX = cx + 30; this.rGTY = cy + 110 }
+          const lunge = Math.round(this.W * 0.075)
+          const lungeY = Math.round(this.H * 0.096)
+          if (this.atk === 'left')       { this.lGTX = this.CX + lunge;  this.lGTY = this.CY + lungeY }
+          else if (this.atk === 'right') { this.rGTX = this.CX - lunge;  this.rGTY = this.CY + lungeY }
+          else {
+            const bLunge = Math.round(this.W * 0.038)
+            const bLungeY = Math.round(this.H * 0.212)
+            this.lGTX = this.CX - bLunge; this.lGTY = this.CY + bLungeY
+            this.rGTX = this.CX + bLunge; this.rGTY = this.CY + bLungeY
+          }
           this.t1 = this.time.delayedCall(atkMs, () => {
             if (!this.hitDone) { this.hitDone = true; this.onMiss() }
           })
@@ -431,35 +440,31 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
           this.clearT(); this.set('countered')
           this.flash(0xffee22, 0.5); this.shake(20); this.snd('snd_hit')
           this.msg('💥 TOUCHÉ !')
-
-          // Alterne main gauche / main droite
           this.lastPunchHand = this.lastPunchHand === 'right' ? 'left' : 'right'
           this.punchGlove(this.lastPunchHand)
-
           this.clippyHP = Math.max(0, this.clippyHP - 3)
           if (this.clippyHP <= 0) { this.t1 = this.time.delayedCall(400, () => this.doWin()); return }
           this.t1 = this.time.delayedCall(900, () => this.startIdle())
         }
 
         punchGlove(hand: 'left' | 'right') {
-          const isLeft  = hand === 'left'
-          const glove   = isLeft ? this.pGloveL : this.pGloveR
-          const txPunch = isLeft ? P_GLOVE_LEFT : P_GLOVE_RIGHT
-          const tx  = isLeft ? PG_LPUNCH_X : PG_RPUNCH_X
-          const ty  = isLeft ? PG_LPUNCH_Y : PG_RPUNCH_Y
-          const gx  = isLeft ? PG_LX : PG_RX
-          const gy  = isLeft ? PG_LY : PG_RY
-          glove.setTexture(txPunch).setFlipX(false)
-          this.tweens.killTweensOf(glove)
+          const txPunch = hand === 'left' ? P_GLOVE_LEFT : P_GLOVE_RIGHT
+          // Cible légèrement décalée gauche ou droite selon la main
+          const offX = hand === 'left'
+            ? -Math.round(this.W * 0.08)
+            :  Math.round(this.W * 0.08)
+          const tx = this.W / 2 + offX
+          const ty = Math.round(this.H * 0.54)
+          const gx = this.W / 2
+          const gy = Math.round(this.H * 0.86)
+          this.pGlove.setTexture(txPunch)
+          this.tweens.killTweensOf(this.pGlove)
           this.tweens.add({
-            targets: glove, x: tx, y: ty, duration: 130, ease: 'Power2',
+            targets: this.pGlove, x: tx, y: ty, duration: 130, ease: 'Power2',
             onComplete: () => {
               this.tweens.add({
-                targets: glove, x: gx, y: gy, duration: 280, ease: 'Power2',
-                onComplete: () => {
-                  glove.setTexture(P_GLOVE_DEFAULT)
-                  if (!isLeft) glove.setFlipX(true)
-                },
+                targets: this.pGlove, x: gx, y: gy, duration: 300, ease: 'Power2',
+                onComplete: () => this.pGlove.setTexture(P_GLOVE_DEFAULT),
               })
             },
           })
@@ -469,19 +474,21 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
           this.stars = 0; this.set('starpunch')
           this.flash(0xffffff, 0.75); this.shake(28); this.snd('snd_hit')
           this.msg('⭐⭐⭐  UPPERCUT ÉTOILE !!!')
+          const upperY = Math.round(this.H * 0.24)
+          const guardY = Math.round(this.H * 0.86)
           // Bras Clippy montent
-          this.lGTX = 380; this.lGTY = CLIPPY_CY - 110
-          this.rGTX = 420; this.rGTY = CLIPPY_CY - 110
-          // Les deux gants joueur montent (uppercut)
-          this.pGloveL.setTexture(P_GLOVE_LEFT).setFlipX(false)
-          this.pGloveR.setTexture(P_GLOVE_RIGHT).setFlipX(false)
-          this.tweens.killTweensOf(this.pGloveL); this.tweens.killTweensOf(this.pGloveR)
-          this.tweens.add({ targets: this.pGloveL, x: PG_UPPER_LX, y: PG_UPPER_LY, duration: 180, ease: 'Power2',
-            onComplete: () => this.tweens.add({ targets: this.pGloveL, x: PG_LX, y: PG_LY, duration: 500, ease: 'Power2',
-              onComplete: () => { this.pGloveL.setTexture(P_GLOVE_DEFAULT).setFlipX(false) } }) })
-          this.tweens.add({ targets: this.pGloveR, x: PG_UPPER_RX, y: PG_UPPER_RY, duration: 180, ease: 'Power2',
-            onComplete: () => this.tweens.add({ targets: this.pGloveR, x: PG_RX, y: PG_RY, duration: 500, ease: 'Power2',
-              onComplete: () => { this.pGloveR.setTexture(P_GLOVE_DEFAULT).setFlipX(true) } }) })
+          this.lGTX = this.CX - Math.round(this.W * 0.025); this.lGTY = this.CY - Math.round(this.H * 0.212)
+          this.rGTX = this.CX + Math.round(this.W * 0.025); this.rGTY = this.CY - Math.round(this.H * 0.212)
+          // Gant joueur monte
+          this.pGlove.setTexture(P_GLOVE_LEFT)
+          this.tweens.killTweensOf(this.pGlove)
+          this.tweens.add({
+            targets: this.pGlove, x: this.W / 2, y: upperY, duration: 180, ease: 'Power2',
+            onComplete: () => this.tweens.add({
+              targets: this.pGlove, x: this.W / 2, y: guardY, duration: 500, ease: 'Power2',
+              onComplete: () => this.pGlove.setTexture(P_GLOVE_DEFAULT),
+            }),
+          })
           this.clippyHP = Math.max(0, this.clippyHP - 8)
           if (this.clippyHP <= 0) { this.t1 = this.time.delayedCall(500, () => this.doWin()); return }
           this.t1 = this.time.delayedCall(1400, () => { this.armsGuard(); this.startIdle() })
@@ -515,13 +522,11 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
           this.gArms.clear()
           this.gHUD.clear()
 
-          // Épaules dans le repère courant (avec shake + bounce)
-          const lSX = cx + SH_LX, lSY = cy + SH_LY
-          const rSX = cx + SH_RX, rSY = cy + SH_RY
-          // Gants courants (compensés par le shake/bounce du sprite)
-          const dy = cy - CLIPPY_CY
-          const lGx = this.lGX + (cx - 400), lGy = this.lGY + dy
-          const rGx = this.rGX + (cx - 400), rGy = this.rGY + dy
+          const lSX = cx + this.SH_LX, lSY = cy + this.SH_LY
+          const rSX = cx + this.SH_RX, rSY = cy + this.SH_RY
+          const dy = cy - this.CY
+          const lGx = this.lGX + (cx - this.CX), lGy = this.lGY + dy
+          const rGx = this.rGX + (cx - this.CX), rGy = this.rGY + dy
 
           this.drawArm(lSX, lSY, lGx, lGy, 'left')
           this.drawArm(rSX, rSY, rGx, rGy, 'right')
@@ -530,7 +535,7 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
           if (this.flashA > 0.01) {
             this.gFlash.clear()
             this.gFlash.fillStyle(this.flashC, Math.min(this.flashA, 0.55))
-            this.gFlash.fillRect(0, 0, W, H)
+            this.gFlash.fillRect(0, 0, this.W, this.H)
           } else {
             this.gFlash.clear()
           }
@@ -538,33 +543,29 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
 
         drawArm(sx: number, sy: number, gx: number, gy: number, side: 'left' | 'right') {
           const g = this.gArms
-          const isActive   = this.gs === 'telegraph' || this.gs === 'attack'
-          const isThisArm  = this.atk === 'body'
+          const isActive  = this.gs === 'telegraph' || this.gs === 'attack'
+          const isThisArm = this.atk === 'body'
             || (side === 'left'  && this.atk === 'left')
             || (side === 'right' && this.atk === 'right')
-          const isLunging  = this.gs === 'attack'    && isThisArm
-          const isUpper    = this.gs === 'starpunch'
+          const isLunging = this.gs === 'attack'   && isThisArm
+          const isUpper   = this.gs === 'starpunch'
 
-          // Halo telegraph
           if (isActive && isThisArm) {
             g.fillStyle(0xff5500, 0.22 + this.eyePulse * 0.32)
-            g.fillCircle(gx, gy, 52)
+            g.fillCircle(gx, gy, Math.round(this.W * 0.065))
           }
 
-          // Bras (ligne épaisse)
           g.lineStyle(isLunging ? 28 : 23, 0xaabbc8, 1)
           g.beginPath(); g.moveTo(sx, sy); g.lineTo(gx, gy); g.strokePath()
           g.lineStyle(3, 0x334455, 0.6)
           g.beginPath(); g.moveTo(sx, sy); g.lineTo(gx, gy); g.strokePath()
 
-          if (USE_GLOVE_SPRITES) return   // sprites gants gèrent l'affichage
+          if (USE_GLOVE_SPRITES) return
 
-          // Gant dessiné
           const r = isLunging ? 34 : isUpper ? 30 : 28
           const col = isUpper ? 0xffcc00 : isLunging ? 0xff2200 : (isActive && isThisArm) ? 0xff5500 : 0xcc2222
           g.fillStyle(col, 1); g.lineStyle(4, 0x441111, 1)
           g.fillCircle(gx, gy, r); g.strokeCircle(gx, gy, r)
-          // Jointures
           g.lineStyle(2, 0x661111, 0.7)
           for (let i = -1; i <= 1; i++) {
             g.beginPath(); g.moveTo(gx - 11 + i * 9, gy - 9); g.lineTo(gx - 11 + i * 9, gy + 9); g.strokePath()
@@ -574,15 +575,17 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
 
         drawHUD() {
           const g = this.gHUD
-          const BW = 210, BH = 18, BY = 28
+          const W = this.W, H = this.H
+          const BW = Math.round(W * 0.263), BH = 18, BY = 28
 
-          // ── Fond texte ────────────────────────────────────────────────────
+          // Fond texte
           const hasAction = this.gs === 'telegraph' || this.gs === 'attack' || this.gs === 'counter' || (this.gs === 'idle' && this.stars >= 3)
-          const bgH = hasAction ? 120 : 60
+          const bgH = hasAction ? 110 : 55
+          const bgY = Math.round(H * 0.625)
           g.fillStyle(0x000000, 0.72)
-          g.fillRoundedRect(60, 342, W - 120, bgH, 8)
+          g.fillRoundedRect(Math.round(W * 0.075), bgY, Math.round(W * 0.85), bgH, 8)
 
-          // ── Barre joueur ────────────────────────────────────────────────
+          // Barre joueur
           const pPct = Math.max(0, this.playerHP / PLAYER_MAX_HP)
           g.fillStyle(0x0d0d1e, 1).fillRoundedRect(14, BY, BW, BH, 4)
           if (pPct > 0) {
@@ -591,7 +594,7 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
           }
           g.lineStyle(2, 0x000000, 0.7).strokeRoundedRect(14, BY, BW, BH, 4)
 
-          // ── Barre Clippy ────────────────────────────────────────────────
+          // Barre Clippy
           const cPct = Math.max(0, this.clippyHP / initialHP)
           g.fillStyle(0x0d0d1e, 1).fillRoundedRect(W - 14 - BW, BY, BW, BH, 4)
           if (cPct > 0) {
@@ -599,15 +602,16 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
           }
           g.lineStyle(2, 0x000000, 0.7).strokeRoundedRect(W - 14 - BW, BY, BW, BH, 4)
 
-          // ── Étoiles ─────────────────────────────────────────────────────
+          // Étoiles
           for (let i = 0; i < 3; i++) {
             g.fillStyle(i < this.stars ? 0xffcc00 : 0x252535, 1)
             this.drawStar(g, W/2 - 28 + i * 28, BY + 9, 10, 4.5)
           }
 
-          // ── Barre de timing ─────────────────────────────────────────────
+          // Barre de timing
           if (this.telPct > 0.01) {
-            const TW = 490, TH = 9, TX = (W - TW) / 2, TY = 335
+            const TW = Math.round(W * 0.613), TH = 9
+            const TX = (W - TW) / 2, TY = bgY - 14
             g.fillStyle(0x0a0a1a, 0.85).fillRoundedRect(TX, TY, TW, TH, 4)
             g.fillStyle(this.gs === 'telegraph' ? 0xffaa00 : 0xff4422, 1)
             g.fillRoundedRect(TX, TY, TW * this.telPct, TH, 4)
@@ -630,13 +634,18 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
       // ── GAME INSTANCE ────────────────────────────────────────────────────────
 
       const game = new Phaser.Game({
-        type:   Phaser.AUTO,
-        width:  W, height: H,
+        type:   Phaser.WEBGL,
         parent: containerRef.current!,
+        transparent: false,
         backgroundColor: '#050510',
         scene:  PunchScene,
-        scale:  { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-        render: { antialias: true },
+        scale:  {
+          mode:       Phaser.Scale.RESIZE,
+          autoCenter: Phaser.Scale.CENTER_BOTH,
+        },
+        render: { antialias: true, antialiasGL: true, pixelArt: false },
+        audio:  { disableWebAudio: false },
+        banner: false,
       })
       gameRef.current = game
     })
@@ -651,7 +660,7 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = 20 }: 
   return (
     <div
       ref={containerRef}
-      style={{ width: '100vw', height: '100vh', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      style={{ position: 'fixed', inset: 0, zIndex: 99990 }}
     />
   )
 }
