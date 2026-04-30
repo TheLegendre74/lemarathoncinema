@@ -1272,11 +1272,17 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
         private countdownTxt!:Phaser.GameObjects.Text
         private scoreTxt!:    Phaser.GameObjects.Text
         private laneFlashBg:  Phaser.GameObjects.Rectangle[] = []
+        private clippySprite!: Phaser.GameObjects.Image
+        private hitRings:     Phaser.GameObjects.Arc[] = []
+        private laserTimers:  Phaser.Time.TimerEvent[] = []
+        private lastLitDir: Dir | null = null
+        private laneCenterX = 0
 
         constructor() { super({ key: 'FeverScene' }) }
 
         preload() {
           this.load.audio('fever-music', '/audio/clippy/nightclub.m4a')
+          this.load.image('evil-clippy-disco', '/evil-clippy-disco.png')
         }
 
         private getElapsed(): number {
@@ -1292,36 +1298,35 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
             this.earlyG  = Math.round(EARLY_GRACE * 1.10)
           }
 
-          // Fond fever rouge pulsant
-          this.add.rectangle(W/2, H/2, W, H, 0x000000).setAlpha(this.isMobile ? 0.90 : 0.55)
-          const fBg = this.add.rectangle(W/2, H/2, W, H, 0x220000).setAlpha(0)
-          this.tweens.add({ targets: fBg, alpha: { from: 0.20, to: 0.40 }, duration: 450, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+          this.add.rectangle(W / 2, H / 2, W, H, 0x000000).setAlpha(this.isMobile ? 0.85 : 0.42)
+          const fBg = this.add.rectangle(W / 2, H / 2, W, H, 0x08001a).setAlpha(0)
+          this.tweens.add({ targets: fBg, alpha: { from: 0, to: this.isMobile ? 0.55 : 0.22 }, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
 
           if (this.isMobile) this.setupMobile(W, H)
           else               this.setupDesktop(W, H)
 
           // Header
           this.add.text(W/2, this.isMobile ? this.clippyZoneH/2 - 10 : 14, '⚡  FEVER NIGHT  ⚡', {
-            fontSize: '15px', color: '#ff6600', letterSpacing: 4,
+            fontSize: '13px', color: '#cc88ff', letterSpacing: 3,
             fontFamily: 'monospace', fontStyle: 'bold', stroke: '#000', strokeThickness: 3,
           }).setOrigin(0.5, this.isMobile ? 0.5 : 0)
 
           // Compte à rebours
           this.countdownTxt = this.add.text(W/2, this.isMobile ? this.clippyZoneH - 22 : 42, '30', {
-            fontSize: this.isMobile ? '26px' : '36px', color: '#ff4400',
+            fontSize: this.isMobile ? '26px' : '34px', color: '#cc88ff',
             fontFamily: 'monospace', fontStyle: 'bold', stroke: '#000', strokeThickness: 4,
-          }).setOrigin(0.5)
+          }).setOrigin(0.5).setDepth(20)
 
           // Combo & score
           const comboY = this.isMobile ? Math.round(H * 0.64) : Math.round(H * 0.70)
           this.comboTxt = this.add.text(W/2, comboY, '', {
-            fontSize: '20px', fontStyle: 'bold', fontFamily: 'monospace', color: '#ff9944', stroke: '#000', strokeThickness: 3,
+            fontSize: '20px', fontStyle: 'bold', fontFamily: 'monospace', color: '#ffffff', stroke: '#000', strokeThickness: 3,
           }).setOrigin(0.5).setAlpha(0)
           this.feedbackTxt = this.add.text(W/2, this.isMobile ? Math.round(H*0.73) : Math.round(H*0.61), '', {
             fontSize: '38px', fontStyle: 'bold', fontFamily: 'monospace', stroke: '#000', strokeThickness: 4,
           }).setOrigin(0.5)
           this.scoreTxt = this.add.text(W - 6, 8, 'Score: 0', {
-            fontSize: '14px', color: '#ff9944', fontFamily: 'monospace', fontStyle: 'bold', stroke: '#000', strokeThickness: 3,
+            fontSize: '14px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold', stroke: '#000', strokeThickness: 3,
           }).setOrigin(1, 0)
 
           // Keyboard
@@ -1353,6 +1358,8 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           const totalLaneW = Math.min(W * 0.58, 530)
           this.laneW = Math.round(totalLaneW / 4)
           const laneX0 = Math.round(W/2 - totalLaneW/2)
+          const laneRight = Math.round(W / 2 + totalLaneW / 2)
+          this.laneCenterX = Math.round(W / 2)
           this.colX = COLS.map((_, i) => Math.round(laneX0 + (i + 0.5) * totalLaneW / COLS.length))
 
           this.add.rectangle(W/2, H/2, totalLaneW + 18, H, 0x000000).setAlpha(0.55)
@@ -1377,6 +1384,11 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
             g.lineStyle(2.5, 0xffffff, 0.55); g.strokeRoundedRect(x-nW/2, this.hitY-nH/2, nW, nH, nR)
             this.add.text(x, this.hitY, COL_ARROWS[dir], { fontSize:`${Math.round(nH*1.0)}px`, color:COL_CSS[dir], fontFamily:'monospace', fontStyle:'bold', stroke:'#00000077', strokeThickness:2 }).setOrigin(0.5).setAlpha(0.80)
           })
+          this.clippySprite = this.add.image(Math.round(W * 0.82), Math.round(H * 0.50), 'evil-clippy-disco')
+          const clippySize = Math.min(Math.round(H * 0.32), 160)
+          this.clippySprite.setDisplaySize(clippySize, clippySize).setDepth(5)
+          this.add.text(Math.round(W * 0.82), Math.round(H * 0.50) - clippySize / 2 - 14, 'CLIPPY', { fontSize: '14px', color: '#cc88ff', fontFamily: 'monospace', fontStyle: 'bold' }).setOrigin(0.5, 1)
+          this.spawnLasers(W, H, laneX0, laneRight)
         }
 
         private setupMobile(W: number, H: number) {
@@ -1387,8 +1399,17 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           this.colX = COLS.map((_, i) => Math.round((i + 0.5) * W / COLS.length))
 
           const clipBg = this.add.graphics()
-          clipBg.fillStyle(0x180000, 1); clipBg.fillRect(0, 0, W, this.clippyZoneH)
-          this.add.rectangle(W/2, this.clippyZoneH, W, 2, 0xff4400).setAlpha(0.70)
+          clipBg.fillGradientStyle(0x0c001e, 0x0c001e, 0x04000e, 0x04000e, 1)
+          clipBg.fillRect(0, 0, W, this.clippyZoneH)
+          this.add.text(W / 2, 6, '*  FEVER NIGHT  *', {
+            fontSize: '11px', color: '#cc88ff', fontFamily: 'monospace', letterSpacing: 3,
+          }).setOrigin(0.5, 0)
+          this.clippySprite = this.add.image(-9999, -9999, 'evil-clippy-disco').setVisible(false)
+          onClippyMoveRef.current?.(0.5)
+          const sepGfx = this.add.graphics()
+          sepGfx.fillGradientStyle(0x7700ff, 0x7700ff, 0x000000, 0x000000, 0.35, 0.35, 0, 0)
+          sepGfx.fillRect(0, this.clippyZoneH - 8, W, 8)
+          this.add.rectangle(W/2, this.clippyZoneH, W, 2, 0xaa44ff).setAlpha(0.85)
           this.add.rectangle(W/2, this.clippyZoneH + (H - this.clippyZoneH)/2, W, H - this.clippyZoneH, 0x01000a)
           for (let i = 1; i < 4; i++) {
             const x = Math.round(i * W / 4), sg = this.add.graphics()
@@ -1396,8 +1417,9 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           }
           COLS.forEach((dir, i) => {
             const x = this.colX[i], col = COL_HEX[dir], lH = H - this.clippyZoneH, g = this.add.graphics()
-            g.fillStyle(col, 0.05); g.fillRect(x - colW/2, this.clippyZoneH, colW, lH/2)
-            g.fillStyle(col, 0.13); g.fillRect(x - colW/2, this.clippyZoneH + lH/2, colW, lH/2)
+            g.fillStyle(col, 0.03); g.fillRect(x - colW/2, this.clippyZoneH, colW, lH/3)
+            g.fillStyle(col, 0.07); g.fillRect(x - colW/2, this.clippyZoneH + lH/3, colW, lH/3)
+            g.fillStyle(col, 0.12); g.fillRect(x - colW/2, this.clippyZoneH + 2*lH/3, colW, lH/3)
           })
           this.laneFlashBg = COLS.map((dir, i) => {
             const lH = H - this.clippyZoneH
@@ -1410,6 +1432,54 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
             const ring = this.add.circle(x, this.hitY, cR, col, 0.28); ring.setStrokeStyle(3, col, 1.0)
             this.add.circle(x, this.hitY, Math.round(cR*0.48), 0x000000, 0.60)
             this.add.text(x, this.hitY, COL_ARROWS[dir], { fontSize:`${Math.round(cR*0.95)}px`, color:COL_CSS[dir], fontFamily:'monospace', fontStyle:'bold', stroke:'#000', strokeThickness:3 }).setOrigin(0.5).setAlpha(0.85)
+            this.hitRings[i] = ring
+          })
+          this.spawnLasers(W, H, -1)
+        }
+
+        private spawnLasers(W: number, H: number, laneX0: number, laneRight = -1) {
+          const COLS_L = [0xff2266, 0x2266ff, 0x22ffcc, 0xff9900, 0xcc22ff, 0x22ff44]
+          const isMob = laneX0 < 0
+          const laserDefs = isMob
+            ? [
+                { ox: W * 0.04, oy: this.clippyZoneH * 0.18, angle: 55, col: COLS_L[0] },
+                { ox: W * 0.96, oy: this.clippyZoneH * 0.18, angle: 125, col: COLS_L[1] },
+                { ox: W * 0.08, oy: this.clippyZoneH * 0.50, angle: 60, col: COLS_L[4] },
+                { ox: W * 0.92, oy: this.clippyZoneH * 0.50, angle: 120, col: COLS_L[2] },
+              ]
+            : [
+                { ox: laneX0 * 0.35, oy: H * 0.04, angle: 65, col: COLS_L[0] },
+                { ox: laneX0 * 0.60, oy: H * 0.03, angle: 75, col: COLS_L[2] },
+                { ox: laneX0 * 0.20, oy: H * 0.06, angle: 50, col: COLS_L[4] },
+                { ox: laneRight + (W - laneRight) * 0.65, oy: H * 0.04, angle: 115, col: COLS_L[3] },
+                { ox: laneRight + (W - laneRight) * 0.40, oy: H * 0.03, angle: 105, col: COLS_L[5] },
+                { ox: laneRight + (W - laneRight) * 0.80, oy: H * 0.06, angle: 130, col: COLS_L[1] },
+              ]
+
+          laserDefs.forEach(({ ox, oy, angle, col }, idx) => {
+            const laserG = this.add.graphics().setDepth(2)
+            const speed = 16 + (idx % 5) * 5
+            let t = idx * 42.7
+            const len = Math.max(W, H) * 1.5
+            const timer = this.time.addEvent({
+              delay: 40,
+              loop: true,
+              callback: () => {
+                if (this.ended) { this.time.removeEvent(timer); return }
+                t += speed * 0.04
+                const rad = Phaser.Math.DegToRad(angle + Math.sin(Phaser.Math.DegToRad(t)) * 30)
+                const ex = ox + Math.cos(rad) * len
+                const ey = oy + Math.sin(rad) * len
+                laserG.clear()
+                laserG.lineStyle(14, col, 0.06)
+                laserG.beginPath(); laserG.moveTo(ox, oy); laserG.lineTo(ex, ey); laserG.strokePath()
+                laserG.lineStyle(5, col, 0.22)
+                laserG.beginPath(); laserG.moveTo(ox, oy); laserG.lineTo(ex, ey); laserG.strokePath()
+                laserG.lineStyle(2, 0xffffff, 0.30)
+                laserG.beginPath(); laserG.moveTo(ox, oy); laserG.lineTo(ex, ey); laserG.strokePath()
+              },
+            })
+            this.laserTimers.push(timer)
           })
         }
 
@@ -1442,10 +1512,24 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           this.activeNotes = this.activeNotes.filter(n => !n.judged)
 
           const litDirs = new Set<Dir>()
+          let closestDir: Dir | null = null
+          let closestDist = Infinity
           for (const n of this.activeNotes) {
-            if (!n.judged) { const tth = n.time - elapsed; if (tth >= -this.hitWin && tth <= AHEAD_MS) litDirs.add(n.dir) }
+            if (!n.judged) {
+              const tth = n.time - elapsed
+              if (tth >= -this.hitWin && tth <= AHEAD_MS) {
+                litDirs.add(n.dir)
+                if (Math.abs(tth) < closestDist) { closestDist = Math.abs(tth); closestDir = n.dir }
+              }
+            }
           }
           this.laneFlashBg.forEach((bg, i) => bg.setAlpha(litDirs.has(COLS[i]) ? (this.isMobile ? 0.22 : 0.18) : 0))
+          if (closestDir && closestDir !== this.lastLitDir) {
+            this.lastLitDir = closestDir
+            const idx = COLS.indexOf(closestDir)
+            if (this.isMobile) onClippyMoveRef.current?.(this.colX[idx] / this.scale.width)
+            else if (this.clippySprite) this.tweens.add({ targets: this.clippySprite, x: this.colX[idx], duration: 90, ease: 'Back.Out' })
+          }
 
           if (this.feedbackTxt.alpha > 0) this.feedbackTxt.setAlpha(Math.max(0, this.feedbackTxt.alpha - 0.022))
           if (this.comboTxt.alpha > 0 && this.combo === 0) this.comboTxt.setAlpha(Math.max(0, this.comboTxt.alpha - 0.025))
@@ -1469,11 +1553,14 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
         }
 
         private handleInput(dir: Dir, elapsed: number) {
-          let best: typeof this.activeNotes[0] | null = null, bestDelta = Infinity, hasNear = false
+          let best: typeof this.activeNotes[0] | null = null
+          let bestDelta = Infinity
+          let hasEarlySameLane = false
+          let hasNear = false
           for (const n of this.activeNotes) {
             if (n.judged || n.dir !== dir) continue
             const tth = n.time - elapsed, d = Math.abs(tth)
-            if (tth <= this.earlyG && tth >= -this.hitWin) hasNear = true
+            if (tth > this.hitWin && tth <= this.earlyG) { hasEarlySameLane = true; hasNear = true }
             if (d < bestDelta) { bestDelta = d; best = n }
           }
           if (best && bestDelta <= this.hitWin) {
@@ -1490,12 +1577,18 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           } else {
             this.feedbackTxt.setText(hasNear ? 'TROP TÔT !' : 'ERREUR !').setColor('#ff9944').setAlpha(1)
             this.combo = 0; this.comboTxt.setAlpha(0)
+            if (!hasEarlySameLane) {
+              this.hp = Math.max(0, this.hp - 1)
+              onMissRef.current?.()
+              if (this.hp <= 0) this.endGame('lose')
+            }
           }
         }
 
         private doMiss() {
           this.feedbackTxt.setText('MISS !').setColor('#e85a5a').setAlpha(1)
           this.hp = Math.max(0, this.hp - 1)
+          onMissRef.current?.()
           this.combo = 0; this.comboTxt.setAlpha(0)
           if (this.hp <= 0) this.endGame('lose')
         }
@@ -1505,6 +1598,8 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           this.ended = true
           feverFinalScore.current = this.score; feverFinalCombo.current = this.maxCombo
           this.sound.stopAll()
+          this.laserTimers.forEach(t => this.time.removeEvent(t))
+          this.laserTimers = []
           this.time.addEvent({ delay: result === 'win' ? 900 : 600, callback: () => onFeverEndRef.current?.(result === 'win') })
         }
       }
@@ -1594,7 +1689,7 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
       )}
 
       {/* ── Clippy HTML mobile (DDR uniquement) ── */}
-      {isMobileUI && innerPhase === 'ddr' && (
+      {isMobileUI && (innerPhase === 'ddr' || innerPhase === 'fever') && (
         <img
           src="/evil-clippy-disco.png"
           alt="Evil Clippy Disco"
