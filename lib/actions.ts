@@ -1935,6 +1935,22 @@ export async function unlockClippyMaster() {
   return { success: true }
 }
 
+export async function unlockFeverNight() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  await supabase.from('discovered_eggs').upsert(
+    { user_id: user.id, egg_id: 'rythme-dans-la-peau' },
+    { onConflict: 'user_id,egg_id', ignoreDuplicates: true }
+  )
+  await supabase.from('profiles').update({ active_badge: 'fever-night' } as any).eq('id', user.id)
+  await deleteCacheKeys([`user:${user.id}:eggs`, `user:${user.id}:profile`])
+  revalidatePath('/profil')
+  revalidatePath('/classement')
+  revalidatePath('/marathoniens')
+  return { success: true }
+}
+
 // ── FORUM ─────────────────────────────────────────────────────
 
 export async function createForumTopic(title: string, description: string) {

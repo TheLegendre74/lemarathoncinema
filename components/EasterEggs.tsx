@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { discoverEgg } from '@/lib/actions'
 import dynamic from 'next/dynamic'
+// TODO TEMP — supprimer avant lancement prod
+const ClippyPunchOutPhaser = dynamic(() => import('./ClippyPunchOutPhaser'), { ssr: false })
 const FightClubGame  = dynamic(() => import('./FightClubGame'),                                   { ssr: false })
 const KillBillGame   = dynamic(() => import('./KillBillGame'),                                    { ssr: false })
 const AVPEgg         = dynamic(() => import('./AVPEgg'),                                          { ssr: false })
@@ -950,6 +952,8 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
   const predSoundRef = useRef<HTMLAudioElement | null>(null)
   const [showTipiak,     setShowTipiak]     = useState(false)
   const [showPandora,    setShowPandora]    = useState(false)
+  // TODO TEMP — supprimer avant lancement prod
+  const [showPunchTest,  setShowPunchTest]  = useState(false)
   const [showClipy,      setShowClipy]      = useState(() => {
     if (typeof window === 'undefined') return false
     return localStorage.getItem('clippy_active') === '1' || localStorage.getItem('clippy_is_larbin') === '1'
@@ -1285,6 +1289,12 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
         keyBuf.current = []
         return
       }
+      // TODO TEMP — "clippy p3" → test Punch-Out direct
+      if (buf.slice(-9).join('').toLowerCase() === 'clippy p3') {
+        setShowPunchTest(true)
+        keyBuf.current = []
+        return
+      }
       // "pandore" et variantes → Boîte de Pandore (Clippy)
       const last16 = buf.slice(-16).join('').toLowerCase()
       const last7  = buf.slice(-7).join('').toLowerCase()
@@ -1348,6 +1358,8 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
       {showSouthPark  && <SouthParkBus_  onDone={() => setShowSouthPark(false)} />}
       {showRandy      && <RandyMarsh_    onDone={() => setShowRandy(false)}     quote={ee.randyQuote} />}
       {showKillBill   && <KillBillGame    onDone={() => setShowKillBill(false)}  endText={ee.killBillEnd} />}
+      {/* TODO TEMP — supprimer avant lancement prod */}
+      {showPunchTest  && <ClippyPunchOutPhaser onWin={() => setShowPunchTest(false)} onLose={() => setShowPunchTest(false)} initialHP={20} />}
       {showAVP        && <AVPEgg          onDone={() => { predSoundRef.current?.pause(); predSoundRef.current = null; setShowAVP(false) }} predSound={predSoundRef} />}
       {showTipiak     && <TipiakOverlay  onDone={() => setShowTipiak(false)} />}
       {showTamagotchi && <TamagotchiKeyOverlay onClose={() => setShowTamagotchi(false)} isGuest={isGuest} />}

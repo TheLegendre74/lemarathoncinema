@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Jaws Easter Egg Test</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #020712;
+      color: #f6f2e7;
+      font-family: Arial, sans-serif;
+    }
+
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      background: #020712;
+    }
+
+    .panel {
+      position: fixed;
+      left: clamp(20px, 6vw, 72px);
+      bottom: clamp(28px, 9vh, 92px);
+      width: min(440px, calc(100vw - 40px));
+      text-shadow: 0 2px 18px rgba(0, 0, 0, .72);
+      z-index: 2;
+    }
+
+    .kicker {
+      margin: 0 0 10px;
+      color: #9dc3d0;
+      font-size: 12px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      color: #f3ead2;
+      font-size: clamp(38px, 7vw, 82px);
+      line-height: .92;
+      letter-spacing: 0;
+      font-family: Georgia, serif;
+    }
+
+    .copy {
+      margin: 0 0 22px;
+      max-width: 390px;
+      color: rgba(246, 242, 231, .78);
+      font-size: 15px;
+      line-height: 1.55;
+    }
+
+    .version {
+      margin: 0 0 12px;
+      color: #ff6b6b;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    button {
+      min-height: 44px;
+      border: 1px solid rgba(246, 242, 231, .34);
+      background: rgba(246, 242, 231, .92);
+      color: #07111d;
+      border-radius: 6px;
+      padding: 0 18px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 14px 32px rgba(0, 0, 0, .32);
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="scene"></canvas>
+  <div class="panel" id="panel">
+    <p class="kicker">Test local isolé</p>
+    <h1>Les Dents de la mer</h1>
+    <p class="version">Version sang contenu / plongée naturelle</p>
+    <p class="copy">Scène autonome hors Next : mer nocturne, patrouille, montée de tension, surgissement et attaque.</p>
+    <button id="start">Lancer la scène</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('scene')
+    const ctx = canvas.getContext('2d')
+    const panel = document.getElementById('panel')
+    const startButton = document.getElementById('start')
+
+    let width = 0
+    let height = 0
+    let startTime = 0
+    let running = false
+    let raf = 0
+    let audio = null
+    let victimAlive = true
+    let shakeUntil = 0
+    let biteHandled = false
+
+    const stars = Array.from({ length: 70 }, (_, i) => ({
+      x: ((i * 97) % 1000) / 1000,
+      y: 0.035 + (((i * 53) % 360) / 1000),
+      r: 0.7 + ((i * 29) % 16) / 10,
+      a: 0.35 + ((i * 17) % 55) / 100,
+    }))
+
+    const phase = {
+      firstPass: 6800,
+      vanish: 10600,
+      return: 13200,
+      circle: 21500,
+      dive: 23200,
+      breach: 25400,
+      bite: 26600,
+      sink: 30600,
+      end: 34600,
+    }
+
+    function resize() {
+      const dpr = Math.max(1, window.devicePixelRatio || 1)
+      width = Math.floor(window.innerWidth)
+      height = Math.floor(window.innerHeight)
+      canvas.width = Math.floor(width * dpr)
+      canvas.height = Math.floor(height * dpr)
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    }
+
+    function wavePath(y, amp, freq, speed) {
+      ctx.beginPath()
+      ctx.moveTo(0, y)
+      for (let x = 0; x <= width + 8; x += 8) {
+        ctx.lineTo(x, y + Math.sin(x * freq + speed) * amp + Math.sin(x * freq * 2.1 + speed * 1.7) * amp * .28)
+      }
+    }
+
+    function drawSky(t) {
+      const waterY = height * .5
+      const gradient = ctx.createLinearGradient(0, 0, 0, waterY)
+      gradient.addColorStop(0, '#020713')
+      gradient.addColorStop(1, '#0a1d32')
+      ctx.fillStyle = gradient
+      ctx.fillRect(0, 0, width, waterY)
+
+      const moonX = width * .73
+      const moonY = height * .14
+      for (let i = 7; i >= 1; i--) {
+        ctx.fillStyle = `rgba(217, 210, 166, ${.018 * i})`
+        ctx.beginPath()
+        ctx.arc(moonX, moonY, 23 * i, 0, Math.PI * 2)
+        ctx.fill()
+      }
+      ctx.fillStyle = '#f0ead1'
+      ctx.beginPath()
+      ctx.arc(moonX, moonY, 34, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.fillStyle = 'rgba(207, 200, 171, .26)'
+      ctx.beginPath()
+      ctx.arc(moonX - 9, moonY - 6, 8, 0, Math.PI * 2)
+      ctx.arc(moonX + 10, moonY + 8, 5, 0, Math.PI * 2)
+      ctx.fill()
+
+      for (const star of stars) {
+        const alpha = star.a + Math.sin(t * .003 * star.r) * .12
+        ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(.15, alpha)})`
+        ctx.beginPath()
+        ctx.arc(width * star.x, height * star.y, star.r, 0, Math.PI * 2)
+        ctx.fill()
+      }
+
+      ctx.fillStyle = '#071422'
+      ctx.fillRect(0, waterY - 6, width, 12)
+    }
+
+    function drawWater(t, elapsed) {
+      const waterY = height * .5
+      const blood = smoothstep(clamp((elapsed - phase.bite) / 7600))
+      const gradient = ctx.createLinearGradient(0, waterY, 0, height)
+      gradient.addColorStop(0, mixColor('#0b3156', '#4a0710', blood * .38))
+      gradient.addColorStop(.38, mixColor('#082844', '#300710', blood * .32))
+      gradient.addColorStop(.72, mixColor('#051a2f', '#1d0409', blood * .24))
+      gradient.addColorStop(1, mixColor('#03101f', '#100207', blood * .18))
+      ctx.fillStyle = gradient
+      ctx.fillRect(0, waterY, width, height - waterY)
+
+      ctx.fillStyle = 'rgba(21, 81, 123, .38)'
+      wavePath(waterY + 8, 9, .009, t * .0011)
+      ctx.lineTo(width, height)
+      ctx.lineTo(0, height)
+      ctx.closePath()
+      ctx.fill()
+
+      ctx.fillStyle = 'rgba(8, 40, 68, .56)'
+      wavePath(waterY + 26, 16, .006, t * .0008)
+      ctx.lineTo(width, height)
+      ctx.lineTo(0, height)
+      ctx.closePath()
+      ctx.fill()
+
+      ctx.strokeStyle = 'rgba(155, 199, 214, .22)'
+      ctx.lineWidth = 1
+      for (let y = waterY + 42; y < height; y += 42) {
+        const offset = Math.sin(t * .001 + y * .02) * 70
+        ctx.beginPath()
+        ctx.moveTo(width * .56 + offset, y)
+        ctx.lineTo(width * .76 + offset * .35, y + 4)
+        ctx.stroke()
+      }
+
+      if (blood > 0) {
+        ctx.fillStyle = `rgba(120, 3, 12, ${.08 + .16 * blood})`
+        ctx.fillRect(0, waterY, width, height - waterY)
+        const pulse = 1 + Math.sin(t * .002) * .08
+        ctx.fillStyle = `rgba(150, 5, 14, ${.34 + .28 * blood})`
+        ellipse(width * .5, waterY + 18, (80 + blood * 360) * pulse, 20 + blood * 76)
+        ctx.fillStyle = `rgba(92, 2, 7, ${.16 + .22 * blood})`
+        ellipse(width * .5 + 34, waterY + 42, 120 + blood * 330, 28 + blood * 62)
+        ctx.fillStyle = `rgba(210, 18, 26, ${.09 * blood})`
+        for (let i = 0; i < 9; i++) {
+          const a = i * .68 + t * .0005
+          ellipse(
+            width * .5 + Math.cos(a) * (45 + blood * 130),
+            waterY + 32 + Math.sin(a) * (12 + blood * 28),
+            26 + blood * 62,
+            6 + blood * 14,
+          )
+        }
+      }
+    }
+
+    function drawReflection(t, elapsed) {
+      if (elapsed > phase.breach) return
+      const waterY = height * .5
+      const center = width * .73
+      for (let i = 0; i < 18; i++) {
+        const y = waterY + 18 + i * 18
+        const spread = 20 + i * 11
+        const wobble = Math.sin(t * .0018 + i) * 18
+        ctx.strokeStyle = `rgba(222, 211, 161, ${Math.max(0, .19 - i * .009)})`
+        ctx.lineWidth = 2
+        ctx.beginPath()
+        ctx.moveTo(center - spread + wobble, y)
+        ctx.lineTo(center + spread * .7 + wobble * .4, y + Math.sin(i) * 4)
+        ctx.stroke()
+      }
+    }
+
+    function drawThreatWake(t, elapsed) {
+      if (elapsed < phase.return || elapsed > phase.breach) return
+      const waterY = height * .5
+      const cx = width * .5
+      const orbitP = clamp((elapsed - phase.return) / (phase.circle - phase.return))
+      const radiusX = 190 - orbitP * 96
+      const radiusY = 40 - orbitP * 14
+      const alpha = .1 + orbitP * .26
+
+      ctx.save()
+      ctx.translate(cx, waterY + 14)
+      ctx.strokeStyle = `rgba(190, 232, 245, ${alpha})`
+      ctx.lineWidth = 1.5
+      for (let i = 0; i < 4; i++) {
+        const wobble = Math.sin(t * .0014 + i) * 7
+        ctx.beginPath()
+        ctx.ellipse(0, wobble, radiusX + i * 18, radiusY + i * 7, 0, Math.PI * .05, Math.PI * 1.65)
+        ctx.stroke()
+      }
+
+      ctx.strokeStyle = `rgba(6, 12, 18, ${.32 + orbitP * .2})`
+      ctx.lineWidth = 18
+      ctx.beginPath()
+      ctx.ellipse(0, 12, radiusX * .84, radiusY * .7, 0, Math.PI * .15, Math.PI * 1.45)
+      ctx.stroke()
+      ctx.restore()
+    }
+
+    function drawVictim(elapsed) {
+      if (!victimAlive) return
+      const waterY = height * .5
+      const cx = width * .5
+      const panic = Math.max(0, Math.min(1, (elapsed - 17000) / 9300))
+      const bob = Math.sin(elapsed * .004) * (5 + panic * 3)
+      const x = cx + Math.sin(elapsed * .0016) * (8 + panic * 12)
+      const y = waterY - 14 + bob
+
+      ctx.fillStyle = 'rgba(2, 7, 19, .24)'
+      ellipse(x, waterY + 16, 112, 20)
+
+      ctx.fillStyle = '#f1f0e8'
+      ellipse(x, y + 21, 82, 31)
+      ctx.strokeStyle = '#c62127'
+      ctx.lineWidth = 5
+      strokeEllipse(x, y + 21, 82, 31)
+      ctx.fillStyle = '#0b3156'
+      ellipse(x, y + 21, 34, 13)
+
+      ctx.strokeStyle = '#e8b19b'
+      ctx.lineWidth = 6
+      line(x - 13, y - 3, x - 34, y - 20 - panic * 10)
+      line(x + 13, y - 3, x + 34, y - 18 - panic * 8)
+
+      ctx.fillStyle = '#e8b19b'
+      ellipse(x, y - 2, 25, 31)
+      ctx.fillStyle = '#d51e29'
+      ellipse(x, y - 9, 24, 13)
+      circle(x, y - 31, 14)
+      ctx.fillStyle = '#271006'
+      ellipse(x + 5, y - 36, 28, 17)
+      ellipse(x + 15, y - 19, 13, 28)
+      ctx.fillStyle = '#1c1110'
+      circle(x - 5, y - 32, 1.8)
+      circle(x + 5, y - 32, 1.8)
+    }
+
+    function drawFin(elapsed) {
+      if (elapsed < 1600 || elapsed > phase.dive) return
+      const waterY = height * .5
+      const cx = width * .5
+      const first = elapsed < phase.vanish
+      const reappear = elapsed >= phase.return
+      if (!first && !reappear) return
+
+      let x = 0
+      let y = waterY
+      let visible = 1
+      let s = 1
+
+      if (first) {
+        const p = clamp((elapsed - 1600) / (phase.firstPass - 1600))
+        const submerge = smoothstep(clamp((elapsed - phase.firstPass) / (phase.vanish - phase.firstPass)))
+        x = width * (.09 + .6 * p)
+        y = waterY - 2 + Math.sin(p * Math.PI) * -8 + submerge * 74
+        visible = y < waterY + 38 ? 1 : 0
+        s = .72 + p * .34
+      } else {
+        const p = clamp((elapsed - phase.return) / (phase.circle - phase.return))
+        const tighten = 1 - p * .56
+        const angle = -Math.PI * .12 + p * Math.PI * 2.1
+        const breathe = Math.sin(p * Math.PI * 2)
+        const submerged = breathe < -.18 ? smoothstep((-breathe - .18) / .82) : 0
+        const dive = smoothstep(clamp((elapsed - phase.circle) / (phase.dive - phase.circle)))
+        x = cx + Math.cos(angle) * 210 * tighten
+        y = waterY + 4 + Math.sin(angle) * 34 * tighten - Math.max(0, breathe) * 8 + submerged * 58 + dive * 88
+        visible = y < waterY + 38 ? 1 : 0
+        s = .82 + p * .38
+      }
+      if (visible <= 0) return
+
+      ctx.fillStyle = 'rgba(0, 0, 0, .68)'
+      ellipse(x + 40, y + 22, 190 * s, 22 * s)
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 1)'
+      ctx.beginPath()
+      ctx.moveTo(x - 18 * s, y + 20 * s)
+      ctx.quadraticCurveTo(x - 4 * s, y + 9 * s, x + 10 * s, y - 18 * s)
+      ctx.quadraticCurveTo(x + 18 * s, y - 42 * s, x + 35 * s, y - 62 * s)
+      ctx.quadraticCurveTo(x + 43 * s, y - 28 * s, x + 27 * s, y + 18 * s)
+      ctx.quadraticCurveTo(x + 6 * s, y + 24 * s, x - 18 * s, y + 20 * s)
+      ctx.closePath()
+      ctx.fill()
+
+      ctx.strokeStyle = 'rgba(5, 10, 14, 1)'
+      ctx.lineWidth = 2.5
+      ctx.beginPath()
+      ctx.moveTo(x + 4 * s, y + 16 * s)
+      ctx.quadraticCurveTo(x + 18 * s, y - 18 * s, x + 32 * s, y - 56 * s)
+      ctx.stroke()
+
+      ctx.strokeStyle = 'rgba(214, 247, 255, .28)'
+      ctx.lineWidth = 2
+      for (let i = 0; i < 4; i++) {
+        ctx.beginPath()
+        ctx.moveTo(x + 24 * s + i * 5, y + 16 + i * 4)
+        ctx.lineTo(x + 78 * s + i * 22, y + 9 + Math.sin(elapsed * .005 + i) * 7)
+        ctx.stroke()
+      }
+    }
+
+    function drawShark(elapsed) {
+      if (elapsed < phase.dive) return
+      const waterY = height * .5
+      const cx = width * .5
+      const riseP = clamp((elapsed - phase.dive) / (phase.breach - phase.dive))
+      const biteP = clamp((elapsed - phase.breach) / (phase.bite - phase.breach))
+      const sinkP = clamp((elapsed - phase.bite - 450) / (phase.sink - phase.bite))
+      const easeRise = smoothstep(riseP)
+      const attackEase = smoothstep(biteP)
+      const lunge = Math.sin(biteP * Math.PI) * 92
+      const sway = Math.sin(elapsed * .006) * (1 - biteP) * 18
+      const y = waterY + 390 - easeRise * 650 - attackEase * 76 - lunge + sinkP * (height + 390)
+      const jaw = Math.min(1, biteP * 1.65) * (1 - Math.max(0, sinkP - .2))
+      const s = Math.max(.78, Math.min(1.76, .8 + easeRise * .78 + attackEase * .25))
+      if (y > height + 260) return
+
+      ctx.save()
+      ctx.translate(cx + sway, y)
+      ctx.rotate(Math.sin(elapsed * .003) * .035 * (1 - biteP))
+      ctx.scale(s, s)
+
+      ctx.fillStyle = 'rgba(0, 0, 0, .52)'
+      ellipse(0, 148, 240, 64)
+      const sharkBody = ctx.createLinearGradient(-70, -120, 70, 150)
+      sharkBody.addColorStop(0, '#48545c')
+      sharkBody.addColorStop(.2, '#7f8b91')
+      sharkBody.addColorStop(.43, '#dfe2db')
+      sharkBody.addColorStop(.72, '#f8f5e9')
+      sharkBody.addColorStop(1, '#bbb9aa')
+      ctx.fillStyle = sharkBody
+      ellipse(0, 44, 132, 326)
+
+      ctx.fillStyle = '#f7f4e9'
+      ellipse(10, 78, 78, 214)
+
+      ctx.fillStyle = 'rgba(18, 26, 30, .5)'
+      ctx.beginPath()
+      ctx.moveTo(-58, -52)
+      ctx.quadraticCurveTo(0, -92, 58, -52)
+      ctx.quadraticCurveTo(36, -15, 0, -6)
+      ctx.quadraticCurveTo(-36, -15, -58, -52)
+      ctx.closePath()
+      ctx.fill()
+
+      ctx.fillStyle = '#1d252b'
+      triangle(-20, -72, -42, -164, 12, -82)
+      triangle(-58, 30, -125, 74, -61, 92)
+      triangle(58, 30, 125, 74, 61, 92)
+
+      ctx.strokeStyle = 'rgba(12, 18, 22, .45)'
+      ctx.lineWidth = 2.2
+      for (let i = 0; i < 5; i++) {
+        line(-55 + i * 6, -18 + i * 10, -35 + i * 4, 8 + i * 10)
+        line(55 - i * 6, -18 + i * 10, 35 - i * 4, 8 + i * 10)
+      }
+
+      const head = ctx.createLinearGradient(0, -150, 0, -38)
+      head.addColorStop(0, '#56636b')
+      head.addColorStop(.44, '#b7c0bf')
+      head.addColorStop(1, '#eef0e6')
+      ctx.fillStyle = head
+      ctx.beginPath()
+      ctx.moveTo(-70, -82)
+      ctx.quadraticCurveTo(-46, -128, 0, -152)
+      ctx.quadraticCurveTo(46, -128, 70, -82)
+      ctx.quadraticCurveTo(54, -42, 0, -34)
+      ctx.quadraticCurveTo(-54, -42, -70, -82)
+      ctx.closePath()
+      ctx.fill()
+
+      ctx.fillStyle = 'rgba(15, 22, 26, .18)'
+      ctx.beginPath()
+      ctx.moveTo(-42, -104)
+      ctx.quadraticCurveTo(0, -130, 42, -104)
+      ctx.quadraticCurveTo(30, -86, 0, -80)
+      ctx.quadraticCurveTo(-30, -86, -42, -104)
+      ctx.fill()
+
+      const lowerY = jaw * 72
+      ctx.fillStyle = '#7a0710'
+      ctx.beginPath()
+      ctx.moveTo(-58, -72 + lowerY)
+      ctx.quadraticCurveTo(0, -42 + lowerY, 58, -72 + lowerY)
+      ctx.lineTo(47, -28 + lowerY)
+      ctx.quadraticCurveTo(0, -6 + lowerY, -47, -28 + lowerY)
+      ctx.closePath()
+      ctx.fill()
+
+      ctx.fillStyle = '#f6f1dd'
+      for (let i = 0; i < 11; i++) {
+        const tx = -62 + i * 12.4
+        triangle(tx, -48, tx + 5, -78, tx + 11, -48)
+      }
+      for (let i = 0; i < 10; i++) {
+        const tx = -55 + i * 12.4
+        triangle(tx, -33 + lowerY, tx + 5, -8 + lowerY, tx + 11, -33 + lowerY)
+      }
+
+      const eyeAlpha = clamp((riseP - .34) / .3)
+      if (eyeAlpha > 0) {
+        ctx.fillStyle = `rgba(3, 5, 6, ${eyeAlpha})`
+        ellipse(-46, -92, 9, 5)
+        ellipse(46, -92, 9, 5)
+        ctx.fillStyle = `rgba(190, 205, 200, ${.18 * eyeAlpha})`
+        ellipse(-44, -93, 2.5, 1.5)
+        ellipse(48, -93, 2.5, 1.5)
+        ctx.fillStyle = `rgba(5, 8, 9, ${.75 * eyeAlpha})`
+        ellipse(-18, -78, 4, 2)
+        ellipse(18, -78, 4, 2)
+      }
+      ctx.restore()
+    }
+
+    function drawSplash(elapsed) {
+      if (elapsed < phase.breach || elapsed > phase.bite + 900) return
+      const t = elapsed - phase.breach
+      const p = Math.min(1, t / 1700)
+      const waterY = height * .5
+      const cx = width * .5
+      ctx.strokeStyle = `rgba(232, 251, 255, ${.58 * (1 - p)})`
+      ctx.lineWidth = 3
+      for (let i = 0; i < 4; i++) {
+        strokeEllipse(cx, waterY + 9 + i * 5, 120 + p * 240 + i * 45, 28 + p * 72 + i * 9)
+      }
+      ctx.fillStyle = `rgba(232, 251, 255, ${.34 * (1 - p)})`
+      for (let i = 0; i < 28; i++) {
+        const a = (i / 28) * Math.PI * 2
+        const r = 55 + p * 180 + (i % 5) * 9
+        circle(cx + Math.cos(a) * r, waterY - 10 - Math.abs(Math.sin(a)) * (70 + p * 80), 2 + (i % 3))
+      }
+    }
+
+    function drawForeground(t, elapsed) {
+      const waterY = height * .5
+      const chop = Math.min(1, elapsed / 19000)
+      ctx.strokeStyle = 'rgba(106, 167, 191, .36)'
+      ctx.lineWidth = 2
+      wavePath(waterY + 3, 8 + chop * 4, .013, t * .0019)
+      ctx.stroke()
+      ctx.strokeStyle = 'rgba(217, 242, 245, .18)'
+      ctx.lineWidth = 1
+      wavePath(waterY + 24, 13 + chop * 8, .016, t * .0024)
+      ctx.stroke()
+    }
+
+    function drawVignette(elapsed) {
+      ctx.strokeStyle = 'rgba(0, 0, 0, .34)'
+      ctx.lineWidth = Math.max(width, height) * .18
+      ctx.strokeRect(0, 0, width, height)
+    }
+
+    function render(now) {
+      const elapsed = now - startTime
+      if (elapsed > phase.bite && !biteHandled) {
+        biteHandled = true
+        victimAlive = false
+        shakeUntil = now + 520
+        if (audio) {
+          audio.pause()
+          audio.currentTime = 0
+        }
+      }
+
+      ctx.save()
+      if (now < shakeUntil) {
+        ctx.translate((Math.random() - .5) * 12, (Math.random() - .5) * 8)
+      }
+
+      drawSky(now)
+      drawWater(now, elapsed)
+      drawReflection(now, elapsed)
+      drawThreatWake(now, elapsed)
+      drawVictim(elapsed)
+      drawFin(elapsed)
+      drawShark(elapsed)
+      drawSplash(elapsed)
+      drawForeground(now, elapsed)
+      drawVignette(elapsed)
+      ctx.restore()
+
+      if (elapsed < phase.end) {
+        raf = requestAnimationFrame(render)
+      } else {
+        running = false
+        panel.classList.remove('hidden')
+        startButton.textContent = 'Relancer la scène'
+      }
+    }
+
+    function start() {
+      if (running) return
+      running = true
+      victimAlive = true
+      biteHandled = false
+      panel.classList.add('hidden')
+      cancelAnimationFrame(raf)
+
+      if (audio) {
+        audio.pause()
+        audio.currentTime = 0
+      }
+      audio = new Audio('../../sons/jaws-theme.m4a')
+      audio.volume = .82
+      audio.play().catch(() => {})
+
+      startTime = performance.now()
+      raf = requestAnimationFrame(render)
+    }
+
+    function clamp(n) {
+      return Math.max(0, Math.min(1, n))
+    }
+
+    function smoothstep(n) {
+      const t = clamp(n)
+      return t * t * (3 - 2 * t)
+    }
+
+    function mixColor(a, b, t) {
+      const ca = hexToRgb(a)
+      const cb = hexToRgb(b)
+      return `rgb(${Math.round(ca.r + (cb.r - ca.r) * t)}, ${Math.round(ca.g + (cb.g - ca.g) * t)}, ${Math.round(ca.b + (cb.b - ca.b) * t)})`
+    }
+
+    function hexToRgb(hex) {
+      const value = parseInt(hex.slice(1), 16)
+      return {
+        r: (value >> 16) & 255,
+        g: (value >> 8) & 255,
+        b: value & 255,
+      }
+    }
+
+    function ellipse(x, y, w, h) {
+      ctx.beginPath()
+      ctx.ellipse(x, y, w / 2, h / 2, 0, 0, Math.PI * 2)
+      ctx.fill()
+    }
+
+    function strokeEllipse(x, y, w, h) {
+      ctx.beginPath()
+      ctx.ellipse(x, y, w / 2, h / 2, 0, 0, Math.PI * 2)
+      ctx.stroke()
+    }
+
+    function circle(x, y, r) {
+      ctx.beginPath()
+      ctx.arc(x, y, r, 0, Math.PI * 2)
+      ctx.fill()
+    }
+
+    function line(x1, y1, x2, y2) {
+      ctx.beginPath()
+      ctx.moveTo(x1, y1)
+      ctx.lineTo(x2, y2)
+      ctx.stroke()
+    }
+
+    function triangle(x1, y1, x2, y2, x3, y3) {
+      ctx.beginPath()
+      ctx.moveTo(x1, y1)
+      ctx.lineTo(x2, y2)
+      ctx.lineTo(x3, y3)
+      ctx.closePath()
+      ctx.fill()
+    }
+
+    window.addEventListener('resize', resize)
+    startButton.addEventListener('click', start)
+    resize()
+    drawSky(0)
+    drawWater(0, 0)
+    drawReflection(0, 0)
+    drawVictim(0)
+    drawForeground(0, 0)
+    drawVignette(0)
+  </script>
+</body>
+</html>

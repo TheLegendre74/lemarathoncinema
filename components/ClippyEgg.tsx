@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { unlockClippyMaster } from '@/lib/actions'
 
-const ClippyDanceBattle = dynamic(() => import('./ClippyDanceBattle'), { ssr: false })
+const ClippyDanceBattle    = dynamic(() => import('./ClippyDanceBattle'), { ssr: false })
+// TODO TEMP — supprimer avant lancement prod
+const ClippyPunchOutPhaser = dynamic(() => import('./ClippyPunchOutPhaser'), { ssr: false })
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr]
@@ -1060,6 +1062,9 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
   const [mgPhase,          setMgPhase]         = useState<'idle'|'active'|'win'|'lose'>('idle')
   const [ddrPhase,         setDdrPhase]        = useState<'idle'|'active'>('idle')
   const ddrPhaseRef        = useRef<'idle'|'active'>('idle')
+  // TODO TEMP — supprimer avant lancement prod
+  const [punchPhase,       setPunchPhase]      = useState<'idle'|'active'>('idle')
+  const punchPhaseRef      = useRef<'idle'|'active'>('idle')
   const [playerPresses,    setPlayerPresses]   = useState(0)
   const [clippyPresses,    setClippyPresses]   = useState(0)
   const [sessionLosses,    setSessionLosses]   = useState(0)
@@ -1214,7 +1219,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
   // Curseur caché uniquement en combat à l'épée (pas pendant DDR, pas sur l'écran de mort)
   useEffect(() => {
     // Curseur caché en combat épée — PAS pendant le taunt DDR (souris normale)
-    const hideCursor = phase === 'combat' && mgPhase === 'idle' && hellPhase === 'idle' && ddrPhase === 'idle' && !showDeathScreen && !ddrTauntActive && !ddrIntroActive
+    const hideCursor = phase === 'combat' && mgPhase === 'idle' && hellPhase === 'idle' && ddrPhase === 'idle' && punchPhase === 'idle' && !showDeathScreen && !ddrTauntActive && !ddrIntroActive
     document.body.style.cursor = hideCursor ? 'none' : ''
     return () => { document.body.style.cursor = '' }
   }, [phase, mgPhase, hellPhase, ddrPhase, showDeathScreen, ddrTauntActive, ddrIntroActive])
@@ -1388,6 +1393,9 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
       } else {
         ddrPhaseRef.current = 'active'; setDdrPhase('active')
       }
+    } else if (effectivePhase === 3) {
+      // TODO TEMP — supprimer avant lancement prod
+      punchPhaseRef.current = 'active'; setPunchPhase('active')
     } else {
       setMessage("🗡️ ÉPREUVE DE FORCE !!! Montre ce que tu vaux !"); setBubble(true)
       setTimeout(() => setMgPhase('active'), 800)
@@ -1445,6 +1453,12 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
       // Après une défaite DDR : relancer le mini-jeu de danse sans intro
       clippyHPRef.current = CLIPPY_MAX_HP; setClippyHP(CLIPPY_MAX_HP)
       ddrPhaseRef.current = 'active'; setDdrPhase('active')
+      return
+    }
+    // TODO TEMP — supprimer avant lancement prod
+    if (deathReason === 'punch' as any) {
+      clippyHPRef.current = CLIPPY_MAX_HP; setClippyHP(CLIPPY_MAX_HP)
+      punchPhaseRef.current = 'active'; setPunchPhase('active')
       return
     }
     if (deathReason === 'ddr_duel') {
@@ -1624,6 +1638,13 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
         return
       }
 
+      // TODO TEMP — supprimer avant lancement prod
+      if (effectivePhase === 3) {
+        setPhase('combat'); phaseRef.current = 'combat'
+        punchPhaseRef.current = 'active'; setPunchPhase('active')
+        return
+      }
+
       setPhase('combat'); phaseRef.current = 'combat'
       setMessage(getBattleStart())
       setBubble(true); dodge(); startMusic()
@@ -1782,6 +1803,22 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
         />
       )}
 
+      {/* TODO TEMP — supprimer avant lancement prod */}
+      {punchPhase === 'active' && (
+        <ClippyPunchOutPhaser
+          initialHP={clippyHP}
+          onWin={() => {
+            punchPhaseRef.current = 'idle'; setPunchPhase('idle')
+            startHellSequence()
+          }}
+          onLose={() => {
+            punchPhaseRef.current = 'idle'; setPunchPhase('idle')
+            setDeathReason('punch' as any)
+            setShowDeathScreen(true)
+          }}
+        />
+      )}
+
       {/* ── Arène background (combat + DDR — bloque tout le site derrière) ── */}
       {phase === 'combat' && hellPhase === 'idle' && (
         <div style={{ position:'fixed', inset:0, zIndex:99980, background:'#000' }}>
@@ -1800,7 +1837,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
       )}
 
       {/* ── Épée curseur joueur ── */}
-      {phase === 'combat' && mgPhase === 'idle' && hellPhase === 'idle' && ddrPhase === 'idle' && (
+      {phase === 'combat' && mgPhase === 'idle' && hellPhase === 'idle' && ddrPhase === 'idle' && !ddrIntroActive && (
         <img src="/epee.png" alt="" style={{ position:'fixed', left:mousePos.x-45, top:mousePos.y-200, width:110, height:320, objectFit:'contain', pointerEvents:'none', zIndex:99998, transform:'rotate(45deg)', userSelect:'none', filter:'drop-shadow(0 4px 12px rgba(0,0,0,.85))' }} />
       )}
 
@@ -2119,7 +2156,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
 
       {/* ── Corps Clippy ── */}
       <div
-        style={{ position:'fixed', left:pos.x, top:pos.y, zIndex:99993, cursor:(phase==='combat'&&!ddrTauntActive)?'none':(tired?'crosshair':'pointer'), transition:'left .3s cubic-bezier(.34,1.56,.64,1),top .3s cubic-bezier(.34,1.56,.64,1)', userSelect:'none', display:(hellPhase!=='idle'||mgPhase!=='idle'||ddrPhase!=='idle'||showLarbinMsg||showLarbinModal||showDeathScreen)?'none':'block' }}
+        style={{ position:'fixed', left:pos.x, top:pos.y, zIndex:99993, cursor:(phase==='combat'&&!ddrTauntActive&&!ddrIntroActive)?'none':(tired?'crosshair':'pointer'), transition:'left .3s cubic-bezier(.34,1.56,.64,1),top .3s cubic-bezier(.34,1.56,.64,1)', userSelect:'none', display:(hellPhase!=='idle'||mgPhase!=='idle'||ddrPhase!=='idle'||showLarbinMsg||showLarbinModal||showDeathScreen)?'none':'block' }}
         onClick={phase==='normal' ? handleNormalClick : handleCombatClick}
       >
         {(bubble || forcedMessage) && (
@@ -2131,12 +2168,17 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
           </div>
         )}
 
-        {phase === 'combat' && !ddrTauntActive ? (
+        {phase === 'combat' && !ddrTauntActive && !ddrIntroActive ? (
           /* Combat épée : Clippy avec bouclier et épée */
           <div style={{ position:'relative', width:wCombat }}>
             <img src="/bouclier.png" alt="" style={{ position:'absolute', left:-wShield*.7, bottom:10, width:wShield, height:wShield, objectFit:'contain', mixBlendMode:'multiply', transform:`rotate(-15deg) scale(${shieldFlash?1.2:1})`, transition:'transform .15s', filter:shieldFlash?'brightness(1.8) drop-shadow(0 0 12px #ffaa00)':'none' }} />
             <img src={effectivePhase === 2 ? '/evil-clippy-disco.png' : '/evil-clippy.png'} alt="Clippy" style={{ width:wCombat, objectFit:'contain', display:'block', mixBlendMode:'multiply', filter:clippyHit?'brightness(3) saturate(0)':'drop-shadow(0 6px 20px rgba(100,80,180,.6))', transition:'filter .15s' }} />
             <img src="/epee.png" alt="" style={{ position:'absolute', right:-wSword*.9, bottom:0, width:wSword, height:hSword, objectFit:'contain', transform:swordWindup?undefined:'rotate(-152deg)', filter:'drop-shadow(0 2px 6px rgba(0,0,0,.6))', animation:swordWindup?'sword-windup .7s ease forwards':'none' }} />
+          </div>
+        ) : phase === 'combat' && ddrIntroActive ? (
+          /* Intro DDR : Clippy sans bouclier ni épée */
+          <div style={{ position:'relative', width:wCombat }}>
+            <img src={effectivePhase === 2 ? '/evil-clippy-disco.png' : '/evil-clippy.png'} alt="Clippy" style={{ width:wCombat, objectFit:'contain', display:'block', mixBlendMode:'multiply', filter:'drop-shadow(0 6px 20px rgba(100,80,180,.6))' }} />
           </div>
         ) : (
           <div style={{ position:'relative' }}>

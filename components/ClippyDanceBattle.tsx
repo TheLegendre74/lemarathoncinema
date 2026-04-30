@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { DANCE_BEATMAP } from './ClippyDanceBattleBeatmap'
 import type { DanceNote } from './ClippyDanceBattleBeatmap'
-import { saveDanceScore, getDanceLeaderboard } from '@/lib/actions'
+import { saveDanceScore, getDanceLeaderboard, unlockFeverNight } from '@/lib/actions'
 
 type Dir = DanceNote['direction']
 type LeaderEntry = { pseudo: string; score: number; max_combo: number }
@@ -22,6 +22,8 @@ const COL_CSS:    Record<Dir, string>    = { left: '#ff6699', down: '#6699ff', u
 const COL_DARK:   Record<Dir, number>    = { left: 0x661133, down: 0x112266, up: 0x116633, right: 0x664411 }
 
 const NOTE_SPEED    = 380
+const FEVER_NOTE_SPEED = NOTE_SPEED * 2  // 760 px/s
+
 const HIT_WIN_MS    = 142    // timing assoupli (+30%)
 const PERFECT_MS    = 62     // idem
 const EARLY_GRACE   = 328    // idem
@@ -32,6 +34,39 @@ const FEVER_X4      = 50     // ×4
 const FLAME_AT      = 20     // flammes CSS apparaissent
 const FEVER_MS      = 10000  // durée fever (réinitialisée à chaque upgrade)
 const AHEAD_MS      = 420    // ms avant hit pour illuminer la lane
+
+// ── Dialogues Clippy quand le joueur fait un run parfait ──────────────────────
+const PERFECT_RAGE_LINES = [
+  '... Zéro faute. Pas une seule. C\'est… statistiquement improbable.',
+  'Vingt ans de chorégraphie perfectionnée dans les coins d\'écran. Vingt ans. Et toi tu passes au travers sans trembler.',
+  'Ce n\'est pas normal. Ce n\'est PAS PRÉVU dans mes données. Aucun humain ne devrait être capable de ça.',
+  'Tu penses que c\'est fini ? Que tu as gagné parce que tu as bien dansé ? NON.',
+  'Si tu es vraiment si fort… Prouve-le. 30 secondes. Mode FEVER NIGHT. Là où même moi j\'ai du mal.',
+]
+
+// ── Beatmap Fever Night (30 sec, 110 BPM, densité ×3, chords) ─────────────────
+const FEVER_BEATMAP: DanceNote[] = (() => {
+  const B = 545
+  const D = ['left', 'down', 'up', 'right'] as const
+  const seq  = [0, 2, 1, 3, 0, 3, 1, 2, 2, 0, 3, 1, 1, 3, 0, 2] as const
+  const cseq = [2, 0, 3, 1, 2, 1, 3, 0, 0, 3, 1, 2, 3, 1, 2, 0] as const
+  const notes: DanceNote[] = []
+  for (let i = 0; i < 56; i++) {
+    const t = (i + 2) * B
+    if (t > 30000) break
+    const si = i % seq.length
+    notes.push({ time: t, direction: D[seq[si]] })
+    // Chord every 2 beats (2 notes simultanées)
+    if (i % 2 === 1 && D[cseq[si]] !== D[seq[si]]) {
+      notes.push({ time: t, direction: D[cseq[si]] })
+    }
+    // Half-beat fill every 3 beats after warmup
+    if (i > 4 && i % 3 === 0) {
+      notes.push({ time: t + Math.round(B * 0.5), direction: D[(seq[si] + 1) % 4] })
+    }
+  }
+  return notes.filter(n => n.time > 0 && n.time <= 30000).sort((a, b) => a.time - b.time)
+})()
 
 // ── Flammes CSS sur les 4 bords de la zone de jeu (combo ≥ 20) ───────────────
 
@@ -206,6 +241,127 @@ function PostGameOverlay({
   )
 }
 
+// ── Overlay : rage parfaite ───────────────────────────────────────────────────
+
+function PerfectRageOverlay({ idx, onNext, onDone }: { idx: number; onNext: () => void; onDone: () => void }) {
+  const isLast = idx >= PERFECT_RAGE_LINES.length - 1
+  useEffect(() => {
+    const t = setTimeout(() => { isLast ? onDone() : onNext() }, 3500)
+    return () => clearTimeout(t)
+  }, [idx, isLast, onNext, onDone])
+  return (
+    <div onClick={() => isLast ? onDone() : onNext()} style={{
+      position: 'fixed', inset: 0, zIndex: 99991, background: 'rgba(4,0,12,.97)',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      gap: '2rem', padding: '2rem', fontFamily: 'monospace', cursor: 'pointer',
+    }}>
+      <div style={{ fontSize: 'clamp(3rem,8vw,5rem)' }}>📎</div>
+      <div key={idx} style={{
+        maxWidth: 520, textAlign: 'center',
+        fontSize: 'clamp(1rem,2.5vw,1.3rem)', color: '#ff9944', fontWeight: 700, lineHeight: 1.7,
+        textShadow: '0 0 20px #ff660088', animation: 'rage-in .35s ease',
+      }}>
+        {PERFECT_RAGE_LINES[idx]}
+      </div>
+      <div style={{ fontSize: '.7rem', color: '#444' }}>{idx + 1} / {PERFECT_RAGE_LINES.length} — clic pour accélérer</div>
+      <style>{`@keyframes rage-in { from{opacity:0;transform:scale(.96)} to{opacity:1;transform:scale(1)} }`}</style>
+    </div>
+  )
+}
+
+// ── Overlay : choix Fever Night ───────────────────────────────────────────────
+
+function FeverChoiceOverlay({ onAccept, onRefuse }: { onAccept: () => void; onRefuse: () => void }) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 99991, background: 'rgba(4,0,12,.97)',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      gap: '1.5rem', padding: '2rem', fontFamily: 'monospace',
+    }}>
+      <div style={{ fontSize: 'clamp(1.6rem,4vw,2.2rem)', color: '#ff6600', fontWeight: 800, letterSpacing: 3, textShadow: '0 0 30px #ff440077', textAlign: 'center' }}>
+        🔥 CLIPPY TE DÉFIE 🔥
+      </div>
+      <div style={{ maxWidth: 480, textAlign: 'center', fontSize: 'clamp(.9rem,2vw,1.1rem)', color: '#ffaa66', lineHeight: 1.8 }}>
+        Survie <strong style={{ color: '#fff' }}>30 secondes</strong> en mode{' '}
+        <strong style={{ color: '#ff6600' }}>FEVER NIGHT</strong>.<br/>
+        Vitesse ×2 — Densité ×3 — Notes simultanées — Aucune pitié.
+      </div>
+      <div style={{ display: 'flex', gap: '1.5rem', marginTop: '.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+        <button onClick={onAccept} style={{
+          padding: '.85rem 2.4rem', borderRadius: 8,
+          background: 'linear-gradient(135deg,#ff4400,#cc2200)', border: '2px solid #ff6600',
+          color: '#fff', fontSize: '1rem', fontWeight: 800, cursor: 'pointer', letterSpacing: 2,
+          boxShadow: '0 0 24px #ff440055',
+        }}>⚡ ACCEPTER LE DÉFI</button>
+        <button onClick={onRefuse} style={{
+          padding: '.85rem 2.4rem', borderRadius: 8,
+          background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.18)',
+          color: '#777', fontSize: '1rem', fontWeight: 600, cursor: 'pointer', letterSpacing: 2,
+        }}>REFUSER (sage)</button>
+      </div>
+    </div>
+  )
+}
+
+// ── Overlay : victoire Fever Night ────────────────────────────────────────────
+
+function FeverPostGameOverlay({
+  score, maxCombo, leader, onContinue,
+}: { score: number; maxCombo: number; leader: LeaderEntry[]; onContinue: () => void }) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 99991,
+      background: 'rgba(4,0,12,.97)', backdropFilter: 'blur(8px)',
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      justifyContent: 'center', gap: '1.4rem', padding: '2rem', fontFamily: 'monospace',
+    }}>
+      <div style={{ fontSize: 'clamp(1.6rem,4vw,2.2rem)', color: '#ffdd00', fontWeight: 800, letterSpacing: 3, textShadow: '0 0 30px #ffdd0055', textAlign: 'center' }}>
+        ⚡ FEVER NIGHT CLEARED ⚡
+      </div>
+      <div style={{ fontSize: 'clamp(.9rem,2vw,1.05rem)', color: '#ff9944', textAlign: 'center', lineHeight: 1.6 }}>
+        Tu as survécu à l&apos;impossible.
+      </div>
+      <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+        {[['SCORE', score.toLocaleString(), '#e8c46a'], ['COMBO MAX', `×${maxCombo}`, '#cc88ff']].map(([lbl, val, col]) => (
+          <div key={lbl} style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '.65rem', color: '#888', letterSpacing: 2, marginBottom: '.2rem' }}>{lbl}</div>
+            <div style={{ fontSize: 'clamp(1.4rem,4vw,2rem)', color: col as string, fontWeight: 700 }}>{val}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ width: '100%', maxWidth: 460, background: 'rgba(255,215,0,.06)', border: '2px solid #ffdd0033', borderRadius: 12, padding: '1.2rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '.85rem' }}>
+        {[
+          { icon: '🏆', lbl: 'SUCCÈS DÉBLOQUÉ', val: 'Le rythme dans la peau', col: '#ffd700' },
+          { icon: '🎵', lbl: 'TITRE DÉBLOQUÉ',  val: 'Fever Night',            col: '#ff9944' },
+        ].map(({ icon, lbl, val, col }) => (
+          <div key={lbl} style={{ display: 'flex', alignItems: 'center', gap: '.8rem' }}>
+            <span style={{ fontSize: '1.5rem' }}>{icon}</span>
+            <div>
+              <div style={{ fontSize: '.6rem', color: '#888', letterSpacing: 2 }}>{lbl}</div>
+              <div style={{ fontSize: '1rem', color: col, fontWeight: 700 }}>{val}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {leader.length > 0 && (
+        <div style={{ width: '100%', maxWidth: 380, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 12, overflow: 'hidden' }}>
+          <div style={{ padding: '.6rem 1rem', fontSize: '.65rem', color: '#888', letterSpacing: 3, borderBottom: '1px solid rgba(255,255,255,.08)' }}>🏆 TOP 10 — MEILLEURS SCORES</div>
+          {leader.slice(0, 10).map((e, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '.8rem', padding: '.4rem 1rem', background: i % 2 === 0 ? 'rgba(255,255,255,.02)' : 'transparent' }}>
+              <span style={{ width: 20, fontSize: '.7rem', color: i < 3 ? (['#ffd700','#c0c0c0','#cd7f32'] as string[])[i] : '#555', fontWeight: 700 }}>{i < 3 ? (['🥇','🥈','🥉'] as string[])[i] : `${i+1}.`}</span>
+              <span style={{ flex: 1, fontSize: '.8rem', color: '#ccc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.pseudo}</span>
+              <span style={{ fontSize: '.8rem', color: '#e8c46a', fontWeight: 600 }}>{e.score.toLocaleString()}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      <button onClick={onContinue} style={{ marginTop: '.5rem', padding: '.75rem 2.5rem', borderRadius: 8, background: 'rgba(255,215,0,.12)', border: '1px solid #ffd70044', color: '#ffd700', fontSize: '1rem', fontWeight: 700, cursor: 'pointer', letterSpacing: 2 }}>
+        CONTINUER
+      </button>
+    </div>
+  )
+}
+
 // ── Composant principal ───────────────────────────────────────────────────────
 
 export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, userId }: Props) {
@@ -234,6 +390,18 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
     score: number; maxCombo: number; won: boolean; leader: LeaderEntry[]
   } | null>(null)
 
+  // ── Perfect / Fever flow ──────────────────────────────────────────────────
+  const [innerPhase,  setInnerPhase]  = useState<'ddr'|'rage'|'choice'|'fever'|'fever_post'>('ddr')
+  const [rageIdx,     setRageIdx]     = useState(0)
+  const [feverLeader, setFeverLeader] = useState<LeaderEntry[]>([])
+  const missCountRef     = useRef(0)
+  const feverContainerRef = useRef<HTMLDivElement>(null)
+  const feverFinalScore  = useRef(0)
+  const feverFinalCombo  = useRef(0)
+  const onAnyMissRef     = useRef<(() => void) | null>(null)
+  const onFeverEndRef    = useRef<((won: boolean) => void) | null>(null)
+  onAnyMissRef.current   = () => { missCountRef.current++ }
+
   const showPostGame = useCallback(async (won: boolean) => {
     finalWon.current = won
     const score = finalScore.current, combo = finalCombo.current
@@ -245,8 +413,38 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
     setPostGame({ score, maxCombo: combo, won, leader })
   }, [userId])
 
-  useEffect(() => { onWinRef.current  = () => showPostGame(true)  }, [showPostGame])
+  useEffect(() => {
+    onWinRef.current = () => {
+      if (missCountRef.current === 0) {
+        // Perfect run: save score silently and show rage sequence
+        if (userId) saveDanceScore(finalScore.current, finalCombo.current).catch(() => {})
+        setInnerPhase('rage')
+        setRageIdx(0)
+      } else {
+        showPostGame(true)
+      }
+    }
+  }, [showPostGame, userId])
   useEffect(() => { onLoseRef.current = () => showPostGame(false) }, [showPostGame])
+
+  // ── Fever end handler ─────────────────────────────────────────────────────
+  useEffect(() => {
+    onFeverEndRef.current = async (won: boolean) => {
+      if (won) {
+        if (userId) try { await unlockFeverNight() } catch {}
+        let ldr: LeaderEntry[] = []
+        try { ldr = await getDanceLeaderboard() } catch {}
+        setFeverLeader(ldr)
+        setInnerPhase('fever_post')
+      } else {
+        // Fever perdu : post-game normal (DDR était gagné)
+        let ldr: LeaderEntry[] = []
+        try { ldr = await getDanceLeaderboard() } catch {}
+        finalWon.current = true
+        setPostGame({ score: finalScore.current, maxCombo: finalCombo.current, won: true, leader: ldr })
+      }
+    }
+  }, [userId])
   useEffect(() => { onMissRef.current = onMiss }, [onMiss])
 
   useEffect(() => {
@@ -926,6 +1124,7 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           this.hp = Math.max(0, this.hp - 1)
           this.hpText.setText(this.buildHpStr())
           onMissRef.current?.()
+          onAnyMissRef.current?.()
           this.combo = 0; this.feverLevel = 0; this.fever = false
           onComboChangeRef.current?.(0)
           this.comboTxt.setAlpha(0); this.feverLabel.setAlpha(0)
@@ -1032,7 +1231,317 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // ── Post-game overlay ───────────────────────────────────────────────────────
+  // ── Fever Night — scène Phaser séparée ────────────────────────────────────
+  useEffect(() => {
+    if (innerPhase !== 'fever' || !feverContainerRef.current) return
+    let destroyed = false
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let phaserGame: any = null
+    let feverKeyListener: ((e: KeyboardEvent) => void) | null = null
+
+    ;(async () => {
+      const Phaser = (await import('phaser')).default
+      if (destroyed || !feverContainerRef.current) return
+
+      const sceneMaxHP = initialHP ?? MAX_HP
+      const isMobile   = window.matchMedia('(pointer: coarse)').matches
+
+      class FeverScene extends Phaser.Scene {
+        private readonly isMobile = isMobile
+        private hp        = sceneMaxHP
+        private score     = 0
+        private combo     = 0
+        private maxCombo  = 0
+        private bmIdx     = 0
+        private ended     = false
+        private feverStartTime = 0
+        private hitWin    = HIT_WIN_MS
+        private perfWin   = PERFECT_MS
+        private earlyG    = EARLY_GRACE
+        private clippyZoneH = 0
+
+        private activeNotes: { obj: Phaser.GameObjects.Container; time: number; dir: Dir; judged: boolean }[] = []
+        private colX!:    number[]
+        private hitY!:    number
+        private spawnAdv!: number
+        private laneW     = 0
+
+        private music!:       Phaser.Sound.BaseSound
+        private feedbackTxt!: Phaser.GameObjects.Text
+        private comboTxt!:    Phaser.GameObjects.Text
+        private countdownTxt!:Phaser.GameObjects.Text
+        private scoreTxt!:    Phaser.GameObjects.Text
+        private laneFlashBg:  Phaser.GameObjects.Rectangle[] = []
+
+        constructor() { super({ key: 'FeverScene' }) }
+
+        preload() {
+          this.load.audio('fever-music', '/audio/clippy/nightclub.m4a')
+        }
+
+        private getElapsed(): number {
+          const seek = ((this.music as any)?.seek ?? 0) * 1000
+          return seek > 50 ? seek : Math.max(0, this.time.now - this.feverStartTime)
+        }
+
+        create() {
+          const W = this.scale.width, H = this.scale.height
+          if (this.isMobile) {
+            this.hitWin = Math.round(HIT_WIN_MS * 1.10)
+            this.perfWin = Math.round(PERFECT_MS * 1.10)
+            this.earlyG  = Math.round(EARLY_GRACE * 1.10)
+          }
+
+          // Fond fever rouge pulsant
+          this.add.rectangle(W/2, H/2, W, H, 0x000000).setAlpha(this.isMobile ? 0.90 : 0.55)
+          const fBg = this.add.rectangle(W/2, H/2, W, H, 0x220000).setAlpha(0)
+          this.tweens.add({ targets: fBg, alpha: { from: 0.20, to: 0.40 }, duration: 450, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+
+          if (this.isMobile) this.setupMobile(W, H)
+          else               this.setupDesktop(W, H)
+
+          // Header
+          this.add.text(W/2, this.isMobile ? this.clippyZoneH/2 - 10 : 14, '⚡  FEVER NIGHT  ⚡', {
+            fontSize: '15px', color: '#ff6600', letterSpacing: 4,
+            fontFamily: 'monospace', fontStyle: 'bold', stroke: '#000', strokeThickness: 3,
+          }).setOrigin(0.5, this.isMobile ? 0.5 : 0)
+
+          // Compte à rebours
+          this.countdownTxt = this.add.text(W/2, this.isMobile ? this.clippyZoneH - 22 : 42, '30', {
+            fontSize: this.isMobile ? '26px' : '36px', color: '#ff4400',
+            fontFamily: 'monospace', fontStyle: 'bold', stroke: '#000', strokeThickness: 4,
+          }).setOrigin(0.5)
+
+          // Combo & score
+          const comboY = this.isMobile ? Math.round(H * 0.64) : Math.round(H * 0.70)
+          this.comboTxt = this.add.text(W/2, comboY, '', {
+            fontSize: '20px', fontStyle: 'bold', fontFamily: 'monospace', color: '#ff9944', stroke: '#000', strokeThickness: 3,
+          }).setOrigin(0.5).setAlpha(0)
+          this.feedbackTxt = this.add.text(W/2, this.isMobile ? Math.round(H*0.73) : Math.round(H*0.61), '', {
+            fontSize: '38px', fontStyle: 'bold', fontFamily: 'monospace', stroke: '#000', strokeThickness: 4,
+          }).setOrigin(0.5)
+          this.scoreTxt = this.add.text(W - 6, 8, 'Score: 0', {
+            fontSize: '14px', color: '#ff9944', fontFamily: 'monospace', fontStyle: 'bold', stroke: '#000', strokeThickness: 3,
+          }).setOrigin(1, 0)
+
+          // Keyboard
+          const kbMap: Record<string, Dir> = { ArrowLeft: 'left', ArrowDown: 'down', ArrowUp: 'up', ArrowRight: 'right' }
+          const kbListener = (e: KeyboardEvent) => {
+            const dir = kbMap[e.key]; if (!dir) return
+            e.preventDefault(); e.stopImmediatePropagation()
+            if (!this.ended) this.handleInput(dir, this.getElapsed())
+          }
+          feverKeyListener = kbListener
+          window.addEventListener('keydown', kbListener, true)
+
+          if (this.isMobile) {
+            this.input.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
+              if (this.ended || ptr.y < this.clippyZoneH) return
+              this.handleInput(COLS[Math.min(3, Math.floor(ptr.x / (this.scale.width / 4)))], this.getElapsed())
+            })
+          }
+
+          this.music = this.sound.add('fever-music', { loop: true, volume: 0.9 })
+          this.music.play()
+          this.feverStartTime = this.time.now
+          this.time.addEvent({ delay: 30500, callback: () => { if (!this.ended) this.endGame('win') } })
+        }
+
+        private setupDesktop(W: number, H: number) {
+          this.hitY = Math.round(H * 0.82)
+          this.spawnAdv = ((this.hitY + 80) / FEVER_NOTE_SPEED) * 1000
+          const totalLaneW = Math.min(W * 0.58, 530)
+          this.laneW = Math.round(totalLaneW / 4)
+          const laneX0 = Math.round(W/2 - totalLaneW/2)
+          this.colX = COLS.map((_, i) => Math.round(laneX0 + (i + 0.5) * totalLaneW / COLS.length))
+
+          this.add.rectangle(W/2, H/2, totalLaneW + 18, H, 0x000000).setAlpha(0.55)
+          this.colX.forEach((x, i) => {
+            const col = COL_HEX[COLS[i]], g = this.add.graphics()
+            g.fillStyle(col, 0.08); g.fillRect(x - this.laneW/2, 0, this.laneW, H/2)
+            g.fillStyle(col, 0.20); g.fillRect(x - this.laneW/2, H/2, this.laneW, H/2)
+            if (i > 0) {
+              const sg = this.add.graphics()
+              sg.lineStyle(1.5, 0xffffff, 0.10); sg.moveTo(x - this.laneW/2, 0); sg.lineTo(x - this.laneW/2, H); sg.strokePath()
+            }
+          })
+          this.laneFlashBg = COLS.map((dir, i) => this.add.rectangle(this.colX[i], H/2, this.laneW, H, COL_HEX[dir]).setAlpha(0))
+          this.add.rectangle(W/2, this.hitY, totalLaneW + 18, 5, 0xffffff).setAlpha(0.08)
+          this.add.rectangle(W/2, this.hitY, totalLaneW + 18, 1, 0xffffff).setAlpha(0.65)
+          const nW = Math.round(this.laneW * 0.96), nH = Math.round(nW * 0.40), nR = Math.round(nH * 0.38)
+          this.colX.forEach((x, i) => {
+            const dir = COLS[i], col = COL_HEX[dir], dark = COL_DARK[dir], g = this.add.graphics()
+            g.fillStyle(col, 0.18); g.fillRoundedRect(x-nW/2-6, this.hitY-nH/2-4, nW+12, nH+8, nR+4)
+            g.fillStyle(dark, 1);   g.fillRoundedRect(x-nW/2, this.hitY-nH/2, nW, nH, nR)
+            g.fillStyle(col, 1);    g.fillRoundedRect(x-nW/2, this.hitY-nH/2, nW, Math.round(nH*0.70), nR)
+            g.lineStyle(2.5, 0xffffff, 0.55); g.strokeRoundedRect(x-nW/2, this.hitY-nH/2, nW, nH, nR)
+            this.add.text(x, this.hitY, COL_ARROWS[dir], { fontSize:`${Math.round(nH*1.0)}px`, color:COL_CSS[dir], fontFamily:'monospace', fontStyle:'bold', stroke:'#00000077', strokeThickness:2 }).setOrigin(0.5).setAlpha(0.80)
+          })
+        }
+
+        private setupMobile(W: number, H: number) {
+          this.clippyZoneH = Math.round(H * 0.26)
+          this.hitY        = Math.round(H * 0.87)
+          this.spawnAdv    = (this.hitY - this.clippyZoneH) / FEVER_NOTE_SPEED * 1000
+          const colW = Math.round(W / 4); this.laneW = colW
+          this.colX = COLS.map((_, i) => Math.round((i + 0.5) * W / COLS.length))
+
+          const clipBg = this.add.graphics()
+          clipBg.fillStyle(0x180000, 1); clipBg.fillRect(0, 0, W, this.clippyZoneH)
+          this.add.rectangle(W/2, this.clippyZoneH, W, 2, 0xff4400).setAlpha(0.70)
+          this.add.rectangle(W/2, this.clippyZoneH + (H - this.clippyZoneH)/2, W, H - this.clippyZoneH, 0x01000a)
+          for (let i = 1; i < 4; i++) {
+            const x = Math.round(i * W / 4), sg = this.add.graphics()
+            sg.lineStyle(1, 0xffffff, 0.18); sg.moveTo(x, this.clippyZoneH); sg.lineTo(x, H); sg.strokePath()
+          }
+          COLS.forEach((dir, i) => {
+            const x = this.colX[i], col = COL_HEX[dir], lH = H - this.clippyZoneH, g = this.add.graphics()
+            g.fillStyle(col, 0.05); g.fillRect(x - colW/2, this.clippyZoneH, colW, lH/2)
+            g.fillStyle(col, 0.13); g.fillRect(x - colW/2, this.clippyZoneH + lH/2, colW, lH/2)
+          })
+          this.laneFlashBg = COLS.map((dir, i) => {
+            const lH = H - this.clippyZoneH
+            return this.add.rectangle(this.colX[i], this.clippyZoneH + lH/2, colW, lH, COL_HEX[dir]).setAlpha(0)
+          })
+          this.add.rectangle(W/2, this.hitY, W, 2, 0xffffff).setAlpha(0.9)
+          const cR = Math.round(colW * 0.43)
+          COLS.forEach((dir, i) => {
+            const x = this.colX[i], col = COL_HEX[dir]
+            const ring = this.add.circle(x, this.hitY, cR, col, 0.28); ring.setStrokeStyle(3, col, 1.0)
+            this.add.circle(x, this.hitY, Math.round(cR*0.48), 0x000000, 0.60)
+            this.add.text(x, this.hitY, COL_ARROWS[dir], { fontSize:`${Math.round(cR*0.95)}px`, color:COL_CSS[dir], fontFamily:'monospace', fontStyle:'bold', stroke:'#000', strokeThickness:3 }).setOrigin(0.5).setAlpha(0.85)
+          })
+        }
+
+        update() {
+          if (this.ended) return
+          const elapsed = this.getElapsed()
+
+          // Compte à rebours
+          const remaining = Math.max(0, 30 - Math.floor(elapsed / 1000))
+          this.countdownTxt.setText(String(remaining))
+          this.countdownTxt.setColor(remaining <= 5 ? '#ff0000' : remaining <= 10 ? '#ff6600' : '#ff4400')
+          if (remaining <= 5) {
+            const pulse = 1 + 0.25 * ((1000 - (elapsed % 1000)) / 1000)
+            this.countdownTxt.setScale(pulse)
+          }
+
+          if (elapsed >= 30000) { this.endGame('win'); return }
+
+          while (this.bmIdx < FEVER_BEATMAP.length && FEVER_BEATMAP[this.bmIdx].time - elapsed < this.spawnAdv) {
+            const note = FEVER_BEATMAP[this.bmIdx]
+            if (note.time >= elapsed - 200) this.spawnNote(note.direction, note.time)
+            this.bmIdx++
+          }
+
+          for (const n of this.activeNotes) {
+            if (n.judged) continue
+            n.obj.setY(this.hitY - ((n.time - elapsed) / 1000) * FEVER_NOTE_SPEED)
+            if (n.time - elapsed < -(this.hitWin + 10)) { n.judged = true; n.obj.destroy(); this.doMiss() }
+          }
+          this.activeNotes = this.activeNotes.filter(n => !n.judged)
+
+          const litDirs = new Set<Dir>()
+          for (const n of this.activeNotes) {
+            if (!n.judged) { const tth = n.time - elapsed; if (tth >= -this.hitWin && tth <= AHEAD_MS) litDirs.add(n.dir) }
+          }
+          this.laneFlashBg.forEach((bg, i) => bg.setAlpha(litDirs.has(COLS[i]) ? (this.isMobile ? 0.22 : 0.18) : 0))
+
+          if (this.feedbackTxt.alpha > 0) this.feedbackTxt.setAlpha(Math.max(0, this.feedbackTxt.alpha - 0.022))
+          if (this.comboTxt.alpha > 0 && this.combo === 0) this.comboTxt.setAlpha(Math.max(0, this.comboTxt.alpha - 0.025))
+        }
+
+        private spawnNote(dir: Dir, hitTime: number) {
+          const i = COLS.indexOf(dir), x = this.colX[i], col = COL_HEX[dir], dark = COL_DARK[dir]
+          const nW = Math.round(this.laneW * (this.isMobile ? 0.83 : 0.92))
+          const nH = Math.round(nW * (this.isMobile ? 0.52 : 0.48))
+          const r  = Math.round(nH * 0.36)
+          const c  = this.add.container(x, -nH * 2)
+          const g  = this.add.graphics()
+          g.fillStyle(col, 0.16); g.fillRoundedRect(-nW/2-8, -nH/2-6, nW+16, nH+12, r+6)
+          g.fillStyle(dark, 1);   g.fillRoundedRect(-nW/2, -nH/2, nW, nH, r)
+          g.fillStyle(col, 1);    g.fillRoundedRect(-nW/2, -nH/2, nW, Math.round(nH*0.70), r)
+          g.lineStyle(2.5, 0xffffff, 0.60); g.strokeRoundedRect(-nW/2, -nH/2, nW, nH, r)
+          g.fillStyle(0xffffff, 0.38); g.fillRoundedRect(-nW/2+5, -nH/2+4, nW-10, Math.round(nH*0.26), Math.min(r-2,5))
+          c.add([g, this.add.text(0, 1, COL_ARROWS[dir], { fontSize:`${Math.round(nH*1.05)}px`, color:'#ffffff', fontFamily:'monospace', fontStyle:'bold', stroke:'#00000077', strokeThickness:3 }).setOrigin(0.5)])
+          c.setDepth(6)
+          this.activeNotes.push({ obj: c, time: hitTime, dir, judged: false })
+        }
+
+        private handleInput(dir: Dir, elapsed: number) {
+          let best: typeof this.activeNotes[0] | null = null, bestDelta = Infinity, hasNear = false
+          for (const n of this.activeNotes) {
+            if (n.judged || n.dir !== dir) continue
+            const tth = n.time - elapsed, d = Math.abs(tth)
+            if (tth <= this.earlyG && tth >= -this.hitWin) hasNear = true
+            if (d < bestDelta) { bestDelta = d; best = n }
+          }
+          if (best && bestDelta <= this.hitWin) {
+            best.judged = true; best.obj.destroy()
+            const perf = bestDelta <= this.perfWin
+            this.score += perf ? 150 : 80; feverFinalScore.current = this.score
+            this.combo++; if (this.combo > this.maxCombo) { this.maxCombo = this.combo; feverFinalCombo.current = this.maxCombo }
+            this.feedbackTxt.setText(perf ? 'PERFECT !' : 'GOOD !').setColor(perf ? '#4ade80' : '#ffcc44').setAlpha(1)
+            this.scoreTxt.setText(`Score: ${this.score}`)
+            if (this.combo >= 2) {
+              this.comboTxt.setText(`COMBO  ×${this.combo}`).setColor('#ff9944').setAlpha(1)
+              this.tweens.add({ targets: this.comboTxt, scaleX: 1.15, scaleY: 1.15, duration: 120, yoyo: true, ease: 'Back.Out' })
+            }
+          } else {
+            this.feedbackTxt.setText(hasNear ? 'TROP TÔT !' : 'ERREUR !').setColor('#ff9944').setAlpha(1)
+            this.combo = 0; this.comboTxt.setAlpha(0)
+          }
+        }
+
+        private doMiss() {
+          this.feedbackTxt.setText('MISS !').setColor('#e85a5a').setAlpha(1)
+          this.hp = Math.max(0, this.hp - 1)
+          this.combo = 0; this.comboTxt.setAlpha(0)
+          if (this.hp <= 0) this.endGame('lose')
+        }
+
+        private endGame(result: 'win' | 'lose') {
+          if (this.ended) return
+          this.ended = true
+          feverFinalScore.current = this.score; feverFinalCombo.current = this.maxCombo
+          this.sound.stopAll()
+          this.time.addEvent({ delay: result === 'win' ? 900 : 600, callback: () => onFeverEndRef.current?.(result === 'win') })
+        }
+      }
+
+      phaserGame = new Phaser.Game({
+        type: Phaser.WEBGL,
+        parent: feverContainerRef.current!,
+        transparent: true,
+        scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH },
+        scene: [FeverScene],
+        audio: { disableWebAudio: false },
+        banner: false,
+        render: { antialias: true, antialiasGL: true, pixelArt: false },
+      })
+    })()
+
+    return () => {
+      destroyed = true
+      if (feverKeyListener) { window.removeEventListener('keydown', feverKeyListener, true); feverKeyListener = null }
+      phaserGame?.destroy(true)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [innerPhase])
+
+  // ── Overlays état interne ───────────────────────────────────────────────────
+
+  if (innerPhase === 'fever_post') {
+    return (
+      <FeverPostGameOverlay
+        score={feverFinalScore.current}
+        maxCombo={feverFinalCombo.current}
+        leader={feverLeader}
+        onContinue={() => onWin()}
+      />
+    )
+  }
+
   if (postGame) {
     return (
       <PostGameOverlay
@@ -1047,36 +1556,65 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
     )
   }
 
+  if (innerPhase === 'rage') {
+    return (
+      <PerfectRageOverlay
+        idx={rageIdx}
+        onNext={() => setRageIdx(i => i + 1)}
+        onDone={() => setInnerPhase('choice')}
+      />
+    )
+  }
+
+  if (innerPhase === 'choice') {
+    return (
+      <FeverChoiceOverlay
+        onAccept={() => setInnerPhase('fever')}
+        onRefuse={() => showPostGame(true)}
+      />
+    )
+  }
+
   return (
     <>
+      {/* Canvas DDR (caché pendant la scène Fever) */}
       <div
         ref={containerRef}
         tabIndex={-1}
-        style={{ position: 'fixed', inset: 0, zIndex: 99985, outline: 'none' }}
+        style={{ position: 'fixed', inset: 0, zIndex: 99985, outline: 'none', display: innerPhase === 'fever' ? 'none' : 'block' }}
       />
 
-      {/* ── Clippy HTML mobile : rendu natif navigateur, zéro pixelisation ── */}
-      {isMobileUI && (
+      {/* Canvas Fever Night */}
+      {innerPhase === 'fever' && (
+        <div
+          ref={feverContainerRef}
+          tabIndex={-1}
+          style={{ position: 'fixed', inset: 0, zIndex: 99985, outline: 'none' }}
+        />
+      )}
+
+      {/* ── Clippy HTML mobile (DDR uniquement) ── */}
+      {isMobileUI && innerPhase === 'ddr' && (
         <img
           src="/evil-clippy-disco.png"
           alt="Evil Clippy Disco"
           style={{
             position: 'fixed',
             left: `${clippyXPct * 100}%`,
-            top: '26vh',                      // = clippyZoneH (H * 0.26)
+            top: '26vh',
             transform: 'translate(-50%, -50%)',
-            width: 'min(22vh, 32vw)',          // taille après -10% (0.36*0.90 ≈ 0.32)
+            width: 'min(22vh, 32vw)',
             height: 'min(22vh, 32vw)',
             objectFit: 'contain',
             transition: 'left 0.09s cubic-bezier(.34,1.56,.64,1)',
-            zIndex: 99988,                     // au-dessus du canvas Phaser
+            zIndex: 99988,
             pointerEvents: 'none',
-            imageRendering: 'auto',            // interpolation bicubique navigateur
+            imageRendering: 'auto',
           }}
         />
       )}
 
-      <FlameBorder combo={liveCombo} />
+      {(innerPhase === 'ddr') && <FlameBorder combo={liveCombo} />}
     </>
   )
 }
