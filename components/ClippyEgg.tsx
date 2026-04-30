@@ -1751,7 +1751,8 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
     </svg>
   )
 
-  const bubbleLeft = pos.x > window.innerWidth / 2
+  // Pendant l'intro DDR phase 2, Clippy est centré → bulle centrée aussi (pas de décalage gauche/droite)
+  const bubbleLeft = ddrIntroActive && effectivePhase === 2 ? false : pos.x > window.innerWidth / 2
 
   // Taille combat : phase 1 mobile −15%, autres phases mobile +10%, DDR intro P2 desktop +20%
   const isMobileUI = window.matchMedia('(pointer: coarse)').matches
@@ -1900,7 +1901,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
       )}
 
       {/* ── Barres HP ── */}
-      {phase === 'combat' && hellPhase === 'idle' && mgPhase === 'idle' && !showDeathScreen && (
+      {phase === 'combat' && hellPhase === 'idle' && mgPhase === 'idle' && !showDeathScreen && !ddrIntroActive && (
         <>
           <div className="clippy-hpbar-clippy" style={{ background:'rgba(8,8,14,.92)', border:`2px solid ${effectivePhase >= 3 ? '#e85a5a' : '#e8c46a'}`, borderRadius:10, padding:hpPadPx, display:'flex', alignItems:'center', gap:hpGap, backdropFilter:'blur(6px)' }}>
             <span style={{ fontSize:hpFont, color: effectivePhase >= 3 ? '#e85a5a' : '#e8c46a', fontWeight:700 }}>📎 CLIPPY {`(Ph.${effectivePhase})`}{activeGodPhase > 0 && ' ⚙️'}</span>
@@ -2240,21 +2241,22 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
       )}
 
       {/* ── Corps Clippy ── */}
-      {/* Intro DDR phase 2 : centré horizontalement, positionné à 20% de hauteur */}
-      {(() => {
-        const clippyX = ddrIntroActive && effectivePhase === 2
-          ? Math.round(window.innerWidth / 2 - wCombat / 2)
-          : pos.x
-        const clippyY = ddrIntroActive && effectivePhase === 2
-          ? Math.round(window.innerHeight * 0.20)
-          : pos.y
-        return (
       <div
-        style={{ position:'fixed', left:clippyX, top:clippyY, zIndex:99993, cursor:(phase==='combat'&&!ddrTauntActive&&!ddrIntroActive)?'none':(tired?'crosshair':'pointer'), transition:'left .3s cubic-bezier(.34,1.56,.64,1),top .3s cubic-bezier(.34,1.56,.64,1)', userSelect:'none', display:(hellPhase!=='idle'||mgPhase!=='idle'||ddrPhase!=='idle'||showLarbinMsg||showLarbinModal||showDeathScreen)?'none':'block' }}
+        style={{
+          position:'fixed',
+          left:  ddrIntroActive && effectivePhase === 2 ? '50%' : pos.x,
+          top:   ddrIntroActive && effectivePhase === 2 ? '18%' : pos.y,
+          transform: ddrIntroActive && effectivePhase === 2 ? 'translateX(-50%)' : 'none',
+          zIndex:99993,
+          cursor:(phase==='combat'&&!ddrTauntActive&&!ddrIntroActive)?'none':(tired?'crosshair':'pointer'),
+          transition:'left .3s cubic-bezier(.34,1.56,.64,1),top .3s cubic-bezier(.34,1.56,.64,1)',
+          userSelect:'none',
+          display:(hellPhase!=='idle'||mgPhase!=='idle'||ddrPhase!=='idle'||showLarbinMsg||showLarbinModal||showDeathScreen)?'none':'block',
+        }}
         onClick={phase==='normal' ? handleNormalClick : handleCombatClick}
       >
         {(bubble || forcedMessage) && (
-          <div style={{ position:'absolute', bottom:phase==='combat'?wCombat*1.4+20:wNormal*.7+16, [bubbleLeft?'right':'left']:0, width:bubbleWidth, background: forcedMessage ? '#1a0a2e' : phase==='combat'?'#120505':'#fffde7', border:`2px solid ${forcedMessage ? '#a855f7' : phase==='combat'?'#e85a5a':'#c4a030'}`, borderRadius:10, padding:bubblePadding, fontSize:bubbleFont, color: forcedMessage ? '#e9d5ff' : phase==='combat'?'#ffaaaa':'#1a1a1a', lineHeight:1.5, boxShadow:`0 4px 20px ${forcedMessage ? 'rgba(168,85,247,.35)' : phase==='combat'?'rgba(232,90,90,.3)':'rgba(0,0,0,.3)'}`, animation:'clippy-bubble-in .2s ease', zIndex:10000 }}
+          <div style={{ position:'absolute', bottom:phase==='combat'?wCombat*1.4+20:wNormal*.7+16, ...(ddrIntroActive && effectivePhase === 2 ? { left:'50%', transform:'translateX(-50%)' } : { [bubbleLeft?'right':'left']:0 }), width:bubbleWidth, background: forcedMessage ? '#1a0a2e' : phase==='combat'?'#120505':'#fffde7', border:`2px solid ${forcedMessage ? '#a855f7' : phase==='combat'?'#e85a5a':'#c4a030'}`, borderRadius:10, padding:bubblePadding, fontSize:bubbleFont, color: forcedMessage ? '#e9d5ff' : phase==='combat'?'#ffaaaa':'#1a1a1a', lineHeight:1.5, boxShadow:`0 4px 20px ${forcedMessage ? 'rgba(168,85,247,.35)' : phase==='combat'?'rgba(232,90,90,.3)':'rgba(0,0,0,.3)'}`, animation:'clippy-bubble-in .2s ease', zIndex:10000 }}
             onClick={e => { e.stopPropagation(); if (!forcedMessage) setBubble(false) }}>
             {forcedMessage ?? message}
             {!forcedMessage && isLarbin && phase === 'normal' && <span style={{ display:'block', marginTop:4, fontSize:10, color:'rgba(0,0,0,.25)', fontStyle:'italic' }}>— Clippy, ton maître</span>}
@@ -2282,8 +2284,6 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
           </div>
         )}
       </div>
-        )
-      })()}
     </>
   )
 }
