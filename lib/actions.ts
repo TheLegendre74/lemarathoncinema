@@ -398,15 +398,18 @@ export async function signOut() {
 // ── WATCHED ─────────────────────────────────────────────────
 
 // Explicit pre/marathon mark (used by the two separate buttons)
-const MARATHON_SOFT_LIMIT = 3
-const MARATHON_HARD_LIMIT = 8
+const MARATHON_SOFT_LIMIT = 4   // 4 films max/jour avant demande admin
+const MARATHON_HARD_LIMIT = 8   // 8 films max/jour après approbation admin
 
 export async function getMarathonDailyStatus() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { count: 0, blocked: false, pendingRequest: false, approvedToday: false }
 
-  const today = new Date().toISOString().slice(0, 10)
+  // Date du jour en heure de Paris (CEST = UTC+2 pendant le marathon)
+  const todayParis = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })
+  const dayStart = new Date(todayParis + 'T00:00:00+02:00').toISOString()
+  const dayEnd   = new Date(todayParis + 'T23:59:59.999+02:00').toISOString()
 
   const [
     { count: watchedToday },
@@ -418,14 +421,14 @@ export async function getMarathonDailyStatus() {
       .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id)
       .eq('pre', false)
-      .gte('created_at', today + 'T00:00:00.000Z')
-      .lt('created_at', today + 'T23:59:59.999Z'),
+      .gte('watched_at', dayStart)
+      .lte('watched_at', dayEnd),
     supabase.from('profiles').select('marathon_blocked_until').eq('id', user.id).single(),
     (supabase as any)
       .from('marathon_watch_requests')
       .select('status')
       .eq('user_id', user.id)
-      .eq('day', today),
+      .eq('day', todayParis),
   ])
 
   const blocked = profile?.marathon_blocked_until
@@ -448,14 +451,14 @@ export async function submitMarathonWatchRequest(message: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non connecté' }
 
-  const today = new Date().toISOString().slice(0, 10)
+  const todayParis = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })
 
   // Check if request already exists
   const { data: existing } = await (supabase as any)
     .from('marathon_watch_requests')
     .select('id')
     .eq('user_id', user.id)
-    .eq('day', today)
+    .eq('day', todayParis)
     .single()
   if (existing) return { error: 'Tu as déjà soumis une demande aujourd\'hui.' }
 
@@ -463,7 +466,7 @@ export async function submitMarathonWatchRequest(message: string) {
   await (supabase as any).from('marathon_watch_requests').insert({
     user_id: user.id,
     message: message.trim().slice(0, 500) || null,
-    day: today,
+    day: todayParis,
   })
 
   // Block user for 24h

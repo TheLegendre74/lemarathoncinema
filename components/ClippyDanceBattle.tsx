@@ -43,8 +43,8 @@ const FEVER_BASE_DENSITY_MULTIPLIER = 2
 const FEVER_SURVIVAL_STEP_MS = 15000
 const FEVER_SURVIVAL_STEP_MULTIPLIER = 1.5
 const FEVER_TRACK_END_FALLBACK_MS = 180000
-// Pattern notes par beat (boucle 16 beats, moy 1.6875/beat = +26% vs précédent)
-const FEVER_BEAT_PATTERN = [2,2,1,2,1,2,2,1,2,1,2,2,2,1,2,2] as const
+// Pattern notes par beat (boucle 16 beats, moy 1.875/beat = +10% vs précédent)
+const FEVER_BEAT_PATTERN = [2,2,2,2,1,2,2,1,2,2,2,2,2,1,2,2] as const
 
 // ── Dialogues Clippy quand le joueur fait un run parfait ──────────────────────
 const PERFECT_RAGE_LINES = [
@@ -1287,6 +1287,8 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
         private clippyZoneH = 0
 
         private activeNotes: { obj: Phaser.GameObjects.Container; time: number; dir: Dir; judged: boolean }[] = []
+        // Directions auto-jugées comme chord — évite la pénalité sur la 2e touche simultanée
+        private chordJudgedDirs = new Map<Dir, number>()
         private colX!:    number[]
         private hitY!:    number
         private spawnAdv!: number
@@ -1667,6 +1669,13 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
         }
 
         private handleInput(dir: Dir, elapsed: number) {
+          // Si cette direction a été auto-jugée comme chord il y a < 300ms → ignorer sans pénalité
+          const chordTs = this.chordJudgedDirs.get(dir)
+          if (chordTs !== undefined && this.time.now - chordTs < 300) {
+            this.chordJudgedDirs.delete(dir)
+            return
+          }
+
           let best: typeof this.activeNotes[0] | null = null
           let bestDelta = Infinity
           let hasEarlySameLane = false
@@ -1680,11 +1689,12 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           if (best && bestDelta <= this.hitWin) {
             const hitTime = best.time
             best.judged = true; best.obj.destroy()
-            // Auto-valider les notes chord au même timestamp (±15ms)
+            // Auto-valider les notes chord au même timestamp (±30ms) et mémoriser leur direction
             let chordBonus = 0
             for (const n of this.activeNotes) {
-              if (!n.judged && Math.abs(n.time - hitTime) <= 15) {
+              if (!n.judged && Math.abs(n.time - hitTime) <= 30) {
                 n.judged = true; n.obj.destroy(); chordBonus++
+                this.chordJudgedDirs.set(n.dir, this.time.now)
               }
             }
             const perf = bestDelta <= this.perfWin
