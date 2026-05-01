@@ -343,6 +343,12 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
 
               {/* Watched buttons */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem', marginBottom: '1rem' }}>
+                {film.saison === 2 ? (
+                  <div style={{ background: 'rgba(232,90,90,.06)', border: '1px solid rgba(232,90,90,.25)', borderRadius: 'var(--r)', padding: '.85rem 1rem', textAlign: 'center' }}>
+                    <div style={{ fontSize: '.88rem', fontWeight: 700, color: '#ff9999', marginBottom: '.3rem' }}>🔒 Disponible en Saison 2</div>
+                    <div style={{ fontSize: '.75rem', color: 'var(--text3)', lineHeight: 1.5 }}>Ce film a été ajouté pendant le marathon et sera disponible lors de la prochaine saison. Tu pourras le marquer vu à partir de la Saison 2 !</div>
+                  </div>
+                ) : <>
                 {/* Pré-marathon : grisé si le marathon est en cours */}
                 <button
                   className={`btn ${isWatched && watchedPre === true ? 'btn-green' : 'btn-outline'} btn-full`}
@@ -405,6 +411,7 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
                       : `🏆 J'ai vu ce film pendant le marathon (+${CONFIG.EXP_FILM} EXP)`}
                   </button>
                 )}
+                </>}
               </div>
 
               {/* Watchlist button */}
@@ -1163,6 +1170,8 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
   async function handleQuickToggle(e: React.MouseEvent, filmId: number, filmTitre: string) {
     e.stopPropagation()
     if (!profile) return
+    const targetFilm = films.find(f => f.id === filmId)
+    if (targetFilm?.saison === 2) return
     const wasWatched = watchedSet.has(filmId)
     // Optimistic update uniquement si on enlève ou si pas en limite
     if (wasWatched) setLocalWatchedIds(prev => prev.filter(id => id !== filmId))
@@ -1316,7 +1325,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                   <div style={{ fontSize: '.82rem', fontWeight: 600, color: 'var(--text)', lineHeight: 1.2, marginBottom: '.15rem' }}>{film.titre}</div>
                   <div style={{ fontSize: '.68rem', color: 'var(--text2)' }}>{film.annee} · {film.realisateur}</div>
                 </div>
-                {!isWatched && s2 && <div style={{ position: 'absolute', top: 7, left: 7, background: 'var(--red)', color: '#fff', fontSize: '.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: 99 }}>S2</div>}
+                {s2 && <div style={{ position: 'absolute', top: 7, left: 7, background: 'rgba(8,8,14,.82)', border: '1px solid rgba(232,90,90,.55)', color: '#ff9999', fontSize: '.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: 99, letterSpacing: '.3px', zIndex: 4 }}>🔒 Saison 2</div>}
                 {!isWatched && maj && <div style={{ position: 'absolute', top: 7, right: 7, background: 'rgba(255,255,255,.12)', color: '#aaa', fontSize: '.58rem', padding: '2px 7px', borderRadius: 99 }}>60%+</div>}
                 {isWeek && <div style={{ position: 'absolute', bottom: 7, left: 7, background: 'var(--gold)', color: '#0a0a0f', fontSize: '.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: 99 }}>⭐ SEMAINE</div>}
 
@@ -1417,6 +1426,11 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                 </div>
                 {profile && (
                   <div style={{ marginTop: 'auto', paddingTop: '.35rem' }}>
+                  {s2 ? (
+                    <div style={{ width: '100%', background: 'rgba(232,90,90,.04)', border: '1px solid rgba(232,90,90,.18)', borderRadius: 6, padding: '.28rem .4rem', fontSize: '.68rem', color: 'rgba(255,120,120,.5)', textAlign: 'center', lineHeight: 1.3, cursor: 'default' }}>
+                      🔒 Dispo saison 2
+                    </div>
+                  ) : (
                   <button
                     onClick={e => handleQuickToggle(e, film.id, film.titre)}
                     style={{
@@ -1437,6 +1451,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                       ? `✓ Vu · ${watchedPreMap[film.id] === false ? '🏁 marathon' : '⏳ avant'}`
                       : '+ J\'ai vu'}
                   </button>
+                  )}
 
                 {/* Bouton watchlist */}
                   <div style={{ position: 'relative' }}>

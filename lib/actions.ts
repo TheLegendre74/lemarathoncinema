@@ -525,6 +525,12 @@ export async function markWatched(filmId: number, pre: boolean) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non connecté' }
 
+  // Bloquer les films de saison future
+  const { data: filmCheck } = await supabase.from('films').select('saison').eq('id', filmId).single()
+  if (filmCheck && filmCheck.saison > CONFIG.SAISON_NUMERO) {
+    return { error: 'Ce film sera disponible lors de la saison suivante.' }
+  }
+
   // Block marathon mark if marathon not live
   if (!pre && !isMarathonLive()) return { error: 'Le marathon n\'a pas encore commencé.' }
 
@@ -582,6 +588,12 @@ export async function toggleWatched(filmId: number, filmTitre: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non connecté' }
+
+  // Bloquer les films de saison future
+  const { data: filmCheck } = await supabase.from('films').select('saison').eq('id', filmId).single()
+  if (filmCheck && filmCheck.saison > CONFIG.SAISON_NUMERO) {
+    return { error: 'Ce film sera disponible lors de la saison suivante.' }
+  }
 
   const { data: existing } = await supabase
     .from('watched')
