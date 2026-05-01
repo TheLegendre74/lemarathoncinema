@@ -74,18 +74,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     ])
     // Si le profil est absent (trigger SQL non exécuté), on le crée à la volée
     if (!profileData) {
-      console.log('[LAYOUT] profil manquant, création automatique pour', user.email)
       const pseudo = (user.user_metadata?.pseudo as string | undefined) || user.email?.split('@')[0] || 'Utilisateur'
       const adminDb = createAdminClient()
-      const { error: upsertErr } = await adminDb.from('profiles').upsert({ id: user.id, pseudo, saison: cfg.SAISON_NUMERO })
-      if (upsertErr) console.error('[LAYOUT] upsert error:', upsertErr.message)
-      const { data: newProfile, error: fetchErr } = await adminDb.from('profiles').select('*').eq('id', user.id).single()
-      if (fetchErr) console.error('[LAYOUT] fetch error:', fetchErr.message)
+      await adminDb.from('profiles').upsert({ id: user.id, pseudo, saison: cfg.SAISON_NUMERO })
+      const { data: newProfile } = await adminDb.from('profiles').select('*').eq('id', user.id).single()
       profile = newProfile
     } else {
       profile = profileData
     }
-    console.log('[LAYOUT] profile =>', profile ? `✓ ${(profile as any).pseudo}` : `✗ null (user: ${user.email})`)
     hasRageuxEgg = (eggs ?? []).some((e: any) => e.egg_id === 'rageux')
     hasTamagotchiEgg = (eggs ?? []).some((e: any) => e.egg_id === 'tamagotchi')
     hasClippyEgg = (eggs ?? []).some((e: any) => e.egg_id === 'clippy')
