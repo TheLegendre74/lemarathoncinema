@@ -10,18 +10,15 @@ export default async function MarathoniensPage() {
   const adminClient = createAdminClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const [{ data: profiles }, { data: seasonFilms }] = await Promise.all([
+  const [{ data: profiles }, totalFilmsResult, { data: allWatched }] = await Promise.all([
     supabase.from('profiles').select('id, pseudo, exp, avatar_url, active_badge, bio').order('exp', { ascending: false }) as any,
-    adminClient.from('films').select('id').eq('saison', CONFIG.SAISON_NUMERO).eq('pending_admin_approval', false),
+    // totalFilms : films de la saison courante approuvés (pour la barre de progression marathon)
+    adminClient.from('films').select('id', { count: 'exact', head: true }).eq('saison', CONFIG.SAISON_NUMERO).eq('pending_admin_approval', false),
+    // allWatched : TOUS les visionnages sans filtre film_id (adminClient bypasse le RLS)
+    adminClient.from('watched').select('user_id, pre').limit(100000),
   ])
 
-  const filmIds = (seasonFilms ?? []).map((f: any) => f.id as number)
-  const totalFilms = filmIds.length
-
-  // Récupérer tous les visionnages de la saison courante (adminClient bypasse le RLS)
-  const { data: allWatched } = filmIds.length > 0
-    ? await adminClient.from('watched').select('user_id, pre').in('film_id', filmIds).limit(50000)
-    : { data: [] }
+  const totalFilms = (totalFilmsResult as any).count ?? 0
 
   // Films vus pendant le marathon (non pré) et pré-marathon
   const watchedMap: Record<string, number> = {}
