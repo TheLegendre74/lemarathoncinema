@@ -57,7 +57,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   if (user) {
     const [profileData, eggs, unread, watchedResult] = await Promise.all([
       withCache(`user:${user.id}:profile`, 60, async () => {
-        const { data } = await supabase.from('profiles').select('id, pseudo, avatar_url, exp, active_badge, is_admin, saison, created_at, updated_at, marathon_blocked_until, pre_marathon_window_until, tutorial_seen').eq('id', user.id).single()
+        const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
         return data
       }),
       withCache(`user:${user.id}:eggs`, 60, async () => {
@@ -79,7 +79,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       const adminDb = createAdminClient()
       const { error: upsertErr } = await adminDb.from('profiles').upsert({ id: user.id, pseudo, saison: cfg.SAISON_NUMERO })
       if (upsertErr) console.error('[LAYOUT] upsert error:', upsertErr.message)
-      const { data: newProfile, error: fetchErr } = await adminDb.from('profiles').select('id, pseudo, avatar_url, exp, active_badge, is_admin, saison, created_at, updated_at, marathon_blocked_until, pre_marathon_window_until, tutorial_seen').eq('id', user.id).single()
+      const { data: newProfile, error: fetchErr } = await adminDb.from('profiles').select('*').eq('id', user.id).single()
       if (fetchErr) console.error('[LAYOUT] fetch error:', fetchErr.message)
       profile = newProfile
     } else {
