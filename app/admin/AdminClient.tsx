@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminBatchFlaggedDecisions, adminSet18Flag, adminApproveAllPending, adminSetFilmCategory, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, adminFetchFrenchPosters, adminScanAgeRestrictions, adminTestFilmCertification, adminDiagnostic, updateFilm, adminResolveReport, adminSetConfig, adminVerifyPosters, adminRepairBrokenPosters, adminSetAdmin, adminAddNews, adminDeleteNews, adminAddRecommendation, adminDeleteRecommendation, deleteForumTopic, adminEndSeason, adminApproveFilmRequest, adminRejectFilmRequest, adminFetchOverviews, adminReviewMarathonRequest } from '@/lib/actions'
+import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminBatchFlaggedDecisions, adminSet18Flag, adminApproveAllPending, adminSetFilmCategory, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, adminFetchFrenchPosters, adminScanAgeRestrictions, adminTestFilmCertification, adminDiagnostic, updateFilm, adminResolveReport, adminSetConfig, adminVerifyPosters, adminRepairBrokenPosters, adminSetAdmin, adminAddNews, adminDeleteNews, adminAddRecommendation, adminDeleteRecommendation, deleteForumTopic, adminEndSeason, adminApproveFilmRequest, adminRejectFilmRequest, adminFetchOverviews, adminReviewMarathonRequest, adminGetPreMarathonStats } from '@/lib/actions'
+import type { PreMarathonFilmStat } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
 import { CONFIG } from '@/lib/config'
 import type { Film, Profile } from '@/lib/supabase/types'
@@ -539,6 +540,12 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
   const [clippyEditVal, setClippyEditVal] = useState('')
   const [clippySaving, setClippySaving] = useState(false)
   const [endingseason, setEndingSeason] = useState(false)
+  const [preStats, setPreStats] = useState<{
+    most: PreMarathonFilmStat[]
+    least: PreMarathonFilmStat[]
+    avg: number; total: number; totalWatches: number
+  } | null>(null)
+  const [preStatsLoading, setPreStatsLoading] = useState(false)
 
   // ── Scroll fix pour les boutons 18+ ─────────────────────────────────────────
   // Au lieu de tenter de restaurer après coup, on intercepte directement
@@ -1064,6 +1071,60 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
             </div>
           ))}
         </div>
+      </Section>
+
+      {/* Pré-marathon stats */}
+      <Section icon="📊" title="Stats pré-marathon (vus avant le marathon)">
+        <button
+          className="btn btn-gold"
+          style={{ marginBottom: '1rem', fontSize: '.82rem', opacity: preStatsLoading ? .5 : 1 }}
+          disabled={preStatsLoading}
+          onClick={async () => {
+            setPreStatsLoading(true)
+            const res = await adminGetPreMarathonStats()
+            setPreStats(res)
+            setPreStatsLoading(false)
+          }}
+        >
+          {preStatsLoading ? '⏳ Chargement…' : '📊 Charger les stats pré-marathon'}
+        </button>
+        {preStats && (
+          <div>
+            <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1rem', flexWrap: 'wrap', fontSize: '.82rem', color: 'var(--text2)' }}>
+              <span>🎬 <strong style={{ color: 'var(--text)' }}>{preStats.total}</strong> films vus au total</span>
+              <span>👁️ <strong style={{ color: 'var(--text)' }}>{preStats.totalWatches}</strong> visionnages cumulés</span>
+              <span>📈 Moyenne : <strong style={{ color: 'var(--gold)' }}>{preStats.avg}</strong> vus/film</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+              {/* Most watched */}
+              <div>
+                <div style={{ fontSize: '.75rem', letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: '.6rem' }}>🔥 Plus vus</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '.3rem' }}>
+                  {preStats.most.map((f, i) => (
+                    <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: '.6rem', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.45rem .75rem' }}>
+                      <span style={{ fontSize: '.72rem', color: 'var(--text3)', minWidth: 18, textAlign: 'right' }}>{i + 1}.</span>
+                      <span style={{ flex: 1, fontSize: '.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.titre}</span>
+                      <span style={{ fontSize: '.78rem', color: 'var(--gold)', fontWeight: 600, whiteSpace: 'nowrap' }}>{f.count} vue{f.count > 1 ? 's' : ''}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* Least watched */}
+              <div>
+                <div style={{ fontSize: '.75rem', letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: '.6rem' }}>❄️ Moins vus</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '.3rem' }}>
+                  {preStats.least.map((f, i) => (
+                    <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: '.6rem', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.45rem .75rem' }}>
+                      <span style={{ fontSize: '.72rem', color: 'var(--text3)', minWidth: 18, textAlign: 'right' }}>{i + 1}.</span>
+                      <span style={{ flex: 1, fontSize: '.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.titre}</span>
+                      <span style={{ fontSize: '.78rem', color: 'var(--text3)', fontWeight: 600, whiteSpace: 'nowrap' }}>{f.count} vue{f.count > 1 ? 's' : ''}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </Section>
 
       {/* Section — Films soumis sans correspondance TMDB (validation manuelle) */}

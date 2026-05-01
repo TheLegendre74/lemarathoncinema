@@ -671,17 +671,24 @@ export async function voteDuel(duelId: number, filmChoice: number) {
 
   const { data: existing } = await supabase
     .from('votes')
-    .select('duel_id')
+    .select('film_choice')
     .eq('user_id', user.id)
     .eq('duel_id', duelId)
     .single()
-  if (existing) return { error: 'Tu as déjà voté.' }
 
-  await supabase.from('votes').insert({ user_id: user.id, duel_id: duelId, film_choice: filmChoice })
-  await supabase.rpc('increment_exp', { user_id: user.id, amount: CONFIG.EXP_VOTE })
+  const adminClient = createAdminClient()
+  if (existing) {
+    if (existing.film_choice === filmChoice) return { success: true, changed: false }
+    // Changer le vote : supprimer l'ancien et insérer le nouveau
+    await adminClient.from('votes').delete().eq('user_id', user.id).eq('duel_id', duelId)
+    await adminClient.from('votes').insert({ user_id: user.id, duel_id: duelId, film_choice: filmChoice })
+  } else {
+    await adminClient.from('votes').insert({ user_id: user.id, duel_id: duelId, film_choice: filmChoice })
+    await supabase.rpc('increment_exp', { user_id: user.id, amount: CONFIG.EXP_VOTE })
+  }
 
   revalidatePath('/duels')
-  return { success: true }
+  return { success: true, changed: !!existing, isNew: !existing }
 }
 
 // ── REPORTS ──────────────────────────────────────────────────
@@ -3524,4 +3531,53 @@ export async function getUserWatchlistFilmIds() {
     map[item.film_id].push(item.watchlist_id)
   })
   return map
+}
+
+// ── ADMIN — Stats pré-marathon ───────────────────────────────────────────────
+
+export type PreMarathonFilmStat = { id: number; titre: string; count: number }
+
+export async function adminGetPreMarathonStats(): Promise<{
+  most: PreMarathonFilmStat[]
+  least: PreMarathonFilmStat[]
+  avg: number
+  total: number
+  totalWatches: number
+} | null> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+  const { data: prof } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!prof?.is_admin) return null
+
+  const adminClient = createAdminClient()
+  const { data: watches } = await adminClient
+    .from('watched')
+    .select('film_id, films!inner(id, titre)')
+    .eq('pre', true)
+
+  if (!watches || watches.length === 0) return { most: [], least: [], avg: 0, total: 0, totalWatches: 0 }
+
+  const countMap: Record<number, { titre: string; count: number }> = {}
+  for (const w of watches as any[]) {
+    const fid = w.film_id
+    const titre = w.films?.titre ?? `Film #${fid}`
+    if (!countMap[fid]) countMap[fid] = { titre, count: 0 }
+    countMap[fid].count++
+  }
+
+  const sorted = Object.entries(countMap)
+    .map(([id, { titre, count }]) => ({ id: Number(id), titre, count }))
+    .sort((a, b) => b.count - a.count)
+
+  const totalWatches = sorted.reduce((s, f) => s + f.count, 0)
+  const avg = sorted.length > 0 ? Math.round((totalWatches / sorted.length) * 10) / 10 : 0
+
+  return {
+    most: sorted.slice(0, 15),
+    least: sorted.filter(f => f.count > 0).slice(-15).reverse(),
+    avg,
+    total: sorted.length,
+    totalWatches,
+  }
 }

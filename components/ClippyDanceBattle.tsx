@@ -23,7 +23,7 @@ const COL_CSS:    Record<Dir, string>    = { left: '#ff6699', down: '#6699ff', u
 const COL_DARK:   Record<Dir, number>    = { left: 0x661133, down: 0x112266, up: 0x116633, right: 0x664411 }
 
 const NOTE_SPEED    = 380
-const FEVER_NOTE_SPEED = NOTE_SPEED * 2 * 0.85  // 646 px/s (-15% vs Fever initial)
+const FEVER_NOTE_SPEED = NOTE_SPEED * 2 * 0.85 * 0.8  // 517 px/s (−20% vs précédent)
 
 const HIT_WIN_MS    = 142    // timing assoupli (+30%)
 const PERFECT_MS    = 62     // idem
@@ -37,12 +37,14 @@ const FEVER_MS      = 10000  // durée fever (réinitialisée à chaque upgrade)
 const AHEAD_MS      = 420    // ms avant hit pour illuminer la lane
 const FEVER_CHALLENGE_MS = 30000
 const FEVER_BEAT_MS    = 545                          // tempo original 110 BPM — synco musique
-const FEVER_NOTE_STEP  = Math.round(545 * 1.5)        // 817ms entre groupes (> 0.8s, atterrit sur la grille 3/2)
+const FEVER_NOTE_STEP  = Math.round(545 * 1.5)        // conservé pour rétrocompat DDR
 const FEVER_WARMUP_MS  = 3000                         // 3s de préparation avant les premières notes
 const FEVER_BASE_DENSITY_MULTIPLIER = 2
 const FEVER_SURVIVAL_STEP_MS = 15000
 const FEVER_SURVIVAL_STEP_MULTIPLIER = 1.5
 const FEVER_TRACK_END_FALLBACK_MS = 180000
+// Pattern notes par beat (boucle 16 beats, moy 1.6875/beat = +26% vs précédent)
+const FEVER_BEAT_PATTERN = [2,2,1,2,1,2,2,1,2,1,2,2,2,1,2,2] as const
 
 // ── Dialogues Clippy quand le joueur fait un run parfait ──────────────────────
 const PERFECT_RAGE_LINES = [
@@ -1617,7 +1619,7 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
         }
 
         private nextBeatTime() {
-          return (this.beatIdx + 2) * FEVER_NOTE_STEP
+          return FEVER_WARMUP_MS + this.beatIdx * FEVER_BEAT_MS
         }
 
         private getDensityMultiplier(hitTime: number) {
@@ -1627,17 +1629,18 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
         }
 
         private buildFeverNotes(beatIndex: number, beatTime: number): DanceNote[] {
-          // Toutes les notes tombent au beat exact — pas de sub-beat, max 4 simultanées
-          const density   = this.getDensityMultiplier(beatTime)
-          const maxNotes  = Math.min(4, Math.floor(density))  // 2 en base, +1 par palier survie
+          const patternCount = FEVER_BEAT_PATTERN[beatIndex % FEVER_BEAT_PATTERN.length]
+          const density = this.getDensityMultiplier(beatTime)
+          // En mode survie, la densité peut forcer +1 note au-delà du pattern
+          const maxNotes = this.survivalMode
+            ? Math.min(4, Math.max(patternCount, Math.floor(density)))
+            : patternCount
           const si  = beatIndex % FEVER_SEQ.length
           const csi = beatIndex % FEVER_CSEQ.length
           const used  = new Set<string>()
           const notes: DanceNote[] = []
-          // Note principale
           notes.push({ time: beatTime, direction: COLS[FEVER_SEQ[si]] })
           used.add(COLS[FEVER_SEQ[si]])
-          // Notes chord : piochées dans CSEQ puis rotations pour remplir
           const pool = [COLS[FEVER_CSEQ[csi]], COLS[(FEVER_SEQ[si] + 2) % 4], COLS[(FEVER_SEQ[si] + 3) % 4]]
           for (const dir of pool) {
             if (notes.length >= maxNotes) break
@@ -1675,9 +1678,17 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
             if (d < bestDelta) { bestDelta = d; best = n }
           }
           if (best && bestDelta <= this.hitWin) {
+            const hitTime = best.time
             best.judged = true; best.obj.destroy()
+            // Auto-valider les notes chord au même timestamp (±15ms)
+            let chordBonus = 0
+            for (const n of this.activeNotes) {
+              if (!n.judged && Math.abs(n.time - hitTime) <= 15) {
+                n.judged = true; n.obj.destroy(); chordBonus++
+              }
+            }
             const perf = bestDelta <= this.perfWin
-            this.score += perf ? 150 : 80; feverFinalScore.current = this.score
+            this.score += (perf ? 150 : 80) + chordBonus * 80; feverFinalScore.current = this.score
             this.combo++; if (this.combo > this.maxCombo) { this.maxCombo = this.combo; feverFinalCombo.current = this.maxCombo }
             this.feedbackTxt.setText(perf ? 'PERFECT !' : 'GOOD !').setColor(perf ? '#4ade80' : '#ffcc44').setAlpha(1)
             this.scoreTxt.setText(`Score: ${this.score}`)
