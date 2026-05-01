@@ -1032,6 +1032,8 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
   const [localWatchedIds, setLocalWatchedIds] = useState<number[]>(watchedIds)
   useEffect(() => { setLocalWatchedIds(watchedIds) }, [watchedIds])
   const watchedSet = useMemo(() => new Set(localWatchedIds), [localWatchedIds])
+  // Override optimiste pour la valeur pre (évite l'affichage temporaire "⏳ avant" après un clic marathon)
+  const [localPreOverride, setLocalPreOverride] = useState<Record<number, boolean>>({})
 
   // ── Watchlist state ─────────────────────���──────────────────
   const [watchlists, setWatchlists] = useState<WatchlistInfo[]>(initialWatchlists ?? [])
@@ -1176,26 +1178,55 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
     const targetFilm = films.find(f => f.id === filmId)
     if (targetFilm?.saison === 2) return
     const wasWatched = watchedSet.has(filmId)
-    // Optimistic update uniquement si on enlève ou si pas en limite
     if (wasWatched) setLocalWatchedIds(prev => prev.filter(id => id !== filmId))
     else setLocalWatchedIds(prev => [...prev, filmId])
     const res = await toggleWatched(filmId, filmTitre)
     if (res?.error === 'LIMIT_REACHED') {
-      setLocalWatchedIds(prev => prev.filter(id => id !== filmId)) // revert
-      setModal(films.find(f => f.id === filmId) ?? null) // ouvrir le modal avec le form de demande
+      setLocalWatchedIds(prev => prev.filter(id => id !== filmId))
+      setModal(films.find(f => f.id === filmId) ?? null)
       return
     }
     if (res?.error === 'PENDING_REQUEST' || res?.error === 'BLOCKED') {
-      setLocalWatchedIds(prev => prev.filter(id => id !== filmId)) // revert
+      setLocalWatchedIds(prev => prev.filter(id => id !== filmId))
       addToast(res.error === 'BLOCKED' ? '🔒 Ajout bloqué (24h)' : '⏳ Demande en attente d\'examen admin', '⚠️')
       return
     }
     if (res?.error) {
-      setLocalWatchedIds(prev => wasWatched ? [...prev, filmId] : prev.filter(id => id !== filmId)) // revert
+      setLocalWatchedIds(prev => wasWatched ? [...prev, filmId] : prev.filter(id => id !== filmId))
       addToast(res.error, '⚠️')
       return
     }
     addToast(wasWatched ? `"${filmTitre}" retiré` : isMarathonLive ? `+${CONFIG.EXP_FILM} EXP — "${filmTitre}" vu !` : `"${filmTitre}" marqué vu`, '🎬')
+    router.refresh()
+  }
+
+  // Marquer "vu pendant le marathon" depuis la carte (marathon live uniquement)
+  async function handleQuickMarkMarathon(e: React.MouseEvent, filmId: number, filmTitre: string) {
+    e.stopPropagation()
+    if (!profile) return
+    // Optimiste : ajout immédiat + pré=false (marathon)
+    setLocalWatchedIds(prev => [...prev, filmId])
+    setLocalPreOverride(prev => ({ ...prev, [filmId]: false }))
+    const res = await markWatched(filmId, false)
+    if (res?.error === 'LIMIT_REACHED') {
+      setLocalWatchedIds(prev => prev.filter(id => id !== filmId))
+      setLocalPreOverride(prev => { const n = { ...prev }; delete n[filmId]; return n })
+      setModal(films.find(f => f.id === filmId) ?? null)
+      return
+    }
+    if (res?.error === 'PENDING_REQUEST' || res?.error === 'BLOCKED') {
+      setLocalWatchedIds(prev => prev.filter(id => id !== filmId))
+      setLocalPreOverride(prev => { const n = { ...prev }; delete n[filmId]; return n })
+      addToast(res.error === 'BLOCKED' ? '🔒 Ajout bloqué (24h)' : '⏳ Demande en attente d\'examen admin', '⚠️')
+      return
+    }
+    if (res?.error) {
+      setLocalWatchedIds(prev => prev.filter(id => id !== filmId))
+      setLocalPreOverride(prev => { const n = { ...prev }; delete n[filmId]; return n })
+      addToast(res.error, '⚠️')
+      return
+    }
+    addToast(`+${CONFIG.EXP_FILM} EXP — "${filmTitre}" vu pendant le marathon !`, '🎬')
     router.refresh()
   }
 
@@ -1408,14 +1439,17 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                 )}
               </div>
               {/* Badge VU positionné sur la carte (hors du container overflow:hidden) */}
-              {isWatched && (
-                <div style={{ position: 'absolute', top: 6, right: 6, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px', pointerEvents: 'none', zIndex: 5 }}>
-                  <div style={{ background: 'var(--green)', color: '#041a0e', fontSize: '.6rem', fontWeight: 700, padding: '2px 6px', borderRadius: 99, letterSpacing: '.4px' }}>VU ✓</div>
-                  <div style={{ background: watchedPreMap[film.id] === false ? 'rgba(249,199,79,.92)' : 'rgba(0,0,0,.78)', color: watchedPreMap[film.id] === false ? '#0a0a0f' : 'rgba(255,255,255,.88)', fontSize: '.55rem', fontWeight: 700, padding: '2px 5px', borderRadius: 99, whiteSpace: 'nowrap' }}>
-                    {watchedPreMap[film.id] === false ? '🏁 marathon' : '⏳ avant'}
+              {isWatched && (() => {
+                const ep = film.id in localPreOverride ? localPreOverride[film.id] : watchedPreMap[film.id]
+                return (
+                  <div style={{ position: 'absolute', top: 6, right: 6, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px', pointerEvents: 'none', zIndex: 5 }}>
+                    <div style={{ background: 'var(--green)', color: '#041a0e', fontSize: '.6rem', fontWeight: 700, padding: '2px 6px', borderRadius: 99, letterSpacing: '.4px' }}>VU ✓</div>
+                    <div style={{ background: ep === false ? 'rgba(249,199,79,.92)' : 'rgba(0,0,0,.78)', color: ep === false ? '#0a0a0f' : 'rgba(255,255,255,.88)', fontSize: '.55rem', fontWeight: 700, padding: '2px 5px', borderRadius: 99, whiteSpace: 'nowrap' }}>
+                      {ep === false ? '🏁 marathon' : '⏳ avant'}
+                    </div>
                   </div>
-                </div>
-              )}
+                )
+              })()}
               <div style={{ padding: '.65rem .75rem .5rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '.82rem', fontWeight: 500, lineHeight: 1.3, marginBottom: '.15rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{film.titre}</div>
@@ -1433,28 +1467,49 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                     <div style={{ width: '100%', background: 'rgba(232,90,90,.04)', border: '1px solid rgba(232,90,90,.18)', borderRadius: 6, padding: '.28rem .4rem', fontSize: '.68rem', color: 'rgba(255,120,120,.5)', textAlign: 'center', lineHeight: 1.3, cursor: 'default' }}>
                       🔒 Dispo saison 2
                     </div>
-                  ) : (
-                  <button
-                    onClick={e => handleQuickToggle(e, film.id, film.titre)}
-                    style={{
-                      width: '100%',
-                      background: isWatched ? 'rgba(79,217,138,.12)' : 'rgba(255,255,255,.04)',
-                      border: `1px solid ${isWatched ? 'rgba(79,217,138,.35)' : 'rgba(255,255,255,.1)'}`,
-                      borderRadius: 6,
-                      padding: '.28rem .4rem',
-                      fontSize: '.68rem',
-                      color: isWatched ? 'var(--green)' : 'var(--text2)',
-                      cursor: 'pointer',
-                      fontWeight: isWatched ? 600 : 400,
-                      transition: 'background .15s, border-color .15s',
-                      lineHeight: 1.3,
-                    }}
-                  >
-                    {isWatched
-                      ? `✓ Vu · ${watchedPreMap[film.id] === false ? '🏁 marathon' : '⏳ avant'}`
-                      : '+ J\'ai vu'}
-                  </button>
-                  )}
+                  ) : (() => {
+                    const effectivePre = film.id in localPreOverride ? localPreOverride[film.id] : watchedPreMap[film.id]
+                    if (isWatched) {
+                      // Film déjà vu — bouton de retrait
+                      return (
+                        <button
+                          onClick={e => handleQuickToggle(e, film.id, film.titre)}
+                          style={{ width: '100%', background: 'rgba(79,217,138,.12)', border: '1px solid rgba(79,217,138,.35)', borderRadius: 6, padding: '.28rem .4rem', fontSize: '.68rem', color: 'var(--green)', cursor: 'pointer', fontWeight: 600, transition: 'background .15s', lineHeight: 1.3 }}
+                        >
+                          {`✓ Vu · ${effectivePre === false ? '🏁 marathon' : '⏳ avant'}`}
+                        </button>
+                      )
+                    }
+                    if (isMarathonLive) {
+                      // Pendant le marathon : bouton "vu pendant" actif + "vu avant" grisé
+                      return (
+                        <>
+                          <button
+                            onClick={e => handleQuickMarkMarathon(e, film.id, film.titre)}
+                            style={{ width: '100%', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 6, padding: '.28rem .4rem', fontSize: '.68rem', color: 'var(--text2)', cursor: 'pointer', lineHeight: 1.3, transition: 'background .15s' }}
+                          >
+                            🏁 Vu pendant le marathon
+                          </button>
+                          <button
+                            disabled
+                            title="Le marathon est en cours — impossible de marquer comme vu avant"
+                            style={{ marginTop: '.25rem', width: '100%', background: 'transparent', border: '1px solid rgba(255,255,255,.06)', borderRadius: 6, padding: '.22rem .4rem', fontSize: '.62rem', color: 'rgba(255,255,255,.22)', cursor: 'not-allowed', lineHeight: 1.3 }}
+                          >
+                            ⏳ Vu avant — bloqué
+                          </button>
+                        </>
+                      )
+                    }
+                    // Avant le marathon
+                    return (
+                      <button
+                        onClick={e => handleQuickToggle(e, film.id, film.titre)}
+                        style={{ width: '100%', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 6, padding: '.28rem .4rem', fontSize: '.68rem', color: 'var(--text2)', cursor: 'pointer', lineHeight: 1.3, transition: 'background .15s' }}
+                      >
+                        + J&apos;ai vu
+                      </button>
+                    )
+                  })()}
 
                 {/* Bouton watchlist */}
                   <div style={{ position: 'relative' }}>
