@@ -10,20 +10,35 @@ export default async function MarathoniensPage() {
   const adminClient = createAdminClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const [{ data: profiles }, totalFilmsResult, { data: allWatched }] = await Promise.all([
+  // Lancer les requêtes indépendantes en parallèle
+  const [{ data: profiles }, totalFilmsResult, { data: firstPage }] = await Promise.all([
     supabase.from('profiles').select('id, pseudo, exp, avatar_url, active_badge, bio').order('exp', { ascending: false }) as any,
-    // totalFilms : films de la saison courante approuvés (pour la barre de progression marathon)
+    // totalFilms : films de la saison courante approuvés (barre de progression marathon)
     adminClient.from('films').select('id', { count: 'exact', head: true }).eq('saison', CONFIG.SAISON_NUMERO).eq('pending_admin_approval', false),
-    // allWatched : TOUS les visionnages sans filtre film_id (adminClient bypasse le RLS)
-    adminClient.from('watched').select('user_id, pre').limit(100000),
+    // 1re page watched (PostgREST plafonne à 1000 lignes par requête même avec .limit())
+    adminClient.from('watched').select('user_id, pre').range(0, 999),
   ])
 
   const totalFilms = (totalFilmsResult as any).count ?? 0
 
+  // Paginer watched jusqu'à épuisement (bypass de la limite 1000 lignes PostgREST)
+  const allWatched: { user_id: string; pre: boolean }[] = [...((firstPage as any) ?? [])]
+  let pageFrom = 1000
+  while ((firstPage as any)?.length === 1000) {
+    const { data: nextPage } = await adminClient
+      .from('watched')
+      .select('user_id, pre')
+      .range(pageFrom, pageFrom + 999)
+    if (!nextPage || nextPage.length === 0) break
+    allWatched.push(...(nextPage as any))
+    if (nextPage.length < 1000) break
+    pageFrom += 1000
+  }
+
   // Films vus pendant le marathon (non pré) et pré-marathon
   const watchedMap: Record<string, number> = {}
   const preMap: Record<string, number> = {}
-  ;(allWatched ?? []).forEach((w: any) => {
+  allWatched.forEach((w: any) => {
     if (w.pre) preMap[w.user_id] = (preMap[w.user_id] ?? 0) + 1
     else watchedMap[w.user_id] = (watchedMap[w.user_id] ?? 0) + 1
   })
