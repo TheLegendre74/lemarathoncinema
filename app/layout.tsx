@@ -73,6 +73,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       }),
     ])
     profile = profileData
+    console.log('[LAYOUT] profile =>', profile ? `✓ ${(profile as any).pseudo}` : `✗ null (user: ${user.email})`)
     hasRageuxEgg = (eggs ?? []).some((e: any) => e.egg_id === 'rageux')
     hasTamagotchiEgg = (eggs ?? []).some((e: any) => e.egg_id === 'tamagotchi')
     hasClippyEgg = (eggs ?? []).some((e: any) => e.egg_id === 'clippy')
