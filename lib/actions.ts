@@ -537,6 +537,19 @@ export async function markWatched(filmId: number, pre: boolean) {
   // Block marathon mark if marathon not live
   if (!pre && !isMarathonLive()) return { error: 'Le marathon n\'a pas encore commencé.' }
 
+  // Bloquer le marquage pré-marathon pendant le marathon sauf fenêtre ouverte
+  if (pre && isMarathonLive()) {
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('pre_marathon_window_until')
+      .eq('id', user.id)
+      .single()
+    const windowUntil = (prof as any)?.pre_marathon_window_until
+    if (!windowUntil || new Date(windowUntil) < new Date()) {
+      return { error: 'PRE_WINDOW_EXPIRED' }
+    }
+  }
+
   // Vérification limite quotidienne marathon
   if (!pre) {
     const status = await getMarathonDailyStatus()
@@ -3446,6 +3459,172 @@ export async function getUserReactionsForWatchlists(watchlistIds: string[]) {
   const map: Record<string, string> = {}
   ;(data ?? []).forEach((r: any) => { map[r.watchlist_id] = r.type })
   return map
+}
+
+// ── INSCRIPTIONS EN COURS DE SAISON ───────────────────────────
+
+export async function submitSeasonJoinRequest(message: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+
+  if (!isMarathonLive()) return { error: 'Le marathon n\'a pas encore commencé.' }
+
+  const safe = message.trim().slice(0, 500)
+
+  // Vérifie s'il y a déjà une demande active
+  const { data: existing } = await (supabase as any)
+    .from('season_join_requests')
+    .select('id, status')
+    .eq('user_id', user.id)
+    .eq('saison', CONFIG.SAISON_NUMERO)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (existing && ['pending', 'approved_current', 'approved_next'].includes(existing.status)) {
+    return { error: 'Tu as déjà une demande en cours ou acceptée.' }
+  }
+
+  if (existing && existing.status === 'rejected') {
+    // Réactivation d'une demande rejetée
+    await (supabase as any)
+      .from('season_join_requests')
+      .update({ message: safe || null, status: 'pending', reviewed_by: null, reviewed_at: null })
+      .eq('id', existing.id)
+  } else {
+    await (supabase as any)
+      .from('season_join_requests')
+      .insert({ user_id: user.id, message: safe || null, saison: CONFIG.SAISON_NUMERO })
+  }
+
+  revalidatePath('/admin')
+  return { success: true }
+}
+
+export async function getMySeasonJoinStatus() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const { data } = await (supabase as any)
+    .from('season_join_requests')
+    .select('id, status, message, created_at')
+    .eq('user_id', user.id)
+    .eq('saison', CONFIG.SAISON_NUMERO)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  return data ?? null
+}
+
+export async function adminGetAllSeasonJoinRequests() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: me } = await supabase.from('profiles').select('is_admin').eq('id', user?.id ?? '').single()
+  if (!me?.is_admin) return []
+
+  const { data } = await (supabase as any)
+    .from('season_join_requests')
+    .select('id, user_id, message, status, saison, created_at, reviewed_at')
+    .eq('saison', CONFIG.SAISON_NUMERO)
+    .order('created_at', { ascending: false })
+
+  return data ?? []
+}
+
+export async function adminGetSeasonJoinRequests() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: me } = await supabase.from('profiles').select('is_admin').eq('id', user?.id ?? '').single()
+  if (!me?.is_admin) return []
+
+  const { data } = await (supabase as any)
+    .from('season_join_requests')
+    .select('id, user_id, message, status, saison, created_at, profiles!user_id(pseudo, avatar_url)')
+    .eq('status', 'pending')
+    .eq('saison', CONFIG.SAISON_NUMERO)
+    .order('created_at', { ascending: false })
+
+  return data ?? []
+}
+
+export async function adminReviewSeasonJoinRequest(
+  requestId: string,
+  decision: 'approve_current' | 'approve_next' | 'reject'
+) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: me } = await supabase.from('profiles').select('is_admin').eq('id', user?.id ?? '').single()
+  if (!me?.is_admin) return { error: 'Non autorisé' }
+
+  const { data: req } = await (supabase as any)
+    .from('season_join_requests')
+    .select('user_id')
+    .eq('id', requestId)
+    .single()
+  if (!req) return { error: 'Demande introuvable' }
+
+  await (supabase as any)
+    .from('season_join_requests')
+    .update({
+      status: decision,
+      reviewed_by: user!.id,
+      reviewed_at: new Date().toISOString(),
+    })
+    .eq('id', requestId)
+
+  if (decision === 'approve_current') {
+    // Accorder une fenêtre de 24h pour cocher les films pré-marathon
+    const windowUntil = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+    const adminDb = createAdminClient()
+    await adminDb
+      .from('profiles')
+      .update({ pre_marathon_window_until: windowUntil, saison: CONFIG.SAISON_NUMERO } as any)
+      .eq('id', req.user_id)
+  }
+
+  revalidatePath('/admin')
+  return { success: true }
+}
+
+export async function adminDirectAdmitToMarathon(userId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: me } = await supabase.from('profiles').select('is_admin').eq('id', user?.id ?? '').single()
+  if (!me?.is_admin) return { error: 'Non autorisé' }
+
+  const windowUntil = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+  const adminDb = createAdminClient()
+
+  // Intégrer dans la saison actuelle + ouvrir la fenêtre 24h
+  await adminDb
+    .from('profiles')
+    .update({ saison: CONFIG.SAISON_NUMERO, pre_marathon_window_until: windowUntil } as any)
+    .eq('id', userId)
+
+  // Créer ou mettre à jour la demande d'inscription
+  const { data: existing } = await (supabase as any)
+    .from('season_join_requests')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('saison', CONFIG.SAISON_NUMERO)
+    .maybeSingle()
+
+  if (existing) {
+    await (supabase as any)
+      .from('season_join_requests')
+      .update({ status: 'approved_current', reviewed_by: user!.id, reviewed_at: new Date().toISOString() })
+      .eq('id', existing.id)
+  } else {
+    await (supabase as any)
+      .from('season_join_requests')
+      .insert({ user_id: userId, saison: CONFIG.SAISON_NUMERO, status: 'approved_current', reviewed_by: user!.id, reviewed_at: new Date().toISOString() })
+  }
+
+  revalidatePath('/admin')
+  return { success: true }
 }
 
 export async function getReactionCountsForWatchlists(watchlistIds: string[]) {

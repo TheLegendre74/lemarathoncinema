@@ -36,6 +36,7 @@ interface Props {
   hasRageuxEgg: boolean
   rattrapageMap: Record<number, string>
   userWatchlists: WatchlistInfo[]
+  preMarathonWindowUntil: string | null
 }
 
 function avgRating(scores: number[] | undefined) {
@@ -65,10 +66,10 @@ function playGodfatherTheme() {
 
 
 // ─── FILM MODAL ──────────────────────────────────────────────────────────────
-function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeRating, watchPct, ratingScores, negativeRatingScores, isWeekFilm, isMarathonLive, hasRageuxEgg, watchlists, watchlistFilmMap, onWatchlistToggle, onWatchlistCreate, onClose, onRefresh }: {
+function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeRating, watchPct, ratingScores, negativeRatingScores, isWeekFilm, isMarathonLive, canMarkPre, hasRageuxEgg, watchlists, watchlistFilmMap, onWatchlistToggle, onWatchlistCreate, onClose, onRefresh }: {
   film: Film; profile: Profile | null; isWatched: boolean; watchedPre: boolean | null; myRating: number | undefined; myNegativeRating: number | undefined
   watchPct: number; ratingScores: number[]; negativeRatingScores: number[]; isWeekFilm: boolean
-  isMarathonLive: boolean; hasRageuxEgg: boolean
+  isMarathonLive: boolean; canMarkPre: boolean; hasRageuxEgg: boolean
   watchlists: WatchlistInfo[]; watchlistFilmMap: Record<number, string[]>
   onWatchlistToggle: (watchlistId: string, filmId: number) => Promise<void>
   onWatchlistCreate: (name: string, filmId: number) => Promise<void>
@@ -172,6 +173,10 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
 
   async function handleMarkPre() {
     const res = await markWatched(film.id, true)
+    if (res?.error === 'PRE_WINDOW_EXPIRED') {
+      addToast('Ta fenêtre pré-marathon de 24h est expirée.', '⚠️')
+      return
+    }
     if (res?.error) { addToast(res.error, '⚠️'); return }
     addToast(res?.action === 'removed' ? `"${film.titre}" retiré` : `"${film.titre}" marqué vu (pré-marathon)`, '🎬')
     onRefresh()
@@ -352,13 +357,13 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
                     <div style={{ fontSize: '.75rem', color: 'var(--text3)', lineHeight: 1.5 }}>Ce film a été ajouté pendant le marathon et sera disponible lors de la prochaine saison. Tu pourras le marquer vu à partir de la Saison 2 !</div>
                   </div>
                 ) : <>
-                {/* Pré-marathon : grisé si le marathon est en cours */}
+                {/* Pré-marathon : grisé si marathon en cours, sauf fenêtre 24h accordée */}
                 <button
                   className={`btn ${isWatched && watchedPre === true ? 'btn-green' : 'btn-outline'} btn-full`}
-                  onClick={!isMarathonLive ? handleMarkPre : undefined}
-                  disabled={isMarathonLive}
-                  style={isMarathonLive ? { opacity: 0.35, cursor: 'not-allowed' } : undefined}
-                  title={isMarathonLive ? 'Le marathon est en cours — utilise le bouton ci-dessous' : undefined}
+                  onClick={canMarkPre ? handleMarkPre : undefined}
+                  disabled={!canMarkPre}
+                  style={!canMarkPre ? { opacity: 0.35, cursor: 'not-allowed' } : undefined}
+                  title={!canMarkPre ? 'Le marathon est en cours — utilise le bouton ci-dessous' : undefined}
                 >
                   {isWatched && watchedPre === true ? '✓ Vu avant le marathon — Retirer' : '🎬 J\'ai vu ce film (pré-marathon)'}
                 </button>
@@ -1014,9 +1019,13 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
 
 
 // ─── MAIN FILMS CLIENT ───────────────────────────────────────────────────────
-export default function FilmsClient({ films, profile, watchedIds, watchedPreMap, myRatings, myNegativeRatings, watchCountMap, ratingMap, negativeRatingMap, totalUsers, weekFilmId, isMarathonLive, saisonNumero, age18confirmed, hasRageuxEgg, rattrapageMap: initialRattrapageMap, userWatchlists: initialWatchlists }: Props) {
+export default function FilmsClient({ films, profile, watchedIds, watchedPreMap, myRatings, myNegativeRatings, watchCountMap, ratingMap, negativeRatingMap, totalUsers, weekFilmId, isMarathonLive, saisonNumero, age18confirmed, hasRageuxEgg, rattrapageMap: initialRattrapageMap, userWatchlists: initialWatchlists, preMarathonWindowUntil }: Props) {
   const router = useRouter()
   const { addToast } = useToast()
+  // Joueurs acceptés en cours de saison : bouton pré-marathon actif pendant 24h
+  const canMarkPre = !isMarathonLive || (
+    preMarathonWindowUntil != null && new Date(preMarathonWindowUntil) > new Date()
+  )
   const [search, setSearch] = useState('')
   const [filterGenre, setFilterGenre] = useState('')
   const [filterDecade, setFilterDecade] = useState('')
@@ -1604,6 +1613,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
           negativeRatingScores={negativeRatingMap[modal.id] ?? []}
           isWeekFilm={weekFilmId === modal.id}
           isMarathonLive={isMarathonLive}
+          canMarkPre={canMarkPre}
           hasRageuxEgg={hasRageuxEgg}
           watchlists={watchlists}
           watchlistFilmMap={watchlistFilmMap}

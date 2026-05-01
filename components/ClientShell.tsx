@@ -7,18 +7,23 @@ import dynamic from 'next/dynamic'
 import type { Profile } from '@/lib/supabase/types'
 
 const TamagotchiWidget = dynamic(() => import('./TamagotchiWidget'), { ssr: false })
+const PreMarathonApprovedPopup = dynamic(() => import('./PreMarathonApprovedPopup'), { ssr: false })
 
 interface Props {
   profile: Profile | null
   hasRageuxEgg: boolean
   hasTamagotchiEgg: boolean
   unreadMessages?: number
+  userId?: string
   children: React.ReactNode
 }
 
-export default function ClientShell({ profile, hasRageuxEgg, hasTamagotchiEgg, unreadMessages = 0, children }: Props) {
+export default function ClientShell({ profile, hasRageuxEgg, hasTamagotchiEgg, unreadMessages = 0, userId, children }: Props) {
   const pathname = usePathname()
   const isAuthPage = pathname?.startsWith('/auth')
+
+  const preWindow = (profile as any)?.pre_marathon_window_until as string | null | undefined
+  const showJoinPopup = userId && preWindow && new Date(preWindow) > new Date()
 
   if (isAuthPage) return <>{children}</>
 
@@ -35,6 +40,11 @@ export default function ClientShell({ profile, hasRageuxEgg, hasTamagotchiEgg, u
         </footer>
       </main>
       {hasTamagotchiEgg && <Suspense fallback={null}><TamagotchiWidget /></Suspense>}
+      {showJoinPopup && (
+        <Suspense fallback={null}>
+          <PreMarathonApprovedPopup userId={userId} preMarathonWindowUntil={preWindow} />
+        </Suspense>
+      )}
     </div>
   )
 }

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminBatchFlaggedDecisions, adminSet18Flag, adminApproveAllPending, adminSetFilmCategory, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, adminFetchFrenchPosters, adminScanAgeRestrictions, adminTestFilmCertification, adminDiagnostic, updateFilm, adminResolveReport, adminSetConfig, adminVerifyPosters, adminRepairBrokenPosters, adminSetAdmin, adminAddNews, adminDeleteNews, adminAddRecommendation, adminDeleteRecommendation, deleteForumTopic, adminEndSeason, adminApproveFilmRequest, adminRejectFilmRequest, adminFetchOverviews, adminReviewMarathonRequest, adminGetPreMarathonStats } from '@/lib/actions'
+import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminBatchFlaggedDecisions, adminSet18Flag, adminApproveAllPending, adminSetFilmCategory, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, adminFetchFrenchPosters, adminScanAgeRestrictions, adminTestFilmCertification, adminDiagnostic, updateFilm, adminResolveReport, adminSetConfig, adminVerifyPosters, adminRepairBrokenPosters, adminSetAdmin, adminAddNews, adminDeleteNews, adminAddRecommendation, adminDeleteRecommendation, deleteForumTopic, adminEndSeason, adminApproveFilmRequest, adminRejectFilmRequest, adminFetchOverviews, adminReviewMarathonRequest, adminGetPreMarathonStats, adminReviewSeasonJoinRequest, adminDirectAdmitToMarathon } from '@/lib/actions'
 import type { PreMarathonFilmStat } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
 import { CONFIG } from '@/lib/config'
@@ -473,9 +473,11 @@ interface Props {
   recommendations: any[]
   forumTopics: any[]
   marathonRequests: any[]
+  seasonJoinRequests: any[]
+  allSeasonJoinRequests: any[]
 }
 
-export default function AdminClient({ profile, films, users, duels, weekFilm, totalUsers, watchCountMap, flaggedFilms, pendingFilms18, pendingApprovalFilms, reports, siteConfig, serverConfig, news, recommendations, forumTopics, marathonRequests: initialMarathonRequests }: Props) {
+export default function AdminClient({ profile, films, users, duels, weekFilm, totalUsers, watchCountMap, flaggedFilms, pendingFilms18, pendingApprovalFilms, reports, siteConfig, serverConfig, news, recommendations, forumTopics, marathonRequests: initialMarathonRequests, seasonJoinRequests: initialSeasonJoinRequests, allSeasonJoinRequests }: Props) {
   const { addToast } = useToast()
   const router = useRouter()
   const [posterLoading, setPosterLoading] = useState<Record<number, boolean>>({})
@@ -504,6 +506,11 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
   const [testLoading, setTestLoading] = useState(false)
   const [marathonRequests, setMarathonRequests] = useState<any[]>(initialMarathonRequests)
   const [marathonReviewLoading, setMarathonReviewLoading] = useState<Record<string, boolean>>({})
+  const [seasonJoinRequests, setSeasonJoinRequests] = useState<any[]>(initialSeasonJoinRequests)
+  const [joinReviewLoading, setJoinReviewLoading] = useState<Record<string, boolean>>({})
+  const [directAdmitLoading, setDirectAdmitLoading] = useState<Record<string, boolean>>({})
+  const [localAllJoinRequests, setLocalAllJoinRequests] = useState<any[]>(allSeasonJoinRequests)
+  const [showMarathonParticipants, setShowMarathonParticipants] = useState(false)
 
   // Sync avec flaggedFilms après router.refresh(), en excluant les films déjà traités
   useEffect(() => {
@@ -932,6 +939,85 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
         </div>
       )}
 
+      {/* Demandes d'inscription en cours de saison */}
+      {seasonJoinRequests.length > 0 && (
+        <div style={{ background: 'rgba(167,139,250,.08)', border: '2px solid rgba(167,139,250,.45)', borderRadius: 'var(--rl)', padding: '1rem 1.3rem', marginBottom: '1.2rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '.7rem', marginBottom: '.8rem' }}>
+            <span style={{ fontSize: '1.3rem' }}>🎬</span>
+            <div style={{ fontWeight: 700, color: '#a78bfa', fontSize: '.9rem' }}>
+              {seasonJoinRequests.length} demande{seasonJoinRequests.length > 1 ? 's' : ''} d'inscription en cours de saison
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
+            {seasonJoinRequests.map((r: any) => (
+              <div key={r.id} style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.75rem 1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem', marginBottom: r.message ? '.4rem' : '.5rem', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '.82rem', fontWeight: 600, color: '#a78bfa' }}>
+                    {r.profiles?.pseudo ?? r.user_id}
+                  </span>
+                  <span style={{ fontSize: '.68rem', color: 'var(--text3)' }}>
+                    {new Date(r.created_at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                  <span style={{ fontSize: '.65rem', background: 'rgba(167,139,250,.12)', color: '#a78bfa', border: '1px solid rgba(167,139,250,.3)', borderRadius: 99, padding: '1px 7px', marginLeft: 'auto' }}>
+                    Saison {r.saison}
+                  </span>
+                </div>
+                {r.message && (
+                  <div style={{ fontSize: '.78rem', color: 'var(--text2)', fontStyle: 'italic', borderLeft: '2px solid rgba(167,139,250,.3)', paddingLeft: '.6rem', marginBottom: '.6rem', lineHeight: 1.5 }}>
+                    "{r.message}"
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap' }}>
+                  <button
+                    className="btn btn-green"
+                    style={{ fontSize: '.72rem', padding: '.25rem .7rem' }}
+                    disabled={joinReviewLoading[r.id]}
+                    onClick={async () => {
+                      setJoinReviewLoading(prev => ({ ...prev, [r.id]: true }))
+                      const res = await adminReviewSeasonJoinRequest(r.id, 'approve_current')
+                      if (res?.error) { addToast(res.error, '⚠️'); setJoinReviewLoading(prev => ({ ...prev, [r.id]: false })); return }
+                      setSeasonJoinRequests(prev => prev.filter(x => x.id !== r.id))
+                      addToast(`✅ ${r.profiles?.pseudo} accepté cette saison — fenêtre 24h accordée`, '✅')
+                    }}
+                  >
+                    ✓ Cette saison (24h pré-marathon)
+                  </button>
+                  <button
+                    className="btn btn-outline"
+                    style={{ fontSize: '.72rem', padding: '.25rem .7rem', color: 'var(--gold)', borderColor: 'var(--gold)' }}
+                    disabled={joinReviewLoading[r.id]}
+                    onClick={async () => {
+                      setJoinReviewLoading(prev => ({ ...prev, [r.id]: true }))
+                      const res = await adminReviewSeasonJoinRequest(r.id, 'approve_next')
+                      if (res?.error) { addToast(res.error, '⚠️'); setJoinReviewLoading(prev => ({ ...prev, [r.id]: false })); return }
+                      setSeasonJoinRequests(prev => prev.filter(x => x.id !== r.id))
+                      addToast(`📅 ${r.profiles?.pseudo} accepté pour la saison prochaine`, '📅')
+                    }}
+                  >
+                    📅 Saison prochaine
+                  </button>
+                  <button
+                    className="btn btn-outline"
+                    style={{ fontSize: '.72rem', padding: '.25rem .7rem', color: 'var(--red)', borderColor: 'var(--red)' }}
+                    disabled={joinReviewLoading[r.id]}
+                    onClick={async () => {
+                      if (!confirm(`Refuser la demande de ${r.profiles?.pseudo} ?`)) return
+                      setJoinReviewLoading(prev => ({ ...prev, [r.id]: true }))
+                      const res = await adminReviewSeasonJoinRequest(r.id, 'reject')
+                      if (res?.error) { addToast(res.error, '⚠️'); setJoinReviewLoading(prev => ({ ...prev, [r.id]: false })); return }
+                      setSeasonJoinRequests(prev => prev.filter(x => x.id !== r.id))
+                      addToast(`Demande de ${r.profiles?.pseudo} refusée`, '🔒')
+                    }}
+                  >
+                    ✗ Refuser
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Signalements */}
       {reports.length > 0 && (
         <div style={{ background: 'rgba(232,90,90,.1)', border: '2px solid var(--red)', borderRadius: 'var(--rl)', padding: '1rem 1.3rem', marginBottom: '1.2rem' }}>
@@ -1071,6 +1157,122 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
             </div>
           ))}
         </div>
+      </Section>
+
+      {/* Participants du marathon */}
+      <Section icon="🎬" title="Participants — Saison actuelle">
+        {(() => {
+          const saisonNumero = serverConfig.SAISON_NUMERO
+          const now = new Date()
+
+          // Tous les joueurs triés
+          const inMarathon = users.filter((u: any) => !u.is_admin && u.saison === saisonNumero)
+          const midSeason = users.filter((u: any) => !u.is_admin && u.saison > saisonNumero)
+
+          // Index des demandes par user_id
+          const joinIndex: Record<string, any> = {}
+          localAllJoinRequests.forEach((r: any) => { joinIndex[r.user_id] = r })
+
+          function statusBadge(u: any) {
+            const req = joinIndex[u.id]
+            const window = u.pre_marathon_window_until ? new Date(u.pre_marathon_window_until) : null
+
+            if (!req) return <span style={{ fontSize: '.62rem', background: 'rgba(232,90,90,.12)', color: 'var(--red)', border: '1px solid rgba(232,90,90,.25)', borderRadius: 99, padding: '1px 7px' }}>Pas de demande</span>
+            if (req.status === 'approved_current') {
+              const windowActive = window && window > now
+              return <span style={{ fontSize: '.62rem', background: windowActive ? 'rgba(79,217,138,.15)' : 'rgba(79,217,138,.06)', color: 'var(--green)', border: '1px solid rgba(79,217,138,.3)', borderRadius: 99, padding: '1px 7px' }}>
+                {windowActive ? `Fenêtre active (exp. ${window.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })})` : 'Accepté S1 (fenêtre expirée)'}
+              </span>
+            }
+            if (req.status === 'approved_next') return <span style={{ fontSize: '.62rem', background: 'rgba(232,196,106,.12)', color: 'var(--gold)', border: '1px solid rgba(232,196,106,.3)', borderRadius: 99, padding: '1px 7px' }}>Accepté S{saisonNumero + 1}</span>
+            if (req.status === 'pending') return <span style={{ fontSize: '.62rem', background: 'rgba(167,139,250,.12)', color: '#a78bfa', border: '1px solid rgba(167,139,250,.3)', borderRadius: 99, padding: '1px 7px' }}>Demande en attente</span>
+            if (req.status === 'rejected') return <span style={{ fontSize: '.62rem', background: 'rgba(232,90,90,.12)', color: 'var(--red)', border: '1px solid rgba(232,90,90,.25)', borderRadius: 99, padding: '1px 7px' }}>Refusé</span>
+            return null
+          }
+
+          return (
+            <div>
+              {/* Stats rapides */}
+              <div style={{ display: 'flex', gap: '.8rem', marginBottom: '1.1rem', flexWrap: 'wrap' }}>
+                <div className="stat" style={{ flex: 1, minWidth: 100 }}>
+                  <div className="stat-l">Dans le marathon</div>
+                  <div className="stat-v green">{inMarathon.length}</div>
+                </div>
+                <div className="stat" style={{ flex: 1, minWidth: 100 }}>
+                  <div className="stat-l">Hors marathon</div>
+                  <div className="stat-v" style={{ color: 'var(--red)' }}>{midSeason.length}</div>
+                </div>
+                <div className="stat" style={{ flex: 1, minWidth: 100 }}>
+                  <div className="stat-l">Total joueurs</div>
+                  <div className="stat-v">{inMarathon.length + midSeason.length}</div>
+                </div>
+              </div>
+
+              {/* Joueurs hors marathon */}
+              {midSeason.length > 0 && (
+                <div>
+                  <div
+                    onClick={() => setShowMarathonParticipants(p => !p)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '.5rem', cursor: 'pointer', fontSize: '.78rem', color: 'var(--text2)', marginBottom: '.6rem', userSelect: 'none' }}
+                  >
+                    <span style={{ fontSize: '.65rem' }}>{showMarathonParticipants ? '▼' : '▶'}</span>
+                    <span>Joueurs hors marathon actuel ({midSeason.length})</span>
+                  </div>
+
+                  {showMarathonParticipants && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
+                      {midSeason.map((u: any) => {
+                        const alreadyInCurrentSeason = joinIndex[u.id]?.status === 'approved_current'
+                        const loading = directAdmitLoading[u.id]
+                        return (
+                          <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: '.6rem', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.6rem .9rem', flexWrap: 'wrap' }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: '.85rem', fontWeight: 600 }}>{u.pseudo}</span>
+                                <span style={{ fontSize: '.7rem', color: 'var(--text3)' }}>{u.exp} EXP · S{u.saison}</span>
+                              </div>
+                              <div style={{ marginTop: '.25rem' }}>{statusBadge(u)}</div>
+                            </div>
+                            {!alreadyInCurrentSeason && (
+                              <button
+                                className="btn btn-green"
+                                style={{ fontSize: '.72rem', padding: '.28rem .75rem', whiteSpace: 'nowrap' }}
+                                disabled={loading}
+                                onClick={async () => {
+                                  setDirectAdmitLoading(prev => ({ ...prev, [u.id]: true }))
+                                  const res = await adminDirectAdmitToMarathon(u.id)
+                                  setDirectAdmitLoading(prev => ({ ...prev, [u.id]: false }))
+                                  if (res?.error) { addToast(res.error, '⚠️'); return }
+                                  setLocalAllJoinRequests(prev => {
+                                    const without = prev.filter(r => r.user_id !== u.id)
+                                    return [...without, { user_id: u.id, status: 'approved_current', created_at: new Date().toISOString(), reviewed_at: new Date().toISOString() }]
+                                  })
+                                  addToast(`✅ ${u.pseudo} admis dans le marathon — fenêtre 24h ouverte`, '✅')
+                                  router.refresh()
+                                }}
+                              >
+                                {loading ? '…' : '✓ Admettre dans le marathon'}
+                              </button>
+                            )}
+                            {alreadyInCurrentSeason && (
+                              <span style={{ fontSize: '.72rem', color: 'var(--green)' }}>✓ Admis</span>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {midSeason.length === 0 && (
+                <div style={{ fontSize: '.82rem', color: 'var(--green)', textAlign: 'center', padding: '1rem' }}>
+                  ✅ Tous les joueurs participent au marathon actuel
+                </div>
+              )}
+            </div>
+          )
+        })()}
       </Section>
 
       {/* Pré-marathon stats */}

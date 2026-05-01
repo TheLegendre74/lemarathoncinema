@@ -57,7 +57,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   if (user) {
     const [profileData, eggs, unread, watchedResult] = await Promise.all([
       withCache(`user:${user.id}:profile`, 60, async () => {
-        const { data } = await supabase.from('profiles').select('id, pseudo, avatar_url, exp, active_badge, is_admin, saison, created_at, updated_at, marathon_blocked_until').eq('id', user.id).single()
+        const { data } = await supabase.from('profiles').select('id, pseudo, avatar_url, exp, active_badge, is_admin, saison, created_at, updated_at, marathon_blocked_until, pre_marathon_window_until, tutorial_seen').eq('id', user.id).single()
         return data
       }),
       withCache(`user:${user.id}:eggs`, 60, async () => {
@@ -108,7 +108,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <ToastProvider>
           <EasterEggsLoader config={eeConfig} isGuest={!user} watchedCount={watchedCount} hasClippyEgg={hasClippyEgg} isAdmin={!!(profile as any)?.is_admin} userId={user?.id} />
-          <ClientShell profile={profile} hasRageuxEgg={hasRageuxEgg} hasTamagotchiEgg={hasTamagotchiEgg} unreadMessages={unreadMessages}>
+          <ClientShell
+            profile={profile}
+            hasRageuxEgg={hasRageuxEgg}
+            hasTamagotchiEgg={hasTamagotchiEgg}
+            unreadMessages={unreadMessages}
+            userId={user?.id}
+          >
             {children}
           </ClientShell>
           <a

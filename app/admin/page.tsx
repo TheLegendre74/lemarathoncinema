@@ -2,7 +2,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import AdminClient from './AdminClient'
 import { getServerConfig } from '@/lib/serverConfig'
-import { adminGetMarathonRequests } from '@/lib/actions'
+import { adminGetMarathonRequests, adminGetSeasonJoinRequests, adminGetAllSeasonJoinRequests } from '@/lib/actions'
 import type { Profile } from '@/lib/supabase/types'
 
 export const revalidate = 0
@@ -50,7 +50,11 @@ export default async function AdminPage() {
     (adminDb as any).from('forum_topics').select('*').order('pinned', { ascending: false }).order('created_at', { ascending: false }),
   ])
 
-  const marathonRequests = await adminGetMarathonRequests()
+  const [marathonRequests, seasonJoinRequests, allSeasonJoinRequests] = await Promise.all([
+    adminGetMarathonRequests(),
+    adminGetSeasonJoinRequests(),
+    adminGetAllSeasonJoinRequests(),
+  ])
 
   const totalUsers = users?.length ?? 1
   const watchCountMap: Record<number, number> = {}
@@ -78,6 +82,8 @@ export default async function AdminPage() {
       recommendations={recommendations ?? []}
       forumTopics={forumTopics ?? []}
       marathonRequests={marathonRequests}
+      seasonJoinRequests={seasonJoinRequests}
+      allSeasonJoinRequests={allSeasonJoinRequests}
     />
   )
 }

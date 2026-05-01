@@ -15,6 +15,8 @@ export type Database = {
           avatar_url: string | null
           active_badge: string | null
           marathon_blocked_until: string | null
+          pre_marathon_window_until: string | null
+          tutorial_seen: boolean
         }
         Insert: {
           id: string
@@ -24,6 +26,8 @@ export type Database = {
           saison?: number
           avatar_url?: string | null
           active_badge?: string | null
+          pre_marathon_window_until?: string | null
+          tutorial_seen?: boolean
         }
         Update: {
           pseudo?: string
@@ -32,6 +36,8 @@ export type Database = {
           saison?: number
           avatar_url?: string | null
           active_badge?: string | null
+          pre_marathon_window_until?: string | null
+          tutorial_seen?: boolean
         }
         Relationships: []
       }
@@ -246,6 +252,33 @@ export type Database = {
         Update: {
           resolved?: boolean
           resolved_by?: string | null
+        }
+        Relationships: []
+      }
+      season_join_requests: {
+        Row: {
+          id: string
+          user_id: string
+          message: string | null
+          status: 'pending' | 'approved_current' | 'approved_next' | 'rejected'
+          saison: number
+          reviewed_by: string | null
+          reviewed_at: string | null
+          created_at: string
+        }
+        Insert: {
+          user_id: string
+          message?: string | null
+          status?: string
+          saison?: number
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+        }
+        Update: {
+          message?: string | null
+          status?: string
+          reviewed_by?: string | null
+          reviewed_at?: string | null
         }
         Relationships: []
       }

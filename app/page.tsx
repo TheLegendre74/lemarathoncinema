@@ -6,8 +6,10 @@ import ExpBar from '@/components/ExpBar'
 import Poster from '@/components/Poster'
 import MarathonNotifyToggle from '@/components/MarathonNotifyToggle'
 import WelcomeBanner from '@/components/WelcomeBanner'
+import JoinMarathonBanner from '@/components/JoinMarathonBanner'
 import { getBadge, levelFromExp, CONFIG } from '@/lib/config'
 import { getServerConfig } from '@/lib/serverConfig'
+import { getMySeasonJoinStatus } from '@/lib/actions'
 import type { ServerConfig } from '@/lib/serverConfig'
 import Link from 'next/link'
 
@@ -88,7 +90,7 @@ export default async function HomePage() {
     { count: totalS1Count },
     { data: recentWatched },
   ] = await Promise.all([
-    (supabase as any).from('profiles').select('id, pseudo, exp, saison, notify_marathon, active_badge').eq('id', user.id).single(),
+    (supabase as any).from('profiles').select('id, pseudo, exp, saison, notify_marathon, active_badge, pre_marathon_window_until').eq('id', user.id).single(),
     supabase.from('watched').select('film_id', { count: 'exact', head: true }).eq('user_id', user.id),
     supabase.from('votes').select('duel_id', { count: 'exact', head: true }).eq('user_id', user.id),
     supabase.from('week_films').select('id, active, films(id, titre, annee, poster)').eq('active', true).single(),
@@ -106,6 +108,11 @@ export default async function HomePage() {
       </div>
     )
   }
+
+  // Statut de demande d'inscription en cours de saison
+  const isMidSeasonPlayer = live && (profile as any).saison > CONFIG.SAISON_NUMERO
+  const joinStatus = isMidSeasonPlayer ? await getMySeasonJoinStatus() : null
+  const preMarathonWindowUntil = (profile as any).pre_marathon_window_until as string | null
 
   const rankResult = await withTimeout(supabase
     .from('profiles')
@@ -125,17 +132,23 @@ export default async function HomePage() {
 
   return (
     <div>
-      {/* S2 banner */}
-      {profile.saison > CONFIG.SAISON_NUMERO && live && (
-        <div style={{ background: 'rgba(240,160,96,.07)', border: '1px solid rgba(240,160,96,.25)', borderRadius: 'var(--rl)', padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+      {/* S2 banner + demande d'inscription en cours de saison */}
+      {isMidSeasonPlayer && joinStatus?.status !== 'approved_current' && (
+        <div style={{ background: 'rgba(240,160,96,.07)', border: '1px solid rgba(240,160,96,.25)', borderRadius: 'var(--rl)', padding: '1rem 1.5rem', marginBottom: '1rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <span style={{ fontSize: '1.5rem' }}>🔴</span>
           <div>
             <div style={{ fontSize: '.85rem', fontWeight: 500, color: 'var(--orange)' }}>Tu t'es inscrit après le début du marathon</div>
             <div style={{ fontSize: '.78rem', color: 'var(--text2)', marginTop: '.2rem', lineHeight: 1.6 }}>
-              Tes points seront comptabilisés à partir de la <strong>Saison {CONFIG.SAISON_NUMERO + 1}</strong>. Rendez-vous le mois prochain !
+              Tes points seront comptabilisés à partir de la <strong>Saison {CONFIG.SAISON_NUMERO + 1}</strong>. Tu peux demander à rejoindre la Saison {CONFIG.SAISON_NUMERO} en cours ci-dessous.
             </div>
           </div>
         </div>
+      )}
+      {isMidSeasonPlayer && (
+        <JoinMarathonBanner
+          initialStatus={joinStatus}
+          preMarathonWindowUntil={preMarathonWindowUntil}
+        />
       )}
 
       <div style={{ marginBottom: '2rem' }}>

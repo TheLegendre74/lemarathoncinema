@@ -135,6 +135,7 @@ export default async function FilmsPage() {
       hasRageuxEgg={hasRageuxEgg}
       rattrapageMap={rattrapageMap}
       userWatchlists={userWatchlists}
+      preMarathonWindowUntil={(profile as any)?.pre_marathon_window_until ?? null}
     />
   )
 }
