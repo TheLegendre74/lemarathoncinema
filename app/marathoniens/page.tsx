@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getBadge, levelFromExp, getActiveBadge, CONFIG } from '@/lib/config'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -7,15 +7,21 @@ export const revalidate = 60
 
 export default async function MarathoniensPage() {
   const supabase = await createClient()
+  const adminClient = createAdminClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const [{ data: profiles }, { data: allWatched }, { data: totalFilmsData }] = await Promise.all([
+  const [{ data: profiles }, { data: seasonFilms }] = await Promise.all([
     supabase.from('profiles').select('id, pseudo, exp, avatar_url, active_badge, bio').order('exp', { ascending: false }) as any,
-    supabase.from('watched').select('user_id, pre'),
-    supabase.from('films').select('id', { count: 'exact' }).eq('saison', CONFIG.SAISON_NUMERO).eq('pending_admin_approval', false),
+    adminClient.from('films').select('id').eq('saison', CONFIG.SAISON_NUMERO).eq('pending_admin_approval', false),
   ])
 
-  const totalFilms = totalFilmsData?.length ?? 0
+  const filmIds = (seasonFilms ?? []).map((f: any) => f.id as number)
+  const totalFilms = filmIds.length
+
+  // Récupérer tous les visionnages de la saison courante (adminClient bypasse le RLS)
+  const { data: allWatched } = filmIds.length > 0
+    ? await adminClient.from('watched').select('user_id, pre').in('film_id', filmIds).limit(50000)
+    : { data: [] }
 
   // Films vus pendant le marathon (non pré) et pré-marathon
   const watchedMap: Record<string, number> = {}
