@@ -1878,6 +1878,7 @@ export async function adminForceRefreshAllPosters(fromId: number = 0) {
 // ── WATCH PROVIDERS (public — appelé depuis FilmsClient) ──────
 
 export async function getFilmWatchProviders(tmdbId: number | null): Promise<{
+  link?: string
   flatrate?: { provider_id: number; provider_name: string; logo_path: string }[]
   rent?: { provider_id: number; provider_name: string; logo_path: string }[]
   buy?: { provider_id: number; provider_name: string; logo_path: string }[]

@@ -109,7 +109,7 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
   const isAuthor = profile != null && film.added_by === profile.id
   const avg = avgRating(ratingScores)
   type WP = { provider_id: number; provider_name: string; logo_path: string }
-  const [providers, setProviders] = useState<{ flatrate?: WP[]; rent?: WP[]; buy?: WP[] } | null | 'loading'>('loading')
+  const [providers, setProviders] = useState<{ link?: string; flatrate?: WP[]; rent?: WP[]; buy?: WP[] } | null | 'loading'>('loading')
 
   useEffect(() => {
     if (tab !== 'streaming') return
@@ -117,7 +117,10 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
     getFilmWatchProviders((film as any).tmdb_id ?? null).then(setProviders)
   }, [tab, film, providers])
 
-  const justWatchUrl = `https://www.justwatch.com/fr/films?q=${encodeURIComponent(film.titre)}`
+  // URL directe du film sur JustWatch (fournie par TMDB) ou fallback recherche par titre
+  const justWatchUrl = (providers && providers !== 'loading' && providers.link)
+    ? providers.link
+    : `https://www.justwatch.com/fr/films?q=${encodeURIComponent(film.titre)}`
   const expGain = isWeekFilm ? CONFIG.EXP_FDLS : CONFIG.EXP_FILM
 
   // ── Easter eggs ─────────────────────────────────────────────
