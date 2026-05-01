@@ -24,7 +24,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
 }
 import './globals.css'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import ClientShell from '@/components/ClientShell'
 import { ToastProvider } from '@/components/ToastProvider'
 import EasterEggsLoader from '@/components/EasterEggsLoader'
@@ -72,7 +72,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         return count ?? 0
       }),
     ])
-    profile = profileData
+    // Si le profil est absent (trigger SQL non exécuté), on le crée à la volée
+    if (!profileData) {
+      console.log('[LAYOUT] profil manquant, création automatique pour', user.email)
+      const pseudo = (user.user_metadata?.pseudo as string | undefined) || user.email?.split('@')[0] || 'Utilisateur'
+      const adminDb = createAdminClient()
+      await adminDb.from('profiles').upsert({ id: user.id, pseudo, saison: cfg.SAISON_NUMERO }).eq('id', user.id)
+      const { data: newProfile } = await adminDb.from('profiles').select('id, pseudo, avatar_url, exp, active_badge, is_admin, saison, created_at, updated_at, marathon_blocked_until, pre_marathon_window_until, tutorial_seen').eq('id', user.id).single()
+      profile = newProfile
+    } else {
+      profile = profileData
+    }
     console.log('[LAYOUT] profile =>', profile ? `✓ ${(profile as any).pseudo}` : `✗ null (user: ${user.email})`)
     hasRageuxEgg = (eggs ?? []).some((e: any) => e.egg_id === 'rageux')
     hasTamagotchiEgg = (eggs ?? []).some((e: any) => e.egg_id === 'tamagotchi')
