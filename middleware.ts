@@ -48,11 +48,8 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (user) return supabaseResponse
-
-  // Pas connecté, pas de cookie invité → redirection vers /auth
-  return NextResponse.redirect(new URL('/auth', request.url))
+  await supabase.auth.getUser()
+  return supabaseResponse
 }
 
 export const config = {

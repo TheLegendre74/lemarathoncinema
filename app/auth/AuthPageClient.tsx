@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { signInDirect } from '@/lib/actions'
 import { CONFIG } from '@/lib/config'
 
 function CountdownMini({ marathonStart }: { marathonStart: string }) {
@@ -74,10 +75,10 @@ export default function AuthPageClient({ marathonStart, saisonLabel, saisonNumer
     }
 
     if (tab === 'login') {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) { setErr('Email ou mot de passe incorrect.'); setLoading(false); return }
+      const result = await signInDirect(email, password)
+      if (result.error) { setErr(result.error); setLoading(false); return }
       document.cookie = 'guest_mode=; path=/; max-age=0'
-      setTimeout(() => { window.location.href = '/' }, 500)
+      window.location.href = '/'
     } else {
       if (pseudo.length < 2) { setErr('Pseudo trop court (min 2 caractères).'); setLoading(false); return }
       if (password.length < 4) { setErr('Mot de passe trop court (min 4 caractères).'); setLoading(false); return }

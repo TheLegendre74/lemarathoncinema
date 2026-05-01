@@ -389,6 +389,15 @@ export async function signIn(formData: FormData) {
   return { success: true }
 }
 
+// Version qui accepte les strings directement (appelée depuis AuthPageClient)
+export async function signInDirect(email: string, password: string) {
+  const supabase = await createClient()
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+  if (error || !data.session) return { error: 'Email ou mot de passe incorrect.' }
+  revalidatePath('/', 'layout')
+  return { success: true }
+}
+
 export async function signOut() {
   const supabase = await createClient()
   await supabase.auth.signOut()
