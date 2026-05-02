@@ -357,13 +357,9 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
                     <div style={{ fontSize: '.75rem', color: 'var(--text3)', lineHeight: 1.5 }}>Ce film a été ajouté pendant le marathon et sera disponible lors de la prochaine saison. Tu pourras le marquer vu à partir de la Saison 2 !</div>
                   </div>
                 ) : <>
-                {/* Pré-marathon : grisé si marathon en cours, sauf fenêtre 24h accordée */}
                 <button
                   className={`btn ${isWatched && watchedPre === true ? 'btn-green' : 'btn-outline'} btn-full`}
-                  onClick={canMarkPre ? handleMarkPre : undefined}
-                  disabled={!canMarkPre}
-                  style={!canMarkPre ? { opacity: 0.35, cursor: 'not-allowed' } : undefined}
-                  title={!canMarkPre ? 'Le marathon est en cours — utilise le bouton ci-dessous' : undefined}
+                  onClick={handleMarkPre}
                 >
                   {isWatched && watchedPre === true ? '✓ Vu avant le marathon — Retirer' : '🎬 J\'ai vu ce film (pré-marathon)'}
                 </button>
@@ -1022,10 +1018,7 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
 export default function FilmsClient({ films, profile, watchedIds, watchedPreMap, myRatings, myNegativeRatings, watchCountMap, ratingMap, negativeRatingMap, totalUsers, weekFilmId, isMarathonLive, saisonNumero, age18confirmed, hasRageuxEgg, rattrapageMap: initialRattrapageMap, userWatchlists: initialWatchlists, preMarathonWindowUntil }: Props) {
   const router = useRouter()
   const { addToast } = useToast()
-  // Joueurs acceptés en cours de saison : bouton pré-marathon actif pendant 24h
-  const canMarkPre = !isMarathonLive || (
-    preMarathonWindowUntil != null && new Date(preMarathonWindowUntil) > new Date()
-  )
+  const canMarkPre = true
   const [search, setSearch] = useState('')
   const [filterGenre, setFilterGenre] = useState('')
   const [filterDecade, setFilterDecade] = useState('')

@@ -546,19 +546,6 @@ export async function markWatched(filmId: number, pre: boolean) {
   // Block marathon mark if marathon not live
   if (!pre && !isMarathonLive()) return { error: 'Le marathon n\'a pas encore commencé.' }
 
-  // Bloquer le marquage pré-marathon pendant le marathon sauf fenêtre ouverte
-  if (pre && isMarathonLive()) {
-    const { data: prof } = await supabase
-      .from('profiles')
-      .select('pre_marathon_window_until')
-      .eq('id', user.id)
-      .single()
-    const windowUntil = (prof as any)?.pre_marathon_window_until
-    if (!windowUntil || new Date(windowUntil) < new Date()) {
-      return { error: 'PRE_WINDOW_EXPIRED' }
-    }
-  }
-
   // Vérification limite quotidienne marathon
   if (!pre) {
     const status = await getMarathonDailyStatus()
@@ -3075,19 +3062,22 @@ export async function getFightClubLeaderboard(difficulty: string): Promise<{ pse
 // CREATE POLICY "read" ON dance_scores FOR SELECT USING (true);
 // CREATE POLICY "own" ON dance_scores FOR ALL USING (auth.uid() = user_id);
 
-export async function saveDanceScore(score: number, maxCombo: number): Promise<void> {
+export async function saveDanceScore(score: number, maxCombo: number, survivalMs = 0): Promise<void> {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    const { data: existing } = await (supabase as any).from('dance_scores').select('score').eq('user_id', user.id).single()
-    if (existing && existing.score >= score) return
+    const { data: existing } = await (supabase as any).from('dance_scores').select('score, survival_ms').eq('user_id', user.id).single()
+    const betterScore = !existing || score > (existing.score ?? 0)
+    const betterSurvival = survivalMs > 0 && (!existing || survivalMs > (existing.survival_ms ?? 0))
+    if (!betterScore && !betterSurvival) return
     const { data: profile } = await supabase.from('profiles').select('pseudo').eq('id', user.id).single()
     await (supabase as any).from('dance_scores').upsert({
       user_id: user.id,
       pseudo: (profile as any)?.pseudo ?? 'Anonyme',
-      score: Math.round(score),
-      max_combo: Math.round(maxCombo),
+      score: betterScore ? Math.round(score) : (existing?.score ?? 0),
+      max_combo: betterScore ? Math.round(maxCombo) : (existing?.max_combo ?? 0),
+      survival_ms: betterSurvival ? survivalMs : (existing?.survival_ms ?? 0),
       updated_at: new Date().toISOString(),
     })
   } catch {}
@@ -3098,6 +3088,16 @@ export async function getDanceLeaderboard(): Promise<{ pseudo: string; score: nu
     const supabase = await createClient()
     const { data } = await (supabase as any).from('dance_scores').select('pseudo, score, max_combo').order('score', { ascending: false }).limit(10)
     return (data ?? []) as { pseudo: string; score: number; max_combo: number }[]
+  } catch {
+    return []
+  }
+}
+
+export async function getDanceSurvivalLeaderboard(): Promise<{ pseudo: string; survival_ms: number }[]> {
+  try {
+    const supabase = await createClient()
+    const { data } = await (supabase as any).from('dance_scores').select('pseudo, survival_ms').gt('survival_ms', 0).order('survival_ms', { ascending: false }).limit(10)
+    return (data ?? []) as { pseudo: string; survival_ms: number }[]
   } catch {
     return []
   }
