@@ -1202,6 +1202,23 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
     router.refresh()
   }
 
+  // Marquer "vu avant le marathon" depuis la carte
+  async function handleQuickMarkPre(e: React.MouseEvent, filmId: number, filmTitre: string) {
+    e.stopPropagation()
+    if (!profile) return
+    setLocalWatchedIds(prev => [...prev, filmId])
+    setLocalPreOverride(prev => ({ ...prev, [filmId]: true }))
+    const res = await markWatched(filmId, true)
+    if (res?.error) {
+      setLocalWatchedIds(prev => prev.filter(id => id !== filmId))
+      setLocalPreOverride(prev => { const n = { ...prev }; delete n[filmId]; return n })
+      addToast(res.error, '⚠️')
+      return
+    }
+    addToast(`"${filmTitre}" marqué vu (pré-marathon)`, '🎬')
+    router.refresh()
+  }
+
   // Marquer "vu pendant le marathon" depuis la carte (marathon live uniquement)
   async function handleQuickMarkMarathon(e: React.MouseEvent, filmId: number, filmTitre: string) {
     e.stopPropagation()
@@ -1483,7 +1500,6 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                       )
                     }
                     if (isMarathonLive) {
-                      // Pendant le marathon : bouton "vu pendant" actif + "vu avant" grisé
                       return (
                         <>
                           <button
@@ -1493,11 +1509,10 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                             🏁 Vu pendant le marathon
                           </button>
                           <button
-                            disabled
-                            title="Le marathon est en cours — impossible de marquer comme vu avant"
-                            style={{ marginTop: '.25rem', width: '100%', background: 'transparent', border: '1px solid rgba(255,255,255,.06)', borderRadius: 6, padding: '.22rem .4rem', fontSize: '.62rem', color: 'rgba(255,255,255,.22)', cursor: 'not-allowed', lineHeight: 1.3 }}
+                            onClick={e => handleQuickMarkPre(e, film.id, film.titre)}
+                            style={{ marginTop: '.25rem', width: '100%', background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 6, padding: '.22rem .4rem', fontSize: '.62rem', color: 'var(--text3)', cursor: 'pointer', lineHeight: 1.3 }}
                           >
-                            ⏳ Vu avant — bloqué
+                            ⏳ Vu avant le marathon
                           </button>
                         </>
                       )
