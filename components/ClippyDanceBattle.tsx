@@ -2,10 +2,19 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { DANCE_BEATMAP } from './ClippyDanceBattleBeatmap'
 import type { DanceNote } from './ClippyDanceBattleBeatmap'
-import { saveDanceScore, getDanceLeaderboard, unlockFeverNight } from '@/lib/actions'
+import { saveDanceScore, getDanceLeaderboard, getDanceSurvivalLeaderboard, unlockFeverNight } from '@/lib/actions'
 
 type Dir = DanceNote['direction']
 type LeaderEntry = { pseudo: string; score: number; max_combo: number }
+type SurvivalEntry = { pseudo: string; survival_ms: number }
+
+function formatSurvivalTime(ms: number): string {
+  const s = Math.floor(ms / 1000)
+  const m = Math.floor(s / 60)
+  const sec = s % 60
+  if (m > 0) return `${m}m ${sec.toString().padStart(2, '0')}s`
+  return `${sec}s`
+}
 
 interface Props {
   onWin:  () => void
@@ -153,26 +162,16 @@ function FlameBorder({ combo }: { combo: number }) {
   return (
     <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 99987 }}>
       <style>{`
-        @keyframes flm-a   { from{transform:scaleY(1)    scaleX(1)   } to{transform:scaleY(1.20) scaleX(0.86)} }
-        @keyframes flm-b   { from{transform:scaleY(0.86) scaleX(1.14)} to{transform:scaleY(1.24) scaleX(0.82)} }
-        @keyframes flm-c   { from{transform:scaleY(1.08) scaleX(0.92)} to{transform:scaleY(0.80) scaleX(1.18)} }
-        @keyframes flm-T-a { from{transform:rotate(180deg) scaleY(1)    scaleX(1)   } to{transform:rotate(180deg) scaleY(1.20) scaleX(0.86)} }
-        @keyframes flm-T-b { from{transform:rotate(180deg) scaleY(0.86) scaleX(1.14)} to{transform:rotate(180deg) scaleY(1.24) scaleX(0.82)} }
-        @keyframes flm-T-c { from{transform:rotate(180deg) scaleY(1.08) scaleX(0.92)} to{transform:rotate(180deg) scaleY(0.80) scaleX(1.18)} }
-        @keyframes flm-L-a { from{transform:rotate(90deg)  scaleY(1)    scaleX(1)   } to{transform:rotate(90deg)  scaleY(1.20) scaleX(0.86)} }
-        @keyframes flm-L-b { from{transform:rotate(90deg)  scaleY(0.86) scaleX(1.14)} to{transform:rotate(90deg)  scaleY(1.24) scaleX(0.82)} }
-        @keyframes flm-L-c { from{transform:rotate(90deg)  scaleY(1.08) scaleX(0.92)} to{transform:rotate(90deg)  scaleY(0.80) scaleX(1.18)} }
-        @keyframes flm-R-a { from{transform:rotate(-90deg) scaleY(1)    scaleX(1)   } to{transform:rotate(-90deg) scaleY(1.20) scaleX(0.86)} }
-        @keyframes flm-R-b { from{transform:rotate(-90deg) scaleY(0.86) scaleX(1.14)} to{transform:rotate(-90deg) scaleY(1.24) scaleX(0.82)} }
-        @keyframes flm-R-c { from{transform:rotate(-90deg) scaleY(1.08) scaleX(0.92)} to{transform:rotate(-90deg) scaleY(0.80) scaleX(1.18)} }
+        @keyframes flm-a { from{transform:scaleY(1)    scaleX(1)   } to{transform:scaleY(1.20) scaleX(0.86)} }
+        @keyframes flm-b { from{transform:scaleY(0.86) scaleX(1.14)} to{transform:scaleY(1.24) scaleX(0.82)} }
+        @keyframes flm-c { from{transform:scaleY(1.08) scaleX(0.92)} to{transform:scaleY(0.80) scaleX(1.18)} }
       `}</style>
-      {/* Bas supprimé — trop chargé visuellement */}
-      {/* Haut : pivot=zone.top, flammes vers le BAS */}
-      {makeEdge(cntH, 'T', i => zone.left + (i + 0.5) * zW / cntH, () => zone.top,    'top')}
-      {/* Gauche : pivot=zone.left, flammes vers la DROITE */}
-      {makeEdge(cntV, 'L', () => zone.left,  i => zone.top + (i + 0.5) * zH / cntV, 'lft')}
-      {/* Droite : pivot=zone.right, flammes vers la GAUCHE */}
-      {makeEdge(cntV, 'R', () => zone.right, i => zone.top + (i + 0.5) * zH / cntV, 'rgt')}
+      {/* Bas : flammes vers le HAUT */}
+      {makeEdge(cntH, '', i => zone.left + (i + 0.5) * zW / cntH, () => zone.bottom, 'bot')}
+      {/* Gauche : flammes vers le HAUT */}
+      {makeEdge(cntV, '', () => zone.left,  i => zone.top + (i + 0.5) * zH / cntV, 'lft')}
+      {/* Droite : flammes vers le HAUT */}
+      {makeEdge(cntV, '', () => zone.right, i => zone.top + (i + 0.5) * zH / cntV, 'rgt')}
     </div>
   )
 }
@@ -320,8 +319,8 @@ function FeverChoiceOverlay({ onAccept, onRefuse }: { onAccept: () => void; onRe
 // ── Overlay : victoire Fever Night ────────────────────────────────────────────
 
 function FeverPostGameOverlay({
-  score, maxCombo, leader, onContinue,
-}: { score: number; maxCombo: number; leader: LeaderEntry[]; onContinue: () => void }) {
+  score, maxCombo, leader, survivalLeader, survivalMs, onContinue,
+}: { score: number; maxCombo: number; leader: LeaderEntry[]; survivalLeader: SurvivalEntry[]; survivalMs: number; onContinue: () => void }) {
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 99991,
@@ -369,6 +368,23 @@ function FeverPostGameOverlay({
           ))}
         </div>
       )}
+      {(survivalLeader.length > 0 || survivalMs > 0) && (
+        <div style={{ width: '100%', maxWidth: 380, background: 'rgba(255,100,0,.04)', border: '1px solid rgba(255,100,0,.2)', borderRadius: 12, overflow: 'hidden' }}>
+          <div style={{ padding: '.6rem 1rem', fontSize: '.65rem', color: '#ff9944', letterSpacing: 3, borderBottom: '1px solid rgba(255,100,0,.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>🔥 TOP 10 — SURVIE</span>
+            {survivalMs > 0 && <span style={{ color: '#4ade80' }}>Ton record : {formatSurvivalTime(survivalMs)}</span>}
+          </div>
+          {survivalLeader.length === 0 ? (
+            <div style={{ padding: '.8rem 1rem', fontSize: '.75rem', color: '#555', textAlign: 'center' }}>Sois le premier à survivre !</div>
+          ) : survivalLeader.map((e, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '.8rem', padding: '.4rem 1rem', background: i % 2 === 0 ? 'rgba(255,255,255,.02)' : 'transparent' }}>
+              <span style={{ width: 20, fontSize: '.7rem', color: i < 3 ? (['#ffd700','#c0c0c0','#cd7f32'] as string[])[i] : '#555', fontWeight: 700 }}>{i < 3 ? (['🥇','🥈','🥉'] as string[])[i] : `${i+1}.`}</span>
+              <span style={{ flex: 1, fontSize: '.8rem', color: '#ccc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.pseudo}</span>
+              <span style={{ fontSize: '.8rem', color: '#ff9944', fontWeight: 600 }}>{formatSurvivalTime(e.survival_ms)}</span>
+            </div>
+          ))}
+        </div>
+      )}
       <button onClick={onContinue} style={{ marginTop: '.5rem', padding: '.75rem 2.5rem', borderRadius: 8, background: 'rgba(255,215,0,.12)', border: '1px solid #ffd70044', color: '#ffd700', fontSize: '1rem', fontWeight: 700, cursor: 'pointer', letterSpacing: 2 }}>
         CONTINUER
       </button>
@@ -407,11 +423,13 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
   // ── Perfect / Fever flow ──────────────────────────────────────────────────
   const [innerPhase,  setInnerPhase]  = useState<'ddr'|'rage'|'choice'|'fever'|'fever_post'>(() => startInFeverNight ? 'fever' : 'ddr')
   const [rageIdx,     setRageIdx]     = useState(0)
-  const [feverLeader, setFeverLeader] = useState<LeaderEntry[]>([])
+  const [feverLeader,         setFeverLeader]         = useState<LeaderEntry[]>([])
+  const [feverSurvivalLeader, setFeverSurvivalLeader] = useState<SurvivalEntry[]>([])
   const missCountRef     = useRef(0)
   const feverContainerRef = useRef<HTMLDivElement>(null)
-  const feverFinalScore  = useRef(0)
-  const feverFinalCombo  = useRef(0)
+  const feverFinalScore    = useRef(0)
+  const feverFinalCombo    = useRef(0)
+  const feverFinalSurvival = useRef(0)
   const onAnyMissRef     = useRef<(() => void) | null>(null)
   const onFeverEndRef    = useRef<((won: boolean) => void) | null>(null)
   onAnyMissRef.current   = () => { missCountRef.current++ }
@@ -444,18 +462,24 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
   // ── Fever end handler ─────────────────────────────────────────────────────
   useEffect(() => {
     onFeverEndRef.current = async (won: boolean) => {
+      const survMs = feverFinalSurvival.current
       if (won) {
-        if (userId) try { await unlockFeverNight() } catch {}
+        if (userId) try {
+          await unlockFeverNight()
+          if (survMs > 0) await saveDanceScore(feverFinalScore.current, feverFinalCombo.current, survMs)
+        } catch {}
         let ldr: LeaderEntry[] = []
+        let survLdr: SurvivalEntry[] = []
         try { ldr = await getDanceLeaderboard() } catch {}
+        try { survLdr = await getDanceSurvivalLeaderboard() } catch {}
         setFeverLeader(ldr)
+        setFeverSurvivalLeader(survLdr)
         setInnerPhase('fever_post')
       } else {
+        if (userId && survMs > 0) try { await saveDanceScore(feverFinalScore.current, feverFinalCombo.current, survMs) } catch {}
         if (startInFeverNight) {
-          // Fever night direct → défaite = écran de mort ClippyEgg
           onLoseRef.current()
         } else {
-          // Fever perdu dans le flux DDR normal : post-game normal (DDR était gagné)
           let ldr: LeaderEntry[] = []
           try { ldr = await getDanceLeaderboard() } catch {}
           finalWon.current = true
@@ -1300,6 +1324,7 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
         private countdownTxt!:Phaser.GameObjects.Text
         private scoreTxt!:    Phaser.GameObjects.Text
         private survivalTxt!: Phaser.GameObjects.Text
+        private hpText!:      Phaser.GameObjects.Text
         private survivalPrompt?: Phaser.GameObjects.Container
         private laneFlashBg:  Phaser.GameObjects.Rectangle[] = []
         private clippySprite!: Phaser.GameObjects.Image
@@ -1362,6 +1387,13 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
             fontSize: this.isMobile ? '12px' : '14px', color: '#ffdd66',
             fontFamily: 'monospace', fontStyle: 'bold', stroke: '#000', strokeThickness: 3,
           }).setOrigin(0.5).setDepth(20).setAlpha(0)
+
+          this.hpText = this.add.text(
+            8,
+            this.isMobile ? this.clippyZoneH + 8 : 8,
+            `❤️ ${this.hp} / ${sceneMaxHP}`,
+            { fontSize: this.isMobile ? '13px' : '15px', color: '#ff6688', fontFamily: 'monospace', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }
+          ).setDepth(30)
 
           // Keyboard
           const kbMap: Record<string, Dir> = { ArrowLeft: 'left', ArrowDown: 'down', ArrowUp: 'up', ArrowRight: 'right' }
@@ -1576,8 +1608,9 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           if (!this.challengeCleared && elapsed >= FEVER_CHALLENGE_MS) { this.showSurvivalPrompt(); return }
           if (this.survivalMode && elapsed >= this.trackDurationMs) { this.endGame('win'); return }
           if (this.survivalMode) {
+            const speedMul = this.getSurvivalSpeedMultiplier(elapsed)
             this.survivalTxt
-              .setText(`JUSQU A CE QUE MORT S ENSUIVE - DENSITE x${this.getDensityMultiplier(elapsed).toFixed(1)}`)
+              .setText(`JUSQU A CE QUE MORT S ENSUIVE — VITESSE ×${speedMul.toFixed(2)}  DENSITÉ ×${this.getDensityMultiplier(elapsed).toFixed(1)}`)
               .setAlpha(1)
           }
 
@@ -1591,7 +1624,7 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
 
           for (const n of this.activeNotes) {
             if (n.judged) continue
-            n.obj.setY(this.hitY - ((n.time - elapsed) / 1000) * FEVER_NOTE_SPEED)
+            n.obj.setY(this.hitY - ((n.time - elapsed) / 1000) * FEVER_NOTE_SPEED * this.getSurvivalSpeedMultiplier(elapsed))
             if (n.time - elapsed < -(this.hitWin + 10)) { n.judged = true; n.obj.destroy(); this.doMiss() }
           }
           this.activeNotes = this.activeNotes.filter(n => !n.judged)
@@ -1628,6 +1661,13 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           if (hitTime < FEVER_CHALLENGE_MS || !this.survivalMode) return FEVER_BASE_DENSITY_MULTIPLIER
           const steps = Math.floor((hitTime - FEVER_CHALLENGE_MS) / FEVER_SURVIVAL_STEP_MS)
           return FEVER_BASE_DENSITY_MULTIPLIER * Math.pow(FEVER_SURVIVAL_STEP_MULTIPLIER, steps)
+        }
+
+        private getSurvivalSpeedMultiplier(elapsed: number): number {
+          if (!this.survivalMode || elapsed < FEVER_CHALLENGE_MS) return 1.0
+          // +0.5% toutes les 6s, cap à ×1.85
+          const steps = (elapsed - FEVER_CHALLENGE_MS) / 6000
+          return Math.min(1.85, 1.0 + steps * 0.005)
         }
 
         private buildFeverNotes(beatIndex: number, beatTime: number): DanceNote[] {
@@ -1720,6 +1760,8 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
         private doMiss() {
           this.feedbackTxt.setText('MISS !').setColor('#e85a5a').setAlpha(1)
           this.hp = Math.max(0, this.hp - 1)
+          this.hpText.setText(`❤️ ${this.hp} / ${sceneMaxHP}`)
+          this.hpText.setColor(this.hp <= 3 ? '#ff2244' : this.hp <= 7 ? '#ff8844' : '#ff6688')
           onMissRef.current?.()
           this.combo = 0; this.comboTxt.setAlpha(0)
           if (this.hp <= 0) this.endGame(this.survivalMode ? 'win' : 'lose')
@@ -1786,6 +1828,7 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           if (this.ended) return
           this.ended = true
           feverFinalScore.current = this.score; feverFinalCombo.current = this.maxCombo
+          feverFinalSurvival.current = this.survivalMode ? Math.max(0, this.getElapsed() - FEVER_CHALLENGE_MS) : 0
           this.sound.stopAll()
           this.laserTimers.forEach(t => this.time.removeEvent(t))
           this.laserTimers = []
@@ -1821,6 +1864,8 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
         score={feverFinalScore.current}
         maxCombo={feverFinalCombo.current}
         leader={feverLeader}
+        survivalLeader={feverSurvivalLeader}
+        survivalMs={feverFinalSurvival.current}
         onContinue={() => onWin()}
       />
     )

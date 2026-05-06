@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
-import { unlockClippyMaster, getClippyDefeats, setClippyDefeatsDB, getDanceLeaderboard } from '@/lib/actions'
+import { unlockClippyMaster, getClippyDefeats, setClippyDefeatsDB, getDanceLeaderboard, getDanceSurvivalLeaderboard } from '@/lib/actions'
 
 const ClippyDanceBattle    = dynamic(() => import('./ClippyDanceBattle'), { ssr: false })
 // TODO TEMP — supprimer avant lancement prod
@@ -1088,6 +1088,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
   const [showAbandon,      setShowAbandon]     = useState(false)   // conservé pour compat mini-jeu
   const [showDeathScreen,  setShowDeathScreen] = useState(false)
   const [feverScores, setFeverScores] = useState<{pseudo:string;score:number;max_combo:number}[]|null>(null)
+  const [feverSurvivalScores, setFeverSurvivalScores] = useState<{pseudo:string;survival_ms:number}[]|null>(null)
   // DDR → intro : Clippy provoque avant que le jeu commence
   const [ddrIntroActive,   setDdrIntroActive]  = useState(false)
   const [ddrIntroIdx,      setDdrIntroIdx]     = useState(0)
@@ -1957,6 +1958,14 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
               >
                 🏆 Voir les scores
               </button>
+              <button
+                onClick={async () => {
+                  try { const ldr = await getDanceSurvivalLeaderboard(); setFeverSurvivalScores(ldr) } catch { setFeverSurvivalScores([]) }
+                }}
+                style={{ padding:'.9rem 2rem', borderRadius:8, background:'linear-gradient(135deg,rgba(255,100,0,.2),rgba(255,100,0,.08))', border:'2px solid rgba(255,100,0,.5)', color:'#ff9944', fontSize:'.95rem', fontWeight:700, cursor:'pointer', letterSpacing:2 }}
+              >
+                🔥 TOP SURVIE
+              </button>
             </>) : (<>
               <button
                 onClick={handleDeathContinue}
@@ -2000,6 +2009,37 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
             style={{ padding:'.9rem 2.5rem', borderRadius:8, background:'linear-gradient(135deg,rgba(255,153,68,.3),rgba(255,153,68,.1))', border:'2px solid rgba(255,153,68,.6)', color:'#ff9944', fontSize:'1rem', fontWeight:800, cursor:'pointer', letterSpacing:3 }}
           >
             TERMINER ➜
+          </button>
+        </div>
+      )}
+
+      {/* ══════════════ FEVER NIGHT — TABLEAU DE SURVIE ══════════════ */}
+      {feverSurvivalScores !== null && (
+        <div style={{ position:'fixed', inset:0, zIndex:100000, background:'rgba(4,0,16,.97)', backdropFilter:'blur(8px)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'1.4rem', animation:'death-in .4s ease' }}>
+          <div style={{ fontSize:'2.5rem' }}>🔥</div>
+          <div style={{ fontFamily:'var(--font-display)', fontSize:'1.6rem', color:'#ff9944', letterSpacing:3, textShadow:'0 0 30px rgba(255,100,0,.6)' }}>FEVER NIGHT — SURVIE</div>
+          <div style={{ maxWidth:400, width:'90%', background:'rgba(20,0,40,.8)', border:'2px solid rgba(255,100,0,.4)', borderRadius:12, padding:'1.2rem 1.6rem', maxHeight:'50vh', overflowY:'auto' }}>
+            {feverSurvivalScores.length === 0 ? (
+              <div style={{ color:'rgba(255,255,255,.4)', textAlign:'center', fontSize:'.85rem' }}>Aucune survie enregistrée</div>
+            ) : feverSurvivalScores.map((e, i) => {
+              const s = Math.floor(e.survival_ms / 1000)
+              const m = Math.floor(s / 60)
+              const sec = s % 60
+              const fmt = m > 0 ? `${m}m ${sec.toString().padStart(2,'0')}s` : `${sec}s`
+              return (
+                <div key={i} style={{ display:'flex', alignItems:'center', gap:'1rem', padding:'.5rem 0', borderBottom:i < feverSurvivalScores.length-1 ? '1px solid rgba(255,255,255,.07)' : 'none' }}>
+                  <span style={{ fontSize:'.75rem', color:'#ff9944', fontWeight:700, minWidth:24 }}>#{i+1}</span>
+                  <span style={{ flex:1, fontSize:'.85rem' }}>{e.pseudo}</span>
+                  <span style={{ fontSize:'.75rem', color:'#ff9944', fontWeight:600 }}>{fmt}</span>
+                </div>
+              )
+            })}
+          </div>
+          <button
+            onClick={() => { setFeverSurvivalScores(null) }}
+            style={{ padding:'.9rem 2.5rem', borderRadius:8, background:'linear-gradient(135deg,rgba(255,100,0,.3),rgba(255,100,0,.1))', border:'2px solid rgba(255,100,0,.6)', color:'#ff9944', fontSize:'1rem', fontWeight:800, cursor:'pointer', letterSpacing:3 }}
+          >
+            ← RETOUR
           </button>
         </div>
       )}
@@ -2245,7 +2285,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
         style={{
           position:'fixed',
           left:  ddrIntroActive && effectivePhase === 2 ? '50%' : pos.x,
-          top:   ddrIntroActive && effectivePhase === 2 ? '18%' : pos.y,
+          top:   ddrIntroActive && effectivePhase === 2 ? '45%' : pos.y,
           transform: ddrIntroActive && effectivePhase === 2 ? 'translateX(-50%)' : 'none',
           zIndex:99993,
           cursor:(phase==='combat'&&!ddrTauntActive&&!ddrIntroActive)?'none':(tired?'crosshair':'pointer'),
