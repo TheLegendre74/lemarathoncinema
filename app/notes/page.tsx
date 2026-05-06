@@ -121,8 +121,8 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
-              {ranked.map(({ film, avg, count }, i) => (
-                <FilmRow key={film.id} film={film} avg={avg} count={count} rank={i} mode="normal" />
+              {ranked.map(({ film, avg, count, score }, i) => (
+                <FilmRow key={film.id} film={film} avg={avg} count={count} score={score} rank={i} mode="normal" />
               ))}
             </div>
           )}
@@ -142,8 +142,8 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
-              {worst.map(({ film, avg, count }, i) => (
-                <FilmRow key={film.id} film={film} avg={avg} count={count} rank={i} mode="pires" />
+              {worst.map(({ film, avg, count, score }, i) => (
+                <FilmRow key={film.id} film={film} avg={avg} count={count} score={score} rank={i} mode="pires" />
               ))}
             </div>
           )}
@@ -153,7 +153,7 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
   )
 }
 
-function FilmRow({ film, avg, count, rank, mode }: { film: Film; avg: number; count: number; rank: number; mode: 'normal' | 'pires' }) {
+function FilmRow({ film, avg, count, score, rank, mode }: { film: Film; avg: number; count: number; score: number; rank: number; mode: 'normal' | 'pires' }) {
   const isPires = mode === 'pires'
   const rankDisplay = !isPires
     ? rank === 0 ? '🥇' : rank === 1 ? '🥈' : rank === 2 ? '🥉' : `#${rank + 1}`
@@ -183,8 +183,12 @@ function FilmRow({ film, avg, count, rank, mode }: { film: Film; avg: number; co
         <div style={{ fontSize: '.72rem', color: 'var(--text3)' }}>{film.annee} · {film.realisateur}</div>
       </div>
       <div style={{ textAlign: 'right', flexShrink: 0 }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: isPires ? 'var(--red)' : 'var(--gold)' }}>{avg.toFixed(1)}</div>
-        <div style={{ fontSize: '.67rem', color: 'var(--text3)' }}>{count} vote{count > 1 ? 's' : ''}</div>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: isPires ? 'var(--red)' : 'var(--gold)' }}>
+          {score.toFixed(1)}
+        </div>
+        <div style={{ fontSize: '.67rem', color: 'var(--text3)' }}>
+          moy. {avg.toFixed(1)} · {count} vote{count > 1 ? 's' : ''}
+        </div>
       </div>
     </div>
   )
