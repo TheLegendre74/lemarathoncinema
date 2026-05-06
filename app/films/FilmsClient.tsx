@@ -37,6 +37,7 @@ interface Props {
   rattrapageMap: Record<number, string>
   userWatchlists: WatchlistInfo[]
   preMarathonWindowUntil: string | null
+  duelWinnerIds: number[]
 }
 
 function avgRating(scores: number[] | undefined) {
@@ -1015,7 +1016,7 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
 
 
 // ─── MAIN FILMS CLIENT ───────────────────────────────────────────────────────
-export default function FilmsClient({ films, profile, watchedIds, watchedPreMap, myRatings, myNegativeRatings, watchCountMap, ratingMap, negativeRatingMap, totalUsers, weekFilmId, isMarathonLive, saisonNumero, age18confirmed, hasRageuxEgg, rattrapageMap: initialRattrapageMap, userWatchlists: initialWatchlists, preMarathonWindowUntil }: Props) {
+export default function FilmsClient({ films, profile, watchedIds, watchedPreMap, myRatings, myNegativeRatings, watchCountMap, ratingMap, negativeRatingMap, totalUsers, weekFilmId, isMarathonLive, saisonNumero, age18confirmed, hasRageuxEgg, rattrapageMap: initialRattrapageMap, userWatchlists: initialWatchlists, preMarathonWindowUntil, duelWinnerIds }: Props) {
   const router = useRouter()
   const { addToast } = useToast()
   const canMarkPre = true
@@ -1216,6 +1217,37 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
       return
     }
     addToast(`"${filmTitre}" marqué vu (pré-marathon)`, '🎬')
+    router.refresh()
+  }
+
+  const duelWinnerSet = useMemo(() => new Set(duelWinnerIds), [duelWinnerIds])
+
+  // Marquer "vu pendant le duel" — film vainqueur uniquement, récompense EXP_DUEL_WIN
+  async function handleQuickDuelWin(e: React.MouseEvent, filmId: number, filmTitre: string) {
+    e.stopPropagation()
+    if (!profile) return
+    setLocalWatchedIds(prev => [...prev, filmId])
+    setLocalPreOverride(prev => ({ ...prev, [filmId]: false }))
+    const res = await toggleWatched(filmId, filmTitre)
+    if (res?.error === 'LIMIT_REACHED') {
+      setLocalWatchedIds(prev => prev.filter(id => id !== filmId))
+      setLocalPreOverride(prev => { const n = { ...prev }; delete n[filmId]; return n })
+      setModal(films.find(f => f.id === filmId) ?? null)
+      return
+    }
+    if (res?.error === 'PENDING_REQUEST' || res?.error === 'BLOCKED') {
+      setLocalWatchedIds(prev => prev.filter(id => id !== filmId))
+      setLocalPreOverride(prev => { const n = { ...prev }; delete n[filmId]; return n })
+      addToast(res.error === 'BLOCKED' ? '🔒 Ajout bloqué (24h)' : '⏳ Demande en attente d\'examen admin', '⚠️')
+      return
+    }
+    if (res?.error) {
+      setLocalWatchedIds(prev => prev.filter(id => id !== filmId))
+      setLocalPreOverride(prev => { const n = { ...prev }; delete n[filmId]; return n })
+      addToast(res.error, '⚠️')
+      return
+    }
+    addToast(`+${CONFIG.EXP_DUEL_WIN} EXP — "${filmTitre}" vu pendant le duel ! 🏆`, '🏆')
     router.refresh()
   }
 
@@ -1497,6 +1529,24 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                         >
                           {`✓ Vu · ${effectivePre === false ? '🏁 marathon' : '⏳ avant'}`}
                         </button>
+                      )
+                    }
+                    if (isMarathonLive && duelWinnerSet.has(film.id)) {
+                      return (
+                        <>
+                          <button
+                            onClick={e => handleQuickDuelWin(e, film.id, film.titre)}
+                            style={{ width: '100%', background: 'rgba(232,196,106,.12)', border: '1px solid rgba(232,196,106,.4)', borderRadius: 6, padding: '.3rem .4rem', fontSize: '.68rem', color: 'var(--gold)', cursor: 'pointer', lineHeight: 1.3, fontWeight: 600, transition: 'background .15s' }}
+                          >
+                            🏆 Je l&apos;ai vu pendant le duel
+                          </button>
+                          <button
+                            onClick={e => handleQuickMarkPre(e, film.id, film.titre)}
+                            style={{ marginTop: '.25rem', width: '100%', background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 6, padding: '.22rem .4rem', fontSize: '.62rem', color: 'var(--text3)', cursor: 'pointer', lineHeight: 1.3 }}
+                          >
+                            ⏳ Vu avant le marathon
+                          </button>
+                        </>
                       )
                     }
                     if (isMarathonLive) {

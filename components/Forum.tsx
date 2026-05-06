@@ -627,7 +627,7 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
                     autoFocus
                     maxLength={2000}
                     rows={3}
-                    style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--gold)', borderRadius: 'var(--r)', padding: '.5rem .7rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.83rem', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--gold)', borderRadius: 'var(--r)', padding: '.5rem .7rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.88rem', lineHeight: 1.6, resize: 'vertical', outline: 'none', boxSizing: 'border-box' }}
                     onKeyDown={e => { if (e.key === 'Escape') setEditingId(null) }}
                   />
                   <div style={{ display: 'flex', gap: '.4rem', justifyContent: 'flex-end' }}>
@@ -636,12 +636,12 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
                   </div>
                 </div>
               ) : (
-                <div style={{ fontSize: '.83rem', color: 'var(--text2)', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{p.content}</div>
+                <div style={{ fontSize: '.88rem', color: 'var(--text2)', lineHeight: 1.75, whiteSpace: 'pre-wrap', overflowWrap: 'break-word' }}>{p.content}</div>
               )}
             </div>
           )
         })}
-        <div ref={bottomRef} />
+        <div ref={bottomRef} style={{ height: 6 }} />
       </div>
 
       {profile ? (
@@ -651,7 +651,7 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
             onChange={e => setText(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) submit() }}
             placeholder="Ton commentaire… (Ctrl+Entrée pour envoyer)"
-            style={{ flex: 1, background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.6rem .8rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.83rem', resize: 'vertical', minHeight: 65, outline: 'none' }}
+            style={{ flex: 1, background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.6rem .8rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.88rem', lineHeight: 1.6, resize: 'vertical', minHeight: 68, outline: 'none' }}
             onFocus={e => { e.target.style.borderColor = 'var(--gold)' }}
             onBlur={e => { e.target.style.borderColor = 'var(--border2)' }}
           />

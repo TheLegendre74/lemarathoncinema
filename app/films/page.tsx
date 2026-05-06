@@ -19,7 +19,7 @@ export default async function FilmsPage() {
   ])
 
   // Données publiques cachées — identiques pour tous les utilisateurs
-  const [films, profileCount, weekFilm, statsRows] = await Promise.all([
+  const [films, profileCount, weekFilm, statsRows, duelWinnersData] = await Promise.all([
     withCache('films:list', 300, async () => {
       const { data } = await supabase
         .from('films')
@@ -39,6 +39,14 @@ export default async function FilmsPage() {
     withCache('film_stats', 90, async () => {
       const { data, error } = await (supabase as any).rpc('get_film_stats')
       return error ? null : (data ?? null)
+    }),
+    withCache('duels:winners', 120, async () => {
+      const { data } = await supabase
+        .from('duels')
+        .select('winner_id')
+        .eq('closed', true)
+        .not('winner_id', 'is', null)
+      return (data ?? []).map((d: { winner_id: number | null }) => d.winner_id).filter((id): id is number => id !== null)
     }),
   ])
 
@@ -136,6 +144,7 @@ export default async function FilmsPage() {
       rattrapageMap={rattrapageMap}
       userWatchlists={userWatchlists}
       preMarathonWindowUntil={(profile as any)?.pre_marathon_window_until ?? null}
+      duelWinnerIds={(duelWinnersData as number[]) ?? []}
     />
   )
 }

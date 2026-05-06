@@ -43,7 +43,6 @@ function WinnerHero({
       background: 'var(--bg2)',
       border: '1px solid rgba(232,196,106,.22)',
       borderRadius: 'var(--rxl)',
-      overflow: 'hidden',
       marginBottom: '1.5rem',
       boxShadow: compact ? undefined : '0 0 48px rgba(232,196,106,.07)',
     }}>
