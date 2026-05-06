@@ -21,9 +21,9 @@ interface Props {
 
 // ── Carte du vainqueur — affiche en gros centré ──────────────────────────────
 function WinnerHero({
-  duel, v1, v2, compact = false,
+  duel, v1, v2, compact = false, profile,
 }: {
-  duel: any; v1: number; v2: number; compact?: boolean
+  duel: any; v1: number; v2: number; compact?: boolean; profile: Profile | null
 }) {
   const [forumOpen, setForumOpen] = useState(false)
   const winner = duel.winner
@@ -178,7 +178,7 @@ function WinnerHero({
         <button className="btn btn-ghost" style={{ fontSize: '.78rem' }} onClick={() => setForumOpen(!forumOpen)}>
           💬 Débattre du duel {forumOpen ? '▲' : '▼'}
         </button>
-        {forumOpen && <div style={{ marginTop: '.8rem' }}><Forum topic={`duel_${duel.id}`} profile={null} /></div>}
+        {forumOpen && <div style={{ marginTop: '.8rem' }}><Forum topic={`duel_${duel.id}`} profile={profile} /></div>}
       </div>
     </div>
   )
@@ -471,6 +471,7 @@ export default function DuelsClient({ profile, duels, myVotes, allVotes }: Props
           v1={getVotes(latestClosed.id, latestClosed.film1_id)}
           v2={getVotes(latestClosed.id, latestClosed.film2_id)}
           compact={!!openDuel}
+          profile={profile}
         />
       )}
 
