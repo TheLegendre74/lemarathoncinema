@@ -1531,27 +1531,17 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                         </button>
                       )
                     }
-                    if (isMarathonLive && duelWinnerSet.has(film.id)) {
-                      return (
-                        <>
-                          <button
-                            onClick={e => handleQuickDuelWin(e, film.id, film.titre)}
-                            style={{ width: '100%', background: 'rgba(232,196,106,.12)', border: '1px solid rgba(232,196,106,.4)', borderRadius: 6, padding: '.3rem .4rem', fontSize: '.68rem', color: 'var(--gold)', cursor: 'pointer', lineHeight: 1.3, fontWeight: 600, transition: 'background .15s' }}
-                          >
-                            🏆 Je l&apos;ai vu pendant le duel
-                          </button>
-                          <button
-                            onClick={e => handleQuickMarkPre(e, film.id, film.titre)}
-                            style={{ marginTop: '.25rem', width: '100%', background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 6, padding: '.22rem .4rem', fontSize: '.62rem', color: 'var(--text3)', cursor: 'pointer', lineHeight: 1.3 }}
-                          >
-                            ⏳ Vu avant le marathon
-                          </button>
-                        </>
-                      )
-                    }
                     if (isMarathonLive) {
                       return (
                         <>
+                          {duelWinnerSet.has(film.id) && (
+                            <button
+                              onClick={e => handleQuickDuelWin(e, film.id, film.titre)}
+                              style={{ width: '100%', marginBottom: '.25rem', background: 'rgba(232,196,106,.12)', border: '1px solid rgba(232,196,106,.4)', borderRadius: 6, padding: '.3rem .4rem', fontSize: '.68rem', color: 'var(--gold)', cursor: 'pointer', lineHeight: 1.3, fontWeight: 600, transition: 'background .15s' }}
+                            >
+                              🏆 Je l&apos;ai vu pendant le duel
+                            </button>
+                          )}
                           <button
                             onClick={e => handleQuickMarkMarathon(e, film.id, film.titre)}
                             style={{ width: '100%', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 6, padding: '.28rem .4rem', fontSize: '.68rem', color: 'var(--text2)', cursor: 'pointer', lineHeight: 1.3, transition: 'background .15s' }}
