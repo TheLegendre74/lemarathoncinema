@@ -33,24 +33,40 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
     negRatingMap[r.film_id].push(r.score)
   })
 
+  // Moyenne bayésienne (formule IMDb) : WR = (v/(v+m))×R + (m/(v+m))×C
+  // v = votes du film, R = moyenne du film, m = seuil, C = moyenne globale
+  const m = 3
+
+  const allPosScores = Object.values(ratingMap).flat()
+  const C = allPosScores.length > 0
+    ? allPosScores.reduce((a, b) => a + b, 0) / allPosScores.length
+    : 7
+  const bayesian = (v: number, R: number) => (v / (v + m)) * R + (m / (v + m)) * C
+
   const ranked = Object.entries(ratingMap)
-    .map(([filmId, scores]) => ({
-      film: filmMap[parseInt(filmId)],
-      avg: scores.reduce((a, b) => a + b, 0) / scores.length,
-      count: scores.length,
-    }))
+    .map(([filmId, scores]) => {
+      const v = scores.length
+      const R = scores.reduce((a, b) => a + b, 0) / v
+      return { film: filmMap[parseInt(filmId)], avg: R, count: v, score: bayesian(v, R) }
+    })
     .filter(x => x.film)
-    .sort((a, b) => b.avg - a.avg || b.count - a.count)
+    .sort((a, b) => b.score - a.score)
+
+  const allNegScores = Object.values(negRatingMap).flat()
+  const negC = allNegScores.length > 0
+    ? allNegScores.reduce((a, b) => a + b, 0) / allNegScores.length
+    : 5
+  const negBayesian = (v: number, R: number) => (v / (v + m)) * R + (m / (v + m)) * negC
 
   const worst = hasRageuxEgg
     ? Object.entries(negRatingMap)
-        .map(([filmId, scores]) => ({
-          film: filmMap[parseInt(filmId)],
-          avg: scores.reduce((a, b) => a + b, 0) / scores.length,
-          count: scores.length,
-        }))
+        .map(([filmId, scores]) => {
+          const v = scores.length
+          const R = scores.reduce((a, b) => a + b, 0) / v
+          return { film: filmMap[parseInt(filmId)], avg: R, count: v, score: negBayesian(v, R) }
+        })
         .filter(x => x.film)
-        .sort((a, b) => b.avg - a.avg || b.count - a.count)
+        .sort((a, b) => b.score - a.score)
     : []
 
   return (
@@ -96,7 +112,7 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
       {!showPires && (
         <>
           <div style={{ color: 'var(--text2)', fontSize: '.83rem', marginBottom: '1rem' }}>
-            {ranked.length} film{ranked.length > 1 ? 's' : ''} noté{ranked.length > 1 ? 's' : ''} par la communauté
+            {ranked.length} film{ranked.length > 1 ? 's' : ''} noté{ranked.length > 1 ? 's' : ''} · classement pondéré par le nombre de votants
           </div>
           {ranked.length === 0 ? (
             <div className="empty">
