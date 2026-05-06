@@ -651,6 +651,50 @@ export async function toggleWatched(filmId: number, filmTitre: string) {
   }
 }
 
+// Marquer un film vainqueur de duel comme vu pendant la séance du duel
+export async function markWatchedDuelWinner(filmId: number) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  if (!isMarathonLive()) return { error: 'Le marathon n\'a pas encore commencé.' }
+
+  const { data: filmCheck } = await supabase.from('films').select('saison').eq('id', filmId).single()
+  if (filmCheck && filmCheck.saison > CONFIG.SAISON_NUMERO) {
+    return { error: 'Ce film sera disponible lors de la saison suivante.' }
+  }
+
+  const { data: duel } = await supabase
+    .from('duels').select('winner_id').eq('winner_id', filmId).eq('closed', true).limit(1).single()
+  if (!duel) return { error: 'Ce film n\'est pas vainqueur d\'un duel.' }
+
+  const { data: existing } = await supabase
+    .from('watched').select('pre').eq('user_id', user.id).eq('film_id', filmId).single()
+
+  // Déjà enregistré comme vu pendant le marathon — pas de double bonus
+  if (existing && !existing.pre) return { error: 'ALREADY_MARATHON' }
+
+  // Vérification limite quotidienne uniquement si nouveau (pas déjà en pre)
+  if (!existing) {
+    const status = await getMarathonDailyStatus()
+    if (status.blocked) return { error: 'BLOCKED', blockedUntil: status.blocked }
+    if (status.count >= status.limit!) {
+      if (status.pendingRequest) return { error: 'PENDING_REQUEST' }
+      return { error: 'LIMIT_REACHED', count: status.count }
+    }
+  }
+
+  // Supprimer l'entrée pré-marathon si elle existe
+  if (existing) {
+    await supabase.from('watched').delete().eq('user_id', user.id).eq('film_id', filmId)
+  }
+
+  await supabase.from('watched').insert({ user_id: user.id, film_id: filmId, pre: false })
+  await supabase.rpc('increment_exp', { user_id: user.id, amount: CONFIG.EXP_DUEL_WIN })
+  await deleteCacheKeys([`user:${user.id}:watched_count`, `user:${user.id}:profile`])
+  revalidatePath('/films')
+  return { action: 'added' }
+}
+
 // ── RATINGS ─────────────────────────────────────────────────
 
 export async function upsertRating(filmId: number, score: number) {

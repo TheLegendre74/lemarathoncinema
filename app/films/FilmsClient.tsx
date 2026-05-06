@@ -5,7 +5,7 @@ import Image from 'next/image'
 import Poster from '@/components/Poster'
 import Forum from '@/components/Forum'
 import { useToast } from '@/components/ToastProvider'
-import { toggleWatched, markWatched, upsertRating, upsertNegativeRating, addFilm, updateFilm, reportFilm, discoverEgg, getFilmWatchProviders, adminSetFilmCategory, setFilmRattrapage, submitMarathonWatchRequest, addFilmToWatchlist, removeFilmFromWatchlist, createWatchlist } from '@/lib/actions'
+import { toggleWatched, markWatched, markWatchedDuelWinner, upsertRating, upsertNegativeRating, addFilm, updateFilm, reportFilm, discoverEgg, getFilmWatchProviders, adminSetFilmCategory, setFilmRattrapage, submitMarathonWatchRequest, addFilmToWatchlist, removeFilmFromWatchlist, createWatchlist } from '@/lib/actions'
 import type { TMDBSuggestion } from '@/lib/tmdb'
 import { CONFIG } from '@/lib/config'
 import { useRouter } from 'next/navigation'
@@ -1228,7 +1228,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
     if (!profile) return
     setLocalWatchedIds(prev => [...prev, filmId])
     setLocalPreOverride(prev => ({ ...prev, [filmId]: false }))
-    const res = await toggleWatched(filmId, filmTitre)
+    const res = await markWatchedDuelWinner(filmId)
     if (res?.error === 'LIMIT_REACHED') {
       setLocalWatchedIds(prev => prev.filter(id => id !== filmId))
       setLocalPreOverride(prev => { const n = { ...prev }; delete n[filmId]; return n })
@@ -1244,7 +1244,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
     if (res?.error) {
       setLocalWatchedIds(prev => prev.filter(id => id !== filmId))
       setLocalPreOverride(prev => { const n = { ...prev }; delete n[filmId]; return n })
-      addToast(res.error, '⚠️')
+      addToast(res.error === 'ALREADY_MARATHON' ? 'Déjà marqué vu pendant le marathon' : res.error, '⚠️')
       return
     }
     addToast(`+${CONFIG.EXP_DUEL_WIN} EXP — "${filmTitre}" vu pendant le duel ! 🏆`, '🏆')
@@ -1521,14 +1521,25 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                   ) : (() => {
                     const effectivePre = film.id in localPreOverride ? localPreOverride[film.id] : watchedPreMap[film.id]
                     if (isWatched) {
-                      // Film déjà vu — bouton de retrait
+                      // Film déjà vu
+                      const canClaimDuel = isMarathonLive && duelWinnerSet.has(film.id) && effectivePre === true
                       return (
-                        <button
-                          onClick={e => handleQuickToggle(e, film.id, film.titre)}
-                          style={{ width: '100%', background: 'rgba(79,217,138,.12)', border: '1px solid rgba(79,217,138,.35)', borderRadius: 6, padding: '.28rem .4rem', fontSize: '.68rem', color: 'var(--green)', cursor: 'pointer', fontWeight: 600, transition: 'background .15s', lineHeight: 1.3 }}
-                        >
-                          {`✓ Vu · ${effectivePre === false ? '🏁 marathon' : '⏳ avant'}`}
-                        </button>
+                        <>
+                          <button
+                            onClick={e => handleQuickToggle(e, film.id, film.titre)}
+                            style={{ width: '100%', background: 'rgba(79,217,138,.12)', border: '1px solid rgba(79,217,138,.35)', borderRadius: 6, padding: '.28rem .4rem', fontSize: '.68rem', color: 'var(--green)', cursor: 'pointer', fontWeight: 600, transition: 'background .15s', lineHeight: 1.3 }}
+                          >
+                            {`✓ Vu · ${effectivePre === false ? '🏁 marathon' : '⏳ avant'}`}
+                          </button>
+                          {canClaimDuel && (
+                            <button
+                              onClick={e => handleQuickDuelWin(e, film.id, film.titre)}
+                              style={{ marginTop: '.25rem', width: '100%', background: 'rgba(232,196,106,.12)', border: '1px solid rgba(232,196,106,.4)', borderRadius: 6, padding: '.3rem .4rem', fontSize: '.68rem', color: 'var(--gold)', cursor: 'pointer', lineHeight: 1.3, fontWeight: 600 }}
+                            >
+                              🏆 Je l&apos;ai vu pendant le duel
+                            </button>
+                          )}
+                        </>
                       )
                     }
                     if (isMarathonLive) {
