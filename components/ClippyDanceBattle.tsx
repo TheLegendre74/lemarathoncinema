@@ -1673,21 +1673,60 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
         private buildFeverNotes(beatIndex: number, beatTime: number): DanceNote[] {
           const patternCount = FEVER_BEAT_PATTERN[beatIndex % FEVER_BEAT_PATTERN.length]
           const density = this.getDensityMultiplier(beatTime)
-          // En mode survie, la densité peut forcer +1 note au-delà du pattern
-          const maxNotes = this.survivalMode
-            ? Math.min(4, Math.max(patternCount, Math.floor(density)))
-            : patternCount
           const si  = beatIndex % FEVER_SEQ.length
           const csi = beatIndex % FEVER_CSEQ.length
           const used  = new Set<string>()
           const notes: DanceNote[] = []
-          notes.push({ time: beatTime, direction: COLS[FEVER_SEQ[si]] })
-          used.add(COLS[FEVER_SEQ[si]])
-          const pool = [COLS[FEVER_CSEQ[csi]], COLS[(FEVER_SEQ[si] + 2) % 4], COLS[(FEVER_SEQ[si] + 3) % 4]]
-          for (const dir of pool) {
-            if (notes.length >= maxNotes) break
-            if (!used.has(dir)) { notes.push({ time: beatTime, direction: dir }); used.add(dir) }
+
+          if (!this.survivalMode) {
+            // Fever normal : comportement original
+            notes.push({ time: beatTime, direction: COLS[FEVER_SEQ[si]] })
+            used.add(COLS[FEVER_SEQ[si]])
+            const pool = [COLS[FEVER_CSEQ[csi]], COLS[(FEVER_SEQ[si] + 2) % 4], COLS[(FEVER_SEQ[si] + 3) % 4]]
+            for (const dir of pool) {
+              if (notes.length >= patternCount) break
+              if (!used.has(dir)) { notes.push({ time: beatTime, direction: dir }); used.add(dir) }
+            }
+            return notes.filter(n => n.time <= this.trackDurationMs)
           }
+
+          // ── Mode survie : max 2 simultanées + densité verticale progressive ──
+          // Note principale
+          const dir1 = COLS[FEVER_SEQ[si]]
+          notes.push({ time: beatTime, direction: dir1 })
+          used.add(dir1)
+
+          // Double (2 notes en même temps) : fréquence croissante avec la densité
+          // density 2→2.5 : jamais · 2.5→3 : 1/3 des beats · 3→4 : 1/2 · 4+ : tous
+          const doubleEvery = density >= 4.0 ? 1 : density >= 3.0 ? 2 : density >= 2.5 ? 3 : 0
+          if (doubleEvery > 0 && beatIndex % doubleEvery === 0) {
+            const dir2 = COLS[FEVER_CSEQ[csi]]
+            if (!used.has(dir2)) { notes.push({ time: beatTime, direction: dir2 }); used.add(dir2) }
+          }
+
+          // Notes verticales décalées (remplacent les triples horizontaux)
+          // Le gap diminue avec la densité → timing plus serré = plus difficile
+          if (density >= 2.5) {
+            const subGap = density >= 5.0
+              ? Math.round(FEVER_BEAT_MS * 0.28)
+              : density >= 4.0
+              ? Math.round(FEVER_BEAT_MS * 0.37)
+              : Math.round(FEVER_BEAT_MS * 0.48)
+            const subDir = COLS[(FEVER_SEQ[si] + 2) % 4]
+            if (!used.has(subDir)) {
+              notes.push({ time: beatTime + subGap, direction: subDir })
+              used.add(subDir)
+            }
+            // Deuxième note verticale à très haute densité (density ≥ 5)
+            if (density >= 5.0) {
+              const subDir2 = COLS[(FEVER_CSEQ[csi] + 2) % 4]
+              if (!used.has(subDir2)) {
+                notes.push({ time: beatTime + subGap * 2, direction: subDir2 })
+                used.add(subDir2)
+              }
+            }
+          }
+
           return notes.filter(n => n.time <= this.trackDurationMs)
         }
 
