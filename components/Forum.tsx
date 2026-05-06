@@ -588,7 +588,7 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
         </div>
       )}
 
-      <div style={{ maxHeight: 400, overflowY: 'auto', paddingRight: 4 }}>
+      <div style={{ maxHeight: 400, overflowY: 'auto', paddingRight: 4, paddingBottom: 6 }}>
         {posts.map(p => {
           const isMe = profile?.id === p.user_id
           const isAdmin = profile?.is_admin
@@ -636,7 +636,7 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
                   </div>
                 </div>
               ) : (
-                <div style={{ fontSize: '.83rem', color: 'var(--text2)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{p.content}</div>
+                <div style={{ fontSize: '.83rem', color: 'var(--text2)', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{p.content}</div>
               )}
             </div>
           )
