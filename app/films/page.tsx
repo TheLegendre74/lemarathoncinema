@@ -40,13 +40,15 @@ export default async function FilmsPage() {
       const { data, error } = await (supabase as any).rpc('get_film_stats')
       return error ? null : (data ?? null)
     }),
-    withCache('duels:winners', 120, async () => {
+    withCache(`duels:winners:s${cfg.SAISON_NUMERO}`, 120, async () => {
       const { data } = await supabase
         .from('duels')
-        .select('winner_id')
+        .select('winner_id, winner:films!duels_winner_id_fkey(saison)')
         .eq('closed', true)
         .not('winner_id', 'is', null)
-      return (data ?? []).map((d: { winner_id: number | null }) => d.winner_id).filter((id): id is number => id !== null)
+      return (data ?? [])
+        .filter((d: any) => d.winner?.saison === cfg.SAISON_NUMERO)
+        .map((d: any) => d.winner_id as number)
     }),
   ])
 
