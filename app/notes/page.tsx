@@ -184,11 +184,9 @@ function FilmRow({ film, avg, count, score, rank, mode }: { film: Film; avg: num
       </div>
       <div style={{ textAlign: 'right', flexShrink: 0 }}>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: isPires ? 'var(--red)' : 'var(--gold)' }}>
-          {score.toFixed(1)}
+          {avg.toFixed(1)}
         </div>
-        <div style={{ fontSize: '.67rem', color: 'var(--text3)' }}>
-          moy. {avg.toFixed(1)} · {count} vote{count > 1 ? 's' : ''}
-        </div>
+        <div style={{ fontSize: '.67rem', color: 'var(--text3)' }}>{count} vote{count > 1 ? 's' : ''}</div>
       </div>
     </div>
   )
