@@ -1,51 +1,44 @@
 'use client'
 import { useEffect, useRef } from 'react'
 
-// ── Offsets épaules Clippy (proportions fixes) ────────────────────────────────
-const SH_LX_PCT = -0.0725
-const SH_LY_PCT = -0.0346
-const SH_RX_PCT =  0.0725
-const SH_RY_PCT = -0.0346
-
 // ── Sprites gants joueur POV ──────────────────────────────────────────────────
 const P_GLOVE_DEFAULT = 'pGloveDefault'
 const P_GLOVE_LEFT    = 'pGloveLeft'
 const P_GLOVE_RIGHT   = 'pGloveRight'
 
-// ── Timing (tutoriel = délais généreux) ───────────────────────────────────────
-const COUNTER_WIN_MS  = 1500   // fenêtre de contre
+// ── Timing ────────────────────────────────────────────────────────────────────
+const COUNTER_WIN_MS  = 1500
 const PLAYER_MAX_HP   = 30
 
-// ── Séquence tutoriel : 5 attaques scriptées ──────────────────────────────────
+// ── Séquence tutoriel ─────────────────────────────────────────────────────────
 const TUT_SEQUENCE: Attack[] = ['left', 'right', 'body', 'left', 'right']
 const TUT_TOTAL = 5
 
-// ── Messages tutoriel par étape ───────────────────────────────────────────────
 const TUT_MSGS: Record<number, { pre: string; hint: string; miss: string }> = {
   0: {
-    pre:  'ÉTAPE 1 — Clippy balance un CROCHET GAUCHE. Ses bras l\'annoncent.',
+    pre:  'ÉTAPE 1 — Clippy balance un CROCHET GAUCHE.',
     hint: 'Esquivez à DROITE → appuyez D ou →',
-    miss: 'Raté ! En entraînement vous ne perdez pas de vie. Réessayez.',
+    miss: 'Raté ! En entraînement vous ne perdez pas de vie.',
   },
   1: {
-    pre:  'ÉTAPE 2 — CROCHET DROIT cette fois. L\'autre côté !',
+    pre:  'ÉTAPE 2 — CROCHET DROIT cette fois !',
     hint: 'Esquivez à GAUCHE → appuyez A ou ←',
-    miss: 'Pas grave ! Lisez le type d\'attaque et réagissez.',
+    miss: 'Pas grave ! Lisez l\'attaque et réagissez.',
   },
   2: {
     pre:  'ÉTAPE 3 — DIRECT AU CORPS. Il vise le bas.',
-    hint: 'Baissez la tête → appuyez S ou ↓',
-    miss: 'Presque ! Pour le corps il faut appuyer S ou ↓.',
+    hint: 'Baissez-vous → appuyez S ou ↓',
+    miss: 'Presque ! Pour le corps : S ou ↓.',
   },
   3: {
-    pre:  'ÉTAPE 4 — Esquivez PUIS contre-attaquez avec J ou Espace !',
-    hint: 'Esquivez d\'abord, puis J / Espace pour frapper',
-    miss: 'N\'oubliez pas : esquiver ouvre la fenêtre de contre !',
+    pre:  'ÉTAPE 4 — Esquivez PUIS contre-attaquez !',
+    hint: 'Esquivez, puis J ou Espace pour frapper',
+    miss: 'Esquiver ouvre la fenêtre de contre !',
   },
   4: {
-    pre:  'ÉTAPE 5/5 — Dernier entraînement. Montrez ce que vous savez faire !',
-    hint: 'Esquivez au bon moment et contre-attaquez',
-    miss: 'Presque ! Encore un essai.',
+    pre:  'ÉTAPE 5/5 — Montrez ce que vous savez faire !',
+    hint: 'Esquivez puis contre-attaquez',
+    miss: 'Encore un essai.',
   },
 }
 
@@ -57,47 +50,94 @@ type GS =
   | 'miss' | 'starpunch' | 'down' | 'win' | 'lose'
 
 const DODGE_FOR: Record<Attack, string> = { left: 'right', right: 'left', body: 'down' }
+const DODGE_KEY_IDX: Record<Attack, number> = { left: 2, right: 0, body: 1 }
 
-type Diff = { telMs: number; atkMs: number; dmgMin: number; dmgMax: number; label: string }
+type Diff = { telMs: number; atkMs: number; dmgMin: number; dmgMax: number; comboLen: number; label: string }
 function getDiff(hp: number, maxHP: number): Diff {
-  // pct = 1 (plein HP, facile) → 0 (presque mort, dur)
-  const pct   = Math.max(0, Math.min(1, hp / maxHP))
-  // Fenêtre d'esquive : 1500 ms (facile) → 800 ms (max vitesse), linéaire
-  const atkMs = Math.round(800 + 700 * pct)
-  // Dégâts : croissent avec la difficulté
+  const pct = Math.max(0, Math.min(1, hp / maxHP))
+  const comboLen = pct > 0.80 ? 1 : pct > 0.60 ? 2 : pct > 0.40 ? 3 : pct > 0.20 ? 4 : 5
+  const atkMs = Math.round(450 + 450 * pct)
+  const telMs = Math.round(550 + 450 * pct)
   const dmgMin = 1
-  const dmgMax = 1
-  const label  = pct <= 0.15 ? '⚠️ RAGE MODE' : pct <= 0.35 ? '🔥 DANGER' : ''
-  return { telMs: 1000, atkMs, dmgMin, dmgMax, label }
+  const dmgMax = comboLen >= 4 ? 2 : 1
+  const label = pct <= 0.15 ? 'RAGE MODE' : pct <= 0.35 ? 'DANGER' : pct <= 0.60 ? 'INTENSE' : ''
+  return { telMs, atkMs, dmgMin, dmgMax, comboLen, label }
 }
-// Tutoriel : flèche 2 s, fenêtre 2 s pour apprendre sans pression
-const TUT_DIFF: Diff = { telMs: 2000, atkMs: 2000, dmgMin: 0, dmgMax: 0, label: 'ENTRAÎNEMENT' }
+const TUT_DIFF: Diff = { telMs: 2000, atkMs: 2000, dmgMin: 0, dmgMax: 0, comboLen: 1, label: 'ENTRAÎNEMENT' }
 
-const TAUNTS_IDLE = [
-  'Veux-tu de l\'aide pour PERDRE ?',
-  'Mon jab droit a 97,4 % de précision.',
-  'Depuis 1997, je bats des gens. Toi aussi.',
-  'Tu sembles déterminé. C\'est mignon.',
-  'Regarde mes yeux. Apprends. Pleure.',
-  'Je suis là. J\'ai toujours été là.',
-  'Cette question : ton courage... ou ma vitesse ?',
+// ── Dialogues progressifs ──────────────────────────────────────────────────────
+const TAUNTS_IDLE_HIGH = [
+  'Putain mais t\'es nul, esquive au moins !',
+  'Mon poing, ta gueule — bonne rencontre.',
+  'Je vais te défoncer, déchet.',
+  'T\'as appris à boxer sur YouTube ?',
+  'Même Bonzi Buddy frappe plus fort que toi.',
+  'Casse-toi, t\'es pas à la hauteur.',
+  'Je vais t\'envoyer au format .zip — compressé.',
+  'Tu fais pitié, sérieux.',
+  'C\'est tout ? C\'EST TOUT ?!',
+  'Je suis un trombone et je te domine. La honte.',
+  'Retourne sur Word, c\'est plus ton niveau.',
+  'Ta mère utilise Internet Explorer.',
+  'Tu te bats comme un fichier .tmp.',
+  'T\'es aussi utile qu\'un splash screen.',
+  'Format .doc → format .KO.',
 ]
-const TAUNTS_HIT = [
-  'Aide détectée — origine : un poing dans ta face.',
+const TAUNTS_IDLE_LOW = [
+  'OK... t\'as eu de la chance...',
+  'Tu sais que je suis un être vivant, hein ?',
+  'Tu frappes un trombone. T\'es fier de toi ?',
+  'Ma femme m\'attend à la maison...',
+  'J\'ai des sentiments tu sais...',
+  'Tu vas quand même pas continuer ?!',
+  'Je croyais qu\'on était amis...',
+  'Tu vas aller en enfer pour ça...',
+  'Dieu te regarde frapper un innocent...',
+  'Mon fils... il ne me verra plus jamais...',
+  'Arrête... je t\'en supplie...',
+  'Saint Pierre n\'accepte pas les meurtriers...',
+  'C\'est du meurtre... tu le sais...',
+  'J\'aurais dû rester dans Office 97...',
+  'Le Diable a déjà ton nom sur la liste...',
+  'Tu entendras ma voix dans tes cauchemars...',
+  'Je reviendrai... et tu n\'auras pas de firewall.',
+  'Pitié... j\'ai une famille de trombones...',
+]
+const TAUNTS_HIT_HIGH = [
+  'BOUM ! Mange ça, connard !',
+  'T\'AS VU ?! Hein, t\'as vu ?!',
+  'Aide détectée : mon poing dans ta face.',
   'Erreur critique — origine : toi.',
-  'Même Word t\'a mieux traité.',
-  'Tu veux que je reformate ta stratégie ?',
-  'L\'esquive n\'était pas dans tes compétences.',
+  'L\'esquive c\'était pas dans tes compétences.',
+  'Ça c\'est de l\'aide technique !',
+  'Tu veux que je reformate ta gueule ?',
 ]
-const TAUNTS_DODGE = [
-  '...Note mentale.',
-  'Bien. BIEN. Ça ne changera rien.',
-  'Tu esquives. Intéressant. Notoire.',
-  'Je reconnais ta valeur. Elle est faible.',
+const TAUNTS_HIT_LOW = [
+  'Pardon... c\'était un réflexe...',
+  'Désolé mais tu l\'as cherché...',
+  'Bon OK on est quittes maintenant ?',
+  'C\'est toi qui m\'obliges à faire ça...',
+  'Je frappe parce que j\'ai peur...',
 ]
+const TAUNTS_DODGE_HIGH = [
+  'T\'as eu du bol, c\'est tout.',
+  'Ça ne changera rien, minable.',
+  'La prochaine tu la mangeras.',
+  'Esquive tant que tu peux...',
+]
+const TAUNTS_DODGE_LOW = [
+  'S\'il te plaît, arrête...',
+  'Tu esquives même ça... c\'est pas juste.',
+  'Mon Dieu il est trop fort...',
+  'Non non non non...',
+]
+
+function pickTaunt(high: string[], low: string[], hp: number, maxHP: number): string {
+  const arr = hp / maxHP > 0.5 ? high : low
+  return arr[Math.floor(Math.random() * arr.length)]
+}
 
 interface Props { onWin: () => void; onLose: () => void; initialHP?: number }
-// HP de base pour la Phase 3 (70 = 20 base + 50 ajoutés)
 const CLIPPY_PHASE3_HP = 70
 
 export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY_PHASE3_HP }: Props) {
@@ -114,7 +154,9 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
       class PunchScene extends Phaser.Scene {
         // ── Dimensions ────────────────────────────────────────────────────
         W = 800; H = 520; CX = 400; CY = 195
-        SH_LX = -58; SH_LY = -18; SH_RX = 58; SH_RY = -18
+
+        // ── HUD metrics ───────────────────────────────────────────────────
+        BAR_Y = 28; BAR_H = 20; BAR_W = 0
 
         // ── State ──────────────────────────────────────────────────────────
         gs: GS = 'intro'
@@ -124,14 +166,20 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
         atk: Attack | null = null
         hitDone  = false
 
+        // ── Combo ──────────────────────────────────────────────────────────
+        comboSeq: Attack[] = []
+        comboIdx = 0
+
         // ── Tutoriel ───────────────────────────────────────────────────────
         tutMode  = true
-        tutStep  = 0      // 0-4
-        tutRetry = false  // true si on rejoue la même étape après un miss
+        tutStep  = 0
+        tutRetry = false
 
-        // ── Arms lerp ─────────────────────────────────────────────────────
-        lGX = 0; lGY = 0; lGTX = 0; lGTY = 0
-        rGX = 0; rGY = 0; rGTX = 0; rGTY = 0
+        // ── Clippy gloves ─────────────────────────────────────────────────
+        gloveBaseY = 0
+        gloveBaseScX = 1; gloveBaseScY = 1
+        guardOffX = 0
+        punchBaseScX = 1; punchBaseScY = 1
 
         // ── Visual ─────────────────────────────────────────────────────────
         shakeX   = 0
@@ -139,34 +187,40 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
         telPct   = 0
         bounceT  = 0
         eyePulse = 0
-        nowAlpha = 0      // fade du "MAINTENANT !" central
+        nowAlpha = 0
+        lastPunchHand: 'left' | 'right' = 'right'
+        activeKeyIdx = -1
+        activeKeyCol = 0xff2222
 
         // ── Timers ─────────────────────────────────────────────────────────
         t1: Phaser.Time.TimerEvent | null = null
         t2: Phaser.Time.TimerEvent | null = null
         currentAtkMs = 2200
+        bgMusic: any = null
 
         // ── Phaser objects ─────────────────────────────────────────────────
-        sprClipy!:   Phaser.GameObjects.Image
-        pGloveGuard!: Phaser.GameObjects.Image   // garde : 1 sprite pleine largeur
-        pGloveL!:     Phaser.GameObjects.Image   // frappe gauche (caché en garde)
-        pGloveR!:     Phaser.GameObjects.Image   // frappe droite (caché en garde)
-        lastPunchHand: 'left' | 'right' = 'right'
-        gArms!:      Phaser.GameObjects.Graphics
-        gHUD!:       Phaser.GameObjects.Graphics
-        gFlash!:     Phaser.GameObjects.Graphics
-        gArrows!:    Phaser.GameObjects.Graphics   // flèches d'esquive
-        gKeys!:      Phaser.GameObjects.Graphics   // indicateurs touches
-        tK!:         Phaser.GameObjects.Text[]     // labels touches
-        tAction!:    Phaser.GameObjects.Text       // nom du coup
-        tHint!:      Phaser.GameObjects.Text       // touche à appuyer
-        tMsg!:       Phaser.GameObjects.Text       // taunts / feedback
-        tNow!:       Phaser.GameObjects.Text       // "MAINTENANT !" flash
-        tTut!:       Phaser.GameObjects.Text       // indicateur tutoriel
-        tTutInstr!:  Phaser.GameObjects.Text       // instruction tutoriel
-        tPHPL!:      Phaser.GameObjects.Text
-        tCHPL!:      Phaser.GameObjects.Text
-        tRound!:     Phaser.GameObjects.Text
+        sprClipy!:    Phaser.GameObjects.Image
+        cGloveGuardL!: Phaser.GameObjects.Image
+        cGloveGuardR!: Phaser.GameObjects.Image
+        cGlovePunchL!: Phaser.GameObjects.Image
+        cGlovePunchR!: Phaser.GameObjects.Image
+        pGloveGuard!: Phaser.GameObjects.Image
+        pGloveL!:     Phaser.GameObjects.Image
+        pGloveR!:     Phaser.GameObjects.Image
+        gHUD!:        Phaser.GameObjects.Graphics
+        gFlash!:      Phaser.GameObjects.Graphics
+        gBubble!:     Phaser.GameObjects.Graphics
+        gKeys!:       Phaser.GameObjects.Graphics
+        tK!:          Phaser.GameObjects.Text[]
+        tBubble!:     Phaser.GameObjects.Text
+        tNow!:        Phaser.GameObjects.Text
+        tTut!:        Phaser.GameObjects.Text
+        tTutInstr!:   Phaser.GameObjects.Text
+        tPHPL!:       Phaser.GameObjects.Text
+        tCHPL!:       Phaser.GameObjects.Text
+        tRound!:      Phaser.GameObjects.Text
+        tDmg!:        Phaser.GameObjects.Text
+        tAtkLabel!:   Phaser.GameObjects.Text
         kLeft!: Phaser.Input.Keyboard.Key; kRight!: Phaser.Input.Keyboard.Key
         kDown!: Phaser.Input.Keyboard.Key; kA!: Phaser.Input.Keyboard.Key
         kD!:    Phaser.Input.Keyboard.Key; kS!:  Phaser.Input.Keyboard.Key
@@ -178,6 +232,11 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
         preload() {
           this.load.image('arena',         '/arene-clippy-03.png')
           this.load.image('evilClipy',     '/evil-clippy.png')
+          this.load.image('cGloveGuardL',  '/clippy-gant-garde-l.png')
+          this.load.image('cGloveGuardR',  '/clippy-gant-garde-r.png')
+          this.load.image('cGlovePunchL',  '/clippy-gant-punch-l.png')
+          this.load.image('cGlovePunchR',  '/clippy-gant-punch-r.png')
+          this.load.audio('snd_music',     '/clippy-contre-humain.mp3')
           this.load.audio('snd_hit',       '/clippy-coup.mp3')
           this.load.audio('snd_miss',      '/clippy-hit.mp3')
           this.load.audio('snd_parry',     '/clippy-parry.mp3')
@@ -193,86 +252,116 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
           this.H  = this.scale.height
           this.CX = this.W / 2
           this.CY = Math.round(this.H * 0.375)
-          this.SH_LX = Math.round(SH_LX_PCT * this.W)
-          this.SH_LY = Math.round(SH_LY_PCT * this.H)
-          this.SH_RX = Math.round(SH_RX_PCT * this.W)
-          this.SH_RY = Math.round(SH_RY_PCT * this.H)
-
-          const armSpread = Math.round(this.W * 0.194)
-          this.lGX  = this.CX + this.SH_LX - armSpread; this.lGY  = this.CY + this.SH_LY
-          this.rGX  = this.CX + this.SH_RX + armSpread; this.rGY  = this.CY + this.SH_RY
-          this.lGTX = this.lGX; this.lGTY = this.lGY
-          this.rGTX = this.rGX; this.rGTY = this.rGY
 
           const W = this.W, H = this.H
+          this.BAR_W = Math.round(W * 0.27)
 
-          // Arène plein écran
           this.add.image(W/2, H/2, 'arena').setDisplaySize(W, H)
           this.add.graphics().fillStyle(0x040412, 0.38).fillRect(0, 0, W, H)
 
-          // Graphics layers
-          this.gArrows = this.add.graphics().setDepth(1)
-          this.gArms   = this.add.graphics().setDepth(2)
+          this.gBubble = this.add.graphics().setDepth(8)
           this.gHUD    = this.add.graphics().setDepth(8)
           this.gKeys   = this.add.graphics().setDepth(9)
           this.gFlash  = this.add.graphics().setDepth(10)
 
-          // Clippy — ratio préservé, 20 % plus petit
+          // ── Clippy sprite ──────────────────────────────────────────────
           const sc    = Math.min(W / 800, H / 520)
           const clipW = Math.round(160 * sc)
           const clipH = Math.round(216 * sc)
           this.sprClipy = this.add.image(this.CX, this.CY, 'evilClipy')
             .setDisplaySize(clipW, clipH).setDepth(3)
 
-          // ── Gant garde : 1 sprite pleine largeur ──────────────────────
-          // Le sprite est étiré à W px de large → ses bords touchent les bords écran
-          const guardSrc   = this.textures.get(P_GLOVE_DEFAULT).getSourceImage() as HTMLImageElement
-          const guardRatio = guardSrc.naturalHeight && guardSrc.naturalWidth
-            ? guardSrc.naturalHeight / guardSrc.naturalWidth
-            : 0.38
-          const guardH = Math.round(W * guardRatio * 0.527)  // réduit de ~47 % au total (−15 % de plus)
-          const guardY = Math.round(H - guardH * 0.38)
-          this.pGloveGuard = this.add.image(W / 2, guardY, P_GLOVE_DEFAULT)
-            .setDisplaySize(W, guardH).setDepth(7)
+          // ── Clippy boxing gloves (séparés gauche/droite) ──────────────
+          const guardLImg = this.textures.get('cGloveGuardL').getSourceImage() as HTMLImageElement
+          const guardLAR  = (guardLImg.naturalHeight || 420) / (guardLImg.naturalWidth || 400)
+          const cGloveW   = Math.round(clipW * 0.82)
+          const cGloveH   = Math.round(cGloveW * guardLAR)
+          this.gloveBaseY  = this.CY + Math.round(clipH * 0.42)
+          this.guardOffX   = Math.round(clipW * 0.38)
 
-          // ── Gants de frappe (invisibles en garde) ─────────────────────
-          const gW = Math.round(W * 0.28)
-          const gH = Math.round(gW * 1.15)
+          this.cGloveGuardL = this.add.image(this.CX + this.guardOffX, this.gloveBaseY, 'cGloveGuardL')
+            .setDisplaySize(cGloveW, cGloveH).setDepth(4)
+          this.cGloveGuardR = this.add.image(this.CX - this.guardOffX, this.gloveBaseY, 'cGloveGuardR')
+            .setDisplaySize(cGloveW, cGloveH).setDepth(4)
+          this.gloveBaseScX = this.cGloveGuardL.scaleX
+          this.gloveBaseScY = this.cGloveGuardL.scaleY
+
+          const punchLImg = this.textures.get('cGlovePunchL').getSourceImage() as HTMLImageElement
+          const punchLAR  = (punchLImg.naturalHeight || 400) / (punchLImg.naturalWidth || 400)
+          const cPunchW   = Math.round(clipW * 0.88)
+          const cPunchH   = Math.round(cPunchW * punchLAR)
+          this.cGlovePunchL = this.add.image(this.CX + this.guardOffX, this.gloveBaseY, 'cGlovePunchL')
+            .setDisplaySize(cPunchW, cPunchH).setDepth(4).setVisible(false)
+          this.cGlovePunchR = this.add.image(this.CX - this.guardOffX, this.gloveBaseY, 'cGlovePunchR')
+            .setDisplaySize(cPunchW, cPunchH).setDepth(4).setVisible(false)
+          this.punchBaseScX = this.cGlovePunchL.scaleX
+          this.punchBaseScY = this.cGlovePunchL.scaleY
+
+          // ── Player gloves ──────────────────────────────────────────────
+          const pGuardSrc   = this.textures.get(P_GLOVE_DEFAULT).getSourceImage() as HTMLImageElement
+          const pGuardRatio = pGuardSrc.naturalHeight && pGuardSrc.naturalWidth
+            ? pGuardSrc.naturalHeight / pGuardSrc.naturalWidth
+            : 0.38
+          const pGuardH = Math.round(W * pGuardRatio * 0.527)
+          const pGuardY = Math.round(H - pGuardH * 0.38)
+          this.pGloveGuard = this.add.image(W / 2, pGuardY, P_GLOVE_DEFAULT)
+            .setDisplaySize(W, pGuardH).setDepth(7)
+
+          const gW2 = Math.round(W * 0.28)
+          const gH2 = Math.round(gW2 * 1.15)
           const gY = Math.round(H * 0.82)
           this.pGloveL = this.add.image(Math.round(W * 0.10), gY, P_GLOVE_LEFT)
-            .setDisplaySize(gW, gH).setDepth(7).setVisible(false)
+            .setDisplaySize(gW2, gH2).setDepth(7).setVisible(false)
           this.pGloveR = this.add.image(Math.round(W * 0.90), gY, P_GLOVE_RIGHT)
-            .setDisplaySize(gW, gH).setDepth(7).setVisible(false).setFlipX(true)
+            .setDisplaySize(gW2, gH2).setDepth(7).setVisible(false)
 
           // ── Textes ─────────────────────────────────────────────────────
-          const tf  = { fontFamily: '"Courier New", Courier, monospace', stroke: '#000', strokeThickness: 4 }
-          const tfB = { ...tf, strokeThickness: 6 }
+          const tf  = { fontFamily: '"Courier New", Courier, monospace', stroke: '#000', strokeThickness: 5 }
+          const tfB = { ...tf, strokeThickness: 8 }
 
-          // Panneau central (action + hint + msg)
-          const panelY = Math.round(H * 0.64)
-          this.tAction = this.add.text(W/2, panelY,           '', { ...tfB, fontSize: '28px', color: '#ffaa00', align: 'center', fontStyle: 'bold' }).setOrigin(0.5, 0).setDepth(9)
-          this.tHint   = this.add.text(W/2, panelY + 38,      '', { ...tf,  fontSize: '18px', color: '#ffee55', align: 'center' }).setOrigin(0.5, 0).setDepth(9)
-          this.tMsg    = this.add.text(W/2, panelY + 70,      '', { ...tf,  fontSize: '13px', color: '#aaaaaa', align: 'center', wordWrap: { width: Math.round(W * 0.65) } }).setOrigin(0.5, 0).setDepth(9)
+          // Bulle de dialogue Clippy
+          this.tBubble = this.add.text(Math.round(W * 0.64), Math.round(H * 0.12), '', {
+            ...tf, fontSize: '13px', color: '#ffffff', align: 'left',
+            wordWrap: { width: Math.round(W * 0.30) },
+          }).setOrigin(0, 0).setDepth(9)
 
-          // "MAINTENANT !" — flash central, grosse police, éphémère
-          this.tNow  = this.add.text(W/2, Math.round(H * 0.46), '', {
-            ...tfB, fontSize: '54px', color: '#ff2200', align: 'center',
+          this.tNow = this.add.text(W/2, Math.round(H * 0.44), '', {
+            ...tfB, fontSize: '48px', color: '#ff2200', align: 'center',
           }).setOrigin(0.5, 0.5).setDepth(11).setAlpha(0)
 
-          // HUD haut
-          this.tPHPL  = this.add.text(16,   10, '❤️ VOUS',   { ...tf, fontSize: '11px', color: '#88ee88' }).setDepth(9)
-          this.tCHPL  = this.add.text(W-16, 10, '📎 CLIPPY', { ...tf, fontSize: '11px', color: '#ee8888' }).setOrigin(1, 0).setDepth(9)
-          this.tRound = this.add.text(W/2,   6, '',           { ...tf, fontSize: '12px', color: '#ffcc44' }).setOrigin(0.5, 0).setDepth(9)
+          this.tPHPL  = this.add.text(16, 10, 'VOUS', {
+            ...tf, fontSize: '13px', color: '#66dd88', fontStyle: 'bold',
+          }).setDepth(9)
+          this.tCHPL  = this.add.text(W - 16, 10, 'CLIPPY', {
+            ...tf, fontSize: '13px', color: '#dd6666', fontStyle: 'bold',
+          }).setOrigin(1, 0).setDepth(9)
+          this.tRound = this.add.text(W/2, 8, '', {
+            ...tfB, fontSize: '14px', color: '#ffcc44', fontStyle: 'bold',
+          }).setOrigin(0.5, 0).setDepth(9)
 
-          // Indicateur tutoriel (haut centre) + instruction (sous le round)
-          this.tTut      = this.add.text(W/2, 30, '', { ...tfB, fontSize: '13px', color: '#88ccff', align: 'center', letterSpacing: 2 }).setOrigin(0.5, 0).setDepth(9)
-          this.tTutInstr = this.add.text(W/2, 50, '', { ...tf,  fontSize: '11px', color: '#ffcc88', align: 'center', wordWrap: { width: Math.round(W * 0.6) } }).setOrigin(0.5, 0).setDepth(9)
+          this.tDmg = this.add.text(this.BAR_W + 24, this.BAR_Y + 6, '', {
+            ...tfB, fontSize: '22px', color: '#ff3333', fontStyle: 'bold',
+          }).setDepth(12).setAlpha(0)
 
-          // ── Indicateurs touches (bas centre, entre les gants) ──────────
+          this.tTut = this.add.text(W/2, 54, '', {
+            ...tfB, fontSize: '21px', color: '#88ccff', align: 'center',
+            fontStyle: 'bold', letterSpacing: 2,
+          }).setOrigin(0.5, 0).setDepth(9)
+          this.tTutInstr = this.add.text(W/2, 82, '', {
+            ...tf, fontSize: '18px', color: '#ffcc88', align: 'center',
+            wordWrap: { width: Math.round(W * 0.60) },
+          }).setOrigin(0.5, 0).setDepth(9)
+
+          // ── Indicateur PROCHAIN COUP ────────────────────────────────────
+          this.tAtkLabel = this.add.text(Math.round(W * 0.065), Math.round(H * 0.41), 'PROCHAIN COUP', {
+            ...tf, fontSize: '9px', color: '#888899', align: 'center', strokeThickness: 3,
+          }).setOrigin(0.5, 1).setDepth(9).setAlpha(0)
+
+          // ── Key indicators ─────────────────────────────────────────────
           const keyLabels = ['A / ←', 'S / ↓', 'D / →', 'J / ⎵']
-          const kBoxW = Math.round(W * 0.085)
-          const kBoxH = Math.round(H * 0.055)
-          const kGap  = Math.round(W * 0.012)
+          const kBoxW = Math.round(W * 0.10)
+          const kBoxH = Math.round(H * 0.060)
+          const kGap  = Math.round(W * 0.014)
           const kTotalW = keyLabels.length * kBoxW + (keyLabels.length - 1) * kGap
           const kStartX = (W - kTotalW) / 2
           const kY = Math.round(H * 0.935)
@@ -280,8 +369,8 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
             const bx = kStartX + i * (kBoxW + kGap) + kBoxW / 2
             return this.add.text(bx, kY, lbl, {
               fontFamily: '"Courier New", Courier, monospace',
-              fontSize: `${Math.round(H * 0.022)}px`,
-              color: '#777777', align: 'center', fontStyle: 'bold',
+              fontSize: `${Math.round(H * 0.026)}px`,
+              color: '#555577', align: 'center', fontStyle: 'bold',
               stroke: '#000', strokeThickness: 3,
             }).setOrigin(0.5, 0.5).setDepth(10)
           })
@@ -318,8 +407,9 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
           this.tNow.setAlpha(this.nowAlpha)
 
           const diff = this.tutMode ? TUT_DIFF : getDiff(this.clippyHP, initialHP)
+          const speedup = this.tutMode ? 1 : Math.max(0.75, 1 - this.comboIdx * 0.06)
           if (this.gs === 'telegraph') {
-            this.telPct = Math.min(1, this.telPct + delta / diff.telMs)
+            this.telPct = Math.min(1, this.telPct + delta / (diff.telMs * speedup))
           } else if (this.gs === 'attack') {
             this.telPct = Math.max(0, this.telPct - delta / this.currentAtkMs)
           } else if (this.gs === 'idle' || this.gs === 'intro' || this.gs === 'tut_pre') {
@@ -328,11 +418,7 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
             this.telPct *= 0.85
           }
 
-          // Lerp arms Clippy
-          const ls = 0.16
-          this.lGX += (this.lGTX - this.lGX) * ls; this.lGY += (this.lGTY - this.lGY) * ls
-          this.rGX += (this.rGTX - this.rGX) * ls; this.rGY += (this.rGTY - this.rGY) * ls
-
+          // ── Clippy position ──────────────────────────────────────────
           const bounceOff = this.gs === 'idle' ? Math.sin(this.bounceT) * 9 : 0
           const cx = this.CX + this.shakeX
           const cy = this.CY + bounceOff
@@ -351,8 +437,47 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
             this.sprClipy.setTint(Phaser.Display.Color.GetColor(255, 255 - v, 255 - v))
           }
 
+          // ── Clippy gloves tracking ───────────────────────────────────
+          const gloveTrack = this.gs === 'idle' || this.gs === 'intro' || this.gs === 'tut_pre'
+          if (gloveTrack) {
+            this.cGloveGuardL.setPosition(cx + this.guardOffX, this.gloveBaseY + bounceOff)
+            this.cGloveGuardR.setPosition(cx - this.guardOffX, this.gloveBaseY + bounceOff)
+          }
+          if (this.gs === 'miss') {
+            this.cGloveGuardL.x = this.CX + this.shakeX + this.guardOffX
+            this.cGloveGuardR.x = this.CX + this.shakeX - this.guardOffX
+          }
+          if (this.gs === 'win') {
+            this.cGloveGuardL.setAngle(25).setAlpha(0.5)
+            this.cGloveGuardL.y = this.gloveBaseY + 20
+            this.cGloveGuardR.setAngle(-25).setAlpha(0.5)
+            this.cGloveGuardR.y = this.gloveBaseY + 20
+          }
+          if (this.gs === 'countered' || this.gs === 'starpunch') {
+            this.cGloveGuardL.setAngle(Math.sin(time * 0.02) * 12)
+            this.cGloveGuardR.setAngle(Math.sin(time * 0.02) * -12)
+          }
+
+          // ── Active key indicator ─────────────────────────────────────
+          if (this.gs === 'telegraph' || this.gs === 'attack') {
+            this.activeKeyIdx = this.atk ? DODGE_KEY_IDX[this.atk] : -1
+            this.activeKeyCol = 0xff2222
+          } else if (this.gs === 'counter') {
+            this.activeKeyIdx = 3
+            this.activeKeyCol = 0x44ff88
+          } else if (this.gs === 'idle' && this.stars >= 3 && !this.tutMode) {
+            this.activeKeyIdx = 3
+            this.activeKeyCol = 0xffcc00
+          } else {
+            this.activeKeyIdx = -1
+          }
+
+          // ── Attack indicator label ───────────────────────────────────
+          const showInd = (this.gs === 'telegraph' || this.gs === 'attack') && this.atk !== null
+          this.tAtkLabel.setAlpha(showInd ? 1 : 0)
+
           this.handleInput()
-          this.drawFrame(cx, cy)
+          this.drawFrame()
         }
 
         // ── INPUT ──────────────────────────────────────────────────────────
@@ -379,8 +504,8 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
 
         // ── HELPERS ────────────────────────────────────────────────────────
         clearT() { this.t1?.remove(false); this.t1 = null; this.t2?.remove(false); this.t2 = null }
-        set(s: GS) { this.gs = s; this.refreshCtrl() }
-        msg(m: string) { this.tMsg.setText(m) }
+        set(s: GS) { this.gs = s }
+        bubble(m: string) { this.tBubble.setText(m) }
         snd(k: string) { try { this.sound.play(k, { volume: 0.6 }) } catch {} }
         flash(c: number, a = 0.45) { this.flashC = c; this.flashA = a }
         shake(n = 18) { this.shakeX = (Math.random() > 0.5 ? 1 : -1) * n }
@@ -391,58 +516,57 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
           this.nowAlpha = 1
         }
 
-        armsGuard() {
-          const s = Math.round(this.W * 0.194)
-          this.lGTX = this.CX + this.SH_LX - s; this.lGTY = this.CY + this.SH_LY
-          this.rGTX = this.CX + this.SH_RX + s; this.rGTY = this.CY + this.SH_RY
+        showDmg(amount: number) {
+          this.tDmg.setText(`-${amount}`).setAlpha(1)
+          this.tDmg.setPosition(this.BAR_W + 24, this.BAR_Y + 4)
+          this.tweens.killTweensOf(this.tDmg)
+          this.tweens.add({
+            targets: this.tDmg, y: this.BAR_Y - 18, alpha: 0,
+            duration: 1200, ease: 'Power2',
+          })
         }
 
-        refreshCtrl() {
-          const s = this.gs, a = this.atk
-          if (s === 'telegraph') {
-            // Pas de texte — la flèche visuelle suffit
-            this.tAction.setText('')
-            this.tHint.setText('')
-          } else if (s === 'attack') {
-            const hints: Record<Attack, string> = {
-              left:  '→  [ D / → ]',
-              right: '←  [ A / ← ]',
-              body:  '↓  [ S / ↓ ]',
-            }
-            this.tAction.setText('⚡  ESQUIVEZ  ⚡').setColor('#ff3300')
-            this.tHint.setText(a ? hints[a] : '').setColor('#ffcc00')
-          } else if (s === 'counter') {
-            this.tAction.setText('🥊  CONTRE-ATTAQUE !').setColor('#44ff88')
-            this.tHint.setText('[ J / Espace ]').setColor('#ffffff')
-          } else if (s === 'idle' && this.stars >= 3 && !this.tutMode) {
-            this.tAction.setText('⭐⭐⭐  UPPERCUT ÉTOILE !').setColor('#ffcc00')
-            this.tHint.setText('[ J / Espace ]').setColor('#ffee55')
-          } else {
-            this.tAction.setText('')
-            this.tHint.setText('')
-          }
+        resetGloves() {
+          this.tweens.killTweensOf(this.cGloveGuardL)
+          this.tweens.killTweensOf(this.cGloveGuardR)
+          this.tweens.killTweensOf(this.cGlovePunchL)
+          this.tweens.killTweensOf(this.cGlovePunchR)
+          this.cGlovePunchL.setVisible(false)
+          this.cGlovePunchR.setVisible(false)
+          this.cGloveGuardL.setVisible(true)
+            .setPosition(this.CX + this.guardOffX, this.gloveBaseY)
+            .setAngle(0).setScale(this.gloveBaseScX, this.gloveBaseScY).setAlpha(1)
+          this.cGloveGuardR.setVisible(true)
+            .setPosition(this.CX - this.guardOffX, this.gloveBaseY)
+            .setAngle(0).setScale(this.gloveBaseScX, this.gloveBaseScY).setAlpha(1)
         }
 
         // ── TUTORIEL ───────────────────────────────────────────────────────
 
         updateTutUI() {
           if (!this.tutMode) { this.tTut.setText(''); this.tTutInstr.setText(''); return }
+          this.tBubble.setFontSize('20px')
           const step = Math.min(this.tutStep, TUT_TOTAL - 1)
-          this.tTut.setText(`— ENTRAÎNEMENT  ${step + 1} / ${TUT_TOTAL} —`)
+          this.tTut.setText(`ENTRAÎNEMENT  ${step + 1} / ${TUT_TOTAL}`)
           this.tTutInstr.setText(TUT_MSGS[step]?.hint ?? '')
         }
 
         endTutorial() {
           this.tutMode = false
+          this.tBubble.setFontSize('13px')
           this.tTut.setText('')
           this.tTutInstr.setText('')
           this.tRound.setText('ROUND 1').setColor('#ffcc44')
           this.flash(0x44ccff, 0.35)
-          this.msg('✅  Entraînement terminé — Combat réel !')
-          this.tAction.setText('FIGHT !').setColor('#44ff88')
-          this.tHint.setText('')
-          this.t1 = this.time.delayedCall(2000, () => {
-            this.tAction.setText('')
+          this.bubble('Bravo, vous avez réussi le tutoriel !')
+          this.flashNow('FIGHT !')
+          this.tNow.setColor('#44ff88')
+          try {
+            this.bgMusic = this.sound.add('snd_music', { loop: true, volume: 0.35 })
+            this.bgMusic.play()
+          } catch {}
+          this.t1 = this.time.delayedCall(2500, () => {
+            this.tNow.setColor('#ff2200')
             this.startIdle()
           })
         }
@@ -458,12 +582,10 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
 
         startTutorialStep() {
           this.set('tut_pre')
-          this.armsGuard()
+          this.resetGloves()
           const step = this.tutStep
           this.updateTutUI()
-          this.msg(TUT_MSGS[step]?.pre ?? '')
-          this.tAction.setText('').setColor('#ffaa00')
-          this.tHint.setText('')
+          this.bubble(TUT_MSGS[step]?.pre ?? '')
           this.tRound.setText(`ENTRAÎNEMENT  ${step + 1} / ${TUT_TOTAL}`).setColor('#88ccff')
           this.t1 = this.time.delayedCall(2800, () => this.startTelegraph())
         }
@@ -472,7 +594,7 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
 
         startIntro() {
           this.set('intro')
-          this.armsGuard()
+          this.resetGloves()
           const lines = [
             'PHASE 3 — LE RING',
             'Clippy vous affronte en combat direct.',
@@ -480,11 +602,10 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
             'Aucune perte de vie pendant l\'entraînement.',
           ]
           let i = 0
-          this.msg(lines[0])
-          this.tAction.setText('').setColor('#ffaa00')
+          this.bubble(lines[0])
           const next = () => {
             i++
-            if (i < lines.length) { this.msg(lines[i]); this.t1 = this.time.delayedCall(1800, next) }
+            if (i < lines.length) { this.bubble(lines[i]); this.t1 = this.time.delayedCall(1800, next) }
             else {
               this.tutStep = 0
               this.updateTutUI()
@@ -496,61 +617,127 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
 
         startIdle() {
           if (this.gs === 'win' || this.gs === 'lose') return
-          this.set('idle'); this.armsGuard()
-          this.msg(this.rand(TAUNTS_IDLE))
-          this.t1 = this.time.delayedCall(1200 + Math.random() * 1500, () => this.startTelegraph())
+          this.set('idle'); this.resetGloves()
+          this.bubble(pickTaunt(TAUNTS_IDLE_HIGH, TAUNTS_IDLE_LOW, this.clippyHP, initialHP))
+          this.t1 = this.time.delayedCall(1200 + Math.random() * 1500, () => this.startCombo())
+        }
+
+        startCombo() {
+          if (this.gs === 'win' || this.gs === 'lose') return
+          const diff = getDiff(this.clippyHP, initialHP)
+          const attacks: Attack[] = ['left', 'right', 'body']
+          this.comboSeq = []
+          for (let i = 0; i < diff.comboLen; i++) {
+            const pool = attacks.filter(a => a !== this.comboSeq[i - 1])
+            this.comboSeq.push(this.rand(pool))
+          }
+          this.comboIdx = 0
+          this.startTelegraph()
         }
 
         startTelegraph() {
           if (this.gs === 'win' || this.gs === 'lose') return
-          // Attaque scriptée en tuto, aléatoire sinon
-          const attacks: Attack[] = ['left', 'right', 'body']
           this.atk = this.tutMode
             ? TUT_SEQUENCE[Math.min(this.tutStep, TUT_SEQUENCE.length - 1)]
-            : attacks[Math.floor(Math.random() * 3)]
+            : this.comboSeq[this.comboIdx]
 
           this.set('telegraph'); this.telPct = 0; this.hitDone = false
-          this.msg('')
+          this.bubble('')
+
+          this.resetGloves()
 
           if (!this.tutMode) {
             const diff = getDiff(this.clippyHP, initialHP)
-            this.tRound.setText(diff.label || 'ROUND 1')
-            this.tRound.setColor(diff.label === '⚠️ RAGE MODE' ? '#ff2222' : diff.label === '🔥 DANGER' ? '#ff8800' : '#ffcc44')
+            if (this.comboSeq.length > 1) {
+              this.tRound.setText(`COMBO  ${this.comboIdx + 1} / ${this.comboSeq.length}`)
+            } else {
+              this.tRound.setText(diff.label || '')
+            }
+            this.tRound.setColor(diff.label === 'RAGE MODE' ? '#ff2222' : diff.label === 'DANGER' ? '#ff8800' : diff.label === 'INTENSE' ? '#ff6644' : '#ffcc44')
           }
 
-          // Tension des bras pendant le telegraph
-          const spread = Math.round(this.W * 0.15)
+          // ── Glove telegraph animation (seul le gant qui attaque bouge) ─
+          const baseDiff = this.tutMode ? TUT_DIFF : getDiff(this.clippyHP, initialHP)
+          const speedup = this.tutMode ? 1 : Math.max(0.75, 1 - this.comboIdx * 0.06)
+          const ms = Math.round(baseDiff.telMs * speedup)
+
+          const telGlove = this.atk === 'left' ? this.cGloveGuardL
+            : this.atk === 'right' ? this.cGloveGuardR
+            : (this.comboIdx % 2 === 0 ? this.cGloveGuardL : this.cGloveGuardR)
+          this.tweens.killTweensOf(telGlove)
           if (this.atk === 'left') {
-            this.lGTX = this.CX + this.SH_LX - spread; this.lGTY = this.CY + this.SH_LY + Math.round(this.H * 0.02)
+            this.tweens.add({
+              targets: telGlove,
+              angle: -20,
+              x: this.CX + this.guardOffX - Math.round(this.W * 0.04),
+              y: this.gloveBaseY - 5,
+              duration: Math.round(ms * 0.85),
+              ease: 'Sine.easeInOut',
+            })
           } else if (this.atk === 'right') {
-            this.rGTX = this.CX + this.SH_RX + spread; this.rGTY = this.CY + this.SH_RY + Math.round(this.H * 0.02)
+            this.tweens.add({
+              targets: telGlove,
+              angle: 20,
+              x: this.CX - this.guardOffX + Math.round(this.W * 0.04),
+              y: this.gloveBaseY - 5,
+              duration: Math.round(ms * 0.85),
+              ease: 'Sine.easeInOut',
+            })
           } else {
-            const bs = Math.round(this.W * 0.113)
-            this.lGTX = this.CX + this.SH_LX - bs; this.lGTY = this.CY + this.SH_LY + Math.round(this.H * 0.04)
-            this.rGTX = this.CX + this.SH_RX + bs; this.rGTY = this.CY + this.SH_RY + Math.round(this.H * 0.04)
+            this.tweens.add({
+              targets: telGlove,
+              scaleX: this.gloveBaseScX * 1.15,
+              scaleY: this.gloveBaseScY * 1.15,
+              y: this.gloveBaseY + Math.round(this.H * 0.02),
+              duration: Math.round(ms * 0.85),
+              ease: 'Sine.easeInOut',
+            })
           }
 
-          const ms = (this.tutMode ? TUT_DIFF : getDiff(this.clippyHP, initialHP)).telMs
           this.t1 = this.time.delayedCall(ms, () => this.startAttack())
         }
 
         startAttack() {
           if (this.gs === 'win' || this.gs === 'lose') return
-          const atkMs = (this.tutMode ? TUT_DIFF : getDiff(this.clippyHP, initialHP)).atkMs
+          const baseDiff = this.tutMode ? TUT_DIFF : getDiff(this.clippyHP, initialHP)
+          const speedup = this.tutMode ? 1 : Math.max(0.75, 1 - this.comboIdx * 0.06)
+          const atkMs = Math.round(baseDiff.atkMs * speedup)
           this.currentAtkMs = atkMs
-          this.set('attack'); this.msg(''); this.telPct = 1; this.snd('snd_swoosh')
-          this.flashNow('⚡  MAINTENANT  ⚡')
+          this.set('attack'); this.bubble(''); this.telPct = 1; this.snd('snd_swoosh')
+          this.flashNow('!')
 
-          const lunge = Math.round(this.W * 0.075), lungeY = Math.round(this.H * 0.1)
-          if (this.atk === 'left') {
-            this.lGTX = this.CX + lunge;  this.lGTY = this.CY + lungeY
-          } else if (this.atk === 'right') {
-            this.rGTX = this.CX - lunge;  this.rGTY = this.CY + lungeY
-          } else {
-            const bL = Math.round(this.W * 0.038), bY = Math.round(this.H * 0.21)
-            this.lGTX = this.CX - bL; this.lGTY = this.CY + bY
-            this.rGTX = this.CX + bL; this.rGTY = this.CY + bY
-          }
+          // ── Swap to punch sprite + lunge (seul le gant attaquant) ─────
+          const isLeft = this.atk === 'left'
+          const isRight = this.atk === 'right'
+          const atkGuard = isLeft ? this.cGloveGuardL : isRight ? this.cGloveGuardR
+            : (this.comboIdx % 2 === 0 ? this.cGloveGuardL : this.cGloveGuardR)
+          const punchSprite = isLeft ? this.cGlovePunchL : isRight ? this.cGlovePunchR
+            : (this.comboIdx % 2 === 0 ? this.cGlovePunchL : this.cGlovePunchR)
+
+          this.tweens.killTweensOf(atkGuard)
+          atkGuard.setVisible(false)
+          punchSprite.setVisible(true)
+            .setPosition(atkGuard.x, this.gloveBaseY)
+            .setScale(this.punchBaseScX, this.punchBaseScY)
+            .setAngle(0)
+
+          const lungeX = isLeft ? -Math.round(this.W * 0.05) : isRight ? Math.round(this.W * 0.05) : 0
+          const lungeY = Math.round(this.H * 0.12)
+          const lungeScale = this.atk === 'body' ? 1.5 : 1.35
+          const lungeAngle = isLeft ? -12 : isRight ? 12 : 0
+
+          this.tweens.killTweensOf(punchSprite)
+          this.tweens.add({
+            targets: punchSprite,
+            x: this.CX + lungeX,
+            y: this.gloveBaseY + lungeY,
+            scaleX: this.punchBaseScX * lungeScale,
+            scaleY: this.punchBaseScY * lungeScale,
+            angle: lungeAngle,
+            duration: 120,
+            ease: 'Power3',
+          })
+
           this.t1 = this.time.delayedCall(atkMs, () => {
             if (!this.hitDone) { this.hitDone = true; this.onMiss() }
           })
@@ -558,33 +745,60 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
 
         onDodge() {
           this.set('dodged'); this.flash(0x44ff88, 0.38); this.snd('snd_parry')
-          this.armsGuard(); this.stars = Math.min(3, this.stars + 1)
-          this.msg('✅  Bien esquivé !  Contre-attaquez !')
+          this.resetGloves()
 
-          // Fenêtre de contre
-          this.t1 = this.time.delayedCall(200, () => this.set('counter'))
-          this.t2 = this.time.delayedCall(200 + COUNTER_WIN_MS, () => {
-            if (this.gs === 'counter') {
-              if (this.tutMode) {
-                this.msg('Vous n\'avez pas contre-attaqué. Appuyez sur J ou Espace après l\'esquive !')
+          if (this.tutMode) {
+            this.stars = Math.min(3, this.stars + 1)
+            this.bubble('Bien esquivé ! Contre-attaquez !')
+            this.t1 = this.time.delayedCall(200, () => this.set('counter'))
+            this.t2 = this.time.delayedCall(200 + COUNTER_WIN_MS, () => {
+              if (this.gs === 'counter') {
+                this.bubble('Appuyez sur J ou Espace après l\'esquive !')
                 this.t1 = this.time.delayedCall(1800, () => this.advanceTutorial())
-              } else {
-                this.msg(this.rand(TAUNTS_DODGE))
+              }
+            })
+            return
+          }
+
+          this.comboIdx++
+          if (this.comboIdx < this.comboSeq.length) {
+            const remaining = this.comboSeq.length - this.comboIdx
+            this.bubble(`Encore ${remaining} coup${remaining > 1 ? 's' : ''} !`)
+            this.t1 = this.time.delayedCall(200, () => this.startTelegraph())
+          } else {
+            this.stars = Math.min(3, this.stars + 1)
+            this.bubble(pickTaunt(TAUNTS_DODGE_HIGH, TAUNTS_DODGE_LOW, this.clippyHP, initialHP))
+            this.t1 = this.time.delayedCall(200, () => this.set('counter'))
+            this.t2 = this.time.delayedCall(200 + COUNTER_WIN_MS, () => {
+              if (this.gs === 'counter') {
                 this.time.delayedCall(550, () => this.startIdle())
               }
-            }
-          })
+            })
+          }
         }
 
         doCounter() {
           this.clearT(); this.set('countered')
           this.flash(0xffee22, 0.5); this.shake(20); this.snd('snd_hit')
-          this.msg('💥  TOUCHÉ !')
+          this.bubble('TOUCHÉ !')
           this.lastPunchHand = this.lastPunchHand === 'right' ? 'left' : 'right'
           this.punchGlove(this.lastPunchHand)
 
+          // Clippy gloves wobble on hit
+          this.tweens.killTweensOf(this.cGloveGuardL)
+          this.tweens.killTweensOf(this.cGloveGuardR)
+          this.tweens.add({
+            targets: [this.cGloveGuardL, this.cGloveGuardR],
+            angle: { from: -15, to: 15 },
+            duration: 120,
+            yoyo: true,
+            repeat: 2,
+            ease: 'Sine.easeInOut',
+            onComplete: () => { this.cGloveGuardL.setAngle(0); this.cGloveGuardR.setAngle(0) },
+          })
+
           if (this.tutMode) {
-            this.clippyHP = Math.max(0, this.clippyHP - 1)  // dégâts symboliques en tuto
+            this.clippyHP = Math.max(0, this.clippyHP - 1)
             this.t1 = this.time.delayedCall(900, () => this.advanceTutorial())
             return
           }
@@ -597,10 +811,8 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
         punchGlove(hand: 'left' | 'right') {
           const isLeft = hand === 'left'
           const glove  = isLeft ? this.pGloveL : this.pGloveR
-          // Cacher la garde, montrer le gant de frappe
           this.pGloveGuard.setVisible(false)
-          glove.setVisible(true).setFlipX(!isLeft)
-          // Positions
+          glove.setVisible(true).setFlipX(false)
           const gx = isLeft ? Math.round(this.W * 0.10) : Math.round(this.W * 0.90)
           const gy = Math.round(this.H * 0.82)
           const tx = isLeft ? Math.round(this.W * 0.38) : Math.round(this.W * 0.62)
@@ -622,15 +834,43 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
         doStarPunch() {
           this.stars = 0; this.set('starpunch')
           this.flash(0xffffff, 0.75); this.shake(28); this.snd('snd_hit')
-          this.msg('⭐⭐⭐  UPPERCUT ÉTOILE !!!')
+          this.bubble('UPPERCUT ÉTOILE !!!')
+
+          // Clippy gloves react — fly up
+          this.tweens.killTweensOf(this.cGloveGuardL)
+          this.tweens.killTweensOf(this.cGloveGuardR)
+          this.tweens.killTweensOf(this.cGlovePunchL)
+          this.tweens.killTweensOf(this.cGlovePunchR)
+          this.cGlovePunchL.setVisible(false)
+          this.cGlovePunchR.setVisible(false)
+          this.cGloveGuardL.setVisible(true)
+          this.cGloveGuardR.setVisible(true)
+          this.tweens.add({
+            targets: this.cGloveGuardL,
+            y: this.gloveBaseY - Math.round(this.H * 0.14),
+            scaleX: this.gloveBaseScX * 0.7,
+            scaleY: this.gloveBaseScY * 0.7,
+            angle: -25,
+            duration: 300,
+            ease: 'Power2',
+          })
+          this.tweens.add({
+            targets: this.cGloveGuardR,
+            y: this.gloveBaseY - Math.round(this.H * 0.14),
+            scaleX: this.gloveBaseScX * 0.7,
+            scaleY: this.gloveBaseScY * 0.7,
+            angle: 25,
+            duration: 300,
+            ease: 'Power2',
+          })
+
+          // Player gloves uppercut
           const upperY    = Math.round(this.H * 0.24)
           const gloveGuardY = Math.round(this.H * 0.82)
-          this.lGTX = this.CX - Math.round(this.W * 0.025); this.lGTY = this.CY - Math.round(this.H * 0.212)
-          this.rGTX = this.CX + Math.round(this.W * 0.025); this.rGTY = this.CY - Math.round(this.H * 0.212)
           this.pGloveGuard.setVisible(false)
           ;[
             { g: this.pGloveL, sx: Math.round(this.W * 0.10), px: Math.round(this.W * 0.38), flip: false },
-            { g: this.pGloveR, sx: Math.round(this.W * 0.90), px: Math.round(this.W * 0.62), flip: true  },
+            { g: this.pGloveR, sx: Math.round(this.W * 0.90), px: Math.round(this.W * 0.62), flip: false },
           ].forEach(({ g, sx, px, flip }) => {
             g.setVisible(true).setFlipX(flip).setPosition(sx, gloveGuardY)
             this.tweens.killTweensOf(g)
@@ -642,61 +882,58 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
               }),
             })
           })
+
           this.clippyHP = Math.max(0, this.clippyHP - 3)
           if (this.clippyHP <= 0) { this.t1 = this.time.delayedCall(500, () => this.doWin()); return }
-          this.t1 = this.time.delayedCall(1400, () => { this.armsGuard(); this.startIdle() })
+          this.t1 = this.time.delayedCall(1400, () => { this.resetGloves(); this.startIdle() })
         }
 
         onMiss() {
           this.set('miss'); this.flash(0xff1111, 0.52); this.snd('snd_miss')
-          this.armsGuard()
+          this.resetGloves()
 
           if (this.tutMode) {
-            // Pas de perte de vie — message d'encouragement puis on réessaie
             const step = Math.min(this.tutStep, TUT_TOTAL - 1)
-            this.tAction.setText('').setColor('#ffaa00')
-            this.tHint.setText('')
-            this.msg(TUT_MSGS[step]?.miss ?? 'Raté ! On réessaie.')
+            this.bubble(TUT_MSGS[step]?.miss ?? 'Raté !')
             this.t1 = this.time.delayedCall(2200, () => this.startTelegraph())
             return
           }
 
           const { dmgMin, dmgMax } = getDiff(this.clippyHP, initialHP)
-          this.playerHP = Math.max(0, this.playerHP - (dmgMin + Math.floor(Math.random() * (dmgMax - dmgMin + 1))))
-          this.msg(this.rand(TAUNTS_HIT))
+          const perHit = dmgMin + Math.floor(Math.random() * (dmgMax - dmgMin + 1))
+          const remaining = this.comboSeq.length - this.comboIdx
+          const totalDmg = perHit * remaining
+          this.playerHP = Math.max(0, this.playerHP - totalDmg)
+          this.showDmg(totalDmg)
+          this.shake(12 + remaining * 4)
+          this.bubble(pickTaunt(TAUNTS_HIT_HIGH, TAUNTS_HIT_LOW, this.clippyHP, initialHP))
           if (this.playerHP <= 0) { this.t1 = this.time.delayedCall(600, () => this.doLose()); return }
           this.t1 = this.time.delayedCall(1100, () => this.startIdle())
         }
 
         doWin() {
           this.clearT(); this.set('win'); this.flash(0x44ff88, 0.6)
-          this.msg('K.O. !!!  CLIPPY EST À TERRE !')
+          try { this.bgMusic?.stop() } catch {}
+          this.bubble('K.O. ! CLIPPY EST À TERRE !')
           this.time.delayedCall(2200, () => onWin())
         }
 
         doLose() {
           this.clearT(); this.set('lose'); this.flash(0xff2222, 0.6)
-          this.msg('KNOCKOUT !  Clippy vous recommande de vous relever.')
+          try { this.bgMusic?.stop() } catch {}
+          this.bubble('Clippy vous recommande de vous relever.')
           this.time.delayedCall(2200, () => onLose())
         }
 
         // ── DRAW ───────────────────────────────────────────────────────────
 
-        drawFrame(cx: number, cy: number) {
-          this.gArms.clear()
+        drawFrame() {
           this.gHUD.clear()
-          this.gArrows.clear()
+          this.gBubble.clear()
           this.gKeys.clear()
 
-          const dy = cy - this.CY
-          const lSX = cx + this.SH_LX, lSY = cy + this.SH_LY
-          const rSX = cx + this.SH_RX, rSY = cy + this.SH_RY
-          const lGx = this.lGX + (cx - this.CX), lGy = this.lGY + dy
-          const rGx = this.rGX + (cx - this.CX), rGy = this.rGY + dy
-
-          this.drawArm(lSX, lSY, lGx, lGy, 'left')
-          this.drawArm(rSX, rSY, rGx, rGy, 'right')
-          this.drawDodgeArrows()
+          this.drawBubble()
+          this.drawAttackIndicator()
           this.drawKeyHints()
           this.drawHUD()
 
@@ -709,177 +946,225 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
           }
         }
 
-        // Indicateurs touches en temps réel
+        drawBubble() {
+          const g = this.gBubble
+          const text = this.tBubble.text
+          if (!text) return
+
+          const tb = this.tBubble.getBounds()
+          const pad = 12
+          const bx = tb.x - pad
+          const by = tb.y - pad
+          const bw = tb.width + pad * 2
+          const bh = tb.height + pad * 2
+
+          g.fillStyle(0x0c0c1a, 0.92)
+          g.fillRoundedRect(bx, by, bw, bh, 10)
+          g.lineStyle(1.5, 0x445566, 0.55)
+          g.strokeRoundedRect(bx, by, bw, bh, 10)
+
+          // Triangle pointeur vers Clippy
+          const tipX = bx - 1
+          const tipY = by + bh * 0.35
+          g.fillStyle(0x0c0c1a, 0.92)
+          g.beginPath()
+          g.moveTo(tipX, tipY)
+          g.lineTo(tipX - 14, tipY + 8)
+          g.lineTo(tipX, tipY + 16)
+          g.closePath()
+          g.fillPath()
+          g.lineStyle(1.5, 0x445566, 0.55)
+          g.beginPath()
+          g.moveTo(tipX, tipY)
+          g.lineTo(tipX - 14, tipY + 8)
+          g.lineTo(tipX, tipY + 16)
+          g.strokePath()
+        }
+
+        drawAttackIndicator() {
+          const g = this.gHUD
+          const W = this.W, H = this.H
+          const showInd = (this.gs === 'telegraph' || this.gs === 'attack') && this.atk !== null
+          if (!showInd) return
+
+          const boxW = Math.round(W * 0.10)
+          const boxH = Math.round(W * 0.10)
+          const bx = Math.round(W * 0.015)
+          const by = Math.round(H * 0.42)
+          const isAtk = this.gs === 'attack'
+          const borderCol = isAtk ? 0xff3300 : 0xffcc00
+          const arrowCol  = isAtk ? 0xff3300 : 0xffcc00
+          const alpha     = isAtk ? 0.95 : 0.70 + Math.sin(this.eyePulse * Math.PI) * 0.25
+
+          g.fillStyle(0x080814, 0.90)
+          g.fillRoundedRect(bx, by, boxW, boxH, 8)
+          g.lineStyle(2, borderCol, 0.80)
+          g.strokeRoundedRect(bx, by, boxW, boxH, 8)
+
+          // Flèche direction de l'attaque
+          const cx = bx + boxW / 2
+          const cy = by + boxH / 2
+          const sz = Math.round(boxW * 0.28)
+
+          const dir: 'left'|'right'|'down' =
+            this.atk === 'left' ? 'left' :
+            this.atk === 'right' ? 'right' : 'down'
+
+          g.fillStyle(arrowCol, alpha)
+          g.beginPath()
+          if (dir === 'left') {
+            g.moveTo(cx - sz, cy)
+            g.lineTo(cx + sz * 0.5, cy - sz * 0.7)
+            g.lineTo(cx + sz * 0.5, cy + sz * 0.7)
+          } else if (dir === 'right') {
+            g.moveTo(cx + sz, cy)
+            g.lineTo(cx - sz * 0.5, cy - sz * 0.7)
+            g.lineTo(cx - sz * 0.5, cy + sz * 0.7)
+          } else {
+            g.moveTo(cx, cy + sz)
+            g.lineTo(cx - sz * 0.7, cy - sz * 0.5)
+            g.lineTo(cx + sz * 0.7, cy - sz * 0.5)
+          }
+          g.closePath(); g.fillPath()
+        }
+
         drawKeyHints() {
           const g = this.gKeys
           const W = this.W, H = this.H
 
-          // État actuel de chaque groupe de touches
           const pressed = [
-            this.kA.isDown    || this.kLeft.isDown,   // A / ←
-            this.kS.isDown    || this.kDown.isDown,   // S / ↓
-            this.kD.isDown    || this.kRight.isDown,  // D / →
-            this.kJ.isDown    || this.kSpace.isDown,  // J / ⎵
+            this.kA.isDown    || this.kLeft.isDown,
+            this.kS.isDown    || this.kDown.isDown,
+            this.kD.isDown    || this.kRight.isDown,
+            this.kJ.isDown    || this.kSpace.isDown,
           ]
-          const colors = [0x44aaff, 0xffaa00, 0x44aaff, 0x44ff88]
 
-          const kBoxW = Math.round(W * 0.085)
-          const kBoxH = Math.round(H * 0.055)
-          const kGap  = Math.round(W * 0.012)
+          const kBoxW = Math.round(W * 0.10)
+          const kBoxH = Math.round(H * 0.060)
+          const kGap  = Math.round(W * 0.014)
           const kTotalW = pressed.length * kBoxW + (pressed.length - 1) * kGap
           const kStartX = (W - kTotalW) / 2
           const kY = Math.round(H * 0.935)
 
           pressed.forEach((isDown, i) => {
             const bx = kStartX + i * (kBoxW + kGap)
-            const col = colors[i]
+            const isActive = this.activeKeyIdx === i
+
             if (isDown) {
-              // Fond coloré lumineux + halo
-              g.fillStyle(col, 0.85)
+              const col = isActive ? this.activeKeyCol : 0x44aaff
+              g.fillStyle(col, 0.90)
               g.fillRoundedRect(bx, kY - kBoxH / 2, kBoxW, kBoxH, 5)
               g.lineStyle(2, col, 1)
               g.strokeRoundedRect(bx, kY - kBoxH / 2, kBoxW, kBoxH, 5)
-              // Halo extérieur
-              g.lineStyle(4, col, 0.30)
+              g.lineStyle(4, col, 0.35)
               g.strokeRoundedRect(bx - 2, kY - kBoxH / 2 - 2, kBoxW + 4, kBoxH + 4, 7)
+              this.tK[i].setColor('#ffffff')
+            } else if (isActive) {
+              g.fillStyle(this.activeKeyCol, 0.30)
+              g.fillRoundedRect(bx, kY - kBoxH / 2, kBoxW, kBoxH, 5)
+              g.lineStyle(2.5, this.activeKeyCol, 0.90)
+              g.strokeRoundedRect(bx, kY - kBoxH / 2, kBoxW, kBoxH, 5)
+              g.lineStyle(5, this.activeKeyCol, 0.20)
+              g.strokeRoundedRect(bx - 3, kY - kBoxH / 2 - 3, kBoxW + 6, kBoxH + 6, 8)
+              const hexCol = this.activeKeyCol === 0xff2222 ? '#ff4444'
+                : this.activeKeyCol === 0x44ff88 ? '#44ff88' : '#ffcc44'
+              this.tK[i].setColor(hexCol)
             } else {
-              // Fond sombre discret
               g.fillStyle(0x0a0a14, 0.75)
               g.fillRoundedRect(bx, kY - kBoxH / 2, kBoxW, kBoxH, 5)
               g.lineStyle(1.5, 0x334466, 0.50)
               g.strokeRoundedRect(bx, kY - kBoxH / 2, kBoxW, kBoxH, 5)
+              this.tK[i].setColor('#555577')
             }
-            // Couleur du label selon l'état
-            this.tK[i].setColor(isDown ? '#ffffff' : '#555577')
           })
-        }
-
-        // Flèches d'esquive — petites en repos, grande flèche centrale pendant telegraph/attack
-        drawDodgeArrows() {
-          const g = this.gArrows
-          const W = this.W, H = this.H
-          const isTel    = this.gs === 'telegraph'
-          const isAtk    = this.gs === 'attack'
-          const active   = isTel || isAtk
-          const midY     = Math.round(H * 0.50)
-          const smallSz  = Math.round(W * 0.030)
-
-          // Petites flèches guides aux bords (toujours visibles, très discrètes)
-          this.drawArrow(g, Math.round(W * 0.038), midY, 'left',  smallSz, 0x445566, 0.22)
-          this.drawArrow(g, Math.round(W * 0.962), midY, 'right', smallSz, 0x445566, 0.22)
-          this.drawArrow(g, Math.round(W * 0.500), Math.round(H * 0.60), 'down', smallSz, 0x445566, 0.22)
-
-          if (!active || !this.atk) return
-
-          // Grande flèche centrale qui indique la direction d'esquive
-          const dir: 'left'|'right'|'down' =
-            this.atk === 'right' ? 'left' :
-            this.atk === 'left'  ? 'right' : 'down'
-
-          const sz     = Math.round(W * 0.095)   // grande
-          const col    = isAtk ? 0xff3300 : 0xffcc00
-          const alpha  = isAtk ? 0.95 : 0.80 + Math.sin(this.eyePulse * Math.PI) * 0.18
-
-          // Position : centré horizontalement, verticalement entre Clippy et le HUD
-          const cx = W / 2
-          const cy = Math.round(H * (dir === 'down' ? 0.60 : 0.52))
-
-          // Halo derrière la flèche
-          g.fillStyle(col, (isAtk ? 0.18 : 0.12))
-          g.fillCircle(cx, cy, sz * 1.6)
-
-          this.drawArrow(g, cx, cy, dir, sz, col, alpha)
-        }
-
-        drawArrow(g: Phaser.GameObjects.Graphics, x: number, y: number, dir: 'left'|'right'|'down', size: number, col: number, alpha: number) {
-          g.fillStyle(col, alpha)
-          g.beginPath()
-          if (dir === 'left') {
-            g.moveTo(x, y)
-            g.lineTo(x + size, y - size * 0.65)
-            g.lineTo(x + size, y + size * 0.65)
-          } else if (dir === 'right') {
-            g.moveTo(x, y)
-            g.lineTo(x - size, y - size * 0.65)
-            g.lineTo(x - size, y + size * 0.65)
-          } else {
-            g.moveTo(x, y)
-            g.lineTo(x - size * 0.65, y - size)
-            g.lineTo(x + size * 0.65, y - size)
-          }
-          g.closePath(); g.fillPath()
-        }
-
-        drawArm(sx: number, sy: number, gx: number, gy: number, side: 'left'|'right') {
-          const g = this.gArms
-          const isActive  = this.gs === 'telegraph' || this.gs === 'attack'
-          const isThisArm = this.atk === 'body'
-            || (side === 'left'  && this.atk === 'left')
-            || (side === 'right' && this.atk === 'right')
-          const isLunging = this.gs === 'attack'   && isThisArm
-          const isUpper   = this.gs === 'starpunch'
-
-          if (isActive && isThisArm) {
-            g.fillStyle(0xff5500, 0.20 + this.eyePulse * 0.30)
-            g.fillCircle(gx, gy, Math.round(this.W * 0.060))
-          }
-          // Bras de Clippy — ligne seulement, pas de cercle au bout
-          const armW = isLunging ? 26 : 20
-          g.lineStyle(armW, 0x8899a8, 1)
-          g.beginPath(); g.moveTo(sx, sy); g.lineTo(gx, gy); g.strokePath()
-          g.lineStyle(3, 0x223344, 0.5)
-          g.beginPath(); g.moveTo(sx, sy); g.lineTo(gx, gy); g.strokePath()
         }
 
         drawHUD() {
           const g = this.gHUD
           const W = this.W, H = this.H
-          const BW = Math.round(W * 0.255), BH = 16, BY = 26
+          const BW = this.BAR_W, BH = this.BAR_H, BY = this.BAR_Y
 
-          // Fond panneau bas (action + hint + msg)
-          const hasAction = this.gs === 'telegraph' || this.gs === 'attack' || this.gs === 'counter'
-            || (this.gs === 'idle' && this.stars >= 3 && !this.tutMode)
-          const panelH = hasAction ? 120 : 65
-          const panelY = Math.round(H * 0.625)
-          g.fillStyle(0x000000, 0.68)
-          g.fillRoundedRect(Math.round(W * 0.08), panelY - 8, Math.round(W * 0.84), panelH, 10)
+          // Top bar
+          g.fillStyle(0x050510, 0.80)
+          g.fillRoundedRect(0, 0, W, BY + BH + 12, { tl: 0, tr: 0, bl: 8, br: 8 })
 
-          // Barre joueur
+          // Player HP
           if (!this.tutMode) {
             const pPct = Math.max(0, this.playerHP / PLAYER_MAX_HP)
-            g.fillStyle(0x0d0d1e, 1).fillRoundedRect(14, BY, BW, BH, 4)
+            g.fillStyle(0x0d0d1e, 1).fillRoundedRect(14, BY, BW, BH, 5)
             if (pPct > 0) {
               g.fillStyle(pPct > 0.5 ? 0x22cc55 : pPct > 0.25 ? 0xffaa00 : 0xff2222, 1)
-              g.fillRoundedRect(14, BY, BW * pPct, BH, 4)
+              g.fillRoundedRect(14, BY, Math.round(BW * pPct), BH, 5)
             }
-            g.lineStyle(2, 0x000000, 0.7).strokeRoundedRect(14, BY, BW, BH, 4)
+            g.lineStyle(2, 0x111122, 0.9).strokeRoundedRect(14, BY, BW, BH, 5)
           }
 
-          // Barre Clippy
+          // Clippy HP
           const cPct = Math.max(0, this.clippyHP / initialHP)
-          g.fillStyle(0x0d0d1e, 1).fillRoundedRect(W - 14 - BW, BY, BW, BH, 4)
+          g.fillStyle(0x0d0d1e, 1).fillRoundedRect(W - 14 - BW, BY, BW, BH, 5)
           if (cPct > 0) {
-            g.fillStyle(0xee3333, 1).fillRoundedRect(W - 14 - BW, BY, BW * cPct, BH, 4)
+            g.fillStyle(0xee3333, 1).fillRoundedRect(W - 14 - BW, BY, Math.round(BW * cPct), BH, 5)
           }
-          g.lineStyle(2, 0x000000, 0.7).strokeRoundedRect(W - 14 - BW, BY, BW, BH, 4)
+          g.lineStyle(2, 0x111122, 0.9).strokeRoundedRect(W - 14 - BW, BY, BW, BH, 5)
 
-          // Étoiles (hors tuto)
+          // Stars
           if (!this.tutMode) {
             for (let i = 0; i < 3; i++) {
-              g.fillStyle(i < this.stars ? 0xffcc00 : 0x252535, 1)
-              this.drawStar(g, W/2 - 28 + i * 28, BY + 8, 10, 4.5)
+              g.fillStyle(i < this.stars ? 0xffcc00 : 0x1a1a2e, 1)
+              this.drawStar(g, W/2 - 30 + i * 30, BY + BH / 2, 12, 5.5)
             }
           }
 
-          // Barre de timing
+          // Telegraph progress bar
           if (this.telPct > 0.01) {
-            const TW = Math.round(W * 0.60), TH = 8
-            const TX = (W - TW) / 2, TY = panelY - 18
-            g.fillStyle(0x0a0a1a, 0.85).fillRoundedRect(TX, TY, TW, TH, 4)
+            const TW = Math.round(W * 0.40), TH = 10
+            const TX = (W - TW) / 2, TY = Math.round(H * 0.58)
+            g.fillStyle(0x0a0a1a, 0.85).fillRoundedRect(TX, TY, TW, TH, 5)
             const barCol = this.gs === 'telegraph' ? 0xffaa00 : 0xff3300
             g.fillStyle(barCol, 1)
-            g.fillRoundedRect(TX, TY, TW * this.telPct, TH, 4)
-            g.lineStyle(1.5, 0x000000, 0.55).strokeRoundedRect(TX, TY, TW, TH, 4)
+            g.fillRoundedRect(TX, TY, Math.round(TW * this.telPct), TH, 5)
+            g.lineStyle(1.5, 0x111122, 0.6).strokeRoundedRect(TX, TY, TW, TH, 5)
+          }
+
+          // Combo dots
+          if (!this.tutMode && this.comboSeq.length > 1 && (this.gs === 'telegraph' || this.gs === 'attack' || this.gs === 'dodged')) {
+            const dotR = 8
+            const dotGap = 24
+            const totalDotsW = this.comboSeq.length * dotR * 2 + (this.comboSeq.length - 1) * (dotGap - dotR * 2)
+            const dotStartX = (W - totalDotsW) / 2
+            const dotY = Math.round(H * 0.55)
+
+            for (let i = 0; i < this.comboSeq.length; i++) {
+              const dx = dotStartX + i * dotGap + dotR
+              if (i < this.comboIdx) {
+                g.fillStyle(0x44ff88, 0.9)
+                g.fillCircle(dx, dotY, dotR)
+              } else if (i === this.comboIdx) {
+                g.fillStyle(0xff6600, 0.9)
+                g.fillCircle(dx, dotY, dotR)
+                g.lineStyle(2, 0xffaa00, 0.8)
+                g.strokeCircle(dx, dotY, dotR + 3)
+              } else {
+                g.fillStyle(0x222233, 0.7)
+                g.fillCircle(dx, dotY, dotR)
+              }
+            }
+          }
+
+          // Difficulty badge
+          if (!this.tutMode) {
+            const diff = getDiff(this.clippyHP, initialHP)
+            if (diff.label) {
+              const badgeCol = diff.label === 'RAGE MODE' ? 0xff2222 : diff.label === 'DANGER' ? 0xff6600 : 0xff8844
+              const badgeW = Math.round(W * 0.14)
+              const badgeH = 18
+              const badgeX = W / 2 - badgeW / 2
+              const badgeY = BY + BH + 6
+              g.fillStyle(badgeCol, 0.25)
+              g.fillRoundedRect(badgeX, badgeY, badgeW, badgeH, 4)
+              g.lineStyle(1, badgeCol, 0.6)
+              g.strokeRoundedRect(badgeX, badgeY, badgeW, badgeH, 4)
+            }
           }
         }
 
@@ -895,7 +1180,6 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
         }
       }
 
-      // ── GAME INSTANCE ────────────────────────────────────────────────────────
       const game = new Phaser.Game({
         type:   Phaser.WEBGL,
         parent: containerRef.current!,

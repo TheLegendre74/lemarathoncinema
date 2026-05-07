@@ -5,7 +5,6 @@ import dynamic from 'next/dynamic'
 import { unlockClippyMaster, getClippyDefeats, setClippyDefeatsDB, getDanceLeaderboard, getDanceSurvivalLeaderboard } from '@/lib/actions'
 
 const ClippyDanceBattle    = dynamic(() => import('./ClippyDanceBattle'), { ssr: false })
-// TODO TEMP — supprimer avant lancement prod
 const ClippyPunchOutPhaser = dynamic(() => import('./ClippyPunchOutPhaser'), { ssr: false })
 
 function shuffle<T>(arr: T[]): T[] {
@@ -1076,7 +1075,6 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
   const [mgPhase,          setMgPhase]         = useState<'idle'|'active'|'win'|'lose'>('idle')
   const [ddrPhase,         setDdrPhase]        = useState<'idle'|'active'>(() => startInFeverNight ? 'active' : 'idle')
   const ddrPhaseRef        = useRef<'idle'|'active'>(startInFeverNight ? 'active' : 'idle')
-  // TODO TEMP — supprimer avant lancement prod
   const [punchPhase,       setPunchPhase]      = useState<'idle'|'active'>('idle')
   const punchPhaseRef      = useRef<'idle'|'active'>('idle')
   const [playerPresses,    setPlayerPresses]   = useState(0)
@@ -1099,7 +1097,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
   const [ddrTauntActive,   setDdrTauntActive]  = useState(false)
   const [ddrTauntLines,    setDdrTauntLines]   = useState<string[]>([])
   const [ddrTauntIdx,      setDdrTauntIdx]     = useState(0)
-  const [deathReason,      setDeathReason]     = useState<'hp'|'duel'|'ddr'|'ddr_duel'>('hp')
+  const [deathReason,      setDeathReason]     = useState<'hp'|'duel'|'ddr'|'ddr_duel'|'punch'>('hp')
   const [showLarbinMsg,    setShowLarbinMsg]   = useState(false)
   const [showLarbinModal,  setShowLarbinModal] = useState(false)
   const [hellPhase,        setHellPhase]       = useState<'idle'|'flames'|'grab'|'dialog'|'drag'|'scream'|'fade'>('idle')
@@ -1430,7 +1428,6 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
         ddrPhaseRef.current = 'active'; setDdrPhase('active')
       }
     } else if (effectivePhase === 3) {
-      // TODO TEMP — supprimer avant lancement prod
       punchPhaseRef.current = 'active'; setPunchPhase('active')
     } else {
       setMessage("🗡️ ÉPREUVE DE FORCE !!! Montre ce que tu vaux !"); setBubble(true)
@@ -1491,8 +1488,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
       ddrPhaseRef.current = 'active'; setDdrPhase('active')
       return
     }
-    // TODO TEMP — supprimer avant lancement prod
-    if (deathReason === 'punch' as any) {
+    if (deathReason === 'punch') {
       clippyHPRef.current = CLIPPY_MAX_HP; setClippyHP(CLIPPY_MAX_HP)
       punchPhaseRef.current = 'active'; setPunchPhase('active')
       return
@@ -1675,7 +1671,6 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
         return
       }
 
-      // TODO TEMP — supprimer avant lancement prod
       if (effectivePhase === 3) {
         setPhase('combat'); phaseRef.current = 'combat'
         punchPhaseRef.current = 'active'; setPunchPhase('active')
@@ -1847,7 +1842,6 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
         />
       )}
 
-      {/* TODO TEMP — supprimer avant lancement prod */}
       {punchPhase === 'active' && (
         <ClippyPunchOutPhaser
           initialHP={70}
@@ -1857,7 +1851,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
           }}
           onLose={() => {
             punchPhaseRef.current = 'idle'; setPunchPhase('idle')
-            setDeathReason('punch' as any)
+            setDeathReason('punch')
             setShowDeathScreen(true)
           }}
         />
@@ -1935,7 +1929,9 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
             <div style={{ fontFamily:'var(--font-display)', fontSize:'clamp(.9rem,2vw,1.1rem)', color:'#ffaaaa', lineHeight:1.7 }}>
               {isLarbin
                 ? larbinMsg(deathReason === 'duel' || deathReason === 'ddr_duel' ? '"HAHAHAHA ! Tu as perdu le duel, [NAME] ! Tu veux vraiment continuer avec 10 PV ou t\'avoues-tu vaincu ?"' : '"HAHAHAHA ! Tu es mort, [NAME] ! Tu veux vraiment continuer cette mascarade ou t\'avoues-tu enfin vaincu ?"')
-                : deathReason === 'ddr_duel'
+                : deathReason === 'punch'
+                  ? '"KNOCKOUT ! Tu t\'es fait démolir sur le ring ! Tu veux remonter ou tu jettes l\'éponge, petite chose ?"'
+                  : deathReason === 'ddr_duel'
                   ? '"HAHAHAHA ! Tu as perdu l\'épreuve de force ! Tu peux réessayer ou reconnaître ta défaite, petite chose."'
                   : deathReason === 'duel'
                     ? '"HAHAHAHA ! Tu as perdu le duel final. Tu peux réessayer avec 10 PV ou t\'avouer vaincu, petite chose."'
