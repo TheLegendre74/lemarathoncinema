@@ -226,6 +226,7 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
         tRound!:      Phaser.GameObjects.Text
         tDmg!:        Phaser.GameObjects.Text
         tAtkLabel!:   Phaser.GameObjects.Text
+        popups:       Phaser.GameObjects.Text[] = []
         kLeft!: Phaser.Input.Keyboard.Key; kRight!: Phaser.Input.Keyboard.Key
         kDown!: Phaser.Input.Keyboard.Key; kA!: Phaser.Input.Keyboard.Key
         kD!:    Phaser.Input.Keyboard.Key; kS!:  Phaser.Input.Keyboard.Key
@@ -325,42 +326,42 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
           const tf  = { fontFamily: FONT, stroke: '#000', strokeThickness: 5 }
           const tfB = { ...tf, strokeThickness: 8 }
 
-          // Bulle de dialogue Clippy (+20% → 16px)
+          // Bulle de dialogue Clippy
           this.tBubble = this.add.text(Math.round(W * 0.64), Math.round(H * 0.12), '', {
-            ...tf, fontSize: '16px', color: '#ffffff', align: 'left',
+            ...tf, fontSize: '22px', color: '#ffffff', align: 'left',
             wordWrap: { width: Math.round(W * 0.30) },
           }).setOrigin(0, 0).setDepth(9)
 
           this.tNow = this.add.text(W/2, Math.round(H * 0.44), '', {
-            ...tfB, fontSize: '62px', color: '#ff2200', align: 'center',
+            ...tfB, fontSize: '84px', color: '#ff2200', align: 'center',
           }).setOrigin(0.5, 0.5).setDepth(11).setAlpha(0)
 
           this.tPHPL  = this.add.text(16, 10, 'VOUS', {
-            ...tf, fontSize: '17px', color: '#66dd88', fontStyle: 'bold',
+            ...tf, fontSize: '23px', color: '#66dd88', fontStyle: 'bold',
           }).setDepth(9)
           this.tCHPL  = this.add.text(W - 16, 10, 'CLIPPY', {
-            ...tf, fontSize: '17px', color: '#dd6666', fontStyle: 'bold',
+            ...tf, fontSize: '23px', color: '#dd6666', fontStyle: 'bold',
           }).setOrigin(1, 0).setDepth(9)
           this.tRound = this.add.text(W/2, 8, '', {
-            ...tfB, fontSize: '18px', color: '#ffcc44', fontStyle: 'bold',
+            ...tfB, fontSize: '24px', color: '#ffcc44', fontStyle: 'bold',
           }).setOrigin(0.5, 0).setDepth(9)
 
           this.tDmg = this.add.text(this.BAR_W + 24, this.BAR_Y + 6, '', {
-            ...tfB, fontSize: '28px', color: '#ff3333', fontStyle: 'bold',
+            ...tfB, fontSize: '38px', color: '#ff3333', fontStyle: 'bold',
           }).setDepth(12).setAlpha(0)
 
           this.tTut = this.add.text(W/2, 54, '', {
-            ...tfB, fontSize: '27px', color: '#88ccff', align: 'center',
+            ...tfB, fontSize: '36px', color: '#88ccff', align: 'center',
             fontStyle: 'bold', letterSpacing: 2,
           }).setOrigin(0.5, 0).setDepth(9)
-          this.tTutInstr = this.add.text(W/2, 88, '', {
-            ...tf, fontSize: '23px', color: '#ffcc88', align: 'center',
-            wordWrap: { width: Math.round(W * 0.65) },
+          this.tTutInstr = this.add.text(W/2, 96, '', {
+            ...tf, fontSize: '31px', color: '#ffcc88', align: 'center',
+            wordWrap: { width: Math.round(W * 0.70) },
           }).setOrigin(0.5, 0).setDepth(9)
 
           // ── Indicateur ESQUIVE ────────────────────────────────────────
           this.tAtkLabel = this.add.text(Math.round(W / 2), Math.round(H * 0.50), 'ESQUIVE', {
-            ...tf, fontSize: '14px', color: '#888899', align: 'center', strokeThickness: 3,
+            ...tf, fontSize: '19px', color: '#888899', align: 'center', strokeThickness: 3,
           }).setOrigin(0.5, 1).setDepth(9).setAlpha(0)
 
           // ── Key indicators ─────────────────────────────────────────────
@@ -375,7 +376,7 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
             const bx = kStartX + i * (kBoxW + kGap) + kBoxW / 2
             return this.add.text(bx, kY, lbl, {
               fontFamily: FONT,
-              fontSize: `${Math.round(H * 0.034)}px`,
+              fontSize: `${Math.round(H * 0.046)}px`,
               color: '#555577', align: 'center', fontStyle: 'bold',
               stroke: '#000', strokeThickness: 3,
             }).setOrigin(0.5, 0.5).setDepth(10)
@@ -528,6 +529,27 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
         shake(n = 18) { this.shakeX = (Math.random() > 0.5 ? 1 : -1) * n }
         rand<T>(a: T[]): T { return a[Math.floor(Math.random() * a.length)] }
 
+        popup(msg: string, color = '#ffffff') {
+          const FONT = 'Impact, "Arial Black", "Bebas Neue", sans-serif'
+          const side = Math.random() > 0.5
+          const px = side ? Math.round(this.W * 0.82) : Math.round(this.W * 0.18)
+          const py = Math.round(this.H * 0.45 + (Math.random() - 0.5) * this.H * 0.15)
+          const t = this.add.text(px, py, msg, {
+            fontFamily: FONT, fontSize: '43px', color,
+            stroke: '#000', strokeThickness: 8,
+            align: 'center', fontStyle: 'bold',
+          }).setOrigin(0.5, 0.5).setDepth(11).setAlpha(1)
+          this.popups.push(t)
+          this.tweens.add({
+            targets: t, y: py - 80, alpha: 0,
+            duration: 1400, ease: 'Power2',
+            onComplete: () => {
+              this.popups = this.popups.filter(p => p !== t)
+              t.destroy()
+            },
+          })
+        }
+
         flashNow(text: string) {
           this.tNow.setText(text)
           this.nowAlpha = 1
@@ -562,7 +584,7 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
 
         updateTutUI() {
           if (!this.tutMode) { this.tTut.setText(''); this.tTutInstr.setText(''); return }
-          this.tBubble.setFontSize('24px')
+          this.tBubble.setFontSize('32px')
           const step = Math.min(this.tutStep, TUT_TOTAL - 1)
           this.tTut.setText(`ENTRAÎNEMENT  ${step + 1} / ${TUT_TOTAL}`)
           this.tTutInstr.setText(TUT_MSGS[step]?.hint ?? '')
@@ -570,7 +592,7 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
 
         endTutorial() {
           this.tutMode = false
-          this.tBubble.setFontSize('16px')
+          this.tBubble.setFontSize('22px')
           this.tTut.setText('')
           this.tTutInstr.setText('')
           this.flash(0x44ccff, 0.35)
@@ -796,7 +818,7 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
 
           if (this.tutMode) {
             this.stars = Math.min(3, this.stars + 1)
-            this.bubble('Bien esquivé ! Contre-attaquez !')
+            this.popup('ESQUIVÉ !', '#44ff88')
             this.t1 = this.time.delayedCall(200, () => this.set('counter'))
             this.t2 = this.time.delayedCall(200 + COUNTER_WIN_MS, () => {
               if (this.gs === 'counter') {
@@ -810,10 +832,11 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
           this.comboIdx++
           if (this.comboIdx < this.comboSeq.length) {
             const remaining = this.comboSeq.length - this.comboIdx
-            this.bubble(`Encore ${remaining} coup${remaining > 1 ? 's' : ''} !`)
+            this.popup(`ENCORE ${remaining} !`, '#ffaa00')
             this.t1 = this.time.delayedCall(200, () => this.startTelegraph())
           } else {
             this.stars = Math.min(3, this.stars + 1)
+            this.popup('ESQUIVÉ !', '#44ff88')
             this.bubble(pickTaunt(TAUNTS_DODGE_HIGH, TAUNTS_DODGE_LOW, this.clippyHP, initialHP))
             this.t1 = this.time.delayedCall(200, () => this.set('counter'))
             this.t2 = this.time.delayedCall(200 + COUNTER_WIN_MS, () => {
@@ -827,7 +850,7 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
         doCounter() {
           this.clearT(); this.set('countered')
           this.flash(0xffee22, 0.5); this.shake(20); this.snd('snd_hit')
-          this.bubble('TOUCHÉ !')
+          this.popup('TOUCHÉ !', '#ffee22')
           this.lastPunchHand = this.lastPunchHand === 'right' ? 'left' : 'right'
           this.punchGlove(this.lastPunchHand)
 
@@ -881,7 +904,7 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
         doStarPunch() {
           this.stars = 0; this.set('starpunch')
           this.flash(0xffffff, 0.75); this.shake(28); this.snd('snd_hit')
-          this.bubble('UPPERCUT ÉTOILE !!!')
+          this.popup('★ UPPERCUT ÉTOILE ★', '#ffd700')
 
           // Clippy gloves react — fly up
           this.tweens.killTweensOf(this.cGloveGuardL)
@@ -953,6 +976,7 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
           this.playerHP = Math.max(0, this.playerHP - totalDmg)
           this.showDmg(totalDmg)
           this.shake(12 + remaining * 4)
+          this.popup(`-${totalDmg} HP`, '#ff3333')
           this.bubble(pickTaunt(TAUNTS_HIT_HIGH, TAUNTS_HIT_LOW, this.clippyHP, initialHP))
           if (this.playerHP <= 0) { this.t1 = this.time.delayedCall(600, () => this.doLose()); return }
           this.t1 = this.time.delayedCall(1100, () => this.startIdle())
@@ -961,13 +985,15 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
         doWin() {
           this.clearT(); this.set('win'); this.flash(0x44ff88, 0.6)
           try { this.bgMusic?.pause() } catch {}
-          this.bubble('K.O. ! CLIPPY EST À TERRE !')
+          this.popup('K.O. !!!', '#44ff88')
+          this.bubble('Non... impossible... un trombone... vaincu...')
           this.time.delayedCall(2200, () => onWin())
         }
 
         doLose() {
           this.clearT(); this.set('lose'); this.flash(0xff2222, 0.6)
           try { this.bgMusic?.pause() } catch {}
+          this.popup('K.O.', '#ff2222')
           this.bubble('Clippy vous recommande de vous relever.')
           this.time.delayedCall(2200, () => onLose())
         }

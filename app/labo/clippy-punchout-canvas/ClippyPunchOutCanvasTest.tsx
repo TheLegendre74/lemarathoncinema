@@ -2,9 +2,9 @@
 import dynamic from 'next/dynamic'
 import { useState } from 'react'
 
-const ClippyPunchOut = dynamic(() => import('@/components/ClippyPunchOutPhaser'), { ssr: false })
+const ClippyPunchOut = dynamic(() => import('@/components/ClippyPunchOut'), { ssr: false })
 
-export default function ClippyPunchOutTest() {
+export default function ClippyPunchOutCanvasTest() {
   const [result, setResult] = useState<'playing' | 'win' | 'lose'>('playing')
   const [key, setKey] = useState(0)
 
@@ -49,7 +49,7 @@ export default function ClippyPunchOutTest() {
             </a>
           </div>
           <div style={{ fontSize: 11, color: '#444', marginTop: 16 }}>
-            Test local — non intégré au jeu principal
+            Test local — version Canvas/React (non-Phaser)
           </div>
         </div>
       )}
