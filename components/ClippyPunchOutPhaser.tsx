@@ -191,6 +191,10 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
         lastPunchHand: 'left' | 'right' = 'right'
         activeKeyIdx = -1
         activeKeyCol = 0xff2222
+        spotAngle  = 0
+        spotAngle2 = Math.PI
+        showoffT   = 0
+        isShowoff  = false
 
         // ── Timers ─────────────────────────────────────────────────────────
         t1: Phaser.Time.TimerEvent | null = null
@@ -211,6 +215,7 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
         gFlash!:      Phaser.GameObjects.Graphics
         gBubble!:     Phaser.GameObjects.Graphics
         gKeys!:       Phaser.GameObjects.Graphics
+        gSpots!:      Phaser.GameObjects.Graphics
         tK!:          Phaser.GameObjects.Text[]
         tBubble!:     Phaser.GameObjects.Text
         tNow!:        Phaser.GameObjects.Text
@@ -258,6 +263,7 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
           this.add.image(W/2, H/2, 'arena').setDisplaySize(W, H)
           this.add.graphics().fillStyle(0x040412, 0.38).fillRect(0, 0, W, H)
 
+          this.gSpots  = this.add.graphics().setDepth(1).setAlpha(0.35)
           this.gBubble = this.add.graphics().setDepth(8)
           this.gHUD    = this.add.graphics().setDepth(8)
           this.gKeys   = this.add.graphics().setDepth(9)
@@ -315,45 +321,46 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
             .setDisplaySize(gW2, gH2).setDepth(7).setVisible(false)
 
           // ── Textes ─────────────────────────────────────────────────────
-          const tf  = { fontFamily: '"Courier New", Courier, monospace', stroke: '#000', strokeThickness: 5 }
+          const FONT = 'Impact, "Arial Black", "Bebas Neue", sans-serif'
+          const tf  = { fontFamily: FONT, stroke: '#000', strokeThickness: 5 }
           const tfB = { ...tf, strokeThickness: 8 }
 
-          // Bulle de dialogue Clippy
+          // Bulle de dialogue Clippy (+20% → 16px)
           this.tBubble = this.add.text(Math.round(W * 0.64), Math.round(H * 0.12), '', {
-            ...tf, fontSize: '13px', color: '#ffffff', align: 'left',
+            ...tf, fontSize: '16px', color: '#ffffff', align: 'left',
             wordWrap: { width: Math.round(W * 0.30) },
           }).setOrigin(0, 0).setDepth(9)
 
           this.tNow = this.add.text(W/2, Math.round(H * 0.44), '', {
-            ...tfB, fontSize: '48px', color: '#ff2200', align: 'center',
+            ...tfB, fontSize: '62px', color: '#ff2200', align: 'center',
           }).setOrigin(0.5, 0.5).setDepth(11).setAlpha(0)
 
           this.tPHPL  = this.add.text(16, 10, 'VOUS', {
-            ...tf, fontSize: '13px', color: '#66dd88', fontStyle: 'bold',
+            ...tf, fontSize: '17px', color: '#66dd88', fontStyle: 'bold',
           }).setDepth(9)
           this.tCHPL  = this.add.text(W - 16, 10, 'CLIPPY', {
-            ...tf, fontSize: '13px', color: '#dd6666', fontStyle: 'bold',
+            ...tf, fontSize: '17px', color: '#dd6666', fontStyle: 'bold',
           }).setOrigin(1, 0).setDepth(9)
           this.tRound = this.add.text(W/2, 8, '', {
-            ...tfB, fontSize: '14px', color: '#ffcc44', fontStyle: 'bold',
+            ...tfB, fontSize: '18px', color: '#ffcc44', fontStyle: 'bold',
           }).setOrigin(0.5, 0).setDepth(9)
 
           this.tDmg = this.add.text(this.BAR_W + 24, this.BAR_Y + 6, '', {
-            ...tfB, fontSize: '22px', color: '#ff3333', fontStyle: 'bold',
+            ...tfB, fontSize: '28px', color: '#ff3333', fontStyle: 'bold',
           }).setDepth(12).setAlpha(0)
 
           this.tTut = this.add.text(W/2, 54, '', {
-            ...tfB, fontSize: '21px', color: '#88ccff', align: 'center',
+            ...tfB, fontSize: '27px', color: '#88ccff', align: 'center',
             fontStyle: 'bold', letterSpacing: 2,
           }).setOrigin(0.5, 0).setDepth(9)
-          this.tTutInstr = this.add.text(W/2, 82, '', {
-            ...tf, fontSize: '18px', color: '#ffcc88', align: 'center',
-            wordWrap: { width: Math.round(W * 0.60) },
+          this.tTutInstr = this.add.text(W/2, 88, '', {
+            ...tf, fontSize: '23px', color: '#ffcc88', align: 'center',
+            wordWrap: { width: Math.round(W * 0.65) },
           }).setOrigin(0.5, 0).setDepth(9)
 
           // ── Indicateur PROCHAIN COUP ────────────────────────────────────
           this.tAtkLabel = this.add.text(Math.round(W * 0.065), Math.round(H * 0.41), 'PROCHAIN COUP', {
-            ...tf, fontSize: '9px', color: '#888899', align: 'center', strokeThickness: 3,
+            ...tf, fontSize: '12px', color: '#888899', align: 'center', strokeThickness: 3,
           }).setOrigin(0.5, 1).setDepth(9).setAlpha(0)
 
           // ── Key indicators ─────────────────────────────────────────────
@@ -367,8 +374,8 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
           this.tK = keyLabels.map((lbl, i) => {
             const bx = kStartX + i * (kBoxW + kGap) + kBoxW / 2
             return this.add.text(bx, kY, lbl, {
-              fontFamily: '"Courier New", Courier, monospace',
-              fontSize: `${Math.round(H * 0.026)}px`,
+              fontFamily: FONT,
+              fontSize: `${Math.round(H * 0.034)}px`,
               color: '#555577', align: 'center', fontStyle: 'bold',
               stroke: '#000', strokeThickness: 3,
             }).setOrigin(0.5, 0.5).setDepth(10)
@@ -405,6 +412,14 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
           this.nowAlpha = Math.max(0, this.nowAlpha - dt * 2.2)
           this.tNow.setAlpha(this.nowAlpha)
 
+          // ── Spots de lumière rotatifs ──────────────────────────────────
+          this.spotAngle  += dt * 1.2
+          this.spotAngle2 += dt * 0.9
+          this.drawSpots()
+
+          // ── Showoff animation ─────────────────────────────────────────
+          if (this.isShowoff) this.showoffT += dt
+
           const diff = this.tutMode ? TUT_DIFF : getDiff(this.clippyHP, initialHP)
           const speedup = this.tutMode ? 1 : Math.max(0.75, 1 - this.comboIdx * 0.06)
           if (this.gs === 'telegraph') {
@@ -418,12 +433,15 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
           }
 
           // ── Clippy position ──────────────────────────────────────────
-          const bounceOff = this.gs === 'idle' ? Math.sin(this.bounceT) * 9 : 0
+          const showBounce = this.isShowoff ? Math.sin(this.showoffT * 8) * 14 : 0
+          const bounceOff = this.gs === 'idle' ? Math.sin(this.bounceT) * 9 : showBounce
           const cx = this.CX + this.shakeX
           const cy = this.CY + bounceOff
 
           this.sprClipy.setPosition(cx, cy)
-          this.sprClipy.angle = this.gs === 'win'
+          this.sprClipy.angle = this.isShowoff
+            ? Math.sin(this.showoffT * 5) * 12
+            : this.gs === 'win'
             ? 30
             : (this.gs === 'countered' || this.gs === 'starpunch')
             ? Math.sin(time * 0.025) * 6
@@ -517,7 +535,7 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
 
         showDmg(amount: number) {
           this.tDmg.setText(`-${amount}`).setAlpha(1)
-          this.tDmg.setPosition(this.BAR_W + 24, this.BAR_Y + 4)
+          this.tDmg.setPosition(14 + this.BAR_W + 12, this.BAR_Y + 4)
           this.tweens.killTweensOf(this.tDmg)
           this.tweens.add({
             targets: this.tDmg, y: this.BAR_Y - 18, alpha: 0,
@@ -544,7 +562,7 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
 
         updateTutUI() {
           if (!this.tutMode) { this.tTut.setText(''); this.tTutInstr.setText(''); return }
-          this.tBubble.setFontSize('20px')
+          this.tBubble.setFontSize('24px')
           const step = Math.min(this.tutStep, TUT_TOTAL - 1)
           this.tTut.setText(`ENTRAÎNEMENT  ${step + 1} / ${TUT_TOTAL}`)
           this.tTutInstr.setText(TUT_MSGS[step]?.hint ?? '')
@@ -552,23 +570,32 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
 
         endTutorial() {
           this.tutMode = false
-          this.tBubble.setFontSize('13px')
+          this.tBubble.setFontSize('16px')
           this.tTut.setText('')
           this.tTutInstr.setText('')
-          this.tRound.setText('ROUND 1').setColor('#ffcc44')
           this.flash(0x44ccff, 0.35)
-          this.bubble('Bravo, vous avez réussi le tutoriel !')
-          this.flashNow('FIGHT !')
-          this.tNow.setColor('#44ff88')
-          try {
-            const a = new Audio('/clippy-contre-humain.mp3')
-            a.loop = true; a.volume = 0.35
-            a.play().catch(() => {})
-            this.bgMusic = a
-          } catch {}
-          this.t1 = this.time.delayedCall(2500, () => {
-            this.tNow.setColor('#ff2200')
-            this.startIdle()
+          this.bubble('Bravo ! Clippy se prépare...')
+          this.isShowoff = true
+          this.showoffT = 0
+          this.sprClipy.setFlipX(true)
+          this.resetGloves()
+          this.cGloveGuardL.setVisible(false)
+          this.cGloveGuardR.setVisible(false)
+          this.tRound.setText('').setColor('#ffcc44')
+
+          this.t1 = this.time.delayedCall(2800, () => {
+            this.isShowoff = false
+            this.sprClipy.setFlipX(false)
+            this.cGloveGuardL.setVisible(true)
+            this.cGloveGuardR.setVisible(true)
+            this.tRound.setText('ROUND 1').setColor('#ffcc44')
+            this.flashNow('FIGHT !')
+            this.tNow.setColor('#44ff88')
+            this.flash(0xffffff, 0.55)
+            this.t1 = this.time.delayedCall(2000, () => {
+              this.tNow.setColor('#ff2200')
+              this.startIdle()
+            })
           })
         }
 
@@ -596,6 +623,12 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
         startIntro() {
           this.set('intro')
           this.resetGloves()
+          try {
+            const a = new Audio('/clippy-contre-humain.mp3')
+            a.loop = true; a.volume = 0.35
+            a.play().catch(() => {})
+            this.bgMusic = a
+          } catch {}
           const lines = [
             'PHASE 3 — LE RING',
             'Clippy vous affronte en combat direct.',
@@ -1100,13 +1133,15 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
             g.lineStyle(2, 0x111122, 0.9).strokeRoundedRect(14, BY, BW, BH, 5)
           }
 
-          // Clippy HP
+          // Clippy HP — se vide de droite à gauche
           const cPct = Math.max(0, this.clippyHP / initialHP)
-          g.fillStyle(0x0d0d1e, 1).fillRoundedRect(W - 14 - BW, BY, BW, BH, 5)
+          const cBarX = W - 14 - BW
+          const cFilledW = Math.round(BW * cPct)
+          g.fillStyle(0x0d0d1e, 1).fillRoundedRect(cBarX, BY, BW, BH, 5)
           if (cPct > 0) {
-            g.fillStyle(0xee3333, 1).fillRoundedRect(W - 14 - BW, BY, Math.round(BW * cPct), BH, 5)
+            g.fillStyle(0xee3333, 1).fillRoundedRect(cBarX + BW - cFilledW, BY, cFilledW, BH, 5)
           }
-          g.lineStyle(2, 0x111122, 0.9).strokeRoundedRect(W - 14 - BW, BY, BW, BH, 5)
+          g.lineStyle(2, 0x111122, 0.9).strokeRoundedRect(cBarX, BY, BW, BH, 5)
 
           // Stars
           if (!this.tutMode) {
@@ -1167,6 +1202,29 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
               g.strokeRoundedRect(badgeX, badgeY, badgeW, badgeH, 4)
             }
           }
+        }
+
+        drawSpots() {
+          const g = this.gSpots
+          g.clear()
+          const W = this.W, H = this.H
+          const spots = [
+            { a: this.spotAngle,          col: 0xff2222, r: W * 0.35 },
+            { a: this.spotAngle2,         col: 0x2244ff, r: W * 0.30 },
+            { a: this.spotAngle + 2.1,    col: 0xffcc00, r: W * 0.25 },
+            { a: this.spotAngle2 + 1.5,   col: 0xff00ff, r: W * 0.20 },
+          ]
+          spots.forEach(({ a, col, r }) => {
+            const sx = W / 2 + Math.cos(a) * W * 0.55
+            const sy = H * 0.15
+            const ex = W / 2 + Math.cos(a) * W * 0.4
+            const ey = H
+            g.lineStyle(r, col, 0.06)
+            g.beginPath()
+            g.moveTo(sx, sy)
+            g.lineTo(ex, ey)
+            g.strokePath()
+          })
         }
 
         drawStar(g: Phaser.GameObjects.Graphics, x: number, y: number, r1: number, r2: number) {
