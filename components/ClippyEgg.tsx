@@ -1256,7 +1256,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
     const hideCursor = phase === 'combat' && mgPhase === 'idle' && hellPhase === 'idle' && ddrPhase === 'idle' && punchPhase === 'idle' && !showDeathScreen && !ddrTauntActive && !ddrIntroActive
     document.body.style.cursor = hideCursor ? 'none' : ''
     return () => { document.body.style.cursor = '' }
-  }, [phase, mgPhase, hellPhase, ddrPhase, showDeathScreen, ddrTauntActive, ddrIntroActive])
+  }, [phase, mgPhase, hellPhase, ddrPhase, punchPhase, showDeathScreen, ddrTauntActive, ddrIntroActive])
 
   // ── Intro DDR : Clippy provoque avant le jeu (10s par dialogue, clic = avancer) ──
   const DDR_INTRO_MAX = 4
@@ -1698,7 +1698,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
   function handleCombatClick(e: React.MouseEvent) {
     e.stopPropagation()
     if (ddrIntroActiveRef.current) { setDdrIntroIdx(i => i + 1); return }
-    if (parryActive.current || mgPhase !== 'idle' || ddrPhaseRef.current !== 'idle') return
+    if (parryActive.current || mgPhase !== 'idle' || ddrPhaseRef.current !== 'idle' || punchPhaseRef.current !== 'idle') return
     playSwordCombatSound('/clippy-swoosh.wav', 0.8)
     setTimeout(() => playSwordCombatSound('/clippy-hit.mp3', 0.9), 180)
     const nextHP = Math.max(0, clippyHPRef.current - 1)
@@ -1875,7 +1875,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
       )}
 
       {/* ── Épée curseur joueur ── */}
-      {phase === 'combat' && mgPhase === 'idle' && hellPhase === 'idle' && ddrPhase === 'idle' && !ddrIntroActive && (
+      {phase === 'combat' && mgPhase === 'idle' && hellPhase === 'idle' && ddrPhase === 'idle' && punchPhase === 'idle' && !ddrIntroActive && (
         <img src="/epee.png" alt="" style={{ position:'fixed', left:mousePos.x-45, top:mousePos.y-200, width:110, height:320, objectFit:'contain', pointerEvents:'none', zIndex:99998, transform:'rotate(45deg)', userSelect:'none', filter:'drop-shadow(0 4px 12px rgba(0,0,0,.85))' }} />
       )}
 
@@ -1896,7 +1896,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
       )}
 
       {/* ── Barres HP ── */}
-      {phase === 'combat' && hellPhase === 'idle' && mgPhase === 'idle' && !showDeathScreen && !ddrIntroActive && (
+      {phase === 'combat' && hellPhase === 'idle' && mgPhase === 'idle' && punchPhase === 'idle' && !showDeathScreen && !ddrIntroActive && (
         <>
           <div className="clippy-hpbar-clippy" style={{ background:'rgba(8,8,14,.92)', border:`2px solid ${effectivePhase >= 3 ? '#e85a5a' : '#e8c46a'}`, borderRadius:10, padding:hpPadPx, display:'flex', alignItems:'center', gap:hpGap, backdropFilter:'blur(6px)' }}>
             <span style={{ fontSize:hpFont, color: effectivePhase >= 3 ? '#e85a5a' : '#e8c46a', fontWeight:700 }}>📎 CLIPPY {`(Ph.${effectivePhase})`}{activeGodPhase > 0 && ' ⚙️'}</span>
@@ -2287,7 +2287,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
           cursor:(phase==='combat'&&!ddrTauntActive&&!ddrIntroActive)?'none':(tired?'crosshair':'pointer'),
           transition:'left .3s cubic-bezier(.34,1.56,.64,1),top .3s cubic-bezier(.34,1.56,.64,1)',
           userSelect:'none',
-          display:(hellPhase!=='idle'||mgPhase!=='idle'||ddrPhase!=='idle'||showLarbinMsg||showLarbinModal||showDeathScreen)?'none':'block',
+          display:(hellPhase!=='idle'||mgPhase!=='idle'||ddrPhase!=='idle'||punchPhase==='active'||showLarbinMsg||showLarbinModal||showDeathScreen)?'none':'block',
         }}
         onClick={phase==='normal' ? handleNormalClick : handleCombatClick}
       >

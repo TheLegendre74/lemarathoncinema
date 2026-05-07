@@ -236,7 +236,6 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
           this.load.image('cGloveGuardR',  '/clippy-gant-garde-r.png')
           this.load.image('cGlovePunchL',  '/clippy-gant-punch-l.png')
           this.load.image('cGlovePunchR',  '/clippy-gant-punch-r.png')
-          this.load.audio('snd_music',     '/clippy-contre-humain.mp3')
           this.load.audio('snd_hit',       '/clippy-coup.mp3')
           this.load.audio('snd_miss',      '/clippy-hit.mp3')
           this.load.audio('snd_parry',     '/clippy-parry.mp3')
@@ -562,8 +561,10 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
           this.flashNow('FIGHT !')
           this.tNow.setColor('#44ff88')
           try {
-            this.bgMusic = this.sound.add('snd_music', { loop: true, volume: 0.35 })
-            this.bgMusic.play()
+            const a = new Audio('/clippy-contre-humain.mp3')
+            a.loop = true; a.volume = 0.35
+            a.play().catch(() => {})
+            this.bgMusic = a
           } catch {}
           this.t1 = this.time.delayedCall(2500, () => {
             this.tNow.setColor('#ff2200')
@@ -913,14 +914,14 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
 
         doWin() {
           this.clearT(); this.set('win'); this.flash(0x44ff88, 0.6)
-          try { this.bgMusic?.stop() } catch {}
+          try { this.bgMusic?.pause() } catch {}
           this.bubble('K.O. ! CLIPPY EST À TERRE !')
           this.time.delayedCall(2200, () => onWin())
         }
 
         doLose() {
           this.clearT(); this.set('lose'); this.flash(0xff2222, 0.6)
-          try { this.bgMusic?.stop() } catch {}
+          try { this.bgMusic?.pause() } catch {}
           this.bubble('Clippy vous recommande de vous relever.')
           this.time.delayedCall(2200, () => onLose())
         }
@@ -1196,6 +1197,8 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
 
     return () => {
       mounted = false
+      const sc = gameRef.current?.scene?.scenes?.[0] as any
+      try { sc?.bgMusic?.pause(); sc.bgMusic = null } catch {}
       gameRef.current?.destroy(true)
       gameRef.current = null
     }
