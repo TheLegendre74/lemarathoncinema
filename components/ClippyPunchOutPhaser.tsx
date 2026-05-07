@@ -1002,14 +1002,14 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
           g.lineStyle(2, borderCol, 0.80)
           g.strokeRoundedRect(bx, by, boxW, boxH, 8)
 
-          // Flèche direction de l'attaque
+          // Flèche direction d'esquive (inversée par rapport à l'attaque)
           const cx = bx + boxW / 2
           const cy = by + boxH / 2
           const sz = Math.round(boxW * 0.28)
 
           const dir: 'left'|'right'|'down' =
-            this.atk === 'left' ? 'left' :
-            this.atk === 'right' ? 'right' : 'down'
+            this.atk === 'left' ? 'right' :
+            this.atk === 'right' ? 'left' : 'down'
 
           g.fillStyle(arrowCol, alpha)
           g.beginPath()
