@@ -1077,6 +1077,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
   const ddrPhaseRef        = useRef<'idle'|'active'>(startInFeverNight ? 'active' : 'idle')
   const [punchPhase,       setPunchPhase]      = useState<'idle'|'active'>('idle')
   const punchPhaseRef      = useRef<'idle'|'active'>('idle')
+  const punchTutDoneRef    = useRef(false)
   const [playerPresses,    setPlayerPresses]   = useState(0)
   const [clippyPresses,    setClippyPresses]   = useState(0)
   const [sessionLosses,    setSessionLosses]   = useState(0)
@@ -1844,12 +1845,16 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
 
       {punchPhase === 'active' && (
         <ClippyPunchOutPhaser
-          initialHP={70}
+          initialHP={punchTutDoneRef.current ? 35 : 70}
+          initialPlayerHP={punchTutDoneRef.current ? 15 : 30}
+          skipTutorial={punchTutDoneRef.current}
           onWin={() => {
+            punchTutDoneRef.current = true
             punchPhaseRef.current = 'idle'; setPunchPhase('idle')
             startHellSequence()
           }}
           onLose={() => {
+            punchTutDoneRef.current = true
             punchPhaseRef.current = 'idle'; setPunchPhase('idle')
             setDeathReason('punch')
             setShowDeathScreen(true)

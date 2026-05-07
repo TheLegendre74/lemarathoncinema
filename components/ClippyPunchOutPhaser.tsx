@@ -137,10 +137,10 @@ function pickTaunt(high: string[], low: string[], hp: number, maxHP: number): st
   return arr[Math.floor(Math.random() * arr.length)]
 }
 
-interface Props { onWin: () => void; onLose: () => void; initialHP?: number }
+interface Props { onWin: () => void; onLose: () => void; initialHP?: number; initialPlayerHP?: number; skipTutorial?: boolean }
 const CLIPPY_PHASE3_HP = 70
 
-export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY_PHASE3_HP }: Props) {
+export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY_PHASE3_HP, initialPlayerHP = PLAYER_MAX_HP, skipTutorial = false }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const gameRef      = useRef<any>(null)
 
@@ -160,7 +160,7 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
 
         // ── State ──────────────────────────────────────────────────────────
         gs: GS = 'intro'
-        playerHP = PLAYER_MAX_HP
+        playerHP = initialPlayerHP
         clippyHP = initialHP
         stars    = 0
         atk: Attack | null = null
@@ -358,9 +358,9 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
             wordWrap: { width: Math.round(W * 0.65) },
           }).setOrigin(0.5, 0).setDepth(9)
 
-          // ── Indicateur PROCHAIN COUP ────────────────────────────────────
-          this.tAtkLabel = this.add.text(Math.round(W * 0.065), Math.round(H * 0.41), 'PROCHAIN COUP', {
-            ...tf, fontSize: '12px', color: '#888899', align: 'center', strokeThickness: 3,
+          // ── Indicateur ESQUIVE ────────────────────────────────────────
+          this.tAtkLabel = this.add.text(Math.round(W / 2), Math.round(H * 0.50), 'ESQUIVE', {
+            ...tf, fontSize: '14px', color: '#888899', align: 'center', strokeThickness: 3,
           }).setOrigin(0.5, 1).setDepth(9).setAlpha(0)
 
           // ── Key indicators ─────────────────────────────────────────────
@@ -629,6 +629,19 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
             a.play().catch(() => {})
             this.bgMusic = a
           } catch {}
+
+          if (skipTutorial) {
+            this.tutMode = false
+            this.tBubble.setFontSize('16px')
+            this.bubble('On remet ça, déchet ?')
+            this.tRound.setText('ROUND 1').setColor('#ffcc44')
+            this.flashNow('FIGHT !')
+            this.tNow.setColor('#ff2200')
+            this.flash(0xff4400, 0.5)
+            this.t1 = this.time.delayedCall(1800, () => this.startIdle())
+            return
+          }
+
           const lines = [
             'PHASE 3 — LE RING',
             'Clippy vous affronte en combat direct.',
@@ -1021,43 +1034,61 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
           const showInd = (this.gs === 'telegraph' || this.gs === 'attack') && this.atk !== null
           if (!showInd) return
 
-          const boxW = Math.round(W * 0.10)
-          const boxH = Math.round(W * 0.10)
-          const bx = Math.round(W * 0.015)
-          const by = Math.round(H * 0.42)
-          const isAtk = this.gs === 'attack'
-          const borderCol = isAtk ? 0xff3300 : 0xffcc00
-          const arrowCol  = isAtk ? 0xff3300 : 0xffcc00
-          const alpha     = isAtk ? 0.95 : 0.70 + Math.sin(this.eyePulse * Math.PI) * 0.25
+          const boxSz = Math.round(W * 0.14)
+          const bx = Math.round(W / 2 - boxSz / 2)
+          const by = Math.round(H * 0.52)
+          const ready = this.telPct >= 1
+          const borderCol = ready ? 0x44ff88 : 0xff2222
+          const pulse = ready ? 0.85 + Math.sin(this.eyePulse * Math.PI * 2) * 0.15 : 0.80
 
-          g.fillStyle(0x080814, 0.90)
-          g.fillRoundedRect(bx, by, boxW, boxH, 8)
-          g.lineStyle(2, borderCol, 0.80)
-          g.strokeRoundedRect(bx, by, boxW, boxH, 8)
+          // Fond du cercle
+          g.fillStyle(0x080814, 0.88)
+          g.fillCircle(bx + boxSz / 2, by + boxSz / 2, boxSz / 2)
 
-          // Flèche direction d'esquive (inversée par rapport à l'attaque)
-          const cx = bx + boxW / 2
-          const cy = by + boxH / 2
-          const sz = Math.round(boxW * 0.28)
+          // Arc de remplissage
+          const cx = bx + boxSz / 2
+          const cy = by + boxSz / 2
+          const radius = boxSz / 2 - 4
+          if (this.telPct > 0) {
+            const fillCol = ready ? 0x44ff88 : 0xff2222
+            const endAngle = -Math.PI / 2 + this.telPct * Math.PI * 2
+            g.fillStyle(fillCol, ready ? 0.55 : 0.35)
+            g.beginPath()
+            g.moveTo(cx, cy)
+            g.arc(cx, cy, radius, -Math.PI / 2, endAngle, false)
+            g.closePath()
+            g.fillPath()
+          }
 
+          // Bordure
+          g.lineStyle(3, borderCol, pulse)
+          g.strokeCircle(cx, cy, boxSz / 2)
+          if (ready) {
+            g.lineStyle(6, 0x44ff88, 0.25)
+            g.strokeCircle(cx, cy, boxSz / 2 + 4)
+          }
+
+          // Flèche direction d'esquive au centre
+          const sz = Math.round(boxSz * 0.22)
           const dir: 'left'|'right'|'down' =
             this.atk === 'left' ? 'right' :
             this.atk === 'right' ? 'left' : 'down'
 
-          g.fillStyle(arrowCol, alpha)
+          const arrowCol = ready ? 0x44ff88 : 0xffffff
+          g.fillStyle(arrowCol, ready ? 1 : 0.90)
           g.beginPath()
           if (dir === 'left') {
             g.moveTo(cx - sz, cy)
-            g.lineTo(cx + sz * 0.5, cy - sz * 0.7)
-            g.lineTo(cx + sz * 0.5, cy + sz * 0.7)
+            g.lineTo(cx + sz * 0.5, cy - sz * 0.8)
+            g.lineTo(cx + sz * 0.5, cy + sz * 0.8)
           } else if (dir === 'right') {
             g.moveTo(cx + sz, cy)
-            g.lineTo(cx - sz * 0.5, cy - sz * 0.7)
-            g.lineTo(cx - sz * 0.5, cy + sz * 0.7)
+            g.lineTo(cx - sz * 0.5, cy - sz * 0.8)
+            g.lineTo(cx - sz * 0.5, cy + sz * 0.8)
           } else {
             g.moveTo(cx, cy + sz)
-            g.lineTo(cx - sz * 0.7, cy - sz * 0.5)
-            g.lineTo(cx + sz * 0.7, cy - sz * 0.5)
+            g.lineTo(cx - sz * 0.8, cy - sz * 0.5)
+            g.lineTo(cx + sz * 0.8, cy - sz * 0.5)
           }
           g.closePath(); g.fillPath()
         }
@@ -1149,17 +1180,6 @@ export default function ClippyPunchOutPhaser({ onWin, onLose, initialHP = CLIPPY
               g.fillStyle(i < this.stars ? 0xffcc00 : 0x1a1a2e, 1)
               this.drawStar(g, W/2 - 30 + i * 30, BY + BH / 2, 12, 5.5)
             }
-          }
-
-          // Telegraph progress bar
-          if (this.telPct > 0.01) {
-            const TW = Math.round(W * 0.40), TH = 10
-            const TX = (W - TW) / 2, TY = Math.round(H * 0.58)
-            g.fillStyle(0x0a0a1a, 0.85).fillRoundedRect(TX, TY, TW, TH, 5)
-            const barCol = this.gs === 'telegraph' ? 0xffaa00 : 0xff3300
-            g.fillStyle(barCol, 1)
-            g.fillRoundedRect(TX, TY, Math.round(TW * this.telPct), TH, 5)
-            g.lineStyle(1.5, 0x111122, 0.6).strokeRoundedRect(TX, TY, TW, TH, 5)
           }
 
           // Combo dots
