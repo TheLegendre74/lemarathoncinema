@@ -1317,8 +1317,8 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
     const [minMs, maxMs] = effectivePhase >= 9 ? [60, 200] : effectivePhase === 8 ? [100, 350] : effectivePhase === 7 ? [150, 500] : effectivePhase === 6 ? [200, 700] : effectivePhase >= 5 ? [300, 1200] : effectivePhase === 4 ? [400, 1500] : effectivePhase >= 3 ? [500, 2000] : [3000, 6500]
     const delay = minMs + Math.random() * (maxMs - minMs)
     autoAttackRef.current = setTimeout(() => {
-      if (phaseRef.current !== 'combat' || parryActive.current || mgPhaseRef.current !== 'idle' || ddrPhaseRef.current !== 'idle' || ddrIntroActiveRef.current) {
-        scheduleAutoAttack()   // reschedule sans attaquer si blocage
+      if (phaseRef.current !== 'combat' || parryActive.current || mgPhaseRef.current !== 'idle' || ddrPhaseRef.current !== 'idle' || punchPhaseRef.current !== 'idle' || ddrIntroActiveRef.current) {
+        if (punchPhaseRef.current === 'idle') scheduleAutoAttack()
         return
       }
       triggerAttack()
@@ -1858,7 +1858,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
       )}
 
       {/* ── Arène background (combat + DDR — bloque tout le site derrière) ── */}
-      {phase === 'combat' && hellPhase === 'idle' && (
+      {phase === 'combat' && hellPhase === 'idle' && punchPhase === 'idle' && (
         <div style={{ position:'fixed', inset:0, zIndex:99980, background:'#000' }}>
           <img
             src={
@@ -1884,7 +1884,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
       {parriedAnim && <div style={{ position:'fixed', inset:0, background:'rgba(60,140,255,.2)', zIndex:99989, pointerEvents:'none', animation:'clippy-parry-flash .5s ease' }} />}
 
       {/* ── Carré de parade ── */}
-      {parrySquare && (
+      {parrySquare && punchPhase === 'idle' && (
         <div onClick={handleParryClick} style={{ position:'fixed', left:parrySquare.x, top:parrySquare.y, width:PARRY_SQ, height:PARRY_SQ, zIndex:99996, cursor:'crosshair', animation:'parry-sq-in .15s ease, parry-sq-pulse .6s ease infinite', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:6 }}>
           <div style={{ position:'absolute', inset:0, border:'4px solid #e83232', borderRadius:6, background:'rgba(200,20,20,.18)', backdropFilter:'blur(2px)' }} />
           <span style={{ fontSize:28, position:'relative', zIndex:1, userSelect:'none' }}>⚔️</span>
