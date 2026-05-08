@@ -1,9 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { getUserCached } from '@/lib/auth'
-import { withCache } from '@/lib/redis'
 import SemaineClient from './SemaineClient'
 
-export const revalidate = 60
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 async function fetchWatchProviders(tmdbId: number) {
   const key = process.env.TMDB_API_KEY
@@ -24,11 +24,10 @@ export default async function SemainePage() {
     createClient(),
   ])
 
-  // weekFilm public — même pour tous → caché 1h
-  const weekFilm = await withCache('week_film:full', 3600, async () => {
-    const { data } = await supabase.from('week_films').select('*, films(*)').eq('active', true).order('created_at', { ascending: false }).limit(1).single()
-    return data ?? null
-  })
+  const [{ data: weekFilm }, { data: weekFilmHistory }] = await Promise.all([
+    supabase.from('week_films').select('*, films(*)').eq('active', true).order('created_at', { ascending: false }).limit(1).single(),
+    supabase.from('week_films').select('id, film_id, session_time, active, created_at, films(id, titre, annee, poster, realisateur)').order('created_at', { ascending: false }).limit(50),
+  ])
 
   const film = (weekFilm as any)?.films ?? null
 
@@ -49,6 +48,7 @@ export default async function SemainePage() {
       film={film}
       isWatched={!!isWatched}
       watchProviders={watchProviders}
+      weekFilmHistory={(weekFilmHistory as any[]) ?? []}
     />
   )
 }

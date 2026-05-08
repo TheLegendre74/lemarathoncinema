@@ -28,9 +28,10 @@ interface Props {
   film: any
   isWatched: boolean
   watchProviders: WatchProvidersFR | null
+  weekFilmHistory: any[]
 }
 
-export default function SemaineClient({ profile, weekFilm, film, isWatched, watchProviders }: Props) {
+export default function SemaineClient({ profile, weekFilm, film, isWatched, watchProviders, weekFilmHistory }: Props) {
   const [forumOpen, setForumOpen] = useState(false)
   const { addToast } = useToast()
   const router = useRouter()
@@ -144,6 +145,42 @@ export default function SemaineClient({ profile, weekFilm, film, isWatched, watc
             {forumOpen && <Forum topic={`week_${weekFilm?.id ?? 'cur'}`} profile={profile} />}
           </div>
         </>
+      )}
+
+      {weekFilmHistory.length > 0 && (
+        <div style={{ marginTop: '1.5rem' }}>
+          <div className="section-title">Archives des films de la semaine</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '.8rem' }}>
+            {weekFilmHistory.map((entry) => {
+              const archivedFilm = entry.films
+              if (!archivedFilm) return null
+
+              return (
+                <div key={entry.id} className="card" style={{ display: 'flex', gap: '.75rem', alignItems: 'center', padding: '.8rem' }}>
+                  <div style={{ width: 46, height: 69, borderRadius: 5, overflow: 'hidden', flexShrink: 0, background: 'var(--bg3)' }}>
+                    {archivedFilm.poster ? (
+                      <Image src={archivedFilm.poster} alt={archivedFilm.titre} width={46} height={69} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>ðŸŽ¬</div>
+                    )}
+                  </div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ display: 'flex', gap: '.45rem', alignItems: 'center', marginBottom: '.2rem' }}>
+                      {entry.active && <span style={{ color: 'var(--gold)', border: '1px solid rgba(232,196,106,.35)', borderRadius: 99, padding: '1px 6px', fontSize: '.58rem', textTransform: 'uppercase', letterSpacing: 1 }}>Actuel</span>}
+                      <span style={{ color: 'var(--text3)', fontSize: '.68rem' }}>
+                        {new Date(entry.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      </span>
+                    </div>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: '.95rem', lineHeight: 1.15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{archivedFilm.titre}</div>
+                    <div style={{ color: 'var(--text3)', fontSize: '.72rem', marginTop: '.15rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {archivedFilm.annee}{archivedFilm.realisateur ? ` · ${archivedFilm.realisateur}` : ''}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
       )}
     </div>
   )

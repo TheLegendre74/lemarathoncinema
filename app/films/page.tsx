@@ -32,10 +32,7 @@ export default async function FilmsPage() {
       const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true })
       return count ?? 0
     }),
-    withCache('week_film:active', 3600, async () => {
-      const { data } = await supabase.from('week_films').select('film_id').eq('active', true).single()
-      return data ?? null
-    }),
+    supabase.from('week_films').select('film_id').eq('active', true).order('created_at', { ascending: false }).limit(1).single().then(({ data }) => data ?? null),
     withCache('film_stats', 90, async () => {
       const { data, error } = await (supabase as any).rpc('get_film_stats')
       return error ? null : (data ?? null)
