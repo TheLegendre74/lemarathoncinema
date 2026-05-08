@@ -6,7 +6,6 @@ export async function proxy(request: NextRequest) {
 
   // Toujours laisser passer : auth, API, fichiers statiques
   if (
-    pathname.startsWith('/auth') ||
     pathname.startsWith('/api/') ||
     pathname.startsWith('/_next/') ||
     pathname.startsWith('/favicon') ||
@@ -16,8 +15,10 @@ export async function proxy(request: NextRequest) {
   }
 
   // Mode invité : cookie posé par le bouton "Continuer en mode invité"
+  const isAuthPage = pathname === '/auth'
+  const isAuthFlow = pathname.startsWith('/auth/')
   const guestCookie = request.cookies.get('guest_mode')?.value
-  if (guestCookie === '1') {
+  if (guestCookie === '1' && !isAuthPage) {
     return NextResponse.next()
   }
 
@@ -44,7 +45,20 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user && pathname === '/' && guestCookie !== '1') {
+    return NextResponse.redirect(new URL('/auth', request.url))
+  }
+
+  if (user && isAuthPage) {
+    return NextResponse.redirect(new URL('/', request.url))
+  }
+
+  if (isAuthFlow) {
+    return supabaseResponse
+  }
+
   return supabaseResponse
 }
 
