@@ -1,4 +1,5 @@
 import type Phaser from 'phaser'
+import { CFG } from '../config'
 import type { GameContext, ClippyAttackType } from '../types'
 
 interface GloveSprites {
@@ -27,6 +28,11 @@ export class GloveRenderer {
   private showoffT = 0
   private isShowoff = false
 
+  // Dodge POV animation
+  private dodgePOV = { x: 0, y: 0, angle: 0 }
+  private pGuardBaseX = 0
+  private pGuardBaseY = 0
+
   constructor(
     private scene: Phaser.Scene,
     private W: number,
@@ -38,6 +44,8 @@ export class GloveRenderer {
   init(sprites: GloveSprites, metrics: GloveMetrics) {
     this.sprites = sprites
     this.metrics = metrics
+    this.pGuardBaseX = sprites.pGuard.x
+    this.pGuardBaseY = sprites.pGuard.y
   }
 
   update(ctx: GameContext, dt: number) {
@@ -45,7 +53,55 @@ export class GloveRenderer {
       this.bounceT += dt * 3.5
     }
     if (this.isShowoff) this.showoffT += dt
+    this.updateDodgePOV(ctx, dt)
   }
+
+  private updateDodgePOV(ctx: GameContext, dt: number) {
+    const ps = ctx.player.state
+    const s = this.sprites
+
+    if (ps.action === 'dodge' && ps.dodgeDir) {
+      const maxX = Math.round(this.W * 0.15)
+      const maxY = Math.round(this.H * 0.10)
+      const maxA = 8
+      const t = Math.min(1, ps.timer / CFG.player.dodge.totalMs)
+
+      let ease: number
+      if (t < 0.25) ease = 1 - Math.pow(1 - t / 0.25, 3)
+      else if (t < 0.65) ease = 1
+      else ease = Math.pow(1 - (t - 0.65) / 0.35, 2)
+
+      if (ps.dodgeDir === 'left') {
+        this.dodgePOV.x = -maxX * ease
+        this.dodgePOV.y = 0
+        this.dodgePOV.angle = -maxA * ease
+      } else if (ps.dodgeDir === 'right') {
+        this.dodgePOV.x = maxX * ease
+        this.dodgePOV.y = 0
+        this.dodgePOV.angle = maxA * ease
+      } else {
+        this.dodgePOV.x = 0
+        this.dodgePOV.y = maxY * ease
+        this.dodgePOV.angle = 0
+      }
+    } else {
+      const decay = Math.min(1, 10 * dt)
+      this.dodgePOV.x *= 1 - decay
+      this.dodgePOV.y *= 1 - decay
+      this.dodgePOV.angle *= 1 - decay
+      if (Math.abs(this.dodgePOV.x) < 0.5) this.dodgePOV.x = 0
+      if (Math.abs(this.dodgePOV.y) < 0.5) this.dodgePOV.y = 0
+      if (Math.abs(this.dodgePOV.angle) < 0.1) this.dodgePOV.angle = 0
+    }
+
+    if (s.pGuard.visible) {
+      s.pGuard.x = this.pGuardBaseX + this.dodgePOV.x
+      s.pGuard.y = this.pGuardBaseY + this.dodgePOV.y
+      s.pGuard.angle = this.dodgePOV.angle
+    }
+  }
+
+  getDodgeOffset() { return this.dodgePOV }
 
   resetGloves() {
     const s = this.sprites
@@ -161,16 +217,21 @@ export class GloveRenderer {
     const glove = isLeft ? s.pLeft : s.pRight
     s.pGuard.setVisible(false)
     glove.setVisible(true).setFlipX(false)
-    const gx = isLeft ? Math.round(this.W * 0.10) : Math.round(this.W * 0.90)
-    const gy = Math.round(this.H * 0.82)
+
+    const baseGx = isLeft ? Math.round(this.W * 0.10) : Math.round(this.W * 0.90)
+    const baseGy = Math.round(this.H * 0.82)
+    const startX = baseGx + this.dodgePOV.x
+    const startY = baseGy + this.dodgePOV.y
     const tx = isLeft ? Math.round(this.W * 0.38) : Math.round(this.W * 0.62)
     const ty = Math.round(this.H * 0.56)
-    glove.setPosition(gx, gy)
+
+    glove.setPosition(startX, startY)
+    glove.setAngle(this.dodgePOV.angle)
     this.scene.tweens.killTweensOf(glove)
     this.scene.tweens.add({
-      targets: glove, x: tx, y: ty, duration: 130, ease: 'Power2',
+      targets: glove, x: tx, y: ty, angle: 0, duration: 130, ease: 'Power2',
       onComplete: () => this.scene.tweens.add({
-        targets: glove, x: gx, y: gy, duration: 300, ease: 'Power2',
+        targets: glove, x: baseGx, y: baseGy, duration: 300, ease: 'Power2',
         onComplete: () => { glove.setVisible(false); s.pGuard.setVisible(true) },
       }),
     })
@@ -179,7 +240,6 @@ export class GloveRenderer {
   animateStarPunch() {
     const s = this.sprites
     const m = this.metrics
-    // Clippy gloves fly up
     this.scene.tweens.killTweensOf(s.cGuardL)
     this.scene.tweens.killTweensOf(s.cGuardR)
     s.cPunchL.setVisible(false)
@@ -200,21 +260,23 @@ export class GloveRenderer {
       angle: 25, duration: 300, ease: 'Power2',
     })
 
-    // Player double uppercut
     const upperY = Math.round(this.H * 0.24)
-    const guardY = Math.round(this.H * 0.82)
+    const baseGuardY = Math.round(this.H * 0.82)
     s.pGuard.setVisible(false)
     const punches = [
-      { g: s.pLeft, sx: Math.round(this.W * 0.10), px: Math.round(this.W * 0.38) },
-      { g: s.pRight, sx: Math.round(this.W * 0.90), px: Math.round(this.W * 0.62) },
+      { g: s.pLeft, baseSx: Math.round(this.W * 0.10), px: Math.round(this.W * 0.38) },
+      { g: s.pRight, baseSx: Math.round(this.W * 0.90), px: Math.round(this.W * 0.62) },
     ]
-    punches.forEach(({ g, sx, px }) => {
-      g.setVisible(true).setFlipX(false).setPosition(sx, guardY)
+    punches.forEach(({ g, baseSx, px }) => {
+      const startX = baseSx + this.dodgePOV.x
+      const startY = baseGuardY + this.dodgePOV.y
+      g.setVisible(true).setFlipX(false).setPosition(startX, startY)
+      g.setAngle(this.dodgePOV.angle)
       this.scene.tweens.killTweensOf(g)
       this.scene.tweens.add({
-        targets: g, x: px, y: upperY, duration: 180, ease: 'Power2',
+        targets: g, x: px, y: upperY, angle: 0, duration: 180, ease: 'Power2',
         onComplete: () => this.scene.tweens.add({
-          targets: g, x: sx, y: guardY, duration: 500, ease: 'Power2',
+          targets: g, x: baseSx, y: baseGuardY, duration: 500, ease: 'Power2',
           onComplete: () => { g.setVisible(false); s.pGuard.setVisible(true) },
         }),
       })

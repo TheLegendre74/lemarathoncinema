@@ -1845,8 +1845,8 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
 
       {punchPhase === 'active' && (
         <ClippyPunchOutPhaser
-          initialHP={punchTutDoneRef.current ? 35 : 70}
-          initialPlayerHP={punchTutDoneRef.current ? 15 : 30}
+          initialHP={punchTutDoneRef.current ? 70 : undefined}
+          initialPlayerHP={punchTutDoneRef.current ? 50 : undefined}
           skipTutorial={punchTutDoneRef.current}
           onWin={() => {
             punchTutDoneRef.current = true
