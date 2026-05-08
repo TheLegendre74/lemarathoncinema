@@ -7,6 +7,16 @@ import { isMarathonLive, CONFIG } from '@/lib/config'
 import { getUnreadMessageCount as getUnreadMessageCountFromMessages } from '@/lib/messages'
 import { deleteCacheKeys } from '@/lib/redis'
 
+const WEEK_FILM_CACHE_KEYS = ['week_film:active', 'week_film:full']
+
+async function invalidateWeekFilmCaches() {
+  revalidatePath('/semaine')
+  revalidatePath('/films')
+  revalidatePath('/admin')
+  revalidatePath('/')
+  await deleteCacheKeys(WEEK_FILM_CACHE_KEYS)
+}
+
 // ── TMDB VERIFICATION ────────────────────────────────────────
 
 // ── OMDB FALLBACK ────────────────────────────────────────────
@@ -1161,9 +1171,20 @@ export async function adminSetWeekFilm(filmId: number, sessionTime?: string) {
   // Create new
   await supabase.from('week_films').insert({ film_id: filmId, active: true, session_time: sessionTime ?? `${CONFIG.FDLS_JOUR} à ${CONFIG.FDLS_HEURE}` })
 
-  revalidatePath('/semaine')
-  revalidatePath('/admin')
-  revalidatePath('/')
+  await invalidateWeekFilmCaches()
+  return { success: true }
+}
+
+export async function adminClearWeekFilm() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connectÃ©' }
+
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Non autorisÃ©.' }
+
+  await supabase.from('week_films').update({ active: false }).eq('active', true)
+  await invalidateWeekFilmCaches()
   return { success: true }
 }
 
@@ -1462,7 +1483,7 @@ type PosterLookupResult = {
   tmdbId?: number | null
 }
 
-const POSTER_CACHE_KEYS = ['films:list', 'film_stats', 'week_film:full', 'week_film:active']
+const POSTER_CACHE_KEYS = ['films:list', 'film_stats', ...WEEK_FILM_CACHE_KEYS]
 
 function hasUsablePosterValue(poster: string | null | undefined): poster is string {
   return typeof poster === 'string' && poster.trim().length > 0
