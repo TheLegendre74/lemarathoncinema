@@ -17,6 +17,17 @@ async function invalidateWeekFilmCaches() {
   await deleteCacheKeys(WEEK_FILM_CACHE_KEYS)
 }
 
+function canMarkLatestWeekArchiveNow() {
+  const parts = new Intl.DateTimeFormat('fr-FR', {
+    timeZone: 'Europe/Paris',
+    weekday: 'long',
+    hour: 'numeric',
+  }).formatToParts(new Date())
+  const weekday = parts.find(p => p.type === 'weekday')?.value
+  const hour = parseInt(parts.find(p => p.type === 'hour')?.value ?? '0')
+  return weekday === 'samedi' || (weekday === 'vendredi' && hour >= 22)
+}
+
 // ── TMDB VERIFICATION ────────────────────────────────────────
 
 // ── OMDB FALLBACK ────────────────────────────────────────────
@@ -661,6 +672,62 @@ export async function toggleWatched(filmId: number, filmTitre: string) {
   }
 }
 
+// Marquer le film de la semaine actif, ou la derniere archive pendant la fenetre autorisee.
+export async function markWeekFilmWatched(weekFilmId: number) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecte' }
+  if (!isMarathonLive()) return { error: 'Le marathon n\'a pas encore commence.' }
+
+  const { data: weekFilm, error: weekFilmError } = await supabase
+    .from('week_films')
+    .select('id, film_id, active, created_at')
+    .eq('id', weekFilmId)
+    .single()
+
+  if (weekFilmError || !weekFilm) return { error: 'Film de la semaine introuvable.' }
+
+  if (!weekFilm.active) {
+    const { data: latestArchive } = await supabase
+      .from('week_films')
+      .select('id')
+      .eq('active', false)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    if (latestArchive?.id !== weekFilm.id) {
+      return { error: 'Seule la derniere archive du film de la semaine peut etre marquee comme vue.' }
+    }
+    if (!canMarkLatestWeekArchiveNow()) {
+      return { error: 'La derniere archive peut etre marquee vue seulement le vendredi soir ou le samedi.' }
+    }
+  }
+
+  const { data: filmCheck } = await supabase.from('films').select('saison').eq('id', weekFilm.film_id).single()
+  if (filmCheck && filmCheck.saison > CONFIG.SAISON_NUMERO) {
+    return { error: 'Ce film sera disponible lors de la saison suivante.' }
+  }
+
+  const { data: existing } = await supabase
+    .from('watched')
+    .select('film_id, pre')
+    .eq('user_id', user.id)
+    .eq('film_id', weekFilm.film_id)
+    .single()
+
+  if (existing) return { success: true, alreadyWatched: true, filmId: weekFilm.film_id }
+
+  await supabase.from('watched').insert({ user_id: user.id, film_id: weekFilm.film_id, pre: false })
+  await supabase.rpc('increment_exp', { user_id: user.id, amount: CONFIG.EXP_FDLS })
+  await deleteCacheKeys([`user:${user.id}:watched_count`, `user:${user.id}:profile`])
+  revalidatePath('/semaine')
+  revalidatePath('/films')
+  revalidatePath('/profil')
+  revalidatePath('/classement')
+  return { success: true, filmId: weekFilm.film_id }
+}
+
 // Marquer un film vainqueur de duel comme vu pendant la séance du duel
 export async function markWatchedDuelWinner(filmId: number) {
   const supabase = await createClient()
@@ -1197,6 +1264,26 @@ export async function adminClearWeekFilm() {
 
   const adminDb = createAdminClient()
   const { error } = await adminDb.from('week_films').update({ active: false }).eq('active', true)
+  if (error) return { error: error.message }
+  await invalidateWeekFilmCaches()
+  return { success: true }
+}
+
+export async function adminDeleteWeekFilmArchive(weekFilmId: number) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecte' }
+
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Non autorise.' }
+
+  const adminDb = createAdminClient()
+  const { error } = await adminDb
+    .from('week_films')
+    .delete()
+    .eq('id', weekFilmId)
+    .eq('active', false)
+
   if (error) return { error: error.message }
   await invalidateWeekFilmCaches()
   return { success: true }
