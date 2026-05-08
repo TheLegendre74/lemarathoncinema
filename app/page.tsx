@@ -58,7 +58,7 @@ export default async function HomePage() {
     (supabase as any).from('profiles').select('id, pseudo, exp, saison, notify_marathon, active_badge, pre_marathon_window_until').eq('id', user.id).single(),
     supabase.from('watched').select('film_id', { count: 'exact', head: true }).eq('user_id', user.id),
     supabase.from('votes').select('duel_id', { count: 'exact', head: true }).eq('user_id', user.id),
-    supabase.from('week_films').select('id, active, films(id, titre, annee, poster)').eq('active', true).single(),
+    supabase.from('week_films').select('id, active, films(id, titre, annee, poster)').eq('active', true).order('created_at', { ascending: false }).limit(1).single(),
     supabase.from('duels').select('id, week_num, film1:films!duels_film1_id_fkey(id, titre, annee, poster), film2:films!duels_film2_id_fkey(id, titre, annee, poster)').eq('closed', false).order('created_at', { ascending: false }).limit(1).single(),
     supabase.from('films').select('id', { count: 'exact', head: true }).eq('saison', 1),
     supabase.from('watched').select('film_id, watched_at, pre, films(titre)').eq('user_id', user.id).order('watched_at', { ascending: false }).limit(5),

@@ -1166,10 +1166,22 @@ export async function adminSetWeekFilm(filmId: number, sessionTime?: string) {
   const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
   if (!profile?.is_admin) return { error: 'Non autorisé.' }
 
-  // Deactivate previous
-  await supabase.from('week_films').update({ active: false }).eq('active', true)
-  // Create new
-  await supabase.from('week_films').insert({ film_id: filmId, active: true, session_time: sessionTime ?? `${CONFIG.FDLS_JOUR} à ${CONFIG.FDLS_HEURE}` })
+  const adminDb = createAdminClient()
+
+  const { data: newWeekFilm, error: insertError } = await adminDb
+    .from('week_films')
+    .insert({ film_id: filmId, active: true, session_time: sessionTime ?? `${CONFIG.FDLS_JOUR} à ${CONFIG.FDLS_HEURE}` })
+    .select('id')
+    .single()
+  if (insertError) return { error: insertError.message }
+  if (!newWeekFilm) return { error: 'Film de la semaine non cree.' }
+
+  const { error: archiveError } = await adminDb
+    .from('week_films')
+    .update({ active: false })
+    .eq('active', true)
+    .neq('id', newWeekFilm.id)
+  if (archiveError) return { error: archiveError.message }
 
   await invalidateWeekFilmCaches()
   return { success: true }
@@ -1183,7 +1195,9 @@ export async function adminClearWeekFilm() {
   const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
   if (!profile?.is_admin) return { error: 'Non autorisÃ©.' }
 
-  await supabase.from('week_films').update({ active: false }).eq('active', true)
+  const adminDb = createAdminClient()
+  const { error } = await adminDb.from('week_films').update({ active: false }).eq('active', true)
+  if (error) return { error: error.message }
   await invalidateWeekFilmCaches()
   return { success: true }
 }

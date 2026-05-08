@@ -38,7 +38,7 @@ export default async function AdminPage() {
     adminDb.from('films').select('*').eq('pending_admin_approval', false).order('titre'),
     supabase.from('profiles').select('*, watched:watched(film_id), votes:votes(duel_id)').order('exp', { ascending: false }),
     supabase.from('duels').select('*, film1:films!duels_film1_id_fkey(titre), film2:films!duels_film2_id_fkey(titre), votes(film_choice)').order('created_at', { ascending: false }).limit(10),
-    supabase.from('week_films').select('*, films(titre)').eq('active', true).single(),
+    adminDb.from('week_films').select('*, films(titre)').eq('active', true).order('created_at', { ascending: false }).limit(1).single(),
     supabase.from('watched').select('film_id'),
     adminDb.from('films').select('*').eq('flagged_18_pending', true).order('titre'),
     adminDb.from('films').select('*').eq('flagged_18plus', true).order('created_at', { ascending: false }),

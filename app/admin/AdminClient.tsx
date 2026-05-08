@@ -511,6 +511,8 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
   const [directAdmitLoading, setDirectAdmitLoading] = useState<Record<string, boolean>>({})
   const [localAllJoinRequests, setLocalAllJoinRequests] = useState<any[]>(allSeasonJoinRequests)
   const [showMarathonParticipants, setShowMarathonParticipants] = useState(false)
+  const [weekFilmSelection, setWeekFilmSelection] = useState('')
+  const [weekFilmSaving, setWeekFilmSaving] = useState(false)
 
   // Sync avec flaggedFilms après router.refresh(), en excluant les films déjà traités
   useEffect(() => {
@@ -608,11 +610,13 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
     else { addToast('Duel clôturé — vainqueur désigné !', '🏆'); router.refresh() }
   }
 
-  async function setWeekFilm(filmId: string) {
+  async function saveWeekFilm(filmId: string) {
     if (!filmId) return
+    setWeekFilmSaving(true)
     const result = await adminSetWeekFilm(parseInt(filmId), `${CONFIG.FDLS_JOUR} soir à ${CONFIG.FDLS_HEURE}`)
     if (result.error) addToast(result.error, '⚠️')
-    else { addToast('Film de la semaine défini !', '🎬'); router.refresh() }
+    else { addToast('Film de la semaine défini !', '🎬'); setWeekFilmSelection(''); router.refresh() }
+    setWeekFilmSaving(false)
   }
 
   async function deleteFilm(filmId: number, titre: string) {
@@ -1116,10 +1120,14 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
         )}
         <select
           style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.65rem .9rem', color: 'var(--text2)', fontFamily: 'var(--font-body)', fontSize: '.88rem' }}
-          defaultValue=""
-          onChange={e => setWeekFilm(e.target.value)}
+          value={weekFilmSelection}
+          disabled={weekFilmSaving}
+          onChange={e => {
+            setWeekFilmSelection(e.target.value)
+            saveWeekFilm(e.target.value)
+          }}
         >
-          <option value="">Choisir le film de cette semaine…</option>
+          <option value="">{weekFilmSaving ? 'Mise à jour...' : 'Choisir le film de cette semaine…'}</option>
           {films.filter(f => f.saison === 1).map(f => (
             <option key={f.id} value={f.id}>{f.titre} ({f.annee}) — {getWatchPct(f.id)}% vus</option>
           ))}
