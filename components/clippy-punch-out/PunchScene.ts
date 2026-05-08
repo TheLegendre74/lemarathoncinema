@@ -82,11 +82,15 @@ export class PunchScene extends Phaser.Scene {
 
   // Mouse controls
   private prevMouseX = 0
+  private prevMouseY = 0
   private mouseDodgeCooldown = 0
   private mouseLeftClicked = false
   private mouseRightClicked = false
 
+  // Volume
+  private volume = 0.5
   private bgMusic: HTMLAudioElement | null = null
+
   private eyePulse = 0
   private introTimer = 0
   private prevClippyAction = 'idle'
@@ -253,11 +257,21 @@ export class PunchScene extends Phaser.Scene {
     // Mouse — disable context menu for right-click
     this.input.mouse?.disableContextMenu()
     this.prevMouseX = this.input.activePointer.x
+    this.prevMouseY = this.input.activePointer.y
 
     // Mouse click detection
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (pointer.leftButtonDown()) this.mouseLeftClicked = true
       if (pointer.rightButtonDown()) this.mouseRightClicked = true
+    })
+
+    // Volume — load from localStorage, scroll to adjust
+    try { this.volume = parseFloat(localStorage.getItem('clippy_volume') ?? '0.5') || 0.5 } catch {}
+    this.applyVolume()
+    this.input.on('wheel', (_p: any, _gx: any, _gy: any, _gz: any, dy: number) => {
+      this.volume = Math.max(0, Math.min(1, this.volume - dy * 0.001))
+      this.applyVolume()
+      try { localStorage.setItem('clippy_volume', this.volume.toFixed(2)) } catch {}
     })
 
     // Init systems
@@ -388,6 +402,7 @@ export class PunchScene extends Phaser.Scene {
     this.effectsR.update(ctx, rawDt)
     this.effectsR.draw(ctx)
     this.hudR.draw(ctx)
+    this.drawVolumeIndicator()
     this.drawProjectiles(ctx)
     this.drawMobileButtons()
   }
@@ -410,15 +425,23 @@ export class PunchScene extends Phaser.Scene {
     let dPr = JD(this.kDown)
     let spaceDown = this.kSpace.isDown
 
-    // Détection esquive par mouvement souris (deltaX > seuil + cooldown)
+    // Détection esquive par mouvement souris (delta > seuil + cooldown)
     const mouseX = this.input.activePointer.x
+    const mouseY = this.input.activePointer.y
     const mouseDx = mouseX - this.prevMouseX
+    const mouseDy = mouseY - this.prevMouseY
     this.prevMouseX = mouseX
+    this.prevMouseY = mouseY
     const now = performance.now()
-    if (now >= this.mouseDodgeCooldown && Math.abs(mouseDx) >= CFG.player.mouse.swipeThreshold) {
-      if (mouseDx < 0) lPr = true
-      else rPr = true
-      this.mouseDodgeCooldown = now + CFG.player.mouse.dodgeCooldownMs
+    if (now >= this.mouseDodgeCooldown) {
+      if (Math.abs(mouseDx) >= CFG.player.mouse.swipeThreshold) {
+        if (mouseDx < 0) lPr = true
+        else rPr = true
+        this.mouseDodgeCooldown = now + CFG.player.mouse.dodgeCooldownMs
+      } else if (mouseDy >= CFG.player.mouse.swipeThreshold) {
+        dPr = true
+        this.mouseDodgeCooldown = now + CFG.player.mouse.dodgeCooldownMs
+      }
     }
 
     // Mobile input (merge with keyboard)
@@ -551,19 +574,23 @@ export class PunchScene extends Phaser.Scene {
       : step.expect === 'duck' ? 'down' : null
 
     if (step.expect === 'counter') {
-      if (ps.action === 'counter_window' && jPr) {
+      if (ps.action === 'counter_window' && (jPr || kPr)) {
         this.tutorialSys.onSuccess(ctx)
         this.effectsR.popup('CONTRE !', '#ffee22')
         this.effectsR.flash(ctx, 0xffee22, 0.4)
         return
       }
-      if (lPr || rPr || dPr) {
+      if ((lPr || rPr || dPr) && ps.action === 'idle') {
         const dir: DodgeDirection = lPr ? 'left' : rPr ? 'right' : 'down'
-        if (this.dodgeSys.tryDodge(ctx, dir, REQUIRED_DODGE)) {
-          this.staminaSys.spend(ctx, CFG.player.dodge.staminaCost)
-          this.gloveR.resetGloves()
-          this.effectsR.flash(ctx, 0x44ff88, 0.25)
-        }
+        ps.action = 'dodge'
+        ps.timer = 0
+        ps.dodgeDir = dir
+        ps.isPerfectDodge = true
+        ps.cooldownRemaining = CFG.player.dodge.cooldown
+        this.staminaSys.spend(ctx, CFG.player.dodge.staminaCost)
+        this.gloveR.resetGloves()
+        this.effectsR.flash(ctx, 0x44ff88, 0.25)
+        this.effectsR.popup('PARFAIT !', '#44ff88')
       }
       return
     }
@@ -672,7 +699,7 @@ export class PunchScene extends Phaser.Scene {
 
     try {
       const a = new Audio('/clippy-contre-humain.mp3')
-      a.loop = true; a.volume = 0.35
+      a.loop = true; a.volume = this.volume * 0.7
       a.play().catch(() => {})
       this.bgMusic = a
     } catch {}
@@ -872,10 +899,43 @@ export class PunchScene extends Phaser.Scene {
     }
   }
 
+  // ── VOLUME INDICATOR ──────────────────────────────────────────────────
+
+  private drawVolumeIndicator() {
+    const g = this.gHUD
+    const x = this.W - 14
+    const y = Math.round(this.H * 0.50)
+    const barH = 60
+    const barW = 6
+    const filled = Math.round(barH * this.volume)
+    const label = this.volume <= 0 ? '🔇' : this.volume < 0.35 ? '🔈' : this.volume < 0.7 ? '🔉' : '🔊'
+
+    g.fillStyle(0x0d0d1e, 0.7)
+    g.fillRoundedRect(x - barW, y, barW, barH, 3)
+    if (filled > 0) {
+      g.fillStyle(0x88aacc, 0.8)
+      g.fillRoundedRect(x - barW, y + barH - filled, barW, filled, 3)
+    }
+
+    if (!this.tVol) {
+      this.tVol = this.add.text(x - barW / 2, y - 14, label, {
+        fontFamily: FONT, fontSize: '14px', color: '#88aacc',
+        stroke: '#000', strokeThickness: 2,
+      }).setOrigin(0.5, 0.5).setDepth(9)
+    }
+    this.tVol.setText(label)
+  }
+
+  private tVol: Phaser.GameObjects.Text | null = null
+
   // ── HELPERS ──────────────────────────────────────────────────────────
 
   private snd(key: string) {
-    try { this.sound.play(key, { volume: 0.6 }) } catch {}
+    try { this.sound.play(key, { volume: this.volume }) } catch {}
+  }
+
+  private applyVolume() {
+    if (this.bgMusic) this.bgMusic.volume = this.volume * 0.7
   }
 
   private createContext(): GameContext {
