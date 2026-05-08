@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getUserCached } from '@/lib/auth'
 import { withCache } from '@/lib/redis'
@@ -42,43 +43,7 @@ export default async function HomePage() {
     return data ?? []
   })
 
-  // Guest homepage
-  if (!user) {
-    const [{ count: totalFilmsCount }, { count: playerCount }] = await Promise.all([
-      supabase.from('films').select('id', { count: 'exact', head: true }).eq('saison', 1),
-      supabase.from('profiles').select('id', { count: 'exact', head: true }),
-    ])
-    return (
-      <div>
-        <div style={{ marginBottom: '2rem' }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', lineHeight: 1 }}>Ciné Marathon</div>
-          <div style={{ color: 'var(--text2)', fontSize: '.83rem', marginTop: '.35rem' }}>{cfg.ACCUEIL_SOUS_TITRE}</div>
-        </div>
-
-        <Countdown marathonStart={cfg.MARATHON_START.toISOString()} />
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.8rem', marginBottom: '1.5rem' }}>
-          <div className="stat"><div className="stat-l">Films S1</div><div className="stat-v gold">{totalFilmsCount ?? 0}</div></div>
-          <div className="stat"><div className="stat-l">Joueurs</div><div className="stat-v blue">{playerCount ?? 0}</div></div>
-        </div>
-
-        <div className="card" style={{ marginBottom: '1.5rem', textAlign: 'center', padding: '2rem' }}>
-          <div style={{ fontSize: '2rem', marginBottom: '.8rem' }}>👋</div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', marginBottom: '.5rem' }}>Mode Invité</div>
-          <div style={{ fontSize: '.83rem', color: 'var(--text2)', marginBottom: '1.2rem', lineHeight: 1.6 }}>
-            Tu peux naviguer librement et découvrir les films du marathon.<br />
-            Connecte-toi pour participer, voter et accumuler de l'EXP !
-          </div>
-          <Link href="/auth" className="btn btn-gold" style={{ textDecoration: 'none', display: 'inline-block' }}>
-            Se connecter / S'inscrire
-          </Link>
-        </div>
-
-        <NewsSection newsList={(newsList as any[]) ?? []} />
-        <RulesSection cfg={cfg} />
-      </div>
-    )
-  }
+  if (!user) redirect('/auth')
 
   // Toutes les requêtes qui ne dépendent pas du profil tournent en parallèle
   const [
