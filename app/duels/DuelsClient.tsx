@@ -232,32 +232,40 @@ function DuelCard({
 
       {/* Films */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 64px 1fr' }}>
-        {[f1, f2].map((f, idx) => {
-          const votes = idx === 0 ? v1 : v2
-          const pct = Math.round((votes / tot) * 100)
-          return (
-            <div key={f.id}>
-              {idx === 1 && (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border2)', width: 46, height: 46, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>VS</div>
-                </div>
-              )}
-              <div style={SideStyle(f.id)} onClick={() => canVote && onVote(duel.id, f.id)}>
-                <div style={{ width: 120, height: 180, borderRadius: 'var(--r)', overflow: 'hidden', background: 'var(--bg3)', border: `2px solid ${myVote === f.id ? 'var(--gold)' : winner?.id === f.id ? 'var(--green)' : 'var(--border)'}`, transition: 'border-color .2s' }}>
-                  {f.poster
-                    ? <Image src={f.poster} alt={f.titre} width={120} height={180} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized />
-                    : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>🎬</div>
-                  }
-                </div>
-                <div style={{ fontSize: '.9rem', fontWeight: 500, lineHeight: 1.3 }}>{f.titre}</div>
-                <div style={{ fontSize: '.72rem', color: 'var(--text3)' }}>{f.annee} · {f.realisateur}</div>
-                {myVote && <div style={{ fontSize: '.78rem', color: myVote === f.id ? 'var(--gold)' : 'var(--text3)', fontWeight: myVote === f.id ? 600 : 400 }}>
-                  {votes} vote{votes > 1 ? 's' : ''} ({pct}%)
-                </div>}
-              </div>
-            </div>
-          )
-        })}
+        {/* Film 1 */}
+        <div style={SideStyle(f1.id)} onClick={() => canVote && onVote(duel.id, f1.id)}>
+          <div style={{ width: 120, height: 180, borderRadius: 'var(--r)', overflow: 'hidden', background: 'var(--bg3)', border: `2px solid ${myVote === f1.id ? 'var(--gold)' : winner?.id === f1.id ? 'var(--green)' : 'var(--border)'}`, transition: 'border-color .2s' }}>
+            {f1.poster
+              ? <Image src={f1.poster} alt={f1.titre} width={120} height={180} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized />
+              : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>🎬</div>
+            }
+          </div>
+          <div style={{ fontSize: '.9rem', fontWeight: 500, lineHeight: 1.3 }}>{f1.titre}</div>
+          <div style={{ fontSize: '.72rem', color: 'var(--text3)' }}>{f1.annee} · {f1.realisateur}</div>
+          {myVote && <div style={{ fontSize: '.78rem', color: myVote === f1.id ? 'var(--gold)' : 'var(--text3)', fontWeight: myVote === f1.id ? 600 : 400 }}>
+            {v1} vote{v1 > 1 ? 's' : ''} ({p1}%)
+          </div>}
+        </div>
+
+        {/* VS */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border2)', width: 46, height: 46, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>VS</div>
+        </div>
+
+        {/* Film 2 */}
+        <div style={SideStyle(f2.id)} onClick={() => canVote && onVote(duel.id, f2.id)}>
+          <div style={{ width: 120, height: 180, borderRadius: 'var(--r)', overflow: 'hidden', background: 'var(--bg3)', border: `2px solid ${myVote === f2.id ? 'var(--gold)' : winner?.id === f2.id ? 'var(--green)' : 'var(--border)'}`, transition: 'border-color .2s' }}>
+            {f2.poster
+              ? <Image src={f2.poster} alt={f2.titre} width={120} height={180} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized />
+              : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>🎬</div>
+            }
+          </div>
+          <div style={{ fontSize: '.9rem', fontWeight: 500, lineHeight: 1.3 }}>{f2.titre}</div>
+          <div style={{ fontSize: '.72rem', color: 'var(--text3)' }}>{f2.annee} · {f2.realisateur}</div>
+          {myVote && <div style={{ fontSize: '.78rem', color: myVote === f2.id ? 'var(--gold)' : 'var(--text3)', fontWeight: myVote === f2.id ? 600 : 400 }}>
+            {v2} vote{v2 > 1 ? 's' : ''} ({p2}%)
+          </div>}
+        </div>
       </div>
 
       {/* Barre interactive */}
