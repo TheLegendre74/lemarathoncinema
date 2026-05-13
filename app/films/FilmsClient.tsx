@@ -253,7 +253,7 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
           title={isInception ? 'Cliquer 5 fois...' : undefined}
         >
           {film.poster && !posterErr
-            ? <Image src={film.poster} alt={film.titre} fill style={{ objectFit: 'contain', objectPosition: 'center' }} sizes="500px" unoptimized onError={() => setPosterErr(true)} />
+            ? <Image src={film.poster} alt={film.titre} fill style={{ objectFit: 'contain', objectPosition: 'center' }} sizes="500px" onError={() => setPosterErr(true)} />
             : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem' }}>🎬</div>
           }
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 60%, var(--bg2) 100%)' }} />
@@ -553,7 +553,7 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
                   <>
                     {flatrate.map(p => (
                       <a key={p.provider_id} href={justWatchUrl} target="_blank" rel="noopener noreferrer" className="streaming-platform">
-                        <Image src={`https://image.tmdb.org/t/p/w92${p.logo_path}`} alt={p.provider_name} width={32} height={32} style={{ borderRadius: 6, objectFit: 'cover' }} unoptimized />
+                        <Image src={`https://image.tmdb.org/t/p/w92${p.logo_path}`} alt={p.provider_name} width={32} height={32} style={{ borderRadius: 6, objectFit: 'cover' }} />
                         <span style={{ flex: 1, fontSize: '.88rem', fontWeight: 500, color: 'var(--text)' }}>{p.provider_name}</span>
                         <span className="sp-type svod">Abonnement</span>
                         <span style={{ fontSize: '.8rem', color: 'var(--text3)' }}>↗</span>
@@ -561,7 +561,7 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
                     ))}
                     {deduped.map(p => (
                       <a key={p.provider_id} href={justWatchUrl} target="_blank" rel="noopener noreferrer" className="streaming-platform">
-                        <Image src={`https://image.tmdb.org/t/p/w92${p.logo_path}`} alt={p.provider_name} width={32} height={32} style={{ borderRadius: 6, objectFit: 'cover' }} unoptimized />
+                        <Image src={`https://image.tmdb.org/t/p/w92${p.logo_path}`} alt={p.provider_name} width={32} height={32} style={{ borderRadius: 6, objectFit: 'cover' }} />
                         <span style={{ flex: 1, fontSize: '.88rem', fontWeight: 500, color: 'var(--text)' }}>{p.provider_name}</span>
                         <span className="sp-type tvod">Location/Achat</span>
                         <span style={{ fontSize: '.8rem', color: 'var(--text3)' }}>↗</span>

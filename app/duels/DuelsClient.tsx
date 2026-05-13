@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import Forum from '@/components/Forum'
 import { voteDuel, markWatched, upsertRating } from '@/lib/actions'
@@ -87,7 +88,7 @@ function FilmPreview({ film, watchPct, avg, profile, isWatched, watchedPre, myRa
         <div style={{ display: 'flex', gap: '1rem', padding: '1.2rem' }}>
           <div style={{ width: 100, height: 150, borderRadius: 'var(--r)', overflow: 'hidden', flexShrink: 0, border: '2px solid var(--border2)' }}>
             {film.poster
-              ? <Image src={film.poster} alt={film.titre} width={100} height={150} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized />
+              ? <Image src={film.poster} alt={film.titre} width={100} height={150} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
               : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', background: 'var(--bg3)' }}>🎬</div>
             }
           </div>
@@ -237,7 +238,7 @@ function DuelPoster({ film, w, h, border, watchPct, avg, profile, isWatched, wat
         }}
       >
         {film.poster
-          ? <Image src={film.poster} alt={film.titre} width={w} height={h} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized />
+          ? <Image src={film.poster} alt={film.titre} width={w} height={h} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
           : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: w > 60 ? '2rem' : '1.2rem' }}>🎬</div>
         }
         {hovered && (
@@ -246,12 +247,13 @@ function DuelPoster({ film, w, h, border, watchPct, avg, profile, isWatched, wat
           </div>
         )}
       </div>
-      {showPreview && (
+      {showPreview && createPortal(
         <FilmPreview
           film={film} watchPct={watchPct} avg={avg}
           profile={profile} isWatched={isWatched} watchedPre={watchedPre} myRating={myRating}
           onClose={() => { setShowPreview(false); hoveredByTimer.current = false }} onRefresh={onRefresh}
-        />
+        />,
+        document.body
       )}
     </>
   )

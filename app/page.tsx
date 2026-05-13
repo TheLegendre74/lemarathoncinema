@@ -76,13 +76,15 @@ export default async function HomePage() {
 
   // Statut de demande d'inscription en cours de saison
   const isMidSeasonPlayer = live && (profile as any).saison > CONFIG.SAISON_NUMERO
-  const joinStatus = isMidSeasonPlayer ? await getMySeasonJoinStatus() : null
   const preMarathonWindowUntil = (profile as any).pre_marathon_window_until as string | null
 
-  const rankResult = await withTimeout(supabase
-    .from('profiles')
-    .select('id', { count: 'exact', head: true })
-    .gte('exp', profile.exp))
+  const [joinStatus, rankResult] = await Promise.all([
+    isMidSeasonPlayer ? getMySeasonJoinStatus() : Promise.resolve(null),
+    withTimeout(supabase
+      .from('profiles')
+      .select('id', { count: 'exact', head: true })
+      .gte('exp', profile.exp)),
+  ])
 
   const totalS1 = totalS1Count ?? 0
   const rank = rankResult?.count ?? 1

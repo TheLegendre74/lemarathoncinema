@@ -200,7 +200,7 @@ export default function PublicWatchlistsClient({
                     {items.slice(0, 3).map(item => (
                       <div key={item.film_id} style={{ width: 28, height: 42, borderRadius: 3, overflow: 'hidden', background: 'var(--bg3)', position: 'relative', flexShrink: 0 }}>
                         {item.films?.poster
-                          ? <Image src={item.films.poster} alt={item.films.titre} fill style={{ objectFit: 'cover' }} sizes="28px" unoptimized />
+                          ? <Image src={item.films.poster} alt={item.films.titre} fill style={{ objectFit: 'cover' }} sizes="28px" />
                           : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.5rem' }}>🎬</div>
                         }
                       </div>
@@ -263,7 +263,7 @@ export default function PublicWatchlistsClient({
                   ? previewFilms.map(item => (
                       <div key={item.film_id} style={{ position: 'relative', overflow: 'hidden' }}>
                         {item.films?.poster
-                          ? <Image src={item.films.poster} alt={item.films.titre} fill style={{ objectFit: 'cover' }} sizes="80px" unoptimized />
+                          ? <Image src={item.films.poster} alt={item.films.titre} fill style={{ objectFit: 'cover' }} sizes="80px" />
                           : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>🎬</div>
                         }
                       </div>
@@ -462,7 +462,7 @@ function WatchlistDetailModal({
                   <div key={item.film_id} style={{ display: 'flex', alignItems: 'center', gap: '.85rem', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.6rem .85rem' }}>
                     <div style={{ width: 38, height: 56, borderRadius: 4, overflow: 'hidden', flexShrink: 0, background: 'var(--bg3)', position: 'relative' }}>
                       {film.poster
-                        ? <Image src={film.poster} alt={film.titre} fill style={{ objectFit: 'cover' }} sizes="38px" unoptimized />
+                        ? <Image src={film.poster} alt={film.titre} fill style={{ objectFit: 'cover' }} sizes="38px" />
                         : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.75rem' }}>🎬</div>
                       }
                     </div>

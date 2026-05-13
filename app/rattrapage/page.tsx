@@ -88,7 +88,7 @@ export default async function RattrapagePage() {
                     </div>
                     {f.poster ? (
                       <div style={{ width: 36, height: 54, borderRadius: 5, overflow: 'hidden', flexShrink: 0 }}>
-                        <Image src={f.poster} alt={f.titre} width={36} height={54} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized />
+                        <Image src={f.poster} alt={f.titre} width={36} height={54} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
                       </div>
                     ) : (
                       <div style={{ width: 36, height: 54, borderRadius: 5, background: 'var(--bg3)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>🎬</div>

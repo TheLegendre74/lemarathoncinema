@@ -2,8 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getUserCached } from '@/lib/auth'
 import SemaineClient from './SemaineClient'
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+export const revalidate = 30
 
 async function fetchWatchProviders(tmdbId: number) {
   const key = process.env.TMDB_API_KEY

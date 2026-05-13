@@ -50,7 +50,6 @@ export default function Poster({ film, fill, width = 300, height = 450, classNam
           sizes={sizes ?? '(max-width: 768px) 50vw, 200px'}
           priority={priority}
           loading={priority ? undefined : 'lazy'}
-          unoptimized
         />
       </div>
     )
@@ -67,7 +66,6 @@ export default function Poster({ film, fill, width = 300, height = 450, classNam
       onError={() => setErr(true)}
       priority={priority}
       loading={priority ? undefined : 'lazy'}
-      unoptimized
     />
   )
 }
