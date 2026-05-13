@@ -1198,6 +1198,25 @@ export async function adminCreateDuel(film1Id: number, film2Id: number, weekNum:
   return { success: true }
 }
 
+export async function adminCreateDuelFromFilms(film1Id: number, film2Id: number) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Non autorisé.' }
+
+  const { count } = await supabase.from('duels').select('*', { count: 'exact', head: true })
+  const weekNum = (count ?? 0) + 1
+
+  const { error } = await supabase.from('duels').insert({ film1_id: film1Id, film2_id: film2Id, week_num: weekNum, pending: true })
+  if (error) return { error: error.message }
+  revalidatePath('/duels')
+  revalidatePath('/admin')
+  revalidatePath('/films')
+  return { success: true }
+}
+
 export async function adminApproveDuel(duelId: number) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

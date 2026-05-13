@@ -5,7 +5,7 @@ import Image from 'next/image'
 import Poster from '@/components/Poster'
 import Forum from '@/components/Forum'
 import { useToast } from '@/components/ToastProvider'
-import { toggleWatched, markWatched, markWatchedDuelWinner, upsertRating, upsertNegativeRating, addFilm, updateFilm, reportFilm, discoverEgg, getFilmWatchProviders, adminSetFilmCategory, setFilmRattrapage, submitMarathonWatchRequest, addFilmToWatchlist, removeFilmFromWatchlist, createWatchlist } from '@/lib/actions'
+import { toggleWatched, markWatched, markWatchedDuelWinner, upsertRating, upsertNegativeRating, addFilm, updateFilm, reportFilm, discoverEgg, getFilmWatchProviders, adminSetFilmCategory, setFilmRattrapage, submitMarathonWatchRequest, addFilmToWatchlist, removeFilmFromWatchlist, createWatchlist, adminCreateDuelFromFilms } from '@/lib/actions'
 import type { TMDBSuggestion } from '@/lib/tmdb'
 import { CONFIG } from '@/lib/config'
 import { useRouter } from 'next/navigation'
@@ -1037,6 +1037,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
   const watchedSet = useMemo(() => new Set(localWatchedIds), [localWatchedIds])
   // Override optimiste pour la valeur pre (évite l'affichage temporaire "⏳ avant" après un clic marathon)
   const [localPreOverride, setLocalPreOverride] = useState<Record<number, boolean>>({})
+  const [duelPick, setDuelPick] = useState<number | null>(null)
 
   // ── Watchlist state ─────────────────────���──────────────────
   const [watchlists, setWatchlists] = useState<WatchlistInfo[]>(initialWatchlists ?? [])
@@ -1444,6 +1445,30 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                     style={{ position: 'absolute', top: 5, right: 5, background: rattrapageMap[film.id] ? 'rgba(232,196,106,.3)' : 'rgba(0,0,0,.7)', border: `1px solid ${rattrapageMap[film.id] ? 'rgba(232,196,106,.6)' : 'rgba(255,255,255,.25)'}`, borderRadius: 4, padding: '2px 5px', fontSize: '.55rem', color: rattrapageMap[film.id] ? 'var(--gold)' : '#ccc', cursor: 'pointer', zIndex: 10, lineHeight: 1.4 }}
                     title="Rattrapage"
                   >📚</button>
+                )}
+
+                {/* Bouton admin duel */}
+                {isAdmin && (
+                  <button
+                    onClick={async e => {
+                      e.stopPropagation()
+                      if (!duelPick) {
+                        setDuelPick(film.id)
+                        addToast(`Film 1 sélectionné : ${film.titre} — choisis le 2e film`, '⚔️')
+                      } else if (duelPick === film.id) {
+                        setDuelPick(null)
+                        addToast('Sélection duel annulée', '↩️')
+                      } else {
+                        const f1 = films.find(f => f.id === duelPick)
+                        const result = await adminCreateDuelFromFilms(duelPick, film.id)
+                        setDuelPick(null)
+                        if (result.error) addToast(result.error, '⚠️')
+                        else addToast(`Duel en attente : ${f1?.titre} VS ${film.titre}`, '⚔️')
+                      }
+                    }}
+                    style={{ position: 'absolute', bottom: is18 || isStrange ? 32 : 7, left: 7, background: duelPick === film.id ? 'rgba(232,90,90,.85)' : 'rgba(0,0,0,.7)', border: `1px solid ${duelPick === film.id ? 'rgba(232,90,90,.8)' : duelPick ? 'rgba(232,196,106,.6)' : 'rgba(255,255,255,.25)'}`, borderRadius: 4, padding: '2px 5px', fontSize: '.55rem', color: duelPick === film.id ? '#fff' : duelPick ? 'var(--gold)' : '#ccc', cursor: 'pointer', zIndex: 10, lineHeight: 1.4 }}
+                    title={duelPick === film.id ? 'Annuler la sélection' : duelPick ? 'Sélectionner comme film 2' : 'Sélectionner pour un duel'}
+                  >{duelPick === film.id ? '✕' : '⚔️'}</button>
                 )}
 
                 {/* Menu admin rattrapage */}
