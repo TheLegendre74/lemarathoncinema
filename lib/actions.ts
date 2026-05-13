@@ -1183,7 +1183,7 @@ export async function editPost(postId: string, content: string) {
 
 // ── ADMIN ────────────────────────────────────────────────────
 
-export async function adminCreateDuel(film1Id: number, film2Id: number, weekNum: number) {
+export async function adminCreateDuel(film1Id: number, film2Id: number, weekNum: number, pending = false) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non connecté' }
@@ -1191,8 +1191,40 @@ export async function adminCreateDuel(film1Id: number, film2Id: number, weekNum:
   const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
   if (!profile?.is_admin) return { error: 'Non autorisé.' }
 
-  const { error } = await supabase.from('duels').insert({ film1_id: film1Id, film2_id: film2Id, week_num: weekNum })
+  const { error } = await supabase.from('duels').insert({ film1_id: film1Id, film2_id: film2Id, week_num: weekNum, pending })
   if (error) return { error: error.message }
+  revalidatePath('/duels')
+  revalidatePath('/admin')
+  return { success: true }
+}
+
+export async function adminApproveDuel(duelId: number) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Non autorisé.' }
+
+  const { error } = await supabase.from('duels').update({ pending: false }).eq('id', duelId)
+  if (error) return { error: error.message }
+  revalidatePath('/duels')
+  revalidatePath('/admin')
+  return { success: true }
+}
+
+export async function adminDeleteDuel(duelId: number) {
+  const supabase = await createClient()
+  const adminClient = createAdminClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Non autorisé.' }
+
+  await adminClient.from('posts').delete().eq('topic', `duel_${duelId}`)
+  await adminClient.from('duels').delete().eq('id', duelId)
+
   revalidatePath('/duels')
   revalidatePath('/admin')
   return { success: true }

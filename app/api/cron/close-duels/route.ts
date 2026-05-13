@@ -30,6 +30,7 @@ export async function GET(request: Request) {
     .from('duels')
     .select('id, film1_id, film2_id')
     .eq('closed', false)
+    .eq('pending', false)
 
   if (error || !openDuels?.length) {
     return NextResponse.json({ message: 'Aucun duel ouvert', closed: 0 })

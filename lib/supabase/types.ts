@@ -153,16 +153,19 @@ export type Database = {
           week_num: number
           winner_id: number | null
           closed: boolean
+          pending: boolean
           created_at: string
         }
         Insert: {
           film1_id: number
           film2_id: number
           week_num: number
+          pending?: boolean
         }
         Update: {
           winner_id?: number | null
           closed?: boolean
+          pending?: boolean
         }
         Relationships: []
       }

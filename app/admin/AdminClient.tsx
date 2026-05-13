@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { adminCreateDuel, adminCloseDuel, adminSetWeekFilm, adminClearWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminBatchFlaggedDecisions, adminSet18Flag, adminApproveAllPending, adminSetFilmCategory, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, adminFetchFrenchPosters, adminScanAgeRestrictions, adminTestFilmCertification, adminDiagnostic, updateFilm, adminResolveReport, adminSetConfig, adminVerifyPosters, adminRepairBrokenPosters, adminSetAdmin, adminAddNews, adminDeleteNews, adminAddRecommendation, adminDeleteRecommendation, deleteForumTopic, adminEndSeason, adminApproveFilmRequest, adminRejectFilmRequest, adminFetchOverviews, adminReviewMarathonRequest, adminGetPreMarathonStats, adminReviewSeasonJoinRequest, adminDirectAdmitToMarathon } from '@/lib/actions'
+import { adminCreateDuel, adminCloseDuel, adminApproveDuel, adminDeleteDuel, adminSetWeekFilm, adminClearWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminBatchFlaggedDecisions, adminSet18Flag, adminApproveAllPending, adminSetFilmCategory, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, adminFetchFrenchPosters, adminScanAgeRestrictions, adminTestFilmCertification, adminDiagnostic, updateFilm, adminResolveReport, adminSetConfig, adminVerifyPosters, adminRepairBrokenPosters, adminSetAdmin, adminAddNews, adminDeleteNews, adminAddRecommendation, adminDeleteRecommendation, deleteForumTopic, adminEndSeason, adminApproveFilmRequest, adminRejectFilmRequest, adminFetchOverviews, adminReviewMarathonRequest, adminGetPreMarathonStats, adminReviewSeasonJoinRequest, adminDirectAdmitToMarathon } from '@/lib/actions'
 import type { PreMarathonFilmStat } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
 import { CONFIG } from '@/lib/config'
@@ -583,13 +583,12 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
   async function createDuel() {
     const eligible = films.filter(f => f.saison === 1 && getWatchPct(f.id) < CONFIG.SEUIL_MAJORITY)
     if (eligible.length < 2) { addToast('Pas assez de films éligibles', '⚠️'); return }
-    // Vraie randomisation parmi tous les films éligibles
     const shuffled = [...eligible].sort(() => Math.random() - 0.5)
     const f1 = shuffled[0], f2 = shuffled[1]
     const weekNum = duels.length + 1
-    const result = await adminCreateDuel(f1.id, f2.id, weekNum)
+    const result = await adminCreateDuel(f1.id, f2.id, weekNum, true)
     if (result.error) addToast(result.error, '⚠️')
-    else { addToast(`Duel S${weekNum} créé : ${f1.titre} VS ${f2.titre}`, '⚔️'); router.refresh() }
+    else { addToast(`Duel S${weekNum} en attente : ${f1.titre} VS ${f2.titre}`, '⏳'); router.refresh() }
   }
 
   async function createManualDuel() {
@@ -608,6 +607,19 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
     const result = await adminCloseDuel(duelId)
     if (result.error) addToast(result.error, '⚠️')
     else { addToast('Duel clôturé — vainqueur désigné !', '🏆'); router.refresh() }
+  }
+
+  async function approveDuel(duelId: number) {
+    const result = await adminApproveDuel(duelId)
+    if (result.error) addToast(result.error, '⚠️')
+    else { addToast('Duel approuvé et publié !', '✅'); router.refresh() }
+  }
+
+  async function deleteDuel(duelId: number, label: string) {
+    if (!confirm(`Supprimer le duel "${label}" ? Les votes et messages associés seront supprimés.`)) return
+    const result = await adminDeleteDuel(duelId)
+    if (result.error) addToast(result.error, '⚠️')
+    else { addToast('Duel supprimé', '🗑️'); router.refresh() }
   }
 
   async function saveWeekFilm(filmId: string) {
@@ -1087,18 +1099,23 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
           {duels.map((d: any) => {
             const v1 = d.votes?.filter((v: any) => v.film_choice === d.film1_id).length ?? 0
             const v2 = d.votes?.filter((v: any) => v.film_choice === d.film2_id).length ?? 0
+            const label = `${d.film1?.titre} VS ${d.film2?.titre}`
             return (
-              <div key={d.id} style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.75rem 1rem', display: 'flex', alignItems: 'center', gap: '.8rem', flexWrap: 'wrap' }}>
+              <div key={d.id} style={{ background: d.pending ? 'rgba(232,196,106,.06)' : 'var(--bg3)', border: `1px solid ${d.pending ? 'rgba(232,196,106,.3)' : 'var(--border)'}`, borderRadius: 'var(--r)', padding: '.75rem 1rem', display: 'flex', alignItems: 'center', gap: '.8rem', flexWrap: 'wrap' }}>
                 <span style={{ flex: 1, fontSize: '.82rem' }}>
                   <strong>{d.film1?.titre}</strong> VS <strong>{d.film2?.titre}</strong>
                   <span style={{ color: 'var(--text3)', marginLeft: '.5rem' }}>S{d.week_num}</span>
+                  {d.pending && <span style={{ marginLeft: '.5rem', fontSize: '.68rem', color: 'var(--gold)', background: 'rgba(232,196,106,.12)', padding: '.15rem .5rem', borderRadius: 99 }}>En attente</span>}
                 </span>
                 <span style={{ fontSize: '.72rem', color: 'var(--text3)' }}>{v1 + v2} votes</span>
-                {d.closed ? (
+                {d.pending ? (
+                  <button className="btn btn-green" style={{ fontSize: '.73rem', padding: '.28rem .65rem' }} onClick={() => approveDuel(d.id)}>✓ Approuver</button>
+                ) : d.closed ? (
                   <span style={{ fontSize: '.72rem', color: 'var(--green)' }}>✓ Clôturé</span>
                 ) : (
                   <button className="btn btn-outline" style={{ fontSize: '.73rem', padding: '.28rem .65rem' }} onClick={() => closeDuel(d.id)}>Clôturer</button>
                 )}
+                <button className="btn btn-red" style={{ fontSize: '.68rem', padding: '.25rem .55rem' }} onClick={() => deleteDuel(d.id, label)}>🗑️</button>
               </div>
             )
           })}

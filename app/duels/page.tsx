@@ -12,6 +12,7 @@ export default async function DuelsPage() {
     supabase
       .from('duels')
       .select('*, film1:films!duels_film1_id_fkey(*), film2:films!duels_film2_id_fkey(*), winner:films!duels_winner_id_fkey(*)')
+      .eq('pending', false)
       .order('created_at', { ascending: false })
       .limit(15),
   ])

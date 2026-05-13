@@ -81,6 +81,7 @@ create table public.duels (
   week_num  integer not null,
   winner_id integer references public.films(id),
   closed    boolean default false,
+  pending   boolean default false,
   created_at timestamptz default now() not null
 );
 alter table public.duels enable row level security;
