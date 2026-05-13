@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Image from 'next/image'
 import Forum from '@/components/Forum'
-import { voteDuel } from '@/lib/actions'
+import { voteDuel, markWatched, upsertRating } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
 import { CONFIG } from '@/lib/config'
 import { useRouter } from 'next/navigation'
@@ -20,6 +20,8 @@ interface Props {
   watchCountMap: Record<number, number>
   ratingMap: Record<number, number[]>
   totalUsers: number
+  myWatched: Record<number, boolean>
+  myRatings: Record<number, number>
 }
 
 function avgRating(scores: number[] | undefined) {
@@ -27,11 +29,19 @@ function avgRating(scores: number[] | undefined) {
   return (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1)
 }
 
-// ── Mini-modal film (clic sur affiche) ──────────────────────────────────────
-function FilmPreview({ film, watchPct, avg, onClose }: {
-  film: any; watchPct: number; avg: string | null; onClose: () => void
+// ── Mini-modal film enrichi ─────────────────────────────────────────────────
+function FilmPreview({ film, watchPct, avg, profile, isWatched, watchedPre, myRating, onClose, onRefresh }: {
+  film: any; watchPct: number; avg: string | null; profile: Profile | null
+  isWatched: boolean; watchedPre: boolean | null; myRating: number | undefined
+  onClose: () => void; onRefresh: () => void
 }) {
   const [overview, setOverview] = useState<string | null>(null)
+  const [hov, setHov] = useState(0)
+  const [localRating, setLocalRating] = useState(myRating ?? 0)
+  const [localWatched, setLocalWatched] = useState<{ watched: boolean; pre: boolean | null }>({ watched: isWatched, pre: watchedPre })
+  const [saving, setSaving] = useState(false)
+  const { addToast } = useToast()
+  const router = useRouter()
 
   useEffect(() => {
     fetch(`/api/films/${film.id}/overview`)
@@ -40,9 +50,40 @@ function FilmPreview({ film, watchPct, avg, onClose }: {
       .catch(() => {})
   }, [film.id])
 
+  async function handleRate(score: number) {
+    if (!profile) { addToast('Connecte-toi pour noter', '⚠️'); return }
+    setLocalRating(score)
+    const result = await upsertRating(film.id, score)
+    if (result?.error) { addToast(result.error, '⚠️'); setLocalRating(myRating ?? 0) }
+    else { addToast(`${film.titre} noté ${score}/10`, '★'); onRefresh() }
+  }
+
+  async function handleWatch(pre: boolean) {
+    if (!profile) { addToast('Connecte-toi pour marquer vu', '⚠️'); return }
+    setSaving(true)
+    const alreadySame = localWatched.watched && localWatched.pre === pre
+    setLocalWatched(alreadySame ? { watched: false, pre: null } : { watched: true, pre })
+    const result = await markWatched(film.id, pre)
+    setSaving(false)
+    if (result?.error && result.error !== 'LIMIT_REACHED' && result.error !== 'PENDING_REQUEST' && result.error !== 'BLOCKED') {
+      addToast(result.error, '⚠️')
+      setLocalWatched({ watched: isWatched, pre: watchedPre })
+    } else if (result?.error) {
+      addToast(result.error === 'LIMIT_REACHED' ? 'Limite quotidienne atteinte' : result.error === 'BLOCKED' ? 'Ajout bloqué (24h)' : 'Demande en attente', '⚠️')
+      setLocalWatched({ watched: isWatched, pre: watchedPre })
+    } else {
+      const removed = result?.action === 'removed'
+      addToast(removed ? `"${film.titre}" retiré` : `"${film.titre}" marqué ${pre ? 'vu (avant marathon)' : 'vu (marathon)'}`, '🎬')
+      onRefresh()
+    }
+  }
+
+  const stars = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.7)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--rxl)', maxWidth: 420, width: '100%', overflow: 'hidden', boxShadow: '0 24px 80px rgba(0,0,0,.5)' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--rxl)', maxWidth: 440, width: '100%', overflow: 'hidden', boxShadow: '0 24px 80px rgba(0,0,0,.5)' }}>
+        {/* Header film */}
         <div style={{ display: 'flex', gap: '1rem', padding: '1.2rem' }}>
           <div style={{ width: 100, height: 150, borderRadius: 'var(--r)', overflow: 'hidden', flexShrink: 0, border: '2px solid var(--border2)' }}>
             {film.poster
@@ -57,18 +98,85 @@ function FilmPreview({ film, watchPct, avg, onClose }: {
               <span style={{ fontSize: '.65rem', background: 'rgba(232,196,106,.1)', color: 'var(--gold)', padding: '.15rem .5rem', borderRadius: 99 }}>{film.genre}</span>
               {film.sousgenre && <span style={{ fontSize: '.65rem', background: 'rgba(255,255,255,.06)', color: 'var(--text3)', padding: '.15rem .5rem', borderRadius: 99 }}>{film.sousgenre}</span>}
             </div>
-            <div style={{ display: 'flex', gap: '.8rem', marginTop: 'auto', paddingTop: '.4rem' }}>
-              {avg && <div style={{ fontSize: '.78rem' }}><span style={{ color: 'var(--gold)' }}>★</span> {avg}/5</div>}
+            <div style={{ display: 'flex', gap: '.8rem', marginTop: 'auto', paddingTop: '.4rem', alignItems: 'center' }}>
+              {avg && <div style={{ fontSize: '.78rem' }}><span style={{ color: 'var(--gold)' }}>★</span> {avg}/10</div>}
               <div style={{ fontSize: '.78rem', color: 'var(--text3)' }}>{watchPct}% vus</div>
+              {localWatched.watched && (
+                <span style={{ fontSize: '.6rem', background: 'var(--green)', color: '#041a0e', padding: '2px 6px', borderRadius: 99, fontWeight: 700 }}>
+                  VU {localWatched.pre ? '(avant)' : '(marathon)'}
+                </span>
+              )}
             </div>
           </div>
         </div>
+
+        {/* Synopsis */}
         {overview && (
-          <div style={{ padding: '0 1.2rem 1.2rem', fontSize: '.78rem', color: 'var(--text2)', lineHeight: 1.5, borderTop: '1px solid var(--border)', paddingTop: '.8rem', margin: '0 1.2rem', maxHeight: 120, overflowY: 'auto' }}>
+          <div style={{ padding: '0 1.2rem .8rem', fontSize: '.78rem', color: 'var(--text2)', lineHeight: 1.5, borderTop: '1px solid var(--border)', paddingTop: '.8rem', marginLeft: '1.2rem', marginRight: '1.2rem', maxHeight: 100, overflowY: 'auto' }}>
             {overview}
           </div>
         )}
-        <div style={{ padding: '.6rem 1.2rem 1rem', display: 'flex', justifyContent: 'flex-end' }}>
+
+        {/* Notation */}
+        {profile && (
+          <div style={{ padding: '.8rem 1.2rem', borderTop: '1px solid var(--border)' }}>
+            <div style={{ fontSize: '.72rem', color: 'var(--text3)', marginBottom: '.4rem' }}>Ta note :</div>
+            <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+              {stars.map(s => (
+                <button
+                  key={s}
+                  onMouseEnter={() => setHov(s)}
+                  onMouseLeave={() => setHov(0)}
+                  onClick={() => handleRate(s)}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer', padding: '2px',
+                    fontSize: '1.1rem', lineHeight: 1,
+                    color: (hov || localRating) >= s ? 'var(--gold)' : 'var(--border2)',
+                    transition: 'color .15s, transform .15s',
+                    transform: hov === s ? 'scale(1.3)' : 'scale(1)',
+                  }}
+                >
+                  ★
+                </button>
+              ))}
+              {localRating > 0 && <span style={{ fontSize: '.72rem', color: 'var(--text3)', marginLeft: '.4rem' }}>{localRating}/10</span>}
+            </div>
+          </div>
+        )}
+
+        {/* Marquer vu */}
+        {profile && (
+          <div style={{ padding: '.4rem 1.2rem .8rem', display: 'flex', gap: '.5rem', flexWrap: 'wrap' }}>
+            <button
+              className="btn btn-ghost"
+              disabled={saving}
+              onClick={() => handleWatch(true)}
+              style={{
+                fontSize: '.72rem', padding: '.3rem .7rem',
+                background: localWatched.watched && localWatched.pre === true ? 'rgba(79,217,138,.15)' : undefined,
+                border: localWatched.watched && localWatched.pre === true ? '1px solid var(--green)' : undefined,
+                color: localWatched.watched && localWatched.pre === true ? 'var(--green)' : undefined,
+              }}
+            >
+              ⏳ Vu avant marathon
+            </button>
+            <button
+              className="btn btn-ghost"
+              disabled={saving}
+              onClick={() => handleWatch(false)}
+              style={{
+                fontSize: '.72rem', padding: '.3rem .7rem',
+                background: localWatched.watched && localWatched.pre === false ? 'rgba(249,199,79,.15)' : undefined,
+                border: localWatched.watched && localWatched.pre === false ? '1px solid var(--gold)' : undefined,
+                color: localWatched.watched && localWatched.pre === false ? 'var(--gold)' : undefined,
+              }}
+            >
+              🏁 Vu pendant marathon
+            </button>
+          </div>
+        )}
+
+        <div style={{ padding: '.4rem 1.2rem 1rem', display: 'flex', justifyContent: 'flex-end' }}>
           <button className="btn btn-ghost" style={{ fontSize: '.75rem' }} onClick={onClose}>Fermer</button>
         </div>
       </div>
@@ -76,22 +184,49 @@ function FilmPreview({ film, watchPct, avg, onClose }: {
   )
 }
 
-// ── Affiche interactive (hover zoom + clic) ─────────────────────────────────
-function DuelPoster({ film, w, h, border, watchPct, avg, onClick }: {
+// ── Affiche interactive (hover zoom + clic + auto-preview) ──────────────────
+function DuelPoster({ film, w, h, border, watchPct, avg, profile, isWatched, watchedPre, myRating, onRefresh, onClick }: {
   film: any; w: number; h: number; border: string; watchPct: number; avg: string | null
-  onClick?: (e: React.MouseEvent) => void
+  profile: Profile | null; isWatched: boolean; watchedPre: boolean | null; myRating: number | undefined
+  onRefresh: () => void; onClick?: (e: React.MouseEvent) => void
 }) {
   const [hovered, setHovered] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const hoveredByTimer = useRef(false)
+
+  function handleEnter() {
+    setHovered(true)
+    hoverTimer.current = setTimeout(() => {
+      hoveredByTimer.current = true
+      setShowPreview(true)
+    }, 1500)
+  }
+
+  function handleLeave() {
+    setHovered(false)
+    if (hoverTimer.current) { clearTimeout(hoverTimer.current); hoverTimer.current = null }
+    if (hoveredByTimer.current) { setShowPreview(false); hoveredByTimer.current = false }
+  }
+
+  useEffect(() => {
+    return () => { if (hoverTimer.current) clearTimeout(hoverTimer.current) }
+  }, [])
 
   return (
     <>
       <div
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+        onMouseEnter={handleEnter}
+        onMouseLeave={handleLeave}
         onClick={e => {
-          if (onClick) onClick(e)
-          else { e.stopPropagation(); setShowPreview(true) }
+          if (onClick) {
+            onClick(e)
+          } else {
+            e.stopPropagation()
+            if (hoverTimer.current) { clearTimeout(hoverTimer.current); hoverTimer.current = null }
+            hoveredByTimer.current = false
+            setShowPreview(true)
+          }
         }}
         style={{
           width: w, height: h, borderRadius: 'var(--r)', overflow: 'hidden', background: 'var(--bg3)',
@@ -111,17 +246,24 @@ function DuelPoster({ film, w, h, border, watchPct, avg, onClick }: {
           </div>
         )}
       </div>
-      {showPreview && <FilmPreview film={film} watchPct={watchPct} avg={avg} onClose={() => setShowPreview(false)} />}
+      {showPreview && (
+        <FilmPreview
+          film={film} watchPct={watchPct} avg={avg}
+          profile={profile} isWatched={isWatched} watchedPre={watchedPre} myRating={myRating}
+          onClose={() => { setShowPreview(false); hoveredByTimer.current = false }} onRefresh={onRefresh}
+        />
+      )}
     </>
   )
 }
 
 // ── Carte du vainqueur ──────────────────────────────────────────────────────
 function WinnerHero({
-  duel, v1, v2, compact = false, profile, watchCountMap, ratingMap, totalUsers,
+  duel, v1, v2, compact = false, profile, watchCountMap, ratingMap, totalUsers, myWatched, myRatings, onRefresh,
 }: {
   duel: any; v1: number; v2: number; compact?: boolean; profile: Profile | null
   watchCountMap: Record<number, number>; ratingMap: Record<number, number[]>; totalUsers: number
+  myWatched: Record<number, boolean>; myRatings: Record<number, number>; onRefresh: () => void
 }) {
   const [forumOpen, setForumOpen] = useState(false)
   const winner = duel.winner
@@ -176,23 +318,25 @@ function WinnerHero({
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         gap: compact ? '1.5rem' : '2.5rem', flexWrap: 'wrap',
       }}>
-        {/* Perdant — petit et grisé */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.5rem', opacity: .55, filter: 'grayscale(.4)' }}>
-          <DuelPoster
-            film={loser}
-            w={compact ? 70 : 90}
-            h={compact ? 105 : 135}
-            border="2px solid var(--border)"
-            watchPct={getWatchPct(loser.id)}
-            avg={avgRating(ratingMap[loser.id])}
-          />
+        {/* Perdant */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.5rem' }}>
+          <div style={{ opacity: .55, filter: 'grayscale(.4)' }}>
+            <DuelPoster
+              film={loser}
+              w={compact ? 70 : 90} h={compact ? 105 : 135}
+              border="2px solid var(--border)"
+              watchPct={getWatchPct(loser.id)} avg={avgRating(ratingMap[loser.id])}
+              profile={profile} isWatched={loser.id in myWatched} watchedPre={myWatched[loser.id] ?? null} myRating={myRatings[loser.id]}
+              onRefresh={onRefresh}
+            />
+          </div>
           <div style={{ fontSize: '.68rem', color: 'var(--text3)', textAlign: 'center', maxWidth: 90 }}>
             {loser.titre}
           </div>
           <div style={{ fontSize: '.62rem', color: 'var(--text3)' }}>{lv}v ({pctL}%)</div>
         </div>
 
-        {/* Vainqueur — grand et doré */}
+        {/* Vainqueur */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.6rem', textAlign: 'center' }}>
           <div style={{
             fontSize: '.7rem', letterSpacing: '4px', textTransform: 'uppercase',
@@ -211,11 +355,11 @@ function WinnerHero({
             </div>
             <DuelPoster
               film={winner}
-              w={pw}
-              h={ph}
+              w={pw} h={ph}
               border="3px solid var(--gold)"
-              watchPct={getWatchPct(winner.id)}
-              avg={avgRating(ratingMap[winner.id])}
+              watchPct={getWatchPct(winner.id)} avg={avgRating(ratingMap[winner.id])}
+              profile={profile} isWatched={winner.id in myWatched} watchedPre={myWatched[winner.id] ?? null} myRating={myRatings[winner.id]}
+              onRefresh={onRefresh}
             />
           </div>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: compact ? '1.25rem' : '1.6rem', lineHeight: 1.2, marginTop: '.25rem' }}>
@@ -253,11 +397,12 @@ function WinnerHero({
 
 // ── Carte de vote active ─────────────────────────────────────────────────────
 function DuelCard({
-  duel, profile, myVote, v1, v2, onVote, watchCountMap, ratingMap, totalUsers,
+  duel, profile, myVote, v1, v2, onVote, watchCountMap, ratingMap, totalUsers, myWatched, myRatings, onRefresh,
 }: {
   duel: any; profile: Profile | null; myVote: number | null
   v1: number; v2: number; onVote: (duelId: number, filmId: number) => void
   watchCountMap: Record<number, number>; ratingMap: Record<number, number[]>; totalUsers: number
+  myWatched: Record<number, boolean>; myRatings: Record<number, number>; onRefresh: () => void
 }) {
   const [forumOpen, setForumOpen] = useState(false)
   const f1 = duel.film1, f2 = duel.film2, winner = duel.winner
@@ -271,6 +416,58 @@ function DuelCard({
     return Math.round(((watchCountMap[filmId] ?? 0) / totalUsers) * 100)
   }
 
+  const tied = v1 === v2
+  const f1Leads = v1 > v2
+  const leader = tied ? null : f1Leads ? f1 : f2
+  const trailer = tied ? null : f1Leads ? f2 : f1
+  const lv = leader ? (f1Leads ? v1 : v2) : 0
+  const tv = trailer ? (f1Leads ? v2 : v1) : 0
+  const lp = leader ? (f1Leads ? p1 : p2) : 0
+  const tp = trailer ? (f1Leads ? p2 : p1) : 0
+  const leaderColor = leader === f1 ? '#e8c46a' : '#6699ff'
+  const trailerColor = trailer === f1 ? '#e8c46a' : '#6699ff'
+
+  function renderFilmSide(film: any, votes: number, pct: number, color: string, isLeader: boolean) {
+    const pw = tied ? 120 : isLeader ? 156 : 90
+    const ph = tied ? 180 : isLeader ? 234 : 135
+    return (
+      <div
+        style={{
+          padding: '1.5rem', cursor: canVote ? 'pointer' : 'default',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '.5rem',
+          background: myVote === film.id ? `${color}11` : 'transparent', transition: 'background .2s, opacity .3s',
+          opacity: !tied && !isLeader ? .65 : 1,
+        }}
+        onClick={() => canVote && onVote(duel.id, film.id)}
+      >
+        {isLeader && !tied && <div style={{ fontSize: '.6rem', letterSpacing: '2px', textTransform: 'uppercase', color, fontWeight: 700 }}>En tête</div>}
+        <DuelPoster
+          film={film} w={pw} h={ph}
+          border={`${isLeader && !tied ? '3px' : '2px'} solid ${isLeader && !tied ? color : myVote === film.id ? color : 'var(--border)'}`}
+          watchPct={getWatchPct(film.id)} avg={avgRating(ratingMap[film.id])}
+          profile={profile} isWatched={film.id in myWatched} watchedPre={myWatched[film.id] ?? null} myRating={myRatings[film.id]}
+          onRefresh={onRefresh}
+        />
+        <div style={{ fontSize: isLeader && !tied ? '1rem' : '.82rem', fontWeight: isLeader ? 600 : 500, lineHeight: 1.3 }}>{film.titre}</div>
+        <div style={{ fontSize: '.7rem', color: 'var(--text3)' }}>{film.annee} · {film.realisateur}</div>
+        {myVote && <div style={{ fontSize: '.78rem', color: myVote === film.id ? color : 'var(--text3)', fontWeight: myVote === film.id ? 600 : 400 }}>
+          {votes} vote{votes > 1 ? 's' : ''} ({pct}%)
+        </div>}
+      </div>
+    )
+  }
+
+  const leftFilm = tied || f1Leads ? f1 : f2
+  const rightFilm = tied || f1Leads ? f2 : f1
+  const leftVotes = leftFilm === f1 ? v1 : v2
+  const rightVotes = rightFilm === f1 ? v1 : v2
+  const leftPct = leftFilm === f1 ? p1 : p2
+  const rightPct = rightFilm === f1 ? p1 : p2
+  const leftColor = leftFilm === f1 ? '#e8c46a' : '#6699ff'
+  const rightColor = rightFilm === f1 ? '#e8c46a' : '#6699ff'
+  const leftIsLeader = !tied && leftFilm === leader
+  const rightIsLeader = !tied && rightFilm === leader
+
   return (
     <div style={{
       background: 'var(--bg2)', borderRadius: 'var(--rxl)', overflow: 'hidden', marginBottom: '1.5rem',
@@ -283,6 +480,7 @@ function DuelCard({
           0%, 100% { box-shadow: 0 0 24px rgba(232,196,106,.08), 0 0 60px rgba(232,196,106,.04); }
           50% { box-shadow: 0 0 32px rgba(232,196,106,.18), 0 0 80px rgba(232,196,106,.08); }
         }
+        @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:.6 } }
       `}</style>
 
       {/* Header */}
@@ -296,85 +494,24 @@ function DuelCard({
           }}>
             Vote ouvert
           </span>
-          <style>{`@keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:.6 } }`}</style>
         </div>
         <span style={{ fontSize: '.75rem', color: 'var(--text3)' }}>{v1 + v2} vote{v1 + v2 > 1 ? 's' : ''}</span>
       </div>
 
-      {/* Films */}
-      {(() => {
-        const tied = v1 === v2
-        const f1Leads = v1 > v2
-        const pw1 = tied ? 120 : f1Leads ? 140 : 100
-        const ph1 = tied ? 180 : f1Leads ? 210 : 150
-        const pw2 = tied ? 120 : !f1Leads ? 140 : 100
-        const ph2 = tied ? 180 : !f1Leads ? 210 : 150
-        const col1 = tied ? '1fr' : f1Leads ? '1.3fr' : '.7fr'
-        const col2 = tied ? '1fr' : !f1Leads ? '1.3fr' : '.7fr'
-
-        return (
-          <div style={{ display: 'grid', gridTemplateColumns: `${col1} 64px ${col2}`, transition: 'grid-template-columns .5s ease' }}>
-            {/* Film 1 */}
-            <div
-              style={{
-                padding: '1.5rem', cursor: canVote ? 'pointer' : 'default',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '.7rem',
-                background: myVote === f1.id ? 'rgba(232,196,106,.07)' : 'transparent', transition: 'background .2s',
-                opacity: !tied && !f1Leads ? .7 : 1,
-              }}
-              onClick={() => canVote && onVote(duel.id, f1.id)}
-            >
-              {f1Leads && !tied && <div style={{ fontSize: '.6rem', letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--gold)', fontWeight: 700 }}>En tête</div>}
-              <DuelPoster
-                film={f1} w={pw1} h={ph1}
-                border={`2px solid ${f1Leads && !tied ? 'var(--gold)' : myVote === f1.id ? 'var(--gold)' : 'var(--border)'}`}
-                watchPct={getWatchPct(f1.id)} avg={avgRating(ratingMap[f1.id])}
-                onClick={canVote ? (e) => { e.stopPropagation(); onVote(duel.id, f1.id) } : undefined}
-              />
-              <div style={{ fontSize: f1Leads && !tied ? '.95rem' : '.85rem', fontWeight: 500, lineHeight: 1.3, transition: 'font-size .3s' }}>{f1.titre}</div>
-              <div style={{ fontSize: '.72rem', color: 'var(--text3)' }}>{f1.annee} · {f1.realisateur}</div>
-              {myVote && <div style={{ fontSize: '.78rem', color: myVote === f1.id ? 'var(--gold)' : 'var(--text3)', fontWeight: myVote === f1.id ? 600 : 400 }}>
-                {v1} vote{v1 > 1 ? 's' : ''} ({p1}%)
-              </div>}
-            </div>
-
-            {/* VS */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{
-                fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: 'var(--gold)',
-                background: 'rgba(232,196,106,.08)', border: '2px solid rgba(232,196,106,.25)',
-                width: 50, height: 50, borderRadius: '50%',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 0 20px rgba(232,196,106,.1)',
-              }}>VS</div>
-            </div>
-
-            {/* Film 2 */}
-            <div
-              style={{
-                padding: '1.5rem', cursor: canVote ? 'pointer' : 'default',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '.7rem',
-                background: myVote === f2.id ? 'rgba(102,153,255,.07)' : 'transparent', transition: 'background .2s',
-                opacity: !tied && f1Leads ? .7 : 1,
-              }}
-              onClick={() => canVote && onVote(duel.id, f2.id)}
-            >
-              {!f1Leads && !tied && <div style={{ fontSize: '.6rem', letterSpacing: '2px', textTransform: 'uppercase', color: '#6699ff', fontWeight: 700 }}>En tête</div>}
-              <DuelPoster
-                film={f2} w={pw2} h={ph2}
-                border={`2px solid ${!f1Leads && !tied ? '#6699ff' : myVote === f2.id ? '#6699ff' : 'var(--border)'}`}
-                watchPct={getWatchPct(f2.id)} avg={avgRating(ratingMap[f2.id])}
-                onClick={canVote ? (e) => { e.stopPropagation(); onVote(duel.id, f2.id) } : undefined}
-              />
-              <div style={{ fontSize: !f1Leads && !tied ? '.95rem' : '.85rem', fontWeight: 500, lineHeight: 1.3, transition: 'font-size .3s' }}>{f2.titre}</div>
-              <div style={{ fontSize: '.72rem', color: 'var(--text3)' }}>{f2.annee} · {f2.realisateur}</div>
-              {myVote && <div style={{ fontSize: '.78rem', color: myVote === f2.id ? '#6699ff' : 'var(--text3)', fontWeight: myVote === f2.id ? 600 : 400 }}>
-                {v2} vote{v2 > 1 ? 's' : ''} ({p2}%)
-              </div>}
-            </div>
-          </div>
-        )
-      })()}
+      {/* Films : trailer | VS | leader(centré, 30% plus grand) */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {renderFilmSide(leftFilm, leftVotes, leftPct, leftColor, leftIsLeader)}
+        <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 .5rem' }}>
+          <div style={{
+            fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: 'var(--gold)',
+            background: 'rgba(232,196,106,.08)', border: '2px solid rgba(232,196,106,.25)',
+            width: 50, height: 50, borderRadius: '50%',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 0 20px rgba(232,196,106,.1)',
+          }}>VS</div>
+        </div>
+        {renderFilmSide(rightFilm, rightVotes, rightPct, rightColor, rightIsLeader)}
+      </div>
 
       {/* Barre interactive */}
       <div style={{ padding: '.8rem 1.5rem 1.2rem', borderTop: '1px solid var(--border)' }}>
@@ -438,9 +575,10 @@ function DuelCard({
 }
 
 // ── Archive avec affiches ───────────────────────────────────────────────────
-function ArchiveCard({ duel, v1, v2, watchCountMap, ratingMap, totalUsers }: {
+function ArchiveCard({ duel, v1, v2, watchCountMap, ratingMap, totalUsers, profile, myWatched, myRatings, onRefresh }: {
   duel: any; v1: number; v2: number
   watchCountMap: Record<number, number>; ratingMap: Record<number, number[]>; totalUsers: number
+  profile: Profile | null; myWatched: Record<number, boolean>; myRatings: Record<number, number>; onRefresh: () => void
 }) {
   const winner = duel.winner
   const f1 = duel.film1, f2 = duel.film2
@@ -460,21 +598,23 @@ function ArchiveCard({ duel, v1, v2, watchCountMap, ratingMap, totalUsers }: {
     }}>
       {/* Affiches miniatures */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', flexShrink: 0 }}>
-        {/* Vainqueur */}
         {winner && (
           <DuelPoster
             film={winner} w={40} h={60}
             border="1px solid rgba(232,196,106,.4)"
             watchPct={getWatchPct(winner.id)} avg={avgRating(ratingMap[winner.id])}
+            profile={profile} isWatched={winner.id in myWatched} watchedPre={myWatched[winner.id] ?? null} myRating={myRatings[winner.id]}
+            onRefresh={onRefresh}
           />
         )}
-        {/* Perdant — grisé */}
         {loser && (
           <div style={{ opacity: .4, filter: 'grayscale(.5)' }}>
             <DuelPoster
               film={loser} w={32} h={48}
               border="1px solid var(--border)"
               watchPct={getWatchPct(loser.id)} avg={avgRating(ratingMap[loser.id])}
+              profile={profile} isWatched={loser.id in myWatched} watchedPre={myWatched[loser.id] ?? null} myRating={myRatings[loser.id]}
+              onRefresh={onRefresh}
             />
           </div>
         )}
@@ -505,14 +645,21 @@ function ArchiveCard({ duel, v1, v2, watchCountMap, ratingMap, totalUsers }: {
 }
 
 // ── Composant principal ──────────────────────────────────────────────────────
-export default function DuelsClient({ profile, duels, myVotes, allVotes, watchCountMap, ratingMap, totalUsers }: Props) {
+export default function DuelsClient({ profile, duels, myVotes, allVotes, watchCountMap, ratingMap, totalUsers, myWatched: initialMyWatched, myRatings: initialMyRatings }: Props) {
   const [localVotes, setLocalVotes] = useState<VoteRow[]>(allVotes)
   const [myVoteMap, setMyVoteMap] = useState<Record<number, number>>(
     Object.fromEntries(myVotes.map(v => [v.duel_id, v.film_choice]))
   )
   const [archiveOpen, setArchiveOpen] = useState(false)
+  const [myWatched, setMyWatched] = useState(initialMyWatched)
+  const [myRatings, setMyRatings] = useState(initialMyRatings)
   const { addToast } = useToast()
   const router = useRouter()
+
+  useEffect(() => { setMyWatched(initialMyWatched) }, [initialMyWatched])
+  useEffect(() => { setMyRatings(initialMyRatings) }, [initialMyRatings])
+
+  const handleRefresh = useCallback(() => { router.refresh() }, [router])
 
   // Realtime — votes
   useEffect(() => {
@@ -610,6 +757,9 @@ export default function DuelsClient({ profile, duels, myVotes, allVotes, watchCo
           watchCountMap={watchCountMap}
           ratingMap={ratingMap}
           totalUsers={totalUsers}
+          myWatched={myWatched}
+          myRatings={myRatings}
+          onRefresh={handleRefresh}
         />
       )}
 
@@ -623,6 +773,9 @@ export default function DuelsClient({ profile, duels, myVotes, allVotes, watchCo
           watchCountMap={watchCountMap}
           ratingMap={ratingMap}
           totalUsers={totalUsers}
+          myWatched={myWatched}
+          myRatings={myRatings}
+          onRefresh={handleRefresh}
         />
       )}
 
@@ -646,6 +799,10 @@ export default function DuelsClient({ profile, duels, myVotes, allVotes, watchCo
                   watchCountMap={watchCountMap}
                   ratingMap={ratingMap}
                   totalUsers={totalUsers}
+                  profile={profile}
+                  myWatched={myWatched}
+                  myRatings={myRatings}
+                  onRefresh={handleRefresh}
                 />
               ))}
             </div>

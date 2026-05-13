@@ -20,13 +20,15 @@ export default async function DuelsPage() {
 
   const filmIds = [...new Set((duels ?? []).flatMap((d: any) => [d.film1_id, d.film2_id]))]
 
-  const [votes, { data: allVotes }, { data: watchedRows }, { data: ratingRows }] = await Promise.all([
+  const [votes, { data: allVotes }, { data: watchedRows }, { data: ratingRows }, myWatchedData, myRatingsData] = await Promise.all([
     user
       ? supabase.from('votes').select('duel_id, film_choice').eq('user_id', user.id).then(r => r.data ?? [])
       : Promise.resolve([]),
     supabase.from('votes').select('duel_id, film_choice').in('duel_id', (duels ?? []).map((d: { id: number }) => d.id)),
     filmIds.length ? supabase.from('watched').select('film_id').in('film_id', filmIds) : Promise.resolve({ data: [] }),
     filmIds.length ? supabase.from('ratings').select('film_id, score').in('film_id', filmIds) : Promise.resolve({ data: [] }),
+    user && filmIds.length ? supabase.from('watched').select('film_id, pre').eq('user_id', user.id).in('film_id', filmIds) : Promise.resolve({ data: [] }),
+    user && filmIds.length ? supabase.from('ratings').select('film_id, score').eq('user_id', user.id).in('film_id', filmIds) : Promise.resolve({ data: [] }),
   ])
 
   const watchCountMap: Record<number, number> = {}
@@ -39,6 +41,15 @@ export default async function DuelsPage() {
     ratingMap[r.film_id].push(r.score)
   })
 
+  const myWatched: Record<number, boolean> = {}
+  ;((myWatchedData as any)?.data ?? []).forEach((w: { film_id: number; pre: boolean }) => {
+    myWatched[w.film_id] = w.pre
+  })
+  const myRatings: Record<number, number> = {}
+  ;((myRatingsData as any)?.data ?? []).forEach((r: { film_id: number; score: number }) => {
+    myRatings[r.film_id] = r.score
+  })
+
   return (
     <DuelsClient
       profile={profile}
@@ -48,6 +59,8 @@ export default async function DuelsPage() {
       watchCountMap={watchCountMap}
       ratingMap={ratingMap}
       totalUsers={totalUsers ?? 1}
+      myWatched={myWatched}
+      myRatings={myRatings}
     />
   )
 }
