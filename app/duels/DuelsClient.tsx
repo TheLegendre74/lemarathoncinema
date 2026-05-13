@@ -302,62 +302,79 @@ function DuelCard({
       </div>
 
       {/* Films */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 64px 1fr' }}>
-        {/* Film 1 */}
-        <div
-          style={{
-            padding: '1.5rem', cursor: canVote ? 'pointer' : 'default',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '.7rem',
-            background: myVote === f1.id ? 'rgba(232,196,106,.07)' : 'transparent', transition: 'background .2s',
-          }}
-          onClick={() => canVote && onVote(duel.id, f1.id)}
-        >
-          <DuelPoster
-            film={f1} w={120} h={180}
-            border={`2px solid ${myVote === f1.id ? 'var(--gold)' : 'var(--border)'}`}
-            watchPct={getWatchPct(f1.id)} avg={avgRating(ratingMap[f1.id])}
-            onClick={canVote ? (e) => { e.stopPropagation(); onVote(duel.id, f1.id) } : undefined}
-          />
-          <div style={{ fontSize: '.9rem', fontWeight: 500, lineHeight: 1.3 }}>{f1.titre}</div>
-          <div style={{ fontSize: '.72rem', color: 'var(--text3)' }}>{f1.annee} · {f1.realisateur}</div>
-          {myVote && <div style={{ fontSize: '.78rem', color: myVote === f1.id ? 'var(--gold)' : 'var(--text3)', fontWeight: myVote === f1.id ? 600 : 400 }}>
-            {v1} vote{v1 > 1 ? 's' : ''} ({p1}%)
-          </div>}
-        </div>
+      {(() => {
+        const tied = v1 === v2
+        const f1Leads = v1 > v2
+        const pw1 = tied ? 120 : f1Leads ? 140 : 100
+        const ph1 = tied ? 180 : f1Leads ? 210 : 150
+        const pw2 = tied ? 120 : !f1Leads ? 140 : 100
+        const ph2 = tied ? 180 : !f1Leads ? 210 : 150
+        const col1 = tied ? '1fr' : f1Leads ? '1.3fr' : '.7fr'
+        const col2 = tied ? '1fr' : !f1Leads ? '1.3fr' : '.7fr'
 
-        {/* VS */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{
-            fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: 'var(--gold)',
-            background: 'rgba(232,196,106,.08)', border: '2px solid rgba(232,196,106,.25)',
-            width: 50, height: 50, borderRadius: '50%',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 0 20px rgba(232,196,106,.1)',
-          }}>VS</div>
-        </div>
+        return (
+          <div style={{ display: 'grid', gridTemplateColumns: `${col1} 64px ${col2}`, transition: 'grid-template-columns .5s ease' }}>
+            {/* Film 1 */}
+            <div
+              style={{
+                padding: '1.5rem', cursor: canVote ? 'pointer' : 'default',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '.7rem',
+                background: myVote === f1.id ? 'rgba(232,196,106,.07)' : 'transparent', transition: 'background .2s',
+                opacity: !tied && !f1Leads ? .7 : 1,
+              }}
+              onClick={() => canVote && onVote(duel.id, f1.id)}
+            >
+              {f1Leads && !tied && <div style={{ fontSize: '.6rem', letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--gold)', fontWeight: 700 }}>En tête</div>}
+              <DuelPoster
+                film={f1} w={pw1} h={ph1}
+                border={`2px solid ${f1Leads && !tied ? 'var(--gold)' : myVote === f1.id ? 'var(--gold)' : 'var(--border)'}`}
+                watchPct={getWatchPct(f1.id)} avg={avgRating(ratingMap[f1.id])}
+                onClick={canVote ? (e) => { e.stopPropagation(); onVote(duel.id, f1.id) } : undefined}
+              />
+              <div style={{ fontSize: f1Leads && !tied ? '.95rem' : '.85rem', fontWeight: 500, lineHeight: 1.3, transition: 'font-size .3s' }}>{f1.titre}</div>
+              <div style={{ fontSize: '.72rem', color: 'var(--text3)' }}>{f1.annee} · {f1.realisateur}</div>
+              {myVote && <div style={{ fontSize: '.78rem', color: myVote === f1.id ? 'var(--gold)' : 'var(--text3)', fontWeight: myVote === f1.id ? 600 : 400 }}>
+                {v1} vote{v1 > 1 ? 's' : ''} ({p1}%)
+              </div>}
+            </div>
 
-        {/* Film 2 */}
-        <div
-          style={{
-            padding: '1.5rem', cursor: canVote ? 'pointer' : 'default',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '.7rem',
-            background: myVote === f2.id ? 'rgba(102,153,255,.07)' : 'transparent', transition: 'background .2s',
-          }}
-          onClick={() => canVote && onVote(duel.id, f2.id)}
-        >
-          <DuelPoster
-            film={f2} w={120} h={180}
-            border={`2px solid ${myVote === f2.id ? '#6699ff' : 'var(--border)'}`}
-            watchPct={getWatchPct(f2.id)} avg={avgRating(ratingMap[f2.id])}
-            onClick={canVote ? (e) => { e.stopPropagation(); onVote(duel.id, f2.id) } : undefined}
-          />
-          <div style={{ fontSize: '.9rem', fontWeight: 500, lineHeight: 1.3 }}>{f2.titre}</div>
-          <div style={{ fontSize: '.72rem', color: 'var(--text3)' }}>{f2.annee} · {f2.realisateur}</div>
-          {myVote && <div style={{ fontSize: '.78rem', color: myVote === f2.id ? '#6699ff' : 'var(--text3)', fontWeight: myVote === f2.id ? 600 : 400 }}>
-            {v2} vote{v2 > 1 ? 's' : ''} ({p2}%)
-          </div>}
-        </div>
-      </div>
+            {/* VS */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{
+                fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: 'var(--gold)',
+                background: 'rgba(232,196,106,.08)', border: '2px solid rgba(232,196,106,.25)',
+                width: 50, height: 50, borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 0 20px rgba(232,196,106,.1)',
+              }}>VS</div>
+            </div>
+
+            {/* Film 2 */}
+            <div
+              style={{
+                padding: '1.5rem', cursor: canVote ? 'pointer' : 'default',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '.7rem',
+                background: myVote === f2.id ? 'rgba(102,153,255,.07)' : 'transparent', transition: 'background .2s',
+                opacity: !tied && f1Leads ? .7 : 1,
+              }}
+              onClick={() => canVote && onVote(duel.id, f2.id)}
+            >
+              {!f1Leads && !tied && <div style={{ fontSize: '.6rem', letterSpacing: '2px', textTransform: 'uppercase', color: '#6699ff', fontWeight: 700 }}>En tête</div>}
+              <DuelPoster
+                film={f2} w={pw2} h={ph2}
+                border={`2px solid ${!f1Leads && !tied ? '#6699ff' : myVote === f2.id ? '#6699ff' : 'var(--border)'}`}
+                watchPct={getWatchPct(f2.id)} avg={avgRating(ratingMap[f2.id])}
+                onClick={canVote ? (e) => { e.stopPropagation(); onVote(duel.id, f2.id) } : undefined}
+              />
+              <div style={{ fontSize: !f1Leads && !tied ? '.95rem' : '.85rem', fontWeight: 500, lineHeight: 1.3, transition: 'font-size .3s' }}>{f2.titre}</div>
+              <div style={{ fontSize: '.72rem', color: 'var(--text3)' }}>{f2.annee} · {f2.realisateur}</div>
+              {myVote && <div style={{ fontSize: '.78rem', color: myVote === f2.id ? '#6699ff' : 'var(--text3)', fontWeight: myVote === f2.id ? 600 : 400 }}>
+                {v2} vote{v2 > 1 ? 's' : ''} ({p2}%)
+              </div>}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Barre interactive */}
       <div style={{ padding: '.8rem 1.5rem 1.2rem', borderTop: '1px solid var(--border)' }}>
