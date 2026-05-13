@@ -17,13 +17,111 @@ interface Props {
   duels: any[]
   myVotes: VoteRow[]
   allVotes: VoteRow[]
+  watchCountMap: Record<number, number>
+  ratingMap: Record<number, number[]>
+  totalUsers: number
 }
 
-// ── Carte du vainqueur — affiche en gros centré ──────────────────────────────
+function avgRating(scores: number[] | undefined) {
+  if (!scores?.length) return null
+  return (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1)
+}
+
+// ── Mini-modal film (clic sur affiche) ──────────────────────────────────────
+function FilmPreview({ film, watchPct, avg, onClose }: {
+  film: any; watchPct: number; avg: string | null; onClose: () => void
+}) {
+  const [overview, setOverview] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch(`/api/films/${film.id}/overview`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.overview) setOverview(d.overview) })
+      .catch(() => {})
+  }, [film.id])
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.7)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--rxl)', maxWidth: 420, width: '100%', overflow: 'hidden', boxShadow: '0 24px 80px rgba(0,0,0,.5)' }}>
+        <div style={{ display: 'flex', gap: '1rem', padding: '1.2rem' }}>
+          <div style={{ width: 100, height: 150, borderRadius: 'var(--r)', overflow: 'hidden', flexShrink: 0, border: '2px solid var(--border2)' }}>
+            {film.poster
+              ? <Image src={film.poster} alt={film.titre} width={100} height={150} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized />
+              : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', background: 'var(--bg3)' }}>🎬</div>
+            }
+          </div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', lineHeight: 1.2 }}>{film.titre}</div>
+            <div style={{ fontSize: '.75rem', color: 'var(--text3)' }}>{film.annee} · {film.realisateur}</div>
+            <div style={{ display: 'flex', gap: '.4rem', flexWrap: 'wrap', marginTop: '.2rem' }}>
+              <span style={{ fontSize: '.65rem', background: 'rgba(232,196,106,.1)', color: 'var(--gold)', padding: '.15rem .5rem', borderRadius: 99 }}>{film.genre}</span>
+              {film.sousgenre && <span style={{ fontSize: '.65rem', background: 'rgba(255,255,255,.06)', color: 'var(--text3)', padding: '.15rem .5rem', borderRadius: 99 }}>{film.sousgenre}</span>}
+            </div>
+            <div style={{ display: 'flex', gap: '.8rem', marginTop: 'auto', paddingTop: '.4rem' }}>
+              {avg && <div style={{ fontSize: '.78rem' }}><span style={{ color: 'var(--gold)' }}>★</span> {avg}/5</div>}
+              <div style={{ fontSize: '.78rem', color: 'var(--text3)' }}>{watchPct}% vus</div>
+            </div>
+          </div>
+        </div>
+        {overview && (
+          <div style={{ padding: '0 1.2rem 1.2rem', fontSize: '.78rem', color: 'var(--text2)', lineHeight: 1.5, borderTop: '1px solid var(--border)', paddingTop: '.8rem', margin: '0 1.2rem', maxHeight: 120, overflowY: 'auto' }}>
+            {overview}
+          </div>
+        )}
+        <div style={{ padding: '.6rem 1.2rem 1rem', display: 'flex', justifyContent: 'flex-end' }}>
+          <button className="btn btn-ghost" style={{ fontSize: '.75rem' }} onClick={onClose}>Fermer</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Affiche interactive (hover zoom + clic) ─────────────────────────────────
+function DuelPoster({ film, w, h, border, watchPct, avg, onClick }: {
+  film: any; w: number; h: number; border: string; watchPct: number; avg: string | null
+  onClick?: (e: React.MouseEvent) => void
+}) {
+  const [hovered, setHovered] = useState(false)
+  const [showPreview, setShowPreview] = useState(false)
+
+  return (
+    <>
+      <div
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        onClick={e => {
+          if (onClick) onClick(e)
+          else { e.stopPropagation(); setShowPreview(true) }
+        }}
+        style={{
+          width: w, height: h, borderRadius: 'var(--r)', overflow: 'hidden', background: 'var(--bg3)',
+          border, transition: 'transform .25s ease, box-shadow .25s ease, border-color .2s',
+          transform: hovered ? 'scale(1.08)' : 'scale(1)',
+          boxShadow: hovered ? '0 8px 32px rgba(0,0,0,.4)' : 'none',
+          cursor: 'pointer', position: 'relative', zIndex: hovered ? 5 : 1,
+        }}
+      >
+        {film.poster
+          ? <Image src={film.poster} alt={film.titre} width={w} height={h} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized />
+          : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: w > 60 ? '2rem' : '1.2rem' }}>🎬</div>
+        }
+        {hovered && (
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,.85) 0%, transparent 60%)', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '.5rem', pointerEvents: 'none' }}>
+            <div style={{ fontSize: '.6rem', color: 'var(--text2)', textAlign: 'center' }}>Voir les infos</div>
+          </div>
+        )}
+      </div>
+      {showPreview && <FilmPreview film={film} watchPct={watchPct} avg={avg} onClose={() => setShowPreview(false)} />}
+    </>
+  )
+}
+
+// ── Carte du vainqueur ──────────────────────────────────────────────────────
 function WinnerHero({
-  duel, v1, v2, compact = false, profile,
+  duel, v1, v2, compact = false, profile, watchCountMap, ratingMap, totalUsers,
 }: {
   duel: any; v1: number; v2: number; compact?: boolean; profile: Profile | null
+  watchCountMap: Record<number, number>; ratingMap: Record<number, number[]>; totalUsers: number
 }) {
   const [forumOpen, setForumOpen] = useState(false)
   const winner = duel.winner
@@ -31,12 +129,18 @@ function WinnerHero({
   const tot = v1 + v2 || 1
   const wv = winner?.id === duel.film1_id ? v1 : v2
   const lv = winner?.id === duel.film1_id ? v2 : v1
+  const loser = winner?.id === f1.id ? f2 : f1
   const pctW = Math.round((wv / tot) * 100)
+  const pctL = Math.round((lv / tot) * 100)
 
   if (!winner) return null
 
   const pw = compact ? 150 : 210
   const ph = compact ? 225 : 315
+
+  function getWatchPct(filmId: number) {
+    return Math.round(((watchCountMap[filmId] ?? 0) / totalUsers) * 100)
+  }
 
   return (
     <div style={{
@@ -50,23 +154,15 @@ function WinnerHero({
       <div style={{
         padding: '1rem 1.5rem',
         borderBottom: '1px solid var(--border)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '.5rem',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '.5rem',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '.8rem', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '.68rem', letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--text3)' }}>
             Semaine {duel.week_num}
           </span>
           <span style={{
-            background: 'rgba(232,196,106,.1)',
-            border: '1px solid rgba(232,196,106,.3)',
-            color: 'var(--gold)',
-            fontSize: '.72rem',
-            padding: '.25rem .75rem',
-            borderRadius: 99,
+            background: 'rgba(232,196,106,.1)', border: '1px solid rgba(232,196,106,.3)',
+            color: 'var(--gold)', fontSize: '.72rem', padding: '.25rem .75rem', borderRadius: 99,
           }}>
             Duel clos
           </span>
@@ -74,101 +170,73 @@ function WinnerHero({
         <span style={{ fontSize: '.75rem', color: 'var(--text3)' }}>{tot} vote{tot > 1 ? 's' : ''}</span>
       </div>
 
-      {/* Affiche vainqueur */}
+      {/* Contenu : vainqueur centré + perdant à côté */}
       <div style={{
         padding: compact ? '1.8rem 1.5rem' : '2.8rem 1.5rem',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '1rem',
-        textAlign: 'center',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        gap: compact ? '1.5rem' : '2.5rem', flexWrap: 'wrap',
       }}>
-        <div style={{
-          fontSize: '.7rem',
-          letterSpacing: '4px',
-          textTransform: 'uppercase',
-          color: 'var(--gold)',
-          fontWeight: 700,
-        }}>
-          Vainqueur
+        {/* Perdant — petit et grisé */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.5rem', opacity: .55, filter: 'grayscale(.4)' }}>
+          <DuelPoster
+            film={loser}
+            w={compact ? 70 : 90}
+            h={compact ? 105 : 135}
+            border="2px solid var(--border)"
+            watchPct={getWatchPct(loser.id)}
+            avg={avgRating(ratingMap[loser.id])}
+          />
+          <div style={{ fontSize: '.68rem', color: 'var(--text3)', textAlign: 'center', maxWidth: 90 }}>
+            {loser.titre}
+          </div>
+          <div style={{ fontSize: '.62rem', color: 'var(--text3)' }}>{lv}v ({pctL}%)</div>
         </div>
 
-        {/* Affiche avec badge */}
-        <div style={{ position: 'relative', marginTop: '.5rem' }}>
-          {/* Badge "Winner" au-dessus */}
+        {/* Vainqueur — grand et doré */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.6rem', textAlign: 'center' }}>
           <div style={{
-            position: 'absolute',
-            top: -14,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: 'var(--gold)',
-            color: '#0c0c12',
-            fontSize: '.65rem',
-            fontWeight: 800,
-            letterSpacing: '2.5px',
-            padding: '.22rem .9rem',
-            borderRadius: 99,
-            textTransform: 'uppercase',
-            whiteSpace: 'nowrap',
-            zIndex: 2,
+            fontSize: '.7rem', letterSpacing: '4px', textTransform: 'uppercase',
+            color: 'var(--gold)', fontWeight: 700,
           }}>
-            Winner
+            Vainqueur
           </div>
-          <div style={{
-            width: pw,
-            height: ph,
-            borderRadius: 'var(--r)',
-            overflow: 'hidden',
-            border: '3px solid var(--gold)',
-            boxShadow: compact ? '0 0 20px rgba(232,196,106,.2)' : '0 0 40px rgba(232,196,106,.28)',
-          }}>
-            {winner.poster
-              ? <Image
-                  src={winner.poster}
-                  alt={winner.titre}
-                  width={pw}
-                  height={ph}
-                  style={{ objectFit: 'cover', width: '100%', height: '100%' }}
-                  unoptimized
-                />
-              : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem', background: 'var(--bg3)' }}>🎬</div>
-            }
+          <div style={{ position: 'relative' }}>
+            <div style={{
+              position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)',
+              background: 'var(--gold)', color: '#0c0c12', fontSize: '.65rem', fontWeight: 800,
+              letterSpacing: '2.5px', padding: '.22rem .9rem', borderRadius: 99,
+              textTransform: 'uppercase', whiteSpace: 'nowrap', zIndex: 2,
+            }}>
+              Winner
+            </div>
+            <DuelPoster
+              film={winner}
+              w={pw}
+              h={ph}
+              border="3px solid var(--gold)"
+              watchPct={getWatchPct(winner.id)}
+              avg={avgRating(ratingMap[winner.id])}
+            />
+          </div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: compact ? '1.25rem' : '1.6rem', lineHeight: 1.2, marginTop: '.25rem' }}>
+            {winner.titre}
+          </div>
+          <div style={{ fontSize: '.8rem', color: 'var(--text3)' }}>{winner.annee} · {winner.realisateur}</div>
+          <div style={{ fontSize: '.82rem', color: 'var(--green)', fontWeight: 500 }}>
+            {wv} vote{wv > 1 ? 's' : ''} ({pctW}%)
           </div>
         </div>
+      </div>
 
-        <div style={{
-          fontFamily: 'var(--font-display)',
-          fontSize: compact ? '1.25rem' : '1.6rem',
-          lineHeight: 1.2,
-          marginTop: '.25rem',
-        }}>
-          {winner.titre}
+      {/* Barre résultat */}
+      <div style={{ padding: '0 1.5rem .8rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.68rem', marginBottom: '.3rem' }}>
+          <span style={{ color: winner?.id === f1.id ? 'var(--gold)' : 'var(--text3)' }}>{f1.titre}</span>
+          <span style={{ color: winner?.id === f2.id ? 'var(--gold)' : 'var(--text3)' }}>{f2.titre}</span>
         </div>
-        <div style={{ fontSize: '.8rem', color: 'var(--text3)' }}>
-          {winner.annee} · {winner.realisateur}
-        </div>
-        <div style={{ fontSize: '.82rem', color: 'var(--green)', fontWeight: 500 }}>
-          {wv} vote{wv > 1 ? 's' : ''} ({pctW}%) · Séance {CONFIG.SEANCE_JOUR} {CONFIG.SEANCE_HEURE}
-        </div>
-
-        {/* Résumé du duel */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '.75rem',
-          marginTop: '.25rem',
-          fontSize: '.73rem',
-          color: 'var(--text3)',
-          flexWrap: 'wrap',
-          justifyContent: 'center',
-        }}>
-          <span style={{ color: winner?.id === f1.id ? 'var(--gold)' : undefined }}>
-            {f1.titre} — {v1}v ({Math.round(v1 / tot * 100)}%)
-          </span>
-          <span style={{ color: 'var(--border2)' }}>vs</span>
-          <span style={{ color: winner?.id === f2.id ? 'var(--gold)' : undefined }}>
-            {f2.titre} — {v2}v ({Math.round(v2 / tot * 100)}%)
-          </span>
+        <div style={{ borderRadius: 99, height: 8, overflow: 'hidden', display: 'flex', background: 'var(--bg3)' }}>
+          <div style={{ height: '100%', width: `${Math.round(v1 / tot * 100)}%`, minWidth: v1 > 0 ? 4 : 0, background: winner?.id === f1.id ? 'linear-gradient(90deg, #e8c46a, #f0d78a)' : 'rgba(255,255,255,.15)', transition: 'width .6s ease' }} />
+          <div style={{ height: '100%', width: `${Math.round(v2 / tot * 100)}%`, minWidth: v2 > 0 ? 4 : 0, background: winner?.id === f2.id ? 'linear-gradient(90deg, #6699ff, #88bbff)' : 'rgba(255,255,255,.15)', transition: 'width .6s ease' }} />
         </div>
       </div>
 
@@ -185,14 +253,11 @@ function WinnerHero({
 
 // ── Carte de vote active ─────────────────────────────────────────────────────
 function DuelCard({
-  duel, profile, myVote, v1, v2, onVote,
+  duel, profile, myVote, v1, v2, onVote, watchCountMap, ratingMap, totalUsers,
 }: {
-  duel: any
-  profile: Profile | null
-  myVote: number | null
-  v1: number
-  v2: number
-  onVote: (duelId: number, filmId: number) => void
+  duel: any; profile: Profile | null; myVote: number | null
+  v1: number; v2: number; onVote: (duelId: number, filmId: number) => void
+  watchCountMap: Record<number, number>; ratingMap: Record<number, number[]>; totalUsers: number
 }) {
   const [forumOpen, setForumOpen] = useState(false)
   const f1 = duel.film1, f2 = duel.film2, winner = duel.winner
@@ -202,30 +267,36 @@ function DuelCard({
 
   const canVote = !!profile && !duel.closed
 
-  const SideStyle = (filmId: number): React.CSSProperties => ({
-    padding: '1.5rem',
-    cursor: canVote ? 'pointer' : 'default',
-    display: 'flex', flexDirection: 'column', alignItems: 'center',
-    textAlign: 'center', gap: '.7rem',
-    background: myVote === filmId
-      ? 'rgba(232,196,106,.07)'
-      : winner?.id === filmId
-        ? 'rgba(79,217,138,.06)'
-        : 'transparent',
-    transition: 'background .2s',
-  })
+  function getWatchPct(filmId: number) {
+    return Math.round(((watchCountMap[filmId] ?? 0) / totalUsers) * 100)
+  }
 
   return (
-    <div style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--rxl)', overflow: 'hidden', marginBottom: '1.5rem' }}>
+    <div style={{
+      background: 'var(--bg2)', borderRadius: 'var(--rxl)', overflow: 'hidden', marginBottom: '1.5rem',
+      border: '1px solid rgba(232,196,106,.35)',
+      boxShadow: '0 0 24px rgba(232,196,106,.08), 0 0 60px rgba(232,196,106,.04)',
+      animation: 'duelGlow 3s ease-in-out infinite',
+    }}>
+      <style>{`
+        @keyframes duelGlow {
+          0%, 100% { box-shadow: 0 0 24px rgba(232,196,106,.08), 0 0 60px rgba(232,196,106,.04); }
+          50% { box-shadow: 0 0 32px rgba(232,196,106,.18), 0 0 80px rgba(232,196,106,.08); }
+        }
+      `}</style>
+
       {/* Header */}
       <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '.8rem', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '.68rem', letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--text3)' }}>Semaine {duel.week_num}</span>
-          {winner && (
-            <span style={{ background: 'rgba(79,217,138,.1)', border: '1px solid rgba(79,217,138,.3)', color: 'var(--green)', fontSize: '.72rem', padding: '.25rem .75rem', borderRadius: 99 }}>
-              🏆 Vainqueur : {winner.titre} · Séance {CONFIG.SEANCE_JOUR} {CONFIG.SEANCE_HEURE}
-            </span>
-          )}
+          <span style={{
+            background: 'rgba(232,196,106,.12)', border: '1px solid rgba(232,196,106,.35)',
+            color: 'var(--gold)', fontSize: '.72rem', padding: '.25rem .75rem', borderRadius: 99,
+            animation: 'pulse 2s ease-in-out infinite',
+          }}>
+            Vote ouvert
+          </span>
+          <style>{`@keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:.6 } }`}</style>
         </div>
         <span style={{ fontSize: '.75rem', color: 'var(--text3)' }}>{v1 + v2} vote{v1 + v2 > 1 ? 's' : ''}</span>
       </div>
@@ -233,13 +304,20 @@ function DuelCard({
       {/* Films */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 64px 1fr' }}>
         {/* Film 1 */}
-        <div style={SideStyle(f1.id)} onClick={() => canVote && onVote(duel.id, f1.id)}>
-          <div style={{ width: 120, height: 180, borderRadius: 'var(--r)', overflow: 'hidden', background: 'var(--bg3)', border: `2px solid ${myVote === f1.id ? 'var(--gold)' : winner?.id === f1.id ? 'var(--green)' : 'var(--border)'}`, transition: 'border-color .2s' }}>
-            {f1.poster
-              ? <Image src={f1.poster} alt={f1.titre} width={120} height={180} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized />
-              : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>🎬</div>
-            }
-          </div>
+        <div
+          style={{
+            padding: '1.5rem', cursor: canVote ? 'pointer' : 'default',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '.7rem',
+            background: myVote === f1.id ? 'rgba(232,196,106,.07)' : 'transparent', transition: 'background .2s',
+          }}
+          onClick={() => canVote && onVote(duel.id, f1.id)}
+        >
+          <DuelPoster
+            film={f1} w={120} h={180}
+            border={`2px solid ${myVote === f1.id ? 'var(--gold)' : 'var(--border)'}`}
+            watchPct={getWatchPct(f1.id)} avg={avgRating(ratingMap[f1.id])}
+            onClick={canVote ? (e) => { e.stopPropagation(); onVote(duel.id, f1.id) } : undefined}
+          />
           <div style={{ fontSize: '.9rem', fontWeight: 500, lineHeight: 1.3 }}>{f1.titre}</div>
           <div style={{ fontSize: '.72rem', color: 'var(--text3)' }}>{f1.annee} · {f1.realisateur}</div>
           {myVote && <div style={{ fontSize: '.78rem', color: myVote === f1.id ? 'var(--gold)' : 'var(--text3)', fontWeight: myVote === f1.id ? 600 : 400 }}>
@@ -249,20 +327,33 @@ function DuelCard({
 
         {/* VS */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border2)', width: 46, height: 46, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>VS</div>
+          <div style={{
+            fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: 'var(--gold)',
+            background: 'rgba(232,196,106,.08)', border: '2px solid rgba(232,196,106,.25)',
+            width: 50, height: 50, borderRadius: '50%',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 0 20px rgba(232,196,106,.1)',
+          }}>VS</div>
         </div>
 
         {/* Film 2 */}
-        <div style={SideStyle(f2.id)} onClick={() => canVote && onVote(duel.id, f2.id)}>
-          <div style={{ width: 120, height: 180, borderRadius: 'var(--r)', overflow: 'hidden', background: 'var(--bg3)', border: `2px solid ${myVote === f2.id ? 'var(--gold)' : winner?.id === f2.id ? 'var(--green)' : 'var(--border)'}`, transition: 'border-color .2s' }}>
-            {f2.poster
-              ? <Image src={f2.poster} alt={f2.titre} width={120} height={180} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized />
-              : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>🎬</div>
-            }
-          </div>
+        <div
+          style={{
+            padding: '1.5rem', cursor: canVote ? 'pointer' : 'default',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '.7rem',
+            background: myVote === f2.id ? 'rgba(102,153,255,.07)' : 'transparent', transition: 'background .2s',
+          }}
+          onClick={() => canVote && onVote(duel.id, f2.id)}
+        >
+          <DuelPoster
+            film={f2} w={120} h={180}
+            border={`2px solid ${myVote === f2.id ? '#6699ff' : 'var(--border)'}`}
+            watchPct={getWatchPct(f2.id)} avg={avgRating(ratingMap[f2.id])}
+            onClick={canVote ? (e) => { e.stopPropagation(); onVote(duel.id, f2.id) } : undefined}
+          />
           <div style={{ fontSize: '.9rem', fontWeight: 500, lineHeight: 1.3 }}>{f2.titre}</div>
           <div style={{ fontSize: '.72rem', color: 'var(--text3)' }}>{f2.annee} · {f2.realisateur}</div>
-          {myVote && <div style={{ fontSize: '.78rem', color: myVote === f2.id ? 'var(--gold)' : 'var(--text3)', fontWeight: myVote === f2.id ? 600 : 400 }}>
+          {myVote && <div style={{ fontSize: '.78rem', color: myVote === f2.id ? '#6699ff' : 'var(--text3)', fontWeight: myVote === f2.id ? 600 : 400 }}>
             {v2} vote{v2 > 1 ? 's' : ''} ({p2}%)
           </div>}
         </div>
@@ -274,22 +365,32 @@ function DuelCard({
           <span style={{ color: '#e8c46a', fontWeight: myVote === f1.id ? 700 : 400 }}>{f1.titre}</span>
           <span style={{ color: '#6699ff', fontWeight: myVote === f2.id ? 700 : 400 }}>{f2.titre}</span>
         </div>
-        <div style={{ borderRadius: 99, height: 12, overflow: 'hidden', display: 'flex', cursor: canVote ? 'pointer' : 'default', background: 'var(--bg3)' }}>
+        <div style={{ borderRadius: 99, height: 14, overflow: 'hidden', display: 'flex', cursor: canVote ? 'pointer' : 'default', background: 'var(--bg3)', position: 'relative' }}>
           <div
             onClick={() => canVote && onVote(duel.id, f1.id)}
             title={canVote ? `Voter pour ${f1.titre}` : undefined}
-            style={{ height: '100%', width: `${p1}%`, minWidth: p1 > 0 ? 4 : 0, background: myVote === f1.id ? '#e8c46a' : 'rgba(232,196,106,.55)', transition: 'width .45s ease, background .2s' }}
+            style={{
+              height: '100%', width: `${p1}%`, minWidth: p1 > 0 ? 4 : 0,
+              background: myVote === f1.id ? 'linear-gradient(90deg, #e8c46a, #f0d78a)' : 'rgba(232,196,106,.45)',
+              transition: 'width .6s cubic-bezier(.4,0,.2,1), background .3s',
+              boxShadow: myVote === f1.id ? 'inset 0 0 8px rgba(232,196,106,.3)' : 'none',
+            }}
           />
           <div
             onClick={() => canVote && onVote(duel.id, f2.id)}
             title={canVote ? `Voter pour ${f2.titre}` : undefined}
-            style={{ height: '100%', width: `${p2}%`, minWidth: p2 > 0 ? 4 : 0, background: myVote === f2.id ? '#6699ff' : 'rgba(102,153,255,.55)', transition: 'width .45s ease, background .2s' }}
+            style={{
+              height: '100%', width: `${p2}%`, minWidth: p2 > 0 ? 4 : 0,
+              background: myVote === f2.id ? 'linear-gradient(90deg, #6699ff, #88bbff)' : 'rgba(102,153,255,.45)',
+              transition: 'width .6s cubic-bezier(.4,0,.2,1), background .3s',
+              boxShadow: myVote === f2.id ? 'inset 0 0 8px rgba(102,153,255,.3)' : 'none',
+            }}
           />
         </div>
         {myVote && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.68rem', color: 'var(--text3)', marginTop: '.3rem' }}>
-            <span>{p1}%</span>
-            <span>{p2}%</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.72rem', marginTop: '.35rem', fontWeight: 600 }}>
+            <span style={{ color: '#e8c46a' }}>{p1}%</span>
+            <span style={{ color: '#6699ff' }}>{p2}%</span>
           </div>
         )}
       </div>
@@ -319,29 +420,48 @@ function DuelCard({
   )
 }
 
-// ── Archive compacte ─────────────────────────────────────────────────────────
-function ArchiveCard({ duel, v1, v2 }: { duel: any; v1: number; v2: number }) {
+// ── Archive avec affiches ───────────────────────────────────────────────────
+function ArchiveCard({ duel, v1, v2, watchCountMap, ratingMap, totalUsers }: {
+  duel: any; v1: number; v2: number
+  watchCountMap: Record<number, number>; ratingMap: Record<number, number[]>; totalUsers: number
+}) {
   const winner = duel.winner
+  const f1 = duel.film1, f2 = duel.film2
   const tot = v1 + v2 || 1
+  const loser = winner?.id === f1?.id ? f2 : f1
+  const wv = winner?.id === duel.film1_id ? v1 : v2
+  const lv = winner?.id === duel.film1_id ? v2 : v1
+
+  function getWatchPct(filmId: number) {
+    return Math.round(((watchCountMap[filmId] ?? 0) / totalUsers) * 100)
+  }
 
   return (
     <div style={{
-      background: 'var(--bg2)',
-      border: '1px solid var(--border)',
-      borderRadius: 'var(--r)',
-      padding: '.9rem 1.2rem',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '1rem',
-      marginBottom: '.6rem',
-      flexWrap: 'wrap',
+      background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)',
+      padding: '1rem 1.2rem', display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '.6rem',
     }}>
-      {/* Affiche vainqueur miniature */}
-      {winner?.poster && (
-        <div style={{ width: 36, height: 54, borderRadius: 4, overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(232,196,106,.3)' }}>
-          <Image src={winner.poster} alt={winner.titre} width={36} height={54} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized />
-        </div>
-      )}
+      {/* Affiches miniatures */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', flexShrink: 0 }}>
+        {/* Vainqueur */}
+        {winner && (
+          <DuelPoster
+            film={winner} w={40} h={60}
+            border="1px solid rgba(232,196,106,.4)"
+            watchPct={getWatchPct(winner.id)} avg={avgRating(ratingMap[winner.id])}
+          />
+        )}
+        {/* Perdant — grisé */}
+        {loser && (
+          <div style={{ opacity: .4, filter: 'grayscale(.5)' }}>
+            <DuelPoster
+              film={loser} w={32} h={48}
+              border="1px solid var(--border)"
+              watchPct={getWatchPct(loser.id)} avg={avgRating(ratingMap[loser.id])}
+            />
+          </div>
+        )}
+      </div>
 
       {/* Infos */}
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -350,21 +470,25 @@ function ArchiveCard({ duel, v1, v2 }: { duel: any; v1: number; v2: number }) {
           <span style={{ fontSize: '.72rem', color: 'var(--gold)', fontWeight: 600 }}>🏆 {winner?.titre ?? '—'}</span>
         </div>
         <div style={{ fontSize: '.7rem', color: 'var(--text3)', marginTop: '.2rem' }}>
-          {duel.film1?.titre} vs {duel.film2?.titre}
+          vs {loser?.titre}
         </div>
       </div>
 
-      {/* Score */}
-      <div style={{ fontSize: '.7rem', color: 'var(--text3)', textAlign: 'right', flexShrink: 0 }}>
-        {v1}–{v2}
-        <div style={{ fontSize: '.62rem', color: 'var(--border2)' }}>{tot} vote{tot > 1 ? 's' : ''}</div>
+      {/* Score avec mini barre */}
+      <div style={{ flexShrink: 0, textAlign: 'right' }}>
+        <div style={{ fontSize: '.72rem', color: 'var(--text2)', fontWeight: 500 }}>{wv}–{lv}</div>
+        <div style={{ width: 50, height: 4, borderRadius: 99, overflow: 'hidden', display: 'flex', background: 'var(--bg3)', marginTop: '.3rem' }}>
+          <div style={{ height: '100%', width: `${Math.round(wv / tot * 100)}%`, background: 'var(--gold)' }} />
+          <div style={{ height: '100%', width: `${Math.round(lv / tot * 100)}%`, background: 'rgba(255,255,255,.15)' }} />
+        </div>
+        <div style={{ fontSize: '.58rem', color: 'var(--text3)', marginTop: '.15rem' }}>{tot} vote{tot > 1 ? 's' : ''}</div>
       </div>
     </div>
   )
 }
 
 // ── Composant principal ──────────────────────────────────────────────────────
-export default function DuelsClient({ profile, duels, myVotes, allVotes }: Props) {
+export default function DuelsClient({ profile, duels, myVotes, allVotes, watchCountMap, ratingMap, totalUsers }: Props) {
   const [localVotes, setLocalVotes] = useState<VoteRow[]>(allVotes)
   const [myVoteMap, setMyVoteMap] = useState<Record<number, number>>(
     Object.fromEntries(myVotes.map(v => [v.duel_id, v.film_choice]))
@@ -437,7 +561,6 @@ export default function DuelsClient({ profile, duels, myVotes, allVotes }: Props
     return localVotes.filter(v => v.duel_id === duelId && v.film_choice === filmId).length
   }
 
-  // Séparation : duel actif / dernier clos / archive
   const openDuel = duels.find(d => !d.closed) ?? null
   const closedDuels = duels.filter(d => d.closed)
   const latestClosed = closedDuels[0] ?? null
@@ -459,7 +582,6 @@ export default function DuelsClient({ profile, duels, myVotes, allVotes }: Props
         </div>
       )}
 
-      {/* Duel actif — vote ouvert */}
       {openDuel && (
         <DuelCard
           duel={openDuel}
@@ -468,10 +590,12 @@ export default function DuelsClient({ profile, duels, myVotes, allVotes }: Props
           v1={getVotes(openDuel.id, openDuel.film1_id)}
           v2={getVotes(openDuel.id, openDuel.film2_id)}
           onVote={handleVote}
+          watchCountMap={watchCountMap}
+          ratingMap={ratingMap}
+          totalUsers={totalUsers}
         />
       )}
 
-      {/* Dernier duel clos — vainqueur en grand */}
       {latestClosed && (
         <WinnerHero
           duel={latestClosed}
@@ -479,10 +603,12 @@ export default function DuelsClient({ profile, duels, myVotes, allVotes }: Props
           v2={getVotes(latestClosed.id, latestClosed.film2_id)}
           compact={!!openDuel}
           profile={profile}
+          watchCountMap={watchCountMap}
+          ratingMap={ratingMap}
+          totalUsers={totalUsers}
         />
       )}
 
-      {/* Archive — duels plus anciens */}
       {olderClosed.length > 0 && (
         <div style={{ marginTop: '1rem' }}>
           <button
@@ -492,7 +618,6 @@ export default function DuelsClient({ profile, duels, myVotes, allVotes }: Props
           >
             🗂 Archives — {olderClosed.length} duel{olderClosed.length > 1 ? 's' : ''} passé{olderClosed.length > 1 ? 's' : ''} {archiveOpen ? '▲' : '▼'}
           </button>
-
           {archiveOpen && (
             <div>
               {olderClosed.map(duel => (
@@ -501,6 +626,9 @@ export default function DuelsClient({ profile, duels, myVotes, allVotes }: Props
                   duel={duel}
                   v1={getVotes(duel.id, duel.film1_id)}
                   v2={getVotes(duel.id, duel.film2_id)}
+                  watchCountMap={watchCountMap}
+                  ratingMap={ratingMap}
+                  totalUsers={totalUsers}
                 />
               ))}
             </div>
