@@ -207,7 +207,6 @@ function DuelPoster({ film, w, h, border, watchPct, avg, profile, isWatched, wat
   function handleLeave() {
     setHovered(false)
     if (hoverTimer.current) { clearTimeout(hoverTimer.current); hoverTimer.current = null }
-    if (hoveredByTimer.current) { setShowPreview(false); hoveredByTimer.current = false }
   }
 
   useEffect(() => {
