@@ -1,7 +1,7 @@
 import Phaser from 'phaser'
 import { CFG } from './config'
 import { REQUIRED_DODGE, DODGE_KEY_IDX } from './types'
-import type { GameContext, DodgeDirection } from './types'
+import type { GameContext, DodgeDirection, CombatEvent } from './types'
 import { pickTaunt } from './data/taunts'
 
 import { StaminaSystem } from './systems/StaminaSystem'
@@ -63,6 +63,7 @@ export class PunchScene extends Phaser.Scene {
   private gKeys!: Phaser.GameObjects.Graphics
   private gSpots!: Phaser.GameObjects.Graphics
   private gProj!: Phaser.GameObjects.Graphics
+  private gStun!: Phaser.GameObjects.Graphics
 
   private tBubble!: Phaser.GameObjects.Text
   private tNow!: Phaser.GameObjects.Text
@@ -94,6 +95,8 @@ export class PunchScene extends Phaser.Scene {
   private eyePulse = 0
   private introTimer = 0
   private prevClippyAction = 'idle'
+  private prevBlinkFired = false
+  private clippyScreenPos = { x: 0, y: 0 }
 
   constructor() { super({ key: 'Punch' }) }
 
@@ -115,6 +118,13 @@ export class PunchScene extends Phaser.Scene {
     this.load.image(P_GLOVE_DEFAULT, '/gant-joueur.png')
     this.load.image(P_GLOVE_LEFT, '/gant-joueur-gauche.png')
     this.load.image(P_GLOVE_RIGHT, '/gant-joueur-droit.png')
+
+    // Placeholder sounds — will be replaced with real assets later
+    this.load.audio('snd_guard_block', '/sfx/guard-block.mp3')
+    this.load.audio('snd_counter', '/sfx/counter.mp3')
+    this.load.audio('snd_star_earned', '/sfx/star-earned.mp3')
+    this.load.audio('snd_stun', '/sfx/stun.mp3')
+    this.load.audio('snd_stamina_low', '/sfx/stamina-low.mp3')
   }
 
   // ── CREATE ───────────────────────────────────────────────────────────
@@ -135,6 +145,7 @@ export class PunchScene extends Phaser.Scene {
 
     // Graphics layers
     this.gSpots = this.add.graphics().setDepth(1).setAlpha(0.35)
+    this.gStun = this.add.graphics().setDepth(5)
     this.gProj = this.add.graphics().setDepth(6)
     this.gBubble = this.add.graphics().setDepth(8)
     this.gHUD = this.add.graphics().setDepth(8)
@@ -247,25 +258,24 @@ export class PunchScene extends Phaser.Scene {
       }).setOrigin(0.5, 0.5).setDepth(10)
     })
 
-    // Keyboard (flèches + espace uniquement)
+    // Keyboard
     const kb = this.input.keyboard!
     this.kLeft = kb.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT)
     this.kRight = kb.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT)
     this.kDown = kb.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN)
     this.kSpace = kb.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
 
-    // Mouse — disable context menu for right-click
+    // Mouse
     this.input.mouse?.disableContextMenu()
     this.prevMouseX = this.input.activePointer.x
     this.prevMouseY = this.input.activePointer.y
 
-    // Mouse click detection
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (pointer.leftButtonDown()) this.mouseLeftClicked = true
       if (pointer.rightButtonDown()) this.mouseRightClicked = true
     })
 
-    // Volume — load from localStorage, scroll to adjust
+    // Volume
     try { this.volume = parseFloat(localStorage.getItem('clippy_volume') ?? '0.5') || 0.5 } catch {}
     this.applyVolume()
     this.input.on('wheel', (_p: any, _gx: any, _gy: any, _gz: any, dy: number) => {
@@ -363,7 +373,7 @@ export class PunchScene extends Phaser.Scene {
       return
     }
 
-    // 1. Input first (so player state is fresh for hit resolution)
+    // 1. Input
     this.handleInput(ctx)
 
     // 2. Systems
@@ -376,20 +386,34 @@ export class PunchScene extends Phaser.Scene {
       this.clippyAI.update(ctx, dt)
     }
 
-    // 3. Detect Clippy state transitions (visuals/sounds)
+    // 3. Blink detection
+    if (ctx.clippy.blinkFired && !this.prevBlinkFired) {
+      this.effectsR.blink()
+    }
+    this.prevBlinkFired = ctx.clippy.blinkFired
+
+    // 4. Stamina low warning
+    if (this.staminaSys.consumeLowWarning()) {
+      this.snd('snd_stamina_low')
+    }
+
+    // 5. Detect Clippy state transitions (visuals/sounds)
     this.detectClippyTransitions(ctx)
 
-    // 4. Combat resolution (hit checks, damage)
+    // 6. Combat resolution
     this.combatSys.update(ctx, dt)
 
-    // 5. Meta systems
+    // 7. Process combat events → visual/sound feedback
+    this.processCombatEvents(ctx)
+
+    // 8. Meta systems
     this.hypeSys.update(ctx, dt)
     this.frenzySys.update(ctx, dt)
     if (!ctx.tutorial.active) {
       this.projectileSys.update(ctx, dt)
     }
 
-    // 6. Win/lose check
+    // 9. Win/lose check
     if (ctx.clippy.hp <= 0 && ctx.gamePhase === 'combat') {
       this.doWin()
     } else if (ctx.player.hp <= 0 && ctx.gamePhase === 'combat') {
@@ -399,6 +423,7 @@ export class PunchScene extends Phaser.Scene {
     // Render
     this.gloveR.update(ctx, rawDt)
     this.updateClippyVisuals(ctx, time)
+    this.drawStunStars(ctx, time)
     this.effectsR.update(ctx, rawDt)
     this.effectsR.draw(ctx)
     this.hudR.draw(ctx)
@@ -407,25 +432,86 @@ export class PunchScene extends Phaser.Scene {
     this.drawMobileButtons()
   }
 
+  // ── COMBAT EVENTS ────────────────────────────────────────────────────
+
+  private processCombatEvents(ctx: GameContext) {
+    const hpRatio = ctx.clippy.hp / CFG.clippy.maxHP
+
+    for (const ev of this.combatSys.events) {
+      switch (ev.type) {
+        case 'guard_block':
+          this.snd('snd_guard_block')
+          this.effectsR.popup('BLOQUÉ', '#ff6644')
+          this.gloveR.animateGuardBlock()
+          this.hudR.setBubble(pickTaunt('guard_block', hpRatio))
+          break
+
+        case 'hit':
+          this.snd('snd_hit')
+          if (ev.damage) {
+            this.effectsR.popup(`-${ev.damage}`, '#ff4444')
+            this.effectsR.shake(ctx, 8)
+          }
+          break
+
+        case 'counter_punch':
+          this.snd('snd_counter')
+          this.effectsR.flash(ctx, 0xffee22, 0.6)
+          this.effectsR.shake(ctx, 25)
+          this.effectsR.freezeFrame(ctx, 120)
+          this.effectsR.slowMo(ctx, 0.4, 400)
+          this.effectsR.popup('CONTRE PARFAIT !', '#ffee22')
+          this.gloveR.animateCounterHit()
+          this.hudR.setBubble(pickTaunt('counter', hpRatio))
+          break
+
+        case 'taunt_hit':
+          this.snd('snd_hit')
+          this.effectsR.shake(ctx, 12)
+          if (ev.damage) this.effectsR.popup(`-${ev.damage}`, '#ff8844')
+          this.hudR.setBubble(pickTaunt('hit', hpRatio))
+          break
+
+        case 'stun_start':
+          this.snd('snd_stun')
+          this.gloveR.resetGloves()
+          break
+
+        case 'stun_hit':
+          this.snd('snd_hit')
+          if (ev.damage) this.effectsR.popup(`-${ev.damage}`, '#ffaa44')
+          this.effectsR.shake(ctx, 6)
+          break
+
+        case 'star_earned':
+          this.snd('snd_star_earned')
+          this.effectsR.popup('★', '#ffd700')
+          break
+
+        case 'star_lost':
+          this.effectsR.popup('★ perdue', '#ff4444')
+          break
+      }
+    }
+  }
+
   // ── INPUT ────────────────────────────────────────────────────────────
 
   private handleInput(ctx: GameContext) {
     if (ctx.gamePhase === 'win' || ctx.gamePhase === 'lose') return
 
-    // Mouse clicks: clic droit = jab/counter, clic gauche = heavy/star punch
     let jPr = this.mouseRightClicked
     let kPr = this.mouseLeftClicked
     this.mouseRightClicked = false
     this.mouseLeftClicked = false
 
-    // Flèches clavier + mouvement souris pour esquive
     const JD = Phaser.Input.Keyboard.JustDown
     let lPr = JD(this.kLeft)
     let rPr = JD(this.kRight)
     let dPr = JD(this.kDown)
     let spaceDown = this.kSpace.isDown
 
-    // Détection esquive par mouvement souris (delta > seuil + cooldown)
+    // Mouse dodge detection
     const mouseX = this.input.activePointer.x
     const mouseY = this.input.activePointer.y
     const mouseDx = mouseX - this.prevMouseX
@@ -444,7 +530,7 @@ export class PunchScene extends Phaser.Scene {
       }
     }
 
-    // Mobile input (merge with keyboard)
+    // Mobile input
     this.mobileSys.update(ctx.dt)
     const mobileActions = this.mobileSys.consumeActions()
     for (const action of mobileActions) {
@@ -465,21 +551,13 @@ export class PunchScene extends Phaser.Scene {
 
     const ps = ctx.player.state
 
-    // Tutorial special handling
+    // Tutorial
     if (ctx.tutorial.active) {
       this.handleTutorialInput(ctx, lPr, rPr, dPr, jPr, kPr, spaceDown)
       return
     }
 
-    // Counter (priority: dodge parfaite ouvre la fenêtre)
-    if ((jPr || kPr) && ps.action === 'counter_window') {
-      if (this.dodgeSys.tryCounter(ctx)) {
-        this.onCounter(ctx)
-        return
-      }
-    }
-
-    // Star punch (K = power button, quand 3 étoiles)
+    // Star punch (left click when 3 stars + idle)
     if (kPr && ps.action === 'idle' && ctx.player.stars >= CFG.player.starPunch.starsRequired) {
       if (this.dodgeSys.tryStarPunch(ctx)) {
         this.onStarPunch(ctx)
@@ -487,14 +565,14 @@ export class PunchScene extends Phaser.Scene {
       }
     }
 
-    // Jab (J)
+    // Jab (right click)
     if (jPr && this.combatSys.tryJab(ctx)) {
       ctx.player.lastPunchHand = ctx.player.lastPunchHand === 'right' ? 'left' : 'right'
       this.gloveR.punchGlove(ctx.player.lastPunchHand)
       return
     }
 
-    // Heavy (K, si pas de star punch)
+    // Heavy (left click, no star punch)
     if (kPr && this.combatSys.tryHeavy(ctx)) {
       ctx.player.lastPunchHand = ctx.player.lastPunchHand === 'right' ? 'left' : 'right'
       this.gloveR.punchGlove(ctx.player.lastPunchHand)
@@ -526,7 +604,6 @@ export class PunchScene extends Phaser.Scene {
         this.effectsR.freezeFrame(ctx, 80)
         this.effectsR.shake(ctx, 10)
         this.hypeSys.onPerfectDodge(ctx)
-        ctx.player.stars = Math.min(3, ctx.player.stars + 1)
         this.hudR.setBubble(pickTaunt('dodge', ctx.clippy.hp / CFG.clippy.maxHP))
       } else {
         this.effectsR.popup('ESQUIVÉ', '#88ccff')
@@ -546,8 +623,8 @@ export class PunchScene extends Phaser.Scene {
     if (!step) return
 
     const cs = ctx.clippy.state
-    const ps = ctx.player.state
 
+    // Attack step
     if (step.expect === 'jab' || step.expect === 'heavy') {
       if (jPr || kPr) {
         this.tutorialSys.onSuccess(ctx)
@@ -557,6 +634,7 @@ export class PunchScene extends Phaser.Scene {
       return
     }
 
+    // Guard step
     if (step.expect === 'guard') {
       if (_spaceDown) {
         this.tutorialSys.onSuccess(ctx)
@@ -566,34 +644,45 @@ export class PunchScene extends Phaser.Scene {
       return
     }
 
-    // Dodge-based steps
+    // Dodge+Punish step (two-part)
+    if (step.expect === 'dodge_punish') {
+      if (this.tutorialSys.isDodgePunishWaitingHit()) {
+        if (jPr || kPr) {
+          this.tutorialSys.onSuccess(ctx)
+          this.effectsR.popup('COMBO !', '#ffee22')
+          this.effectsR.flash(ctx, 0xffee22, 0.4)
+        }
+        return
+      }
+
+      if (cs.action !== 'telegraph' && cs.action !== 'attack') return
+
+      let pressed: DodgeDirection | null = null
+      if (lPr) pressed = 'left'
+      else if (rPr) pressed = 'right'
+      else if (dPr) pressed = 'down'
+      if (!pressed) return
+
+      if (cs.attack) {
+        const correctDir = REQUIRED_DODGE[cs.attack.side]
+        if (pressed === correctDir) {
+          this.tutorialSys.onDodgePunishDodge(ctx)
+          this.effectsR.popup('ESQUIVÉ !', '#44ff88')
+          this.effectsR.flash(ctx, 0x44ff88, 0.3)
+          this.gloveR.resetGloves()
+        } else {
+          this.tutorialSys.onFail(ctx)
+        }
+      }
+      return
+    }
+
+    // Simple dodge steps
     if (cs.action !== 'telegraph' && cs.action !== 'attack') return
 
     const expectedDodge = step.expect === 'dodge_right' ? 'right'
       : step.expect === 'dodge_left' ? 'left'
       : step.expect === 'duck' ? 'down' : null
-
-    if (step.expect === 'counter') {
-      if (ps.action === 'counter_window' && (jPr || kPr)) {
-        this.tutorialSys.onSuccess(ctx)
-        this.effectsR.popup('CONTRE !', '#ffee22')
-        this.effectsR.flash(ctx, 0xffee22, 0.4)
-        return
-      }
-      if ((lPr || rPr || dPr) && ps.action === 'idle') {
-        const dir: DodgeDirection = lPr ? 'left' : rPr ? 'right' : 'down'
-        ps.action = 'dodge'
-        ps.timer = 0
-        ps.dodgeDir = dir
-        ps.isPerfectDodge = true
-        ps.cooldownRemaining = CFG.player.dodge.cooldown
-        this.staminaSys.spend(ctx, CFG.player.dodge.staminaCost)
-        this.gloveR.resetGloves()
-        this.effectsR.flash(ctx, 0x44ff88, 0.25)
-        this.effectsR.popup('PARFAIT !', '#44ff88')
-      }
-      return
-    }
 
     if (!expectedDodge) return
 
@@ -622,8 +711,9 @@ export class PunchScene extends Phaser.Scene {
     // Telegraph started
     if ((cs.action === 'telegraph' || cs.action === 'feint_telegraph') && prev !== cs.action) {
       if (cs.attack) {
+        const amp = this.clippyAI.getTellAmplitude(ctx)
         const startup = this.clippyAI.getStartup(cs.attack.type, ctx)
-        this.gloveR.animateTelegraph(ctx, cs.attack.type, startup)
+        this.gloveR.animateTelegraph(ctx, cs.attack.type, startup, amp)
         this.hudR.setBubble('')
 
         if (cs.action === 'feint_telegraph') {
@@ -649,7 +739,25 @@ export class PunchScene extends Phaser.Scene {
       this.hudR.setBubble(pickTaunt('feint', ctx.clippy.hp / CFG.clippy.maxHP))
     }
 
-    // Idle taunt
+    // Taunt started
+    if (cs.action === 'taunt' && prev !== 'taunt') {
+      this.gloveR.setShowoff(true)
+      this.sprClipy.setFlipX(true)
+      this.hudR.setBubble(pickTaunt('taunt', ctx.clippy.hp / CFG.clippy.maxHP))
+    }
+
+    // Taunt ended
+    if (prev === 'taunt' && cs.action !== 'taunt') {
+      this.gloveR.setShowoff(false)
+      this.sprClipy.setFlipX(false)
+    }
+
+    // Stunned started
+    if (cs.action === 'stunned' && prev !== 'stunned') {
+      this.gloveR.resetGloves()
+    }
+
+    // Back to idle
     if (cs.action === 'idle' && prev !== 'idle') {
       this.hudR.setBubble(pickTaunt('idle', ctx.clippy.hp / CFG.clippy.maxHP))
     }
@@ -657,26 +765,7 @@ export class PunchScene extends Phaser.Scene {
     this.prevClippyAction = cs.action
   }
 
-  // ── COMBAT EVENTS ────────────────────────────────────────────────────
-
-  private onCounter(ctx: GameContext) {
-    this.combatSys.applyCounter(ctx)
-    this.staminaSys.spend(ctx, CFG.player.perfectCounter.staminaCost)
-    this.staminaSys.restore(ctx, CFG.player.perfectCounter.staminaGain)
-
-    this.effectsR.flash(ctx, 0xffee22, 0.6)
-    this.effectsR.shake(ctx, 25)
-    this.effectsR.freezeFrame(ctx, 120)
-    this.effectsR.slowMo(ctx, 0.4, 400)
-    this.effectsR.popup('CONTRE PARFAIT !', '#ffee22')
-    this.snd('snd_hit')
-
-    ctx.player.lastPunchHand = ctx.player.lastPunchHand === 'right' ? 'left' : 'right'
-    this.gloveR.punchGlove(ctx.player.lastPunchHand)
-    this.gloveR.animateCounterHit()
-
-    this.hudR.setBubble(pickTaunt('counter', ctx.clippy.hp / CFG.clippy.maxHP))
-  }
+  // ── STAR PUNCH ───────────────────────────────────────────────────────
 
   private onStarPunch(ctx: GameContext) {
     this.combatSys.applyStarPunch(ctx)
@@ -775,7 +864,6 @@ export class PunchScene extends Phaser.Scene {
       this.tTut.setText('')
       this.tTutInstr.setText('')
 
-      // End tutorial → start combat
       if (ctx.gamePhase === 'tutorial') {
         this.effectsR.flash(ctx, 0x44ccff, 0.35)
         this.hudR.setBubble('Bravo ! Clippy se prépare...')
@@ -805,11 +893,36 @@ export class PunchScene extends Phaser.Scene {
   private updateClippyVisuals(ctx: GameContext, time: number) {
     const shakeX = this.effectsR.getShakeX(ctx)
     const pos = this.gloveR.updateClippyPosition(ctx, shakeX)
-
-    this.sprClipy.setPosition(pos.cx, pos.cy)
+    let cx = pos.cx
+    let cy = pos.cy
+    let angle = 0
 
     const cs = ctx.clippy.state
     this.sprClipy.clearTint()
+
+    // Body tell animations during telegraph
+    if ((cs.action === 'telegraph' || cs.action === 'feint_telegraph') && cs.attack) {
+      const amp = this.clippyAI.getTellAmplitude(ctx)
+      const startup = this.clippyAI.getStartup(cs.attack.type, ctx)
+      const progress = Math.min(1, cs.timer / startup)
+
+      if (cs.attack.type === 'charge') {
+        cy -= Math.round(35 * amp * progress)
+        const v = Math.round(80 * amp * progress)
+        this.sprClipy.setTint(Phaser.Display.Color.GetColor(255, Math.max(175, 255 - v), Math.max(175, 255 - v)))
+      } else if (cs.attack.type === 'hook') {
+        const dir = cs.attack.side === 'left' ? 1 : cs.attack.side === 'right' ? -1 : 0
+        angle = dir * 5 * amp * progress
+        const v = Math.round(40 * amp * progress)
+        this.sprClipy.setTint(Phaser.Display.Color.GetColor(255, Math.max(215, 255 - v), Math.max(215, 255 - v)))
+      } else {
+        cy -= Math.round(12 * amp * Math.sin(progress * Math.PI))
+      }
+    }
+
+    this.sprClipy.setPosition(cx, cy)
+    this.clippyScreenPos.x = cx
+    this.clippyScreenPos.y = cy
 
     if (ctx.gamePhase === 'win') {
       this.sprClipy.angle = 30
@@ -817,12 +930,14 @@ export class PunchScene extends Phaser.Scene {
     } else if (cs.action === 'stunned') {
       this.sprClipy.angle = Math.sin(time * 0.025) * 6
       this.sprClipy.setTint(0xffee88)
-    } else if (this.eyePulse > 0.1) {
+    } else if (cs.action === 'taunt') {
+      this.sprClipy.angle = Math.sin(time * 0.01) * 3
+    } else if (this.eyePulse > 0.1 && cs.action !== 'telegraph' && cs.action !== 'feint_telegraph') {
       const v = Math.round(this.eyePulse * 80)
       this.sprClipy.setTint(Phaser.Display.Color.GetColor(255, 255 - v, 255 - v))
-      this.sprClipy.angle = 0
+      this.sprClipy.angle = angle
     } else {
-      this.sprClipy.angle = 0
+      this.sprClipy.angle = angle
     }
 
     // Clippy glove tracking during idle
@@ -831,9 +946,25 @@ export class PunchScene extends Phaser.Scene {
       const gloves = this.gloveR.getGuardGloves()
       const m = (this.gloveR as any).metrics
       if (m) {
-        gloves.cGuardL.setPosition(pos.cx + m.guardOffX, m.gloveBaseY + (pos.cy - this.CY))
-        gloves.cGuardR.setPosition(pos.cx - m.guardOffX, m.gloveBaseY + (pos.cy - this.CY))
+        gloves.cGuardL.setPosition(cx + m.guardOffX, m.gloveBaseY + (cy - this.CY))
+        gloves.cGuardR.setPosition(cx - m.guardOffX, m.gloveBaseY + (cy - this.CY))
       }
+    }
+  }
+
+  // ── STUN STARS ───────────────────────────────────────────────────────
+
+  private drawStunStars(ctx: GameContext, time: number) {
+    this.gStun.clear()
+    const cs = ctx.clippy.state
+    if (cs.action === 'stunned' && cs.stunHitsRemaining > 0) {
+      this.effectsR.drawStunStars(
+        this.gStun,
+        this.clippyScreenPos.x,
+        this.clippyScreenPos.y,
+        cs.stunHitsRemaining,
+        time,
+      )
     }
   }
 
@@ -860,7 +991,6 @@ export class PunchScene extends Phaser.Scene {
       this.gProj.lineStyle(1.5, 0xffffff, 0.4)
       this.gProj.strokeRoundedRect(px - size / 2, py - size / 2, size, size * 0.7, 3)
 
-      // Hit check
       if (proj.progress >= 0.85 && proj.active) {
         if (this.projectileSys.checkHit(ctx, proj)) {
           this.effectsR.shake(ctx, 8)
@@ -957,6 +1087,7 @@ export class PunchScene extends Phaser.Scene {
         comboCount: 0,
         comboTimer: 0,
         guardDuration: 0,
+        isExhausted: false,
       },
 
       clippy: {
@@ -964,10 +1095,15 @@ export class PunchScene extends Phaser.Scene {
         state: {
           action: 'idle', attack: null, timer: 0,
           recoveryDuration: 0, comboRemaining: 0, realAttack: null,
+          stunHitsRemaining: 0,
         },
         psyche: { confidence: 0, panic: 0, fatigue: 0 },
         missStreak: 0,
         idleDuration: 0,
+        blinkFired: false,
+        patternQueue: [],
+        patternRepeats: 0,
+        lastTauntTime: 0,
       },
 
       hype: { value: CFG.hype.initial, level: 'neutral' },

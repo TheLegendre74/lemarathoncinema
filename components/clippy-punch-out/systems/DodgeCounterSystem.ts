@@ -1,5 +1,6 @@
 import { CFG } from '../config'
-import type { GameContext, DodgeDirection, REQUIRED_DODGE } from '../types'
+import type { GameContext, DodgeDirection } from '../types'
+import { REQUIRED_DODGE } from '../types'
 
 export class DodgeCounterSystem {
   tryDodge(ctx: GameContext, direction: DodgeDirection, requiredDodge: typeof REQUIRED_DODGE): boolean {
@@ -7,6 +8,7 @@ export class DodgeCounterSystem {
     if (ps.action !== 'idle' && ps.action !== 'guard') return false
     if (ps.cooldownRemaining > 0) return false
     if (ctx.player.stamina < CFG.player.dodge.staminaCost) return false
+    if (ctx.player.isExhausted) return false
 
     const cs = ctx.clippy.state
     let isPerfect = false
@@ -14,14 +16,12 @@ export class DodgeCounterSystem {
     if (cs.action === 'telegraph' && cs.attack) {
       const correctDir = requiredDodge[cs.attack.side]
       if (direction !== correctDir) return false
-
-      const startup = this.getAttackStartup(cs.attack.type, ctx)
+      const startup = this.getAttackStartup(cs.attack.type)
       const remaining = startup - cs.timer
       isPerfect = remaining <= CFG.player.perfectDodge.windowMs && remaining >= 0
     } else if (cs.action === 'attack' && cs.attack) {
       const correctDir = requiredDodge[cs.attack.side]
       if (direction !== correctDir) return false
-      isPerfect = false
     }
 
     ps.action = 'dodge'
@@ -30,17 +30,6 @@ export class DodgeCounterSystem {
     ps.dodgeDir = direction
     ps.isPerfectDodge = isPerfect
     ps.cooldownRemaining = CFG.player.dodge.cooldown
-
-    return true
-  }
-
-  tryCounter(ctx: GameContext): boolean {
-    const ps = ctx.player.state
-    if (ps.action !== 'counter_window') return false
-
-    ps.action = 'counter'
-    ps.phase = 'active'
-    ps.timer = 0
     return true
   }
 
@@ -48,6 +37,7 @@ export class DodgeCounterSystem {
     if (ctx.player.stars < CFG.player.starPunch.starsRequired) return false
     const ps = ctx.player.state
     if (ps.action !== 'idle') return false
+    if (ctx.player.isExhausted) return false
 
     ctx.player.stars = 0
     ps.action = 'starpunch'
@@ -61,28 +51,11 @@ export class DodgeCounterSystem {
     if (ps.action !== 'dodge') return
 
     ps.timer += dt * 1000
-
     if (ps.timer >= CFG.player.dodge.totalMs) {
-      if (ps.isPerfectDodge) {
-        ps.action = 'counter_window'
-        ps.timer = 0
-      } else {
-        ps.action = 'idle'
-        ps.timer = 0
-        ps.dodgeDir = null
-      }
-      ps.isPerfectDodge = false
-    }
-  }
-
-  updateCounterWindow(ctx: GameContext, dt: number) {
-    const ps = ctx.player.state
-    if (ps.action !== 'counter_window') return
-
-    ps.timer += dt * 1000
-    if (ps.timer >= CFG.player.perfectCounter.windowMs) {
       ps.action = 'idle'
       ps.timer = 0
+      ps.dodgeDir = null
+      ps.isPerfectDodge = false
     }
   }
 
@@ -91,11 +64,9 @@ export class DodgeCounterSystem {
     return ps.action === 'dodge' && ps.timer <= CFG.player.dodge.invulnMs
   }
 
-  private getAttackStartup(type: string, ctx: GameContext): number {
-    // Delegate to ClippyAI for consistent timing, but provide a fallback
-    const base = type === 'jab' ? CFG.clippy.jab.startup
-      : type === 'hook' ? CFG.clippy.hook.startup
-      : CFG.clippy.charge.startup
-    return base
+  private getAttackStartup(type: string): number {
+    if (type === 'jab') return CFG.clippy.jab.startup
+    if (type === 'hook') return CFG.clippy.hook.startup
+    return CFG.clippy.charge.startup
   }
 }

@@ -110,23 +110,42 @@ const FEINT = [
   'C\'est ça la feinte, bébé.',
 ]
 
+const TAUNT = [
+  'Regarde ce que tu ne pourras jamais atteindre.',
+  'Hey le public ! Regardez ce loser !',
+  '*se retourne vers la foule et salue*',
+  'Tu vois ça ? C\'est de la CLASSE.',
+  'Pendant que tu galères, MOI je suis beau.',
+  'On applaudit le champion ! Moi !',
+]
+
+const GUARD_BLOCK = [
+  'Tu croyais quoi ? Que j\'allais rester là ?',
+  'Ma garde est PARFAITE, idiot.',
+  'Haha ! Tu te fatigues pour rien.',
+  'Continue, gaspille ta stamina.',
+  'Tu frappes du vent, minable.',
+]
+
 function pick(arr: string[]): string {
   return arr[Math.floor(Math.random() * arr.length)]
 }
 
 export function pickTaunt(
-  category: 'idle' | 'hit' | 'dodge' | 'counter' | 'panic' | 'confident' | 'frenzy' | 'feint',
+  category: 'idle' | 'hit' | 'dodge' | 'counter' | 'panic' | 'confident' | 'frenzy' | 'feint' | 'taunt' | 'guard_block',
   hpRatio: number,
 ): string {
   const isHigh = hpRatio > 0.5
   switch (category) {
-    case 'idle':      return pick(isHigh ? IDLE_HIGH : IDLE_LOW)
-    case 'hit':       return pick(isHigh ? HIT_HIGH : HIT_LOW)
-    case 'dodge':     return pick(isHigh ? DODGE_HIGH : DODGE_LOW)
-    case 'counter':   return pick(isHigh ? COUNTER_HIGH : COUNTER_LOW)
-    case 'panic':     return pick(PANIC)
-    case 'confident': return pick(CONFIDENT)
-    case 'frenzy':    return pick(FRENZY)
-    case 'feint':     return pick(FEINT)
+    case 'idle':        return pick(isHigh ? IDLE_HIGH : IDLE_LOW)
+    case 'hit':         return pick(isHigh ? HIT_HIGH : HIT_LOW)
+    case 'dodge':       return pick(isHigh ? DODGE_HIGH : DODGE_LOW)
+    case 'counter':     return pick(isHigh ? COUNTER_HIGH : COUNTER_LOW)
+    case 'panic':       return pick(PANIC)
+    case 'confident':   return pick(CONFIDENT)
+    case 'frenzy':      return pick(FRENZY)
+    case 'feint':       return pick(FEINT)
+    case 'taunt':       return pick(TAUNT)
+    case 'guard_block': return pick(GUARD_BLOCK)
   }
 }

@@ -28,7 +28,6 @@ export class GloveRenderer {
   private showoffT = 0
   private isShowoff = false
 
-  // Dodge POV animation
   private dodgePOV = { x: 0, y: 0, angle: 0 }
   private pGuardBaseX = 0
   private pGuardBaseY = 0
@@ -54,6 +53,7 @@ export class GloveRenderer {
     }
     if (this.isShowoff) this.showoffT += dt
     this.updateDodgePOV(ctx, dt)
+    this.updateExhaustedGloves(ctx)
   }
 
   private updateDodgePOV(ctx: GameContext, dt: number) {
@@ -101,6 +101,15 @@ export class GloveRenderer {
     }
   }
 
+  private updateExhaustedGloves(ctx: GameContext) {
+    const s = this.sprites
+    if (!s.pGuard.visible) return
+    if (ctx.player.isExhausted) {
+      s.pGuard.y = this.pGuardBaseY + this.dodgePOV.y + 8
+      s.pGuard.angle = this.dodgePOV.angle + 3
+    }
+  }
+
   getDodgeOffset() { return this.dodgePOV }
 
   resetGloves() {
@@ -120,7 +129,7 @@ export class GloveRenderer {
       .setAngle(0).setScale(m.gloveBaseScX, m.gloveBaseScY).setAlpha(1)
   }
 
-  animateTelegraph(ctx: GameContext, attackType: ClippyAttackType, durationMs: number) {
+  animateTelegraph(ctx: GameContext, attackType: ClippyAttackType, durationMs: number, amplitude: number) {
     const s = this.sprites
     const m = this.metrics
     const atk = ctx.clippy.state.attack
@@ -128,6 +137,7 @@ export class GloveRenderer {
 
     this.resetGloves()
     const side = atk.side
+    const amp = amplitude
 
     const telGlove = side === 'left' ? s.cGuardL
       : side === 'right' ? s.cGuardR
@@ -136,36 +146,45 @@ export class GloveRenderer {
     this.scene.tweens.killTweensOf(telGlove)
 
     if (attackType === 'charge') {
-      // Big wind-up for charge
       this.scene.tweens.add({
         targets: telGlove,
-        scaleX: m.gloveBaseScX * 1.3,
-        scaleY: m.gloveBaseScY * 1.3,
-        y: m.gloveBaseY - Math.round(this.H * 0.06),
-        angle: side === 'left' ? -30 : side === 'right' ? 30 : 0,
+        scaleX: m.gloveBaseScX * (1 + 0.35 * amp),
+        scaleY: m.gloveBaseScY * (1 + 0.35 * amp),
+        y: m.gloveBaseY - Math.round(35 * amp),
+        angle: side === 'left' ? -30 * amp : side === 'right' ? 30 * amp : 0,
         duration: Math.round(durationMs * 0.85),
         ease: 'Sine.easeInOut',
       })
+      const other = side === 'left' ? s.cGuardR : s.cGuardL
+      this.scene.tweens.add({
+        targets: other,
+        x: other.x + (Math.random() > 0.5 ? 1 : -1) * 3 * amp,
+        duration: 80,
+        yoyo: true,
+        repeat: Math.floor(durationMs / 160),
+        ease: 'Sine.easeInOut',
+      })
     } else if (attackType === 'hook') {
-      // Arm pulls back
-      const pullX = side === 'left' ? Math.round(this.W * 0.06) : -Math.round(this.W * 0.06)
+      const pullX = side === 'left'
+        ? Math.round(this.W * 0.06 * amp)
+        : -Math.round(this.W * 0.06 * amp)
       this.scene.tweens.add({
         targets: telGlove,
         x: telGlove.x + pullX,
-        angle: side === 'left' ? -20 : side === 'right' ? 20 : 0,
-        y: m.gloveBaseY - 5,
+        angle: side === 'left' ? -20 * amp : side === 'right' ? 20 * amp : -5 * amp,
+        y: m.gloveBaseY - Math.round(5 * amp),
         duration: Math.round(durationMs * 0.85),
         ease: 'Sine.easeInOut',
       })
     } else {
-      // Jab — subtle twitch
       this.scene.tweens.add({
         targets: telGlove,
-        y: m.gloveBaseY - 3,
-        scaleX: m.gloveBaseScX * 1.05,
-        scaleY: m.gloveBaseScY * 1.05,
-        duration: Math.round(durationMs * 0.85),
-        ease: 'Sine.easeInOut',
+        y: m.gloveBaseY - Math.round(12 * amp),
+        scaleX: m.gloveBaseScX * (1 + 0.05 * amp),
+        scaleY: m.gloveBaseScY * (1 + 0.05 * amp),
+        duration: Math.min(60, Math.round(durationMs * 0.35)),
+        ease: 'Power2',
+        yoyo: true,
       })
     }
   }
@@ -209,6 +228,20 @@ export class GloveRenderer {
 
   animateFeintCancel() {
     this.resetGloves()
+  }
+
+  animateGuardBlock() {
+    const s = this.sprites
+    const m = this.metrics
+    this.scene.tweens.killTweensOf(s.cGuardL)
+    this.scene.tweens.killTweensOf(s.cGuardR)
+    this.scene.tweens.add({
+      targets: [s.cGuardL, s.cGuardR],
+      y: m.gloveBaseY + 3,
+      duration: 60,
+      yoyo: true,
+      ease: 'Power2',
+    })
   }
 
   punchGlove(hand: 'left' | 'right') {

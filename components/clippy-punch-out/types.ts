@@ -25,8 +25,8 @@ export const DODGE_KEY_IDX: Record<DodgeDirection, number> = {
 
 export type PlayerActionType =
   | 'idle' | 'jab' | 'heavy' | 'guard'
-  | 'dodge' | 'counter_window' | 'counter'
-  | 'stunned' | 'starpunch'
+  | 'dodge' | 'stunned' | 'starpunch'
+  | 'exhausted'
 
 export type AttackPhase = 'startup' | 'active' | 'recovery'
 
@@ -43,7 +43,7 @@ export interface PlayerState {
 
 export type ClippyActionType =
   | 'idle' | 'telegraph' | 'attack' | 'recovery'
-  | 'feint_telegraph' | 'feint_cancel' | 'stunned' | 'down'
+  | 'feint_telegraph' | 'feint_cancel' | 'stunned' | 'taunt' | 'down'
 
 export interface ClippyActionState {
   action: ClippyActionType
@@ -52,6 +52,7 @@ export interface ClippyActionState {
   recoveryDuration: number
   comboRemaining: number
   realAttack: ClippyAttack | null
+  stunHitsRemaining: number
 }
 
 export interface ClippyPsyche {
@@ -96,6 +97,17 @@ export interface EffectState {
   slowMoTimer: number
 }
 
+// ─── Combat Events ──────────────────────────────────────────────────
+
+export type CombatEventType =
+  | 'guard_block' | 'hit' | 'counter_punch' | 'taunt_hit'
+  | 'star_earned' | 'star_lost' | 'stun_start' | 'stun_hit'
+
+export interface CombatEvent {
+  type: CombatEventType
+  damage?: number
+}
+
 // ─── Game Context ────────────────────────────────────────────────────
 
 export interface GameContext {
@@ -113,6 +125,7 @@ export interface GameContext {
     comboCount: number
     comboTimer: number
     guardDuration: number
+    isExhausted: boolean
   }
 
   clippy: {
@@ -121,6 +134,10 @@ export interface GameContext {
     psyche: ClippyPsyche
     missStreak: number
     idleDuration: number
+    blinkFired: boolean
+    patternQueue: ClippyAttackType[]
+    patternRepeats: number
+    lastTauntTime: number
   }
 
   hype: {

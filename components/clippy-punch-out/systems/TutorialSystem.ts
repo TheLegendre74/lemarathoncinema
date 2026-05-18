@@ -8,7 +8,7 @@ interface TutStep {
   hint: string
   missMsg: string
   clippyAttack: { type: 'jab' | 'hook' | 'charge'; side: AttackSide } | null
-  expect: 'dodge_right' | 'dodge_left' | 'duck' | 'jab' | 'heavy' | 'guard' | 'counter'
+  expect: 'dodge_right' | 'dodge_left' | 'duck' | 'jab' | 'heavy' | 'guard' | 'dodge_punish'
 }
 
 const STEPS: TutStep[] = [
@@ -49,13 +49,13 @@ const STEPS: TutStep[] = [
     expect: 'jab',
   },
   {
-    id: 'counter',
-    title: 'ÉTAPE 5 — CONTRE PARFAIT',
-    instruction: 'Esquivez puis contre-attaquez !',
-    hint: 'Esquivez → puis clic droit pour contre-attaquer',
-    missMsg: 'Esquivez d\'abord, puis clic droit !',
+    id: 'dodge_punish',
+    title: 'ÉTAPE 5 — ESQUIVE + PUNITION',
+    instruction: 'Esquivez puis frappez Clippy sonné !',
+    hint: 'Esquivez → puis clic droit ou gauche',
+    missMsg: 'Esquivez d\'abord, puis frappez !',
     clippyAttack: { type: 'hook', side: 'left' },
-    expect: 'counter',
+    expect: 'dodge_punish',
   },
 ]
 
@@ -64,6 +64,7 @@ export class TutorialSystem {
   private showingResult = false
   private resultTimer = 0
   private stepSuccess = false
+  private dodgePunishPhase: 0 | 1 = 0
 
   get totalSteps() { return STEPS.length }
 
@@ -73,8 +74,7 @@ export class TutorialSystem {
   }
 
   getTitle(ctx: GameContext): string {
-    const step = this.getCurrentStep(ctx)
-    return step ? step.title : ''
+    return this.getCurrentStep(ctx)?.title ?? ''
   }
 
   getInstruction(ctx: GameContext): string {
@@ -82,8 +82,12 @@ export class TutorialSystem {
       return this.stepSuccess ? 'Bravo !' : (this.getCurrentStep(ctx)?.missMsg ?? 'Raté !')
     }
     const step = this.getCurrentStep(ctx)
-    return step ? step.hint : ''
+    if (!step) return ''
+    if (step.expect === 'dodge_punish' && this.dodgePunishPhase === 1) return 'Maintenant frappez-le !'
+    return step.hint
   }
+
+  isDodgePunishWaitingHit(): boolean { return this.dodgePunishPhase === 1 }
 
   update(ctx: GameContext, dt: number) {
     if (!ctx.tutorial.active) return
@@ -95,10 +99,8 @@ export class TutorialSystem {
         this.resultTimer = 0
         if (this.stepSuccess) {
           ctx.tutorial.step++
-          if (ctx.tutorial.step >= STEPS.length) {
-            ctx.tutorial.active = false
-            return
-          }
+          this.dodgePunishPhase = 0
+          if (ctx.tutorial.step >= STEPS.length) { ctx.tutorial.active = false; return }
         }
         this.waitTimer = 0
       }
@@ -108,7 +110,7 @@ export class TutorialSystem {
     const step = this.getCurrentStep(ctx)
     if (!step) return
 
-    if (step.clippyAttack) {
+    if (step.clippyAttack && this.dodgePunishPhase === 0) {
       this.waitTimer += dt * 1000
       if (this.waitTimer >= 1800 && ctx.clippy.state.action === 'idle') {
         ctx.clippy.state.action = 'telegraph'
@@ -119,14 +121,24 @@ export class TutorialSystem {
     }
   }
 
+  onDodgePunishDodge(ctx: GameContext) {
+    this.dodgePunishPhase = 1
+    ctx.clippy.state.action = 'stunned'
+    ctx.clippy.state.timer = 0
+    ctx.clippy.state.stunHitsRemaining = 3
+    this.waitTimer = 0
+  }
+
   onSuccess(ctx: GameContext) {
     this.stepSuccess = true
     this.showingResult = true
     this.resultTimer = 0
     this.waitTimer = 0
-    ctx.clippy.state.action = 'idle'
-    ctx.clippy.state.timer = 0
-    ctx.clippy.state.attack = null
+    if (ctx.clippy.state.action !== 'stunned') {
+      ctx.clippy.state.action = 'idle'
+      ctx.clippy.state.timer = 0
+      ctx.clippy.state.attack = null
+    }
   }
 
   onFail(ctx: GameContext) {
@@ -137,6 +149,7 @@ export class TutorialSystem {
     ctx.clippy.state.action = 'idle'
     ctx.clippy.state.timer = 0
     ctx.clippy.state.attack = null
+    this.dodgePunishPhase = 0
   }
 
   shouldBlockDamage(ctx: GameContext): boolean {

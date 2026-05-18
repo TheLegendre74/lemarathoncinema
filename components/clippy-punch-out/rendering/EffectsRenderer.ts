@@ -1,4 +1,5 @@
 import type Phaser from 'phaser'
+import { CFG } from '../config'
 import type { GameContext } from '../types'
 
 export class EffectsRenderer {
@@ -6,6 +7,9 @@ export class EffectsRenderer {
   private spotAngle = 0
   private spotAngle2 = Math.PI
   private font = 'Impact, "Arial Black", "Bebas Neue", sans-serif'
+
+  private blinkActive = false
+  private blinkTimer = 0
 
   constructor(
     private scene: Phaser.Scene,
@@ -35,21 +39,38 @@ export class EffectsRenderer {
       }
     }
 
+    if (this.blinkActive) {
+      this.blinkTimer += dt * 1000
+      if (this.blinkTimer >= CFG.tells.blinkDurationMs) {
+        this.blinkActive = false
+        this.blinkTimer = 0
+      }
+    }
+
     this.spotAngle += dt * 1.2
     this.spotAngle2 += dt * 0.9
   }
 
   draw(ctx: GameContext) {
     this.drawSpots(ctx)
+    this.drawBlink()
     this.drawFlash(ctx)
   }
 
   private drawFlash(ctx: GameContext) {
     this.gFlash.clear()
+    if (this.blinkActive) {
+      this.gFlash.fillStyle(0x000000, CFG.tells.blinkAlpha)
+      this.gFlash.fillRect(0, 0, this.W, this.H)
+    }
     if (ctx.effects.flashAlpha > 0.01) {
       this.gFlash.fillStyle(ctx.effects.flashColor, Math.min(ctx.effects.flashAlpha, 0.55))
       this.gFlash.fillRect(0, 0, this.W, this.H)
     }
+  }
+
+  private drawBlink() {
+    // blink overlay is drawn inside drawFlash
   }
 
   private drawSpots(_ctx: GameContext) {
@@ -73,6 +94,11 @@ export class EffectsRenderer {
       g.lineTo(ex, ey)
       g.strokePath()
     })
+  }
+
+  blink() {
+    this.blinkActive = true
+    this.blinkTimer = 0
   }
 
   flash(ctx: GameContext, color: number, alpha = 0.45) {
@@ -118,6 +144,31 @@ export class EffectsRenderer {
         t.destroy()
       },
     })
+  }
+
+  drawStunStars(g: Phaser.GameObjects.Graphics, cx: number, cy: number, count: number, time: number) {
+    if (count <= 0) return
+    const orbitR = 28
+    const starR1 = 8
+    const starR2 = 3.5
+    for (let i = 0; i < count; i++) {
+      const angle = (time * 0.005) + (i * Math.PI * 2) / count
+      const sx = cx + Math.cos(angle) * orbitR
+      const sy = cy - 30 + Math.sin(angle) * orbitR * 0.4
+      g.fillStyle(0xffcc00, 0.9)
+      this.drawStarShape(g, sx, sy, starR1, starR2)
+    }
+  }
+
+  private drawStarShape(g: Phaser.GameObjects.Graphics, x: number, y: number, r1: number, r2: number) {
+    g.beginPath()
+    for (let i = 0; i < 10; i++) {
+      const r = i % 2 === 0 ? r1 : r2
+      const a = (i * Math.PI / 5) - Math.PI / 2
+      if (i === 0) g.moveTo(x + r * Math.cos(a), y + r * Math.sin(a))
+      else g.lineTo(x + r * Math.cos(a), y + r * Math.sin(a))
+    }
+    g.closePath(); g.fillPath()
   }
 
   getShakeX(ctx: GameContext): number {

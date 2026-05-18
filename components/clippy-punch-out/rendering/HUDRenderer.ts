@@ -47,7 +47,7 @@ export class HUDRenderer {
     this.drawStars(ctx)
     this.drawHypeBar(ctx)
     this.drawBubble(ctx)
-    this.drawAttackIndicator(ctx)
+    if (ctx.tutorial.active) this.drawAttackIndicator(ctx)
     this.drawKeyHints(ctx)
     this.drawFrenzyBorder(ctx)
     this.drawProjectileWarnings(ctx)
@@ -104,14 +104,28 @@ export class HUDRenderer {
     const y = this.BAR_Y + this.BAR_H + 4
     const pct = Math.max(0, ctx.player.stamina / CFG.player.maxStamina)
     const isLow = ctx.player.stamina < CFG.player.lowStaminaThreshold
+    const isExhausted = ctx.player.isExhausted
 
     g.fillStyle(0x0d0d1e, 1).fillRoundedRect(14, y, this.BAR_W, this.STAM_H, 3)
     if (pct > 0) {
-      const col = isLow ? 0xff6600 : 0xddaa22
-      g.fillStyle(col, isLow ? 0.6 + Math.sin(ctx.totalTime * 0.008) * 0.3 : 1)
+      let col: number
+      let alpha: number
+      if (isExhausted) {
+        col = 0xff2222
+        alpha = 0.4 + Math.sin(ctx.totalTime * 0.012) * 0.4
+      } else if (isLow) {
+        col = 0xff6600
+        alpha = 0.6 + Math.sin(ctx.totalTime * 0.008) * 0.3
+      } else {
+        col = 0xddaa22
+        alpha = 1
+      }
+      g.fillStyle(col, alpha)
       g.fillRoundedRect(14, y, Math.round(this.BAR_W * pct), this.STAM_H, 3)
     }
-    g.lineStyle(1, 0x111122, 0.7).strokeRoundedRect(14, y, this.BAR_W, this.STAM_H, 3)
+    const borderCol = isExhausted ? 0xff2222 : 0x111122
+    const borderAlpha = isExhausted ? 0.6 + Math.sin(ctx.totalTime * 0.012) * 0.3 : 0.7
+    g.lineStyle(1, borderCol, borderAlpha).strokeRoundedRect(14, y, this.BAR_W, this.STAM_H, 3)
   }
 
   private drawClippyHP(ctx: GameContext) {
@@ -125,7 +139,6 @@ export class HUDRenderer {
     }
     g.lineStyle(2, 0x111122, 0.9).strokeRoundedRect(x, this.BAR_Y, this.BAR_W, this.BAR_H, 5)
 
-    // Phase indicator
     const phase = ctx.combatPhase
     if (phase >= 2) {
       const label = phase === 3 ? 'CHAOS' : 'AGRESSIF'
@@ -170,7 +183,6 @@ export class HUDRenderer {
     }
     g.lineStyle(1.5, 0x222244, 0.8).strokeRoundedRect(x, y, barW, this.HYPE_H, 4)
 
-    // Thresholds
     const hostileX = x + Math.round(barW * (CFG.hype.thresholds.hostile / 100))
     const delirX = x + Math.round(barW * (CFG.hype.thresholds.delirious / 100))
     g.lineStyle(1, 0xffffff, 0.3)
@@ -240,7 +252,6 @@ export class HUDRenderer {
     g.lineStyle(3, borderCol, 0.8)
     g.strokeCircle(cx, cy, boxSz / 2)
 
-    // Direction arrow
     const sz = Math.round(boxSz * 0.22)
     const side = cs.attack!.side
     const dir: DodgeDirection = side === 'left' ? 'right' : side === 'right' ? 'left' : 'down'
@@ -320,13 +331,13 @@ export class HUDRenderer {
     if (cs.action === 'telegraph' || cs.action === 'attack' || cs.action === 'feint_telegraph') {
       if (cs.attack) {
         const side = cs.attack.side
-        if (side === 'left') return 2   // dodge right (D)
-        if (side === 'right') return 0  // dodge left (A)
-        return 1                         // duck (S)
+        if (side === 'left') return 2
+        if (side === 'right') return 0
+        return 1
       }
     }
 
-    if (ps.action === 'counter_window') return 3 // J for counter
+    if (cs.action === 'stunned' && cs.stunHitsRemaining > 0) return 3
 
     if (ps.action === 'idle' && ctx.player.stars >= CFG.player.starPunch.starsRequired) return 3
 
@@ -334,9 +345,9 @@ export class HUDRenderer {
   }
 
   private getActiveKeyColor(ctx: GameContext): number {
-    const ps = ctx.player.state
-    if (ps.action === 'counter_window') return 0x44ff88
-    if (ctx.clippy.state.action === 'telegraph' || ctx.clippy.state.action === 'attack') return 0xff2222
+    const cs = ctx.clippy.state
+    if (cs.action === 'stunned' && cs.stunHitsRemaining > 0) return 0x44ff88
+    if (cs.action === 'telegraph' || cs.action === 'attack') return 0xff2222
     if (ctx.player.stars >= CFG.player.starPunch.starsRequired) return 0xffcc00
     return 0xff2222
   }
