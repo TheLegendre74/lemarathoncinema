@@ -372,7 +372,7 @@ export default function EasterEggsPageClient({ discoveredMap, achievements, eggS
                       setTimeout(() => setLockedToast(null), 5000)
                       return
                     }
-                    localStorage.setItem('clippy_god_phase', String(cp.phase))
+                    localStorage.setItem('clippy_replay_phase', String(cp.phase))
                     localStorage.setItem('clippy_active', '1')
                     window.dispatchEvent(new CustomEvent('clippy:invoke'))
                   }}

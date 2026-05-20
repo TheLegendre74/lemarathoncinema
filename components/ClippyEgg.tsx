@@ -838,6 +838,7 @@ const LS_LARBIN_IDX = 'clippy_larbin_idx'
 const LS_ACTIVE     = 'clippy_active'
 const LS_MASTERED   = 'clippy_mastered'  // jamais effacé une fois acquis
 const LS_GOD_PHASE  = 'clippy_god_phase' // 0=off, 1-9 = phase active (god mode)
+const LS_REPLAY_PHASE = 'clippy_replay_phase' // 0=off, 1-5 = rejeu depuis easter eggs
 
 function getDefeats(): number  { return parseInt(localStorage.getItem(LS_DEFEATS)    ?? '0') }
 function setDefeatsLS(n: number) { localStorage.setItem(LS_DEFEATS, String(n)) }
@@ -883,7 +884,15 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
     return v >= 1 && v <= 9 ? v : 0
   })
   const isAdminMode = isAdmin
-  const effectivePhase = activeGodPhase > 0 ? activeGodPhase : combatPhase
+
+  // ── Replay Mode (depuis la page easter eggs) ──────────────────────────────
+  const [replayPhase, setReplayPhase] = useState<number>(() => {
+    if (typeof window === 'undefined') return 0
+    const v = parseInt(localStorage.getItem(LS_REPLAY_PHASE) ?? '0')
+    return v >= 1 && v <= 5 ? v : 0
+  })
+
+  const effectivePhase = activeGodPhase > 0 ? activeGodPhase : replayPhase > 0 ? replayPhase : combatPhase
   const [showGodModePanel, setShowGodModePanel] = useState(false)
 
   // Sync God Mode en temps réel si modifié depuis un autre onglet / la page admin
@@ -1545,8 +1554,8 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
   function startHellSequence() {
     stopMusic(); clearAutoAttack()
     if (isLarbin) { try { localStorage.removeItem(LS_LARBIN) } catch {} }
-    // En god mode : utiliser l'index de phase (0-8) pour les dialogues, sans incrémenter defeats
-    const hellIdx = activeGodPhase > 0 ? (activeGodPhase - 1) : defeatsRef.current
+    // En god/replay mode : utiliser l'index de phase pour les dialogues, sans incrémenter defeats
+    const hellIdx = activeGodPhase > 0 ? (activeGodPhase - 1) : replayPhase > 0 ? (replayPhase - 1) : defeatsRef.current
     const set = getHellSet(hellIdx)
     setActiveHellLines(set.lines)
     setActiveScream(set.scream)
@@ -1556,8 +1565,8 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
     setHellPhase('flames')
     setTimeout(() => { setHellPhase('grab'); playSound('/clippy-rire.mp3', 0.85) }, 800)
     setTimeout(() => setHellPhase('dialog'), 1900)
-    // Incrémenter defeats uniquement hors god mode
-    if (activeGodPhase === 0) {
+    // Incrémenter defeats uniquement hors god mode et hors replay
+    if (activeGodPhase === 0 && replayPhase === 0) {
       const newD = defeatsRef.current + 1
       defeatsRef.current = newD; setDefeatsLS(newD); setDefeatsState(newD)
       setClippyDefeatsDB(newD).catch(() => {})

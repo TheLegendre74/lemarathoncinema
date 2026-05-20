@@ -1384,7 +1384,7 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
       {showClipy && (
         <ClippyEgg
           key={`clippy-${adminFeverTestId}-${clippyRemountId}`}
-          onDismiss={() => { localStorage.removeItem('clippy_is_larbin'); localStorage.removeItem('clippy_god_phase'); setIsMastered(localStorage.getItem('clippy_mastered') === '1'); setAdminFeverTestId(0); setShowClipy(false) }}
+          onDismiss={() => { localStorage.removeItem('clippy_is_larbin'); localStorage.removeItem('clippy_replay_phase'); setIsMastered(localStorage.getItem('clippy_mastered') === '1'); setAdminFeverTestId(0); setShowClipy(false) }}
           customReplies={config.clippyReplies}
           forcedMessage={showPlea && !pleaDone ? PLEA_CITATIONS[pleaIdx] : undefined}
           isAdmin={isAdmin}
