@@ -49,8 +49,11 @@ const FEVER_BEAT_MS    = 545                          // tempo original 110 BPM 
 const FEVER_NOTE_STEP  = Math.round(545 * 1.5)        // conservé pour rétrocompat DDR
 const FEVER_WARMUP_MS  = 3000                         // 3s de préparation avant les premières notes
 const FEVER_BASE_DENSITY_MULTIPLIER = 2
-const FEVER_SURVIVAL_STEP_MS = 15000
-const FEVER_SURVIVAL_STEP_MULTIPLIER = 1.5
+const FEVER_SPEED_STEP_MS  = 10000   // +10% de vitesse toutes les 10s
+const FEVER_SPEED_FACTOR   = 1.10
+const FEVER_SPEED_CAP      = 3.85
+const FEVER_DENSITY_STEP_MS = 30000  // ×1.5 notes supplémentaires toutes les 30s
+const FEVER_DENSITY_FACTOR  = 1.5
 const FEVER_TRACK_END_FALLBACK_MS = 180000
 // Pattern notes par beat (boucle 16 beats, moy 1.875/beat = +10% vs précédent)
 const FEVER_BEAT_PATTERN = [2,2,2,2,1,2,2,1,2,2,2,2,2,1,2,2] as const
@@ -90,6 +93,22 @@ const FEVER_BEATMAP: DanceNote[] = (() => {
 
 const FEVER_SEQ  = [0, 2, 1, 3, 0, 3, 1, 2, 2, 0, 3, 1, 1, 3, 0, 2] as const
 const FEVER_CSEQ = [2, 0, 3, 1, 2, 1, 3, 0, 0, 3, 1, 2, 3, 1, 2, 0] as const
+const FEVER_SEQS: readonly (readonly number[])[] = [
+  FEVER_SEQ,
+  [1, 3, 0, 2, 3, 0, 2, 1, 0, 2, 3, 1, 2, 0, 1, 3],
+  [3, 1, 2, 0, 1, 2, 0, 3, 3, 1, 0, 2, 0, 2, 3, 1],
+  [2, 0, 3, 1, 0, 1, 3, 2, 1, 3, 2, 0, 3, 0, 1, 2],
+  [0, 3, 2, 1, 3, 2, 0, 1, 1, 0, 3, 2, 2, 1, 0, 3],
+  [3, 0, 1, 2, 2, 1, 3, 0, 0, 3, 2, 1, 1, 2, 3, 0],
+]
+const FEVER_CSEQS: readonly (readonly number[])[] = [
+  FEVER_CSEQ,
+  [3, 1, 2, 0, 1, 2, 0, 3, 2, 0, 1, 3, 0, 2, 3, 1],
+  [0, 2, 3, 1, 3, 0, 1, 2, 1, 3, 2, 0, 2, 0, 1, 3],
+  [1, 3, 0, 2, 2, 3, 0, 1, 3, 1, 0, 2, 1, 2, 3, 0],
+  [2, 1, 3, 0, 0, 3, 1, 2, 3, 2, 0, 1, 0, 3, 2, 1],
+  [1, 0, 2, 3, 3, 2, 0, 1, 2, 1, 3, 0, 3, 0, 1, 2],
+]
 
 // ── Flammes CSS sur les 4 bords de la zone de jeu (combo ≥ 20) ───────────────
 
@@ -166,8 +185,6 @@ function FlameBorder({ combo }: { combo: number }) {
         @keyframes flm-b { from{transform:scaleY(0.86) scaleX(1.14)} to{transform:scaleY(1.24) scaleX(0.82)} }
         @keyframes flm-c { from{transform:scaleY(1.08) scaleX(0.92)} to{transform:scaleY(0.80) scaleX(1.18)} }
       `}</style>
-      {/* Bas : flammes vers le HAUT */}
-      {makeEdge(cntH, '', i => zone.left + (i + 0.5) * zW / cntH, () => zone.bottom, 'bot')}
       {/* Gauche : flammes vers le HAUT */}
       {makeEdge(cntV, '', () => zone.left,  i => zone.top + (i + 0.5) * zH / cntV, 'lft')}
       {/* Droite : flammes vers le HAUT */}
@@ -410,6 +427,8 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
 
   useEffect(() => {
     setIsMobileUI(window.matchMedia('(pointer: coarse)').matches)
+    try { (screen.orientation as any)?.lock?.('portrait').catch(() => {}) } catch {}
+    return () => { try { (screen.orientation as any)?.unlock?.() } catch {} }
   }, [])
 
   // Toujours à jour — Phaser les appelle depuis la closure
@@ -877,12 +896,19 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
             // Inner glow dot
             this.add.circle(x, this.hitY, Math.round(circleR * 0.22), col, 0.50)
 
-            // Arrow inside
-            this.add.text(x, this.hitY, COL_ARROWS[dir], {
-              fontSize: `${Math.round(circleR * 0.95)}px`, color: COL_CSS[dir],
-              fontFamily: 'monospace', fontStyle: 'bold',
-              stroke: '#000000', strokeThickness: 3,
-            }).setOrigin(0.5).setAlpha(0.85)
+            // Arrow inside (drawn via Graphics for pixel-perfect centering)
+            const ag = this.add.graphics()
+            const as_ = Math.round(circleR * 0.38)
+            ag.fillStyle(col, 0.85)
+            if (dir === 'left')       ag.fillTriangle(x - as_, this.hitY, x + as_ * 0.5, this.hitY - as_ * 0.7, x + as_ * 0.5, this.hitY + as_ * 0.7)
+            else if (dir === 'right') ag.fillTriangle(x + as_, this.hitY, x - as_ * 0.5, this.hitY - as_ * 0.7, x - as_ * 0.5, this.hitY + as_ * 0.7)
+            else if (dir === 'up')    ag.fillTriangle(x, this.hitY - as_, x - as_ * 0.7, this.hitY + as_ * 0.5, x + as_ * 0.7, this.hitY + as_ * 0.5)
+            else                      ag.fillTriangle(x, this.hitY + as_, x - as_ * 0.7, this.hitY - as_ * 0.5, x + as_ * 0.7, this.hitY - as_ * 0.5)
+            ag.lineStyle(2, 0xffffff, 0.4)
+            if (dir === 'left')       ag.strokeTriangle(x - as_, this.hitY, x + as_ * 0.5, this.hitY - as_ * 0.7, x + as_ * 0.5, this.hitY + as_ * 0.7)
+            else if (dir === 'right') ag.strokeTriangle(x + as_, this.hitY, x - as_ * 0.5, this.hitY - as_ * 0.7, x - as_ * 0.5, this.hitY + as_ * 0.7)
+            else if (dir === 'up')    ag.strokeTriangle(x, this.hitY - as_, x - as_ * 0.7, this.hitY + as_ * 0.5, x + as_ * 0.7, this.hitY + as_ * 0.5)
+            else                      ag.strokeTriangle(x, this.hitY + as_, x - as_ * 0.7, this.hitY - as_ * 0.5, x + as_ * 0.7, this.hitY - as_ * 0.5)
 
             // Platform shadow below circle
             this.add.ellipse(x, this.hitY + circleR * 0.7, circleR * 2, circleR * 0.4, col, 0.10)
@@ -1659,15 +1685,14 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
 
         private getDensityMultiplier(hitTime: number) {
           if (hitTime < FEVER_CHALLENGE_MS || !this.survivalMode) return FEVER_BASE_DENSITY_MULTIPLIER
-          const steps = Math.floor((hitTime - FEVER_CHALLENGE_MS) / FEVER_SURVIVAL_STEP_MS)
-          return FEVER_BASE_DENSITY_MULTIPLIER * Math.pow(FEVER_SURVIVAL_STEP_MULTIPLIER, steps)
+          const steps = Math.floor((hitTime - FEVER_CHALLENGE_MS) / FEVER_DENSITY_STEP_MS)
+          return FEVER_BASE_DENSITY_MULTIPLIER * Math.pow(FEVER_DENSITY_FACTOR, steps)
         }
 
         private getSurvivalSpeedMultiplier(elapsed: number): number {
           if (!this.survivalMode || elapsed < FEVER_CHALLENGE_MS) return 1.0
-          // +0.5% toutes les 6s, cap à ×1.85
-          const steps = (elapsed - FEVER_CHALLENGE_MS) / 6000
-          return Math.min(1.85, 1.0 + steps * 0.005)
+          const steps = Math.floor((elapsed - FEVER_CHALLENGE_MS) / FEVER_SPEED_STEP_MS)
+          return Math.min(FEVER_SPEED_CAP, Math.pow(FEVER_SPEED_FACTOR, steps))
         }
 
         private buildFeverNotes(beatIndex: number, beatTime: number): DanceNote[] {
@@ -1679,7 +1704,6 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
           const notes: DanceNote[] = []
 
           if (!this.survivalMode) {
-            // Fever normal : comportement original
             notes.push({ time: beatTime, direction: COLS[FEVER_SEQ[si]] })
             used.add(COLS[FEVER_SEQ[si]])
             const pool = [COLS[FEVER_CSEQ[csi]], COLS[(FEVER_SEQ[si] + 2) % 4], COLS[(FEVER_SEQ[si] + 3) % 4]]
@@ -1690,40 +1714,77 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
             return notes.filter(n => n.time <= this.trackDurationMs)
           }
 
-          // ── Mode survie : max 2 simultanées + densité verticale progressive ──
-          // Note principale
-          const dir1 = COLS[FEVER_SEQ[si]]
+          // ── Mode survie : séquences tournantes + fills variés ──
+          const seqSet = Math.floor(beatIndex / 16) % FEVER_SEQS.length
+          const seq  = FEVER_SEQS[seqSet]
+          const cseq = FEVER_CSEQS[seqSet]
+          const sIdx = beatIndex % seq.length
+          const cIdx = beatIndex % cseq.length
+
+          const dir1 = COLS[seq[sIdx]]
           notes.push({ time: beatTime, direction: dir1 })
           used.add(dir1)
 
-          // Double (2 notes en même temps) : fréquence croissante avec la densité
-          // density 2→2.5 : jamais · 2.5→3 : 1/3 des beats · 3→4 : 1/2 · 4+ : tous
+          // Doubles : fréquence croissante
           const doubleEvery = density >= 4.0 ? 1 : density >= 3.0 ? 2 : density >= 2.5 ? 3 : 0
           if (doubleEvery > 0 && beatIndex % doubleEvery === 0) {
-            const dir2 = COLS[FEVER_CSEQ[csi]]
+            const dir2 = COLS[cseq[cIdx]]
             if (!used.has(dir2)) { notes.push({ time: beatTime, direction: dir2 }); used.add(dir2) }
           }
 
-          // Notes verticales décalées (remplacent les triples horizontaux)
-          // Le gap diminue avec la densité → timing plus serré = plus difficile
+          // ── Fills rythmiques variés (alternent selon le beat) ──
+          // Après 1min : triplet (2) et cascade (3) apparaissent ×1.5 plus souvent
           if (density >= 2.5) {
-            const subGap = density >= 5.0
-              ? Math.round(FEVER_BEAT_MS * 0.28)
-              : density >= 4.0
-              ? Math.round(FEVER_BEAT_MS * 0.37)
-              : Math.round(FEVER_BEAT_MS * 0.48)
-            const subDir = COLS[(FEVER_SEQ[si] + 2) % 4]
-            if (!used.has(subDir)) {
-              notes.push({ time: beatTime + subGap, direction: subDir })
-              used.add(subDir)
+            const latePhase = beatTime >= FEVER_CHALLENGE_MS + 60000
+            let fillType: number
+            if (latePhase) {
+              // Cycle de 6 : 0,2,1,3,2,3 → triplet/cascade = 4/6 au lieu de 2/4
+              fillType = [0, 2, 1, 3, 2, 3][beatIndex % 6]
+            } else {
+              fillType = beatIndex % 4
             }
-            // Deuxième note verticale à très haute densité (density ≥ 5)
-            if (density >= 5.0) {
-              const subDir2 = COLS[(FEVER_CSEQ[csi] + 2) % 4]
-              if (!used.has(subDir2)) {
-                notes.push({ time: beatTime + subGap * 2, direction: subDir2 })
-                used.add(subDir2)
+            const gap = density >= 5.0
+              ? Math.round(FEVER_BEAT_MS * 0.22)
+              : density >= 4.0
+              ? Math.round(FEVER_BEAT_MS * 0.32)
+              : Math.round(FEVER_BEAT_MS * 0.45)
+
+            if (fillType === 0) {
+              // Half-beat : 1 note décalée
+              const d = COLS[(seq[sIdx] + 2) % 4]
+              notes.push({ time: beatTime + gap, direction: d })
+            } else if (fillType === 1) {
+              // Gallop : 2 notes rapprochées après le beat
+              const d = COLS[(cseq[cIdx] + 1) % 4]
+              notes.push({ time: beatTime + gap, direction: d })
+              if (density >= 3.0) {
+                const d2 = COLS[(seq[sIdx] + 3) % 4]
+                notes.push({ time: beatTime + Math.round(gap * 1.6), direction: d2 })
               }
+            } else if (fillType === 2) {
+              // Triplet : 3 notes régulièrement espacées dans le beat
+              const tGap = Math.round(FEVER_BEAT_MS / (density >= 4.0 ? 4 : 3))
+              const d = COLS[(seq[sIdx] + 1) % 4]
+              notes.push({ time: beatTime + tGap, direction: d })
+              if (density >= 3.0) {
+                const d2 = COLS[(cseq[cIdx] + 2) % 4]
+                notes.push({ time: beatTime + tGap * 2, direction: d2 })
+              }
+            } else {
+              // Cascade : 3-4 notes rapides dans des directions différentes
+              const cascade = [1, 2, 3].map(k => COLS[(seq[sIdx] + k) % 4])
+              const cGap = Math.round(gap * 0.7)
+              cascade.forEach((d, k) => {
+                if (k < (density >= 4.0 ? 3 : 2)) {
+                  notes.push({ time: beatTime + cGap * (k + 1), direction: d })
+                }
+              })
+            }
+
+            // À très haute densité (≥ 5) : note bonus syncopée avant le prochain beat
+            if (density >= 5.0 && beatIndex % 2 === 0) {
+              const offDir = COLS[(cseq[cIdx] + 3) % 4]
+              notes.push({ time: beatTime + Math.round(FEVER_BEAT_MS * 0.82), direction: offDir })
             }
           }
 

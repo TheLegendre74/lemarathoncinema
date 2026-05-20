@@ -68,7 +68,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         getUnreadMessageCountForUser(user.id, supabase)
       ),
       withCache(`user:${user.id}:watched_count`, 60, async () => {
-        const { count } = await supabase.from('watched').select('id', { count: 'exact', head: true }).eq('user_id', user.id)
+        const { count } = await supabase.from('watched').select('*', { count: 'exact', head: true }).eq('user_id', user.id)
         return count ?? 0
       }),
     ])
