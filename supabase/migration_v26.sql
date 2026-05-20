@@ -1,6 +1,8 @@
 -- Migration v26 : dance_scores multi-entries (3 best per player)
 -- Ajoute un id serial et retire user_id comme PK pour permettre plusieurs scores par joueur
 
+ALTER TABLE dance_scores ADD COLUMN IF NOT EXISTS survival_ms integer NOT NULL DEFAULT 0;
+
 ALTER TABLE dance_scores DROP CONSTRAINT IF EXISTS dance_scores_pkey;
 ALTER TABLE dance_scores ADD COLUMN IF NOT EXISTS id serial;
 ALTER TABLE dance_scores ADD PRIMARY KEY (id);
