@@ -510,7 +510,15 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
         setInnerPhase('fever_post')
       } else {
         if (userId && survMs > 0) try { await saveDanceScore(feverFinalScore.current, feverFinalCombo.current, survMs) } catch {}
-        if (startInFeverNight) {
+        if (survMs > 0) {
+          let ldr: LeaderEntry[] = []
+          let survLdr: SurvivalEntry[] = []
+          try { ldr = await getDanceLeaderboard() } catch {}
+          try { survLdr = await getDanceSurvivalLeaderboard() } catch {}
+          setFeverLeader(ldr)
+          setFeverSurvivalLeader(survLdr)
+          setInnerPhase('fever_post')
+        } else if (startInFeverNight) {
           onLoseRef.current()
         } else {
           let ldr: LeaderEntry[] = []
