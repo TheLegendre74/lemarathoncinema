@@ -9,6 +9,7 @@ export default async function EasterEggsPage() {
 
   let discoveredMap: Record<string, string> = {}
   let achievements: Record<string, boolean> = { watcher: false, critic: false, duelist: false, curator: false }
+  let clippyDefeats = 0
 
   if (user) {
     const { data: discovered } = await supabase
@@ -21,11 +22,13 @@ export default async function EasterEggsPage() {
       { count: ratingCount },
       { count: voteCount },
       { count: filmCount },
+      { data: profileData },
     ] = await Promise.all([
       supabase.from('watched').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
       supabase.from('ratings').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
       supabase.from('votes').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
       supabase.from('films').select('*', { count: 'exact', head: true }).eq('added_by', user.id),
+      supabase.from('profiles').select('clippy_defeats').eq('id', user.id).single(),
     ])
 
     discovered?.forEach(({ egg_id, found_at }) => { discoveredMap[egg_id] = found_at })
@@ -35,6 +38,7 @@ export default async function EasterEggsPage() {
       duelist:  (voteCount   ?? 0) >= 1,
       curator:  (filmCount   ?? 0) >= 1,
     }
+    clippyDefeats = (profileData as any)?.clippy_defeats ?? 0
   }
 
   // Statistiques globales : client admin pour bypasser le RLS (sinon on ne voit que ses propres lignes)
@@ -63,6 +67,7 @@ export default async function EasterEggsPage() {
       achievements={achievements}
       eggStats={eggStats}
       totalUsers={totalUsers ?? 0}
+      clippyDefeats={clippyDefeats}
     />
   )
 }

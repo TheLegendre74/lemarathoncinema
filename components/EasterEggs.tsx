@@ -957,6 +957,7 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
   // TODO TEMP — supprimer avant lancement prod
   const [showPunchTest,  setShowPunchTest]  = useState(false)
   const [adminFeverTestId, setAdminFeverTestId] = useState(0)
+  const [clippyRemountId, setClippyRemountId] = useState(0)
   const [showClipy,      setShowClipy]      = useState(() => {
     if (typeof window === 'undefined') return false
     return localStorage.getItem('clippy_active') === '1' || localStorage.getItem('clippy_is_larbin') === '1'
@@ -1155,7 +1156,7 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
 
   // Coffre maître : invoke / revoke depuis le bouton mobile
   useEffect(() => {
-    function onInvoke() { setShowClipy(true) }
+    function onInvoke() { setClippyRemountId(n => n + 1); setShowClipy(true) }
     function onRevoke() {
       if (showPleaRef.current) { advancePlea(); return }
       // En mode admin (revoke depuis le panel) : dismiss direct, pas de plea aléatoire
@@ -1382,8 +1383,8 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
       }} onClose={() => setShowPandora(false)} />}
       {showClipy && (
         <ClippyEgg
-          key={`clippy-${adminFeverTestId}`}
-          onDismiss={() => { localStorage.removeItem('clippy_is_larbin'); setIsMastered(localStorage.getItem('clippy_mastered') === '1'); setAdminFeverTestId(0); setShowClipy(false) }}
+          key={`clippy-${adminFeverTestId}-${clippyRemountId}`}
+          onDismiss={() => { localStorage.removeItem('clippy_is_larbin'); localStorage.removeItem('clippy_god_phase'); setIsMastered(localStorage.getItem('clippy_mastered') === '1'); setAdminFeverTestId(0); setShowClipy(false) }}
           customReplies={config.clippyReplies}
           forcedMessage={showPlea && !pleaDone ? PLEA_CITATIONS[pleaIdx] : undefined}
           isAdmin={isAdmin}
