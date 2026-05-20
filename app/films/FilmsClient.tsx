@@ -1242,6 +1242,18 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
       addToast(res.error === 'BLOCKED' ? '🔒 Ajout bloqué (24h)' : '⏳ Demande en attente d\'examen admin', '⚠️')
       return
     }
+    if (res?.error === 'EXPIRED') {
+      setLocalWatchedIds(prev => prev.filter(id => id !== filmId))
+      setLocalPreOverride(prev => { const n = { ...prev }; delete n[filmId]; return n })
+      addToast('Le délai de 48h pour réclamer ce duel est passé.', '⏰')
+      return
+    }
+    if (res?.error === 'NOT_PARTICIPANT') {
+      setLocalWatchedIds(prev => prev.filter(id => id !== filmId))
+      setLocalPreOverride(prev => { const n = { ...prev }; delete n[filmId]; return n })
+      addToast('Tu n\'as pas participé à ce duel.', '⚠️')
+      return
+    }
     if (res?.error) {
       setLocalWatchedIds(prev => prev.filter(id => id !== filmId))
       setLocalPreOverride(prev => { const n = { ...prev }; delete n[filmId]; return n })

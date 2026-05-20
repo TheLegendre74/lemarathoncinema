@@ -155,6 +155,7 @@ export type Database = {
           closed: boolean
           pending: boolean
           created_at: string
+          closed_at: string | null
         }
         Insert: {
           film1_id: number
@@ -166,6 +167,7 @@ export type Database = {
           winner_id?: number | null
           closed?: boolean
           pending?: boolean
+          closed_at?: string | null
         }
         Relationships: []
       }

@@ -37,15 +37,15 @@ export default async function FilmsPage() {
       const { data, error } = await (supabase as any).rpc('get_film_stats')
       return error ? null : (data ?? null)
     }),
-    withCache(`duels:winners:s${cfg.SAISON_NUMERO}`, 120, async () => {
+    withCache(`duels:winners:v2:s${cfg.SAISON_NUMERO}`, 120, async () => {
       const { data } = await supabase
         .from('duels')
-        .select('winner_id, winner:films!duels_winner_id_fkey(saison)')
+        .select('id, winner_id, closed_at, winner:films!duels_winner_id_fkey(saison)')
         .eq('closed', true)
         .not('winner_id', 'is', null)
       return (data ?? [])
         .filter((d: any) => d.winner?.saison === cfg.SAISON_NUMERO)
-        .map((d: any) => d.winner_id as number)
+        .map((d: any) => ({ filmId: d.winner_id as number, duelId: d.id as number, closedAt: d.closed_at as string | null }))
     }),
   ])
 
@@ -56,15 +56,17 @@ export default async function FilmsPage() {
   let negativeRatings: any[] = []
   let hasRageuxEgg = false
   let userWatchlists: any[] = []
+  let userVotedDuelIds: number[] = []
 
   if (user) {
-    const [{ data: w }, { data: r }, { data: p }, { data: nr }, { data: eggs }, wl] = await Promise.all([
+    const [{ data: w }, { data: r }, { data: p }, { data: nr }, { data: eggs }, wl, { data: duelVotes }] = await Promise.all([
       supabase.from('watched').select('film_id, pre').eq('user_id', user.id),
       supabase.from('ratings').select('film_id, score').eq('user_id', user.id),
       supabase.from('profiles').select('*').eq('id', user.id).single(),
       (supabase as any).from('negative_ratings').select('film_id, score').eq('user_id', user.id),
       supabase.from('discovered_eggs').select('egg_id').eq('user_id', user.id),
       getUserWatchlists(),
+      supabase.from('votes').select('duel_id').eq('user_id', user.id),
     ])
     watched = w ?? []
     ratings = r ?? []
@@ -72,6 +74,7 @@ export default async function FilmsPage() {
     negativeRatings = nr ?? []
     hasRageuxEgg = (eggs ?? []).some((e: any) => e.egg_id === 'rageux')
     userWatchlists = wl ?? []
+    userVotedDuelIds = (duelVotes ?? []).map((v: any) => v.duel_id as number)
   }
 
   // Agréger les stats globales par film
@@ -112,6 +115,17 @@ export default async function FilmsPage() {
   const myNegativeRatings = Object.fromEntries(negativeRatings.map((r: { film_id: number; score: number }) => [r.film_id, r.score]))
   const weekFilmId = (weekFilm as { film_id: number } | null)?.film_id ?? null
 
+  // Filtrer les duel winners éligibles : user a voté + clôturé < 48h
+  const now = Date.now()
+  const votedDuelSet = new Set(userVotedDuelIds)
+  const duelWinnerIds = ((duelWinnersData ?? []) as { filmId: number; duelId: number; closedAt: string | null }[])
+    .filter(d => {
+      if (!votedDuelSet.has(d.duelId)) return false
+      if (!d.closedAt) return false
+      return (now - new Date(d.closedAt).getTime()) / (1000 * 60 * 60) <= 48
+    })
+    .map(d => d.filmId)
+
   let rattrapageMap: Record<number, string> = {}
   if (profile?.is_admin) {
     const { data: rattrapageData } = await (supabase as any)
@@ -143,7 +157,7 @@ export default async function FilmsPage() {
       rattrapageMap={rattrapageMap}
       userWatchlists={userWatchlists}
       preMarathonWindowUntil={(profile as any)?.pre_marathon_window_until ?? null}
-      duelWinnerIds={(duelWinnersData as number[]) ?? []}
+      duelWinnerIds={duelWinnerIds}
     />
   )
 }

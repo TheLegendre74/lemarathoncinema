@@ -659,11 +659,8 @@ export async function toggleWatched(filmId: number, filmTitre: string) {
     const pre = !isMarathonLive()
     await supabase.from('watched').insert({ user_id: user.id, film_id: filmId, pre })
     if (!pre) {
-      const [{ data: wf }, { data: duel }] = await Promise.all([
-        supabase.from('week_films').select('film_id').eq('active', true).eq('film_id', filmId).single(),
-        supabase.from('duels').select('winner_id').eq('winner_id', filmId).order('created_at', { ascending: false }).limit(1).single(),
-      ])
-      const exp = wf ? CONFIG.EXP_FDLS : (duel ? CONFIG.EXP_DUEL_WIN : CONFIG.EXP_FILM)
+      const { data: wf } = await supabase.from('week_films').select('film_id').eq('active', true).eq('film_id', filmId).single()
+      const exp = wf ? CONFIG.EXP_FDLS : CONFIG.EXP_FILM
       await supabase.rpc('increment_exp', { user_id: user.id, amount: exp })
     }
     await deleteCacheKeys([`user:${user.id}:watched_count`, `user:${user.id}:profile`])
@@ -741,8 +738,16 @@ export async function markWatchedDuelWinner(filmId: number) {
   }
 
   const { data: duel } = await supabase
-    .from('duels').select('winner_id').eq('winner_id', filmId).eq('closed', true).limit(1).single()
+    .from('duels').select('id, winner_id, closed_at').eq('winner_id', filmId).eq('closed', true).order('closed_at', { ascending: false }).limit(1).single()
   if (!duel) return { error: 'Ce film n\'est pas vainqueur d\'un duel.' }
+
+  if (duel.closed_at && (Date.now() - new Date(duel.closed_at).getTime()) / (1000 * 60 * 60) > 48) {
+    return { error: 'EXPIRED' }
+  }
+
+  const { data: vote } = await supabase
+    .from('votes').select('duel_id').eq('user_id', user.id).eq('duel_id', duel.id).single()
+  if (!vote) return { error: 'NOT_PARTICIPANT' }
 
   const { data: existing } = await supabase
     .from('watched').select('pre').eq('user_id', user.id).eq('film_id', filmId).single()
@@ -1270,7 +1275,7 @@ export async function adminCloseDuel(duelId: number) {
   const v2 = votes.filter((v: { film_choice: number }) => v.film_choice === duel.film2_id).length
   const winnerId = v1 >= v2 ? duel.film1_id : duel.film2_id
 
-  await supabase.from('duels').update({ winner_id: winnerId, closed: true }).eq('id', duelId)
+  await supabase.from('duels').update({ winner_id: winnerId, closed: true, closed_at: new Date().toISOString() }).eq('id', duelId)
   revalidatePath('/duels')
   revalidatePath('/admin')
   return { success: true, winnerId }

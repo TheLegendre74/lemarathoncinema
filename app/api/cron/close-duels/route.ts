@@ -47,7 +47,7 @@ export async function GET(request: Request) {
     const v2 = (votes ?? []).filter((v: { film_choice: number }) => v.film_choice === duel.film2_id).length
     const winnerId = v1 >= v2 ? duel.film1_id : duel.film2_id
 
-    await supabase.from('duels').update({ winner_id: winnerId, closed: true }).eq('id', duel.id)
+    await supabase.from('duels').update({ winner_id: winnerId, closed: true, closed_at: new Date().toISOString() }).eq('id', duel.id)
     closed++
   }
 
