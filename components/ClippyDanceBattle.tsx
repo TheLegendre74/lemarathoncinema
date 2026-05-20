@@ -5,8 +5,8 @@ import type { DanceNote } from './ClippyDanceBattleBeatmap'
 import { saveDanceScore, getDanceLeaderboard, getDanceSurvivalLeaderboard, unlockFeverNight } from '@/lib/actions'
 
 type Dir = DanceNote['direction']
-type LeaderEntry = { pseudo: string; score: number; max_combo: number }
-type SurvivalEntry = { pseudo: string; survival_ms: number }
+type LeaderEntry = { pseudo: string; score: number; max_combo: number; survival_ms: number }
+type SurvivalEntry = { pseudo: string; score: number; survival_ms: number }
 
 function formatSurvivalTime(ms: number): string {
   const s = Math.floor(ms / 1000)
@@ -195,6 +195,59 @@ function FlameBorder({ combo }: { combo: number }) {
 
 // ── Post-game overlay ─────────────────────────────────────────────────────────
 
+function LeaderboardTable({ entries, label, color, myScore, showSurvival }: {
+  entries: { pseudo: string; score: number; max_combo?: number; survival_ms?: number }[]
+  label: string; color: string; myScore?: number; showSurvival?: boolean
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const shown = expanded ? entries.slice(0, 100) : entries.slice(0, 10)
+  const hasMore = entries.length > 10
+
+  return (
+    <div style={{ width: '100%', maxWidth: 420, background: 'rgba(255,255,255,.04)', border: `1px solid ${color}33`, borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{ padding: '.6rem 1rem', fontSize: '.65rem', color, letterSpacing: 3, borderBottom: `1px solid ${color}22` }}>
+        {label}
+      </div>
+      <div style={{ maxHeight: expanded ? 400 : 'none', overflowY: expanded ? 'auto' : 'visible' }}>
+        {shown.map((e, i) => {
+          const isMe = myScore !== undefined && e.score === myScore
+          return (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center', gap: '.6rem',
+              padding: '.4rem 1rem',
+              background: isMe ? `${color}18` : i % 2 === 0 ? 'rgba(255,255,255,.02)' : 'transparent',
+              borderLeft: isMe ? `3px solid ${color}` : '3px solid transparent',
+              opacity: !expanded && i >= 10 ? 0.5 : 1,
+            }}>
+              <span style={{ width: 22, fontSize: '.7rem', color: i < 3 ? (['#ffd700','#c0c0c0','#cd7f32'] as string[])[i] : '#555', fontWeight: 700, flexShrink: 0 }}>
+                {i < 3 ? (['🥇','🥈','🥉'] as string[])[i] : `${i+1}.`}
+              </span>
+              <span style={{ flex: 1, fontSize: '.78rem', color: isMe ? color : '#ccc', fontWeight: isMe ? 700 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {e.pseudo}
+              </span>
+              <span style={{ fontSize: '.78rem', color: '#e8c46a', fontWeight: 600, flexShrink: 0 }}>{e.score.toLocaleString()}</span>
+              {showSurvival && e.survival_ms != null && e.survival_ms > 0 && (
+                <span style={{ fontSize: '.7rem', color: '#ff9944', flexShrink: 0 }}>{formatSurvivalTime(e.survival_ms)}</span>
+              )}
+              {!showSurvival && e.max_combo != null && (
+                <span style={{ fontSize: '.68rem', color: '#cc88ff', flexShrink: 0 }}>x{e.max_combo}</span>
+              )}
+            </div>
+          )
+        })}
+      </div>
+      {hasMore && (
+        <button
+          onClick={() => setExpanded(v => !v)}
+          style={{ width: '100%', padding: '.45rem', fontSize: '.7rem', color: '#666', background: 'rgba(255,255,255,.03)', border: 'none', borderTop: '1px solid rgba(255,255,255,.06)', cursor: 'pointer', letterSpacing: 1 }}
+        >
+          {expanded ? '▲ Réduire' : `▼ Voir le top ${Math.min(entries.length, 100)}`}
+        </button>
+      )}
+    </div>
+  )
+}
+
 function PostGameOverlay({
   score, maxCombo, won, leader,
   onContinue,
@@ -210,14 +263,12 @@ function PostGameOverlay({
       background: 'rgba(4,0,12,.96)', backdropFilter: 'blur(8px)',
       display: 'flex', flexDirection: 'column', alignItems: 'center',
       justifyContent: 'center', gap: '1.2rem', padding: '1.5rem',
-      fontFamily: 'monospace',
+      fontFamily: 'monospace', overflowY: 'auto',
     }}>
-      {/* Résultat */}
       <div style={{ fontSize: 'clamp(1.6rem,5vw,2.4rem)', color: won ? '#4ade80' : '#e85a5a', fontWeight: 800, letterSpacing: 3, textShadow: `0 0 30px ${won ? '#4ade8088' : '#e85a5a88'}` }}>
         {won ? '🎉 VICTOIRE !' : '💀 DÉFAITE'}
       </div>
 
-      {/* Scores */}
       <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: '.7rem', color: '#888', letterSpacing: 2, marginBottom: '.2rem' }}>SCORE</div>
@@ -230,35 +281,13 @@ function PostGameOverlay({
         {leader.length > 0 && (
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '.7rem', color: '#888', letterSpacing: 2, marginBottom: '.2rem' }}>CLASSEMENT</div>
-            <div style={{ fontSize: 'clamp(1.4rem,4vw,2rem)', color: '#66ccff', fontWeight: 700 }}>#{Math.min(myRank, 10)}+</div>
+            <div style={{ fontSize: 'clamp(1.4rem,4vw,2rem)', color: '#66ccff', fontWeight: 700 }}>#{myRank}</div>
           </div>
         )}
       </div>
 
-      {/* Leaderboard */}
       {leader.length > 0 && (
-        <div style={{ width: '100%', maxWidth: 380, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 12, overflow: 'hidden' }}>
-          <div style={{ padding: '.6rem 1rem', fontSize: '.65rem', color: '#888', letterSpacing: 3, borderBottom: '1px solid rgba(255,255,255,.08)' }}>
-            🏆 TOP 10 — MEILLEURS SCORES
-          </div>
-          {leader.slice(0, 10).map((e, i) => (
-            <div key={i} style={{
-              display: 'flex', alignItems: 'center', gap: '.8rem',
-              padding: '.45rem 1rem',
-              background: e.score === score ? 'rgba(232,196,106,.1)' : i % 2 === 0 ? 'rgba(255,255,255,.02)' : 'transparent',
-              borderLeft: e.score === score ? '3px solid #e8c46a' : '3px solid transparent',
-            }}>
-              <span style={{ width: 20, fontSize: '.75rem', color: i < 3 ? ['#ffd700','#c0c0c0','#cd7f32'][i] : '#555', fontWeight: 700 }}>
-                {i < 3 ? ['🥇','🥈','🥉'][i] : `${i+1}.`}
-              </span>
-              <span style={{ flex: 1, fontSize: '.82rem', color: e.score === score ? '#e8c46a' : '#ccc', fontWeight: e.score === score ? 700 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {e.pseudo}
-              </span>
-              <span style={{ fontSize: '.8rem', color: '#e8c46a', fontWeight: 600 }}>{e.score.toLocaleString()}</span>
-              <span style={{ fontSize: '.7rem', color: '#cc88ff' }}>x{e.max_combo}</span>
-            </div>
-          ))}
-        </div>
+        <LeaderboardTable entries={leader} label="🏆 MEILLEURS SCORES" color="#e8c46a" myScore={score} />
       )}
 
       <button
@@ -344,6 +373,7 @@ function FeverPostGameOverlay({
       background: 'rgba(4,0,12,.97)', backdropFilter: 'blur(8px)',
       display: 'flex', flexDirection: 'column', alignItems: 'center',
       justifyContent: 'center', gap: '1.4rem', padding: '2rem', fontFamily: 'monospace',
+      overflowY: 'auto',
     }}>
       <div style={{ fontSize: 'clamp(1.6rem,4vw,2.2rem)', color: '#ffdd00', fontWeight: 800, letterSpacing: 3, textShadow: '0 0 30px #ffdd0055', textAlign: 'center' }}>
         ⚡ FEVER NIGHT CLEARED ⚡
@@ -352,7 +382,11 @@ function FeverPostGameOverlay({
         Tu as survécu à l&apos;impossible.
       </div>
       <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-        {[['SCORE', score.toLocaleString(), '#e8c46a'], ['COMBO MAX', `×${maxCombo}`, '#cc88ff']].map(([lbl, val, col]) => (
+        {[
+          ['SCORE', score.toLocaleString(), '#e8c46a'],
+          ['COMBO MAX', `×${maxCombo}`, '#cc88ff'],
+          ...(survivalMs > 0 ? [['SURVIE', formatSurvivalTime(survivalMs), '#ff9944']] : []),
+        ].map(([lbl, val, col]) => (
           <div key={lbl} style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '.65rem', color: '#888', letterSpacing: 2, marginBottom: '.2rem' }}>{lbl}</div>
             <div style={{ fontSize: 'clamp(1.4rem,4vw,2rem)', color: col as string, fontWeight: 700 }}>{val}</div>
@@ -373,35 +407,15 @@ function FeverPostGameOverlay({
           </div>
         ))}
       </div>
+
       {leader.length > 0 && (
-        <div style={{ width: '100%', maxWidth: 380, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 12, overflow: 'hidden' }}>
-          <div style={{ padding: '.6rem 1rem', fontSize: '.65rem', color: '#888', letterSpacing: 3, borderBottom: '1px solid rgba(255,255,255,.08)' }}>🏆 TOP 10 — MEILLEURS SCORES</div>
-          {leader.slice(0, 10).map((e, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '.8rem', padding: '.4rem 1rem', background: i % 2 === 0 ? 'rgba(255,255,255,.02)' : 'transparent' }}>
-              <span style={{ width: 20, fontSize: '.7rem', color: i < 3 ? (['#ffd700','#c0c0c0','#cd7f32'] as string[])[i] : '#555', fontWeight: 700 }}>{i < 3 ? (['🥇','🥈','🥉'] as string[])[i] : `${i+1}.`}</span>
-              <span style={{ flex: 1, fontSize: '.8rem', color: '#ccc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.pseudo}</span>
-              <span style={{ fontSize: '.8rem', color: '#e8c46a', fontWeight: 600 }}>{e.score.toLocaleString()}</span>
-            </div>
-          ))}
-        </div>
+        <LeaderboardTable entries={leader} label="🏆 MEILLEURS SCORES" color="#e8c46a" myScore={score} />
       )}
+
       {(survivalLeader.length > 0 || survivalMs > 0) && (
-        <div style={{ width: '100%', maxWidth: 380, background: 'rgba(255,100,0,.04)', border: '1px solid rgba(255,100,0,.2)', borderRadius: 12, overflow: 'hidden' }}>
-          <div style={{ padding: '.6rem 1rem', fontSize: '.65rem', color: '#ff9944', letterSpacing: 3, borderBottom: '1px solid rgba(255,100,0,.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>🔥 TOP 10 — SURVIE</span>
-            {survivalMs > 0 && <span style={{ color: '#4ade80' }}>Ton record : {formatSurvivalTime(survivalMs)}</span>}
-          </div>
-          {survivalLeader.length === 0 ? (
-            <div style={{ padding: '.8rem 1rem', fontSize: '.75rem', color: '#555', textAlign: 'center' }}>Sois le premier à survivre !</div>
-          ) : survivalLeader.map((e, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '.8rem', padding: '.4rem 1rem', background: i % 2 === 0 ? 'rgba(255,255,255,.02)' : 'transparent' }}>
-              <span style={{ width: 20, fontSize: '.7rem', color: i < 3 ? (['#ffd700','#c0c0c0','#cd7f32'] as string[])[i] : '#555', fontWeight: 700 }}>{i < 3 ? (['🥇','🥈','🥉'] as string[])[i] : `${i+1}.`}</span>
-              <span style={{ flex: 1, fontSize: '.8rem', color: '#ccc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.pseudo}</span>
-              <span style={{ fontSize: '.8rem', color: '#ff9944', fontWeight: 600 }}>{formatSurvivalTime(e.survival_ms)}</span>
-            </div>
-          ))}
-        </div>
+        <LeaderboardTable entries={survivalLeader} label="🔥 SURVIE — TEMPS + SCORE" color="#ff9944" myScore={score} showSurvival />
       )}
+
       <button onClick={onContinue} style={{ marginTop: '.5rem', padding: '.75rem 2.5rem', borderRadius: 8, background: 'rgba(255,215,0,.12)', border: '1px solid #ffd70044', color: '#ffd700', fontSize: '1rem', fontWeight: 700, cursor: 'pointer', letterSpacing: 2 }}>
         CONTINUER
       </button>

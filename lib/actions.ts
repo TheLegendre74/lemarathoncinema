@@ -3276,50 +3276,52 @@ export async function getFightClubLeaderboard(difficulty: string): Promise<{ pse
 }
 
 // ── DANCE LEADERBOARD ─────────────────────────────────────────
-// Requires: CREATE TABLE dance_scores (
-//   user_id uuid references auth.users(id) on delete cascade primary key,
-//   pseudo text not null, score int not null, max_combo int not null default 0,
-//   updated_at timestamptz not null default now()
-// ); ALTER TABLE dance_scores ENABLE ROW LEVEL SECURITY;
-// CREATE POLICY "read" ON dance_scores FOR SELECT USING (true);
-// CREATE POLICY "own" ON dance_scores FOR ALL USING (auth.uid() = user_id);
 
 export async function saveDanceScore(score: number, maxCombo: number, survivalMs = 0): Promise<void> {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    const { data: existing } = await (supabase as any).from('dance_scores').select('score, survival_ms').eq('user_id', user.id).single()
-    const betterScore = !existing || score > (existing.score ?? 0)
-    const betterSurvival = survivalMs > 0 && (!existing || survivalMs > (existing.survival_ms ?? 0))
-    if (!betterScore && !betterSurvival) return
     const { data: profile } = await supabase.from('profiles').select('pseudo').eq('id', user.id).single()
-    await (supabase as any).from('dance_scores').upsert({
+    const pseudo = (profile as any)?.pseudo ?? 'Anonyme'
+
+    await (supabase as any).from('dance_scores').insert({
       user_id: user.id,
-      pseudo: (profile as any)?.pseudo ?? 'Anonyme',
-      score: betterScore ? Math.round(score) : (existing?.score ?? 0),
-      max_combo: betterScore ? Math.round(maxCombo) : (existing?.max_combo ?? 0),
-      survival_ms: betterSurvival ? survivalMs : (existing?.survival_ms ?? 0),
+      pseudo,
+      score: Math.round(score),
+      max_combo: Math.round(maxCombo),
+      survival_ms: survivalMs,
       updated_at: new Date().toISOString(),
     })
+
+    const { data: all } = await (supabase as any)
+      .from('dance_scores')
+      .select('id, score')
+      .eq('user_id', user.id)
+      .order('score', { ascending: false })
+
+    if (all && all.length > 3) {
+      const toDelete = all.slice(3).map((r: any) => r.id)
+      await (supabase as any).from('dance_scores').delete().in('id', toDelete)
+    }
   } catch {}
 }
 
-export async function getDanceLeaderboard(): Promise<{ pseudo: string; score: number; max_combo: number }[]> {
+export async function getDanceLeaderboard(): Promise<{ pseudo: string; score: number; max_combo: number; survival_ms: number }[]> {
   try {
     const supabase = await createClient()
-    const { data } = await (supabase as any).from('dance_scores').select('pseudo, score, max_combo').order('score', { ascending: false }).limit(10)
-    return (data ?? []) as { pseudo: string; score: number; max_combo: number }[]
+    const { data } = await (supabase as any).from('dance_scores').select('pseudo, score, max_combo, survival_ms').order('score', { ascending: false }).limit(100)
+    return (data ?? []) as { pseudo: string; score: number; max_combo: number; survival_ms: number }[]
   } catch {
     return []
   }
 }
 
-export async function getDanceSurvivalLeaderboard(): Promise<{ pseudo: string; survival_ms: number }[]> {
+export async function getDanceSurvivalLeaderboard(): Promise<{ pseudo: string; score: number; survival_ms: number }[]> {
   try {
     const supabase = await createClient()
-    const { data } = await (supabase as any).from('dance_scores').select('pseudo, survival_ms').gt('survival_ms', 0).order('survival_ms', { ascending: false }).limit(10)
-    return (data ?? []) as { pseudo: string; survival_ms: number }[]
+    const { data } = await (supabase as any).from('dance_scores').select('pseudo, score, survival_ms').gt('survival_ms', 0).order('survival_ms', { ascending: false }).limit(100)
+    return (data ?? []) as { pseudo: string; score: number; survival_ms: number }[]
   } catch {
     return []
   }
