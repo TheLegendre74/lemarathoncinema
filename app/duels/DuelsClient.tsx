@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import Forum from '@/components/Forum'
-import { voteDuel, markWatched, upsertRating } from '@/lib/actions'
+import { voteDuel, markWatched, markWatchedDuelWinner, upsertRating } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
 import { CONFIG } from '@/lib/config'
 import { useRouter } from 'next/navigation'
@@ -23,6 +23,8 @@ interface Props {
   totalUsers: number
   myWatched: Record<number, boolean>
   myRatings: Record<number, number>
+  isMarathonLive: boolean
+  duelWinnerIds: number[]
 }
 
 function avgRating(scores: number[] | undefined) {
@@ -31,9 +33,10 @@ function avgRating(scores: number[] | undefined) {
 }
 
 // ── Mini-modal film enrichi ─────────────────────────────────────────────────
-function FilmPreview({ film, watchPct, avg, profile, isWatched, watchedPre, myRating, onClose, onRefresh }: {
+function FilmPreview({ film, watchPct, avg, profile, isWatched, watchedPre, myRating, isDuelWinner, isMarathonLive, onClose, onRefresh }: {
   film: any; watchPct: number; avg: string | null; profile: Profile | null
   isWatched: boolean; watchedPre: boolean | null; myRating: number | undefined
+  isDuelWinner?: boolean; isMarathonLive?: boolean
   onClose: () => void; onRefresh: () => void
 }) {
   const [overview, setOverview] = useState<string | null>(null)
@@ -75,6 +78,20 @@ function FilmPreview({ film, watchPct, avg, profile, isWatched, watchedPre, myRa
     } else {
       const removed = result?.action === 'removed'
       addToast(removed ? `"${film.titre}" retiré` : `"${film.titre}" marqué ${pre ? 'vu (avant marathon)' : 'vu (marathon)'}`, '🎬')
+      onRefresh()
+    }
+  }
+
+  async function handleDuelWin() {
+    if (!profile) { addToast('Connecte-toi', '⚠️'); return }
+    setSaving(true)
+    const res = await markWatchedDuelWinner(film.id)
+    setSaving(false)
+    if (res?.error) {
+      addToast(res.error === 'ALREADY_MARATHON' ? 'Déjà marqué vu pendant le marathon' : res.error === 'EXPIRED' ? 'Délai de 48h dépassé' : (res as any).error, '⚠️')
+    } else {
+      setLocalWatched({ watched: true, pre: false })
+      addToast(`+${CONFIG.EXP_DUEL_WIN} EXP — "${film.titre}" vu pendant le duel ! 🏆`, '🏆')
       onRefresh()
     }
   }
@@ -174,6 +191,20 @@ function FilmPreview({ film, watchPct, avg, profile, isWatched, watchedPre, myRa
             >
               🏁 Vu pendant marathon
             </button>
+            {isDuelWinner && isMarathonLive && (
+              <button
+                className="btn btn-ghost"
+                disabled={saving}
+                onClick={handleDuelWin}
+                style={{
+                  fontSize: '.72rem', padding: '.3rem .7rem',
+                  background: 'rgba(232,196,106,.12)', border: '1px solid rgba(232,196,106,.4)',
+                  color: 'var(--gold)', fontWeight: 600,
+                }}
+              >
+                🏆 Vu pendant le duel
+              </button>
+            )}
           </div>
         )}
 
@@ -186,9 +217,10 @@ function FilmPreview({ film, watchPct, avg, profile, isWatched, watchedPre, myRa
 }
 
 // ── Affiche interactive (hover zoom + clic + auto-preview) ──────────────────
-function DuelPoster({ film, w, h, border, watchPct, avg, profile, isWatched, watchedPre, myRating, onRefresh, onClick }: {
+function DuelPoster({ film, w, h, border, watchPct, avg, profile, isWatched, watchedPre, myRating, isDuelWinner, isMarathonLive, onRefresh, onClick }: {
   film: any; w: number; h: number; border: string; watchPct: number; avg: string | null
   profile: Profile | null; isWatched: boolean; watchedPre: boolean | null; myRating: number | undefined
+  isDuelWinner?: boolean; isMarathonLive?: boolean
   onRefresh: () => void; onClick?: (e: React.MouseEvent) => void
 }) {
   const [hovered, setHovered] = useState(false)
@@ -250,6 +282,7 @@ function DuelPoster({ film, w, h, border, watchPct, avg, profile, isWatched, wat
         <FilmPreview
           film={film} watchPct={watchPct} avg={avg}
           profile={profile} isWatched={isWatched} watchedPre={watchedPre} myRating={myRating}
+          isDuelWinner={isDuelWinner} isMarathonLive={isMarathonLive}
           onClose={() => { setShowPreview(false); hoveredByTimer.current = false }} onRefresh={onRefresh}
         />,
         document.body
@@ -260,11 +293,12 @@ function DuelPoster({ film, w, h, border, watchPct, avg, profile, isWatched, wat
 
 // ── Carte du vainqueur ──────────────────────────────────────────────────────
 function WinnerHero({
-  duel, v1, v2, compact = false, profile, watchCountMap, ratingMap, totalUsers, myWatched, myRatings, onRefresh,
+  duel, v1, v2, compact = false, profile, watchCountMap, ratingMap, totalUsers, myWatched, myRatings, onRefresh, isMarathonLive, duelWinnerSet,
 }: {
   duel: any; v1: number; v2: number; compact?: boolean; profile: Profile | null
   watchCountMap: Record<number, number>; ratingMap: Record<number, number[]>; totalUsers: number
   myWatched: Record<number, boolean>; myRatings: Record<number, number>; onRefresh: () => void
+  isMarathonLive?: boolean; duelWinnerSet?: Set<number>
 }) {
   const [forumOpen, setForumOpen] = useState(false)
   const winner = duel.winner
@@ -360,6 +394,7 @@ function WinnerHero({
               border="3px solid var(--gold)"
               watchPct={getWatchPct(winner.id)} avg={avgRating(ratingMap[winner.id])}
               profile={profile} isWatched={winner.id in myWatched} watchedPre={myWatched[winner.id] ?? null} myRating={myRatings[winner.id]}
+              isDuelWinner={duelWinnerSet?.has(winner.id)} isMarathonLive={isMarathonLive}
               onRefresh={onRefresh}
             />
           </div>
@@ -398,12 +433,13 @@ function WinnerHero({
 
 // ── Carte de vote active ─────────────────────────────────────────────────────
 function DuelCard({
-  duel, profile, myVote, v1, v2, onVote, watchCountMap, ratingMap, totalUsers, myWatched, myRatings, onRefresh,
+  duel, profile, myVote, v1, v2, onVote, watchCountMap, ratingMap, totalUsers, myWatched, myRatings, onRefresh, isMarathonLive, duelWinnerSet,
 }: {
   duel: any; profile: Profile | null; myVote: number | null
   v1: number; v2: number; onVote: (duelId: number, filmId: number) => void
   watchCountMap: Record<number, number>; ratingMap: Record<number, number[]>; totalUsers: number
   myWatched: Record<number, boolean>; myRatings: Record<number, number>; onRefresh: () => void
+  isMarathonLive?: boolean; duelWinnerSet?: Set<number>
 }) {
   const [forumOpen, setForumOpen] = useState(false)
   const f1 = duel.film1, f2 = duel.film2, winner = duel.winner
@@ -447,6 +483,7 @@ function DuelCard({
           border={`${isLeader && !tied ? '3px' : '2px'} solid ${isLeader && !tied ? color : myVote === film.id ? color : 'var(--border)'}`}
           watchPct={getWatchPct(film.id)} avg={avgRating(ratingMap[film.id])}
           profile={profile} isWatched={film.id in myWatched} watchedPre={myWatched[film.id] ?? null} myRating={myRatings[film.id]}
+          isDuelWinner={duelWinnerSet?.has(film.id)} isMarathonLive={isMarathonLive}
           onRefresh={onRefresh}
         />
         <div style={{ fontSize: isLeader && !tied ? '1rem' : '.82rem', fontWeight: isLeader ? 600 : 500, lineHeight: 1.3 }}>{film.titre}</div>
@@ -576,10 +613,11 @@ function DuelCard({
 }
 
 // ── Archive avec affiches ───────────────────────────────────────────────────
-function ArchiveCard({ duel, v1, v2, watchCountMap, ratingMap, totalUsers, profile, myWatched, myRatings, onRefresh }: {
+function ArchiveCard({ duel, v1, v2, watchCountMap, ratingMap, totalUsers, profile, myWatched, myRatings, onRefresh, isMarathonLive, duelWinnerSet }: {
   duel: any; v1: number; v2: number
   watchCountMap: Record<number, number>; ratingMap: Record<number, number[]>; totalUsers: number
   profile: Profile | null; myWatched: Record<number, boolean>; myRatings: Record<number, number>; onRefresh: () => void
+  isMarathonLive?: boolean; duelWinnerSet?: Set<number>
 }) {
   const winner = duel.winner
   const f1 = duel.film1, f2 = duel.film2
@@ -605,6 +643,7 @@ function ArchiveCard({ duel, v1, v2, watchCountMap, ratingMap, totalUsers, profi
             border="1px solid rgba(232,196,106,.4)"
             watchPct={getWatchPct(winner.id)} avg={avgRating(ratingMap[winner.id])}
             profile={profile} isWatched={winner.id in myWatched} watchedPre={myWatched[winner.id] ?? null} myRating={myRatings[winner.id]}
+            isDuelWinner={duelWinnerSet?.has(winner.id)} isMarathonLive={isMarathonLive}
             onRefresh={onRefresh}
           />
         )}
@@ -646,7 +685,7 @@ function ArchiveCard({ duel, v1, v2, watchCountMap, ratingMap, totalUsers, profi
 }
 
 // ── Composant principal ──────────────────────────────────────────────────────
-export default function DuelsClient({ profile, duels, myVotes, allVotes, watchCountMap, ratingMap, totalUsers, myWatched: initialMyWatched, myRatings: initialMyRatings }: Props) {
+export default function DuelsClient({ profile, duels, myVotes, allVotes, watchCountMap, ratingMap, totalUsers, myWatched: initialMyWatched, myRatings: initialMyRatings, isMarathonLive, duelWinnerIds }: Props) {
   const [localVotes, setLocalVotes] = useState<VoteRow[]>(allVotes)
   const [myVoteMap, setMyVoteMap] = useState<Record<number, number>>(
     Object.fromEntries(myVotes.map(v => [v.duel_id, v.film_choice]))
@@ -656,6 +695,8 @@ export default function DuelsClient({ profile, duels, myVotes, allVotes, watchCo
   const [myRatings, setMyRatings] = useState(initialMyRatings)
   const { addToast } = useToast()
   const router = useRouter()
+
+  const duelWinnerSet = useMemo(() => new Set(duelWinnerIds), [duelWinnerIds])
 
   useEffect(() => { setMyWatched(initialMyWatched) }, [initialMyWatched])
   useEffect(() => { setMyRatings(initialMyRatings) }, [initialMyRatings])
@@ -761,6 +802,8 @@ export default function DuelsClient({ profile, duels, myVotes, allVotes, watchCo
           myWatched={myWatched}
           myRatings={myRatings}
           onRefresh={handleRefresh}
+          isMarathonLive={isMarathonLive}
+          duelWinnerSet={duelWinnerSet}
         />
       )}
 
@@ -777,6 +820,8 @@ export default function DuelsClient({ profile, duels, myVotes, allVotes, watchCo
           myWatched={myWatched}
           myRatings={myRatings}
           onRefresh={handleRefresh}
+          isMarathonLive={isMarathonLive}
+          duelWinnerSet={duelWinnerSet}
         />
       )}
 
@@ -804,6 +849,8 @@ export default function DuelsClient({ profile, duels, myVotes, allVotes, watchCo
                   myWatched={myWatched}
                   myRatings={myRatings}
                   onRefresh={handleRefresh}
+                  isMarathonLive={isMarathonLive}
+                  duelWinnerSet={duelWinnerSet}
                 />
               ))}
             </div>

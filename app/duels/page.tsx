@@ -1,14 +1,16 @@
 import { createClient } from '@/lib/supabase/server'
 import { getUserCached } from '@/lib/auth'
 import { withCache } from '@/lib/redis'
+import { getServerConfig, isMarathonLiveFromConfig } from '@/lib/serverConfig'
 import DuelsClient from './DuelsClient'
 
 export const revalidate = 30
 
 export default async function DuelsPage() {
-  const [user, supabase] = await Promise.all([
+  const [user, supabase, cfg] = await Promise.all([
     getUserCached(),
     createClient(),
+    getServerConfig(),
   ])
 
   const [profile, duels, totalUsers] = await Promise.all([
@@ -79,6 +81,11 @@ export default async function DuelsPage() {
     myRatings[r.film_id] = r.score
   })
 
+  const now = Date.now()
+  const duelWinnerIds = ((duels ?? []) as any[])
+    .filter(d => d.closed && d.winner_id && d.closed_at && (now - new Date(d.closed_at).getTime()) / (1000 * 60 * 60) <= 48)
+    .map(d => d.winner_id as number)
+
   return (
     <DuelsClient
       profile={profile}
@@ -90,6 +97,8 @@ export default async function DuelsPage() {
       totalUsers={totalUsers ?? 1}
       myWatched={myWatched}
       myRatings={myRatings}
+      isMarathonLive={isMarathonLiveFromConfig(cfg)}
+      duelWinnerIds={duelWinnerIds}
     />
   )
 }

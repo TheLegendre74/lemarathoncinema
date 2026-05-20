@@ -745,10 +745,6 @@ export async function markWatchedDuelWinner(filmId: number) {
     return { error: 'EXPIRED' }
   }
 
-  const { data: vote } = await supabase
-    .from('votes').select('duel_id').eq('user_id', user.id).eq('duel_id', duel.id).single()
-  if (!vote) return { error: 'NOT_PARTICIPANT' }
-
   const { data: existing } = await supabase
     .from('watched').select('pre').eq('user_id', user.id).eq('film_id', filmId).single()
 

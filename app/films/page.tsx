@@ -56,17 +56,15 @@ export default async function FilmsPage() {
   let negativeRatings: any[] = []
   let hasRageuxEgg = false
   let userWatchlists: any[] = []
-  let userVotedDuelIds: number[] = []
 
   if (user) {
-    const [{ data: w }, { data: r }, { data: p }, { data: nr }, { data: eggs }, wl, { data: duelVotes }] = await Promise.all([
+    const [{ data: w }, { data: r }, { data: p }, { data: nr }, { data: eggs }, wl] = await Promise.all([
       supabase.from('watched').select('film_id, pre').eq('user_id', user.id),
       supabase.from('ratings').select('film_id, score').eq('user_id', user.id),
       supabase.from('profiles').select('*').eq('id', user.id).single(),
       (supabase as any).from('negative_ratings').select('film_id, score').eq('user_id', user.id),
       supabase.from('discovered_eggs').select('egg_id').eq('user_id', user.id),
       getUserWatchlists(),
-      supabase.from('votes').select('duel_id').eq('user_id', user.id),
     ])
     watched = w ?? []
     ratings = r ?? []
@@ -74,7 +72,6 @@ export default async function FilmsPage() {
     negativeRatings = nr ?? []
     hasRageuxEgg = (eggs ?? []).some((e: any) => e.egg_id === 'rageux')
     userWatchlists = wl ?? []
-    userVotedDuelIds = (duelVotes ?? []).map((v: any) => v.duel_id as number)
   }
 
   // Agréger les stats globales par film
@@ -117,10 +114,8 @@ export default async function FilmsPage() {
 
   // Filtrer les duel winners éligibles : user a voté + clôturé < 48h
   const now = Date.now()
-  const votedDuelSet = new Set(userVotedDuelIds)
   const duelWinnerIds = ((duelWinnersData ?? []) as { filmId: number; duelId: number; closedAt: string | null }[])
     .filter(d => {
-      if (!votedDuelSet.has(d.duelId)) return false
       if (!d.closedAt) return false
       return (now - new Date(d.closedAt).getTime()) / (1000 * 60 * 60) <= 48
     })
