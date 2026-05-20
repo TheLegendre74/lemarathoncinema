@@ -16,9 +16,11 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
   const [menuOpen, setMenuOpen] = useState(false)
   const [clippyMastered,  setClippyMastered]  = useState(false)
   const [clippyActive,    setClippyActive]    = useState(false)
+  const [hasClippyRevanche, setHasClippyRevanche] = useState(false)
   useEffect(() => {
     setClippyMastered(localStorage.getItem('clippy_mastered') === '1')
     setClippyActive(localStorage.getItem('clippy_active') === '1')
+    setHasClippyRevanche(parseInt(localStorage.getItem('clippy_defeats') ?? '0') >= 1)
     function onState(e: Event) { setClippyActive((e as CustomEvent).detail?.active ?? false) }
     window.addEventListener('clippy:statechange', onState)
     return () => {
@@ -84,11 +86,12 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
       icon: '🔮',
       label: 'Secret',
       items: [
-        ...(hasTamagotchiEgg  ? [{ href: '/tamagotchi', icon: '🤍', label: 'Mon Alien',       short: 'Alien'  }] : []),
+        ...(hasTamagotchiEgg    ? [{ href: '/tamagotchi',       icon: '🤍', label: 'Mon Alien',              short: 'Alien'    }] : []),
+        ...(hasClippyRevanche   ? [{ href: '/clippy-revanche',  icon: '📎', label: 'La Revanche de Clippy',  short: 'Revanche' }] : []),
         { href: '/easter-eggs', icon: '🥚', label: 'Easter Eggs', short: 'Easter' },
       ],
     },
-  ], [hasRageuxEgg, hasTamagotchiEgg, unreadMessages])
+  ], [hasRageuxEgg, hasTamagotchiEgg, hasClippyRevanche, unreadMessages])
 
   /* groupe actif selon la page courante */
   const activeGroup = useCallback(() => {

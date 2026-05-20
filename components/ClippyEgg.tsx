@@ -1594,8 +1594,10 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
       setTimeout(() => setHellPhase('fade'), 3000)
       setTimeout(() => {
         setHellPhase('idle')
-        if (activeGodPhase > 0) {
-          // God mode : juste reset après la séquence
+        if (replayPhase > 0) {
+          try { localStorage.removeItem(LS_REPLAY_PHASE) } catch {}
+          onDismiss()
+        } else if (activeGodPhase > 0) {
           resetToNormal()
         } else if (defeatsRef.current >= 5) {
           try { localStorage.setItem(LS_MASTERED, '1'); localStorage.removeItem(LS_ACTIVE) } catch {}
