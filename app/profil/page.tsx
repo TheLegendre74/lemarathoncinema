@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { getBadge, getAllBadges, levelFromExp, SPECIAL_BADGES, getSpecialBadge, CONFIG } from '@/lib/config'
+import { getBadge, getActiveBadge, getAllBadges, levelFromExp, SPECIAL_BADGES, getSpecialBadge, CONFIG } from '@/lib/config'
 import ExpBar from '@/components/ExpBar'
 import Image from 'next/image'
 import AvatarUpload from './AvatarUpload'
@@ -57,7 +57,7 @@ export default async function ProfilPage({ searchParams }: { searchParams: Promi
   const rank = rankData?.length ?? 1
   const level = levelFromExp(profile.exp)
   const badges = getAllBadges(profile.exp)
-  const badge = getBadge(profile.exp)
+  const badge = getActiveBadge(profile.exp, (profile as any).active_badge)
   const discoveredEggIds = (eggs ?? []).map((e: any) => e.egg_id as string)
 
   // Titres Tamagotchi débloqués selon le niveau
