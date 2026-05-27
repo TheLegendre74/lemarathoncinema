@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { setActiveBadge } from '@/lib/actions'
 import type { Badge } from '@/lib/config'
 import type { SpecialBadge } from '@/lib/config'
@@ -14,11 +15,20 @@ interface Props {
 export default function BadgeSelector({ expBadges, specialBadges, activeBadge }: Props) {
   const [active, setActive] = useState(activeBadge)
   const [pending, startTransition] = useTransition()
+  const router = useRouter()
 
   function select(id: string | null) {
     const next = active === id ? 'none' : id
+    const prev = active
     setActive(next)
-    startTransition(() => { setActiveBadge(next) })
+    startTransition(async () => {
+      const res = await setActiveBadge(next)
+      if (res?.error) {
+        setActive(prev)
+      } else {
+        router.refresh()
+      }
+    })
   }
 
   const unlocked = expBadges.filter(b => b.unlocked)

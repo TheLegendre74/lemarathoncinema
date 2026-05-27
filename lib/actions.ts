@@ -1143,10 +1143,12 @@ export async function setActiveBadge(badgeId: string | null) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non connecté' }
-  await supabase.from('profiles').update({ active_badge: badgeId } as any).eq('id', user.id)
+  const { error } = await supabase.from('profiles').update({ active_badge: badgeId } as any).eq('id', user.id)
+  if (error) return { error: error.message }
   await deleteCacheKeys([`user:${user.id}:profile`])
   revalidatePath('/profil')
   revalidatePath('/classement')
+  revalidatePath('/marathoniens')
   return { success: true }
 }
 
