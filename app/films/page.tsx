@@ -19,7 +19,7 @@ export default async function FilmsPage() {
   ])
 
   // Données publiques cachées — identiques pour tous les utilisateurs
-  const [films, profileCount, weekFilm, statsRows, duelWinnersData] = await Promise.all([
+  const [films, profileCount, weekFilm, latestArchivedWeekFilm, statsRows, duelWinnersData] = await Promise.all([
     withCache('films:list', 300, async () => {
       const { data } = await supabase
         .from('films')
@@ -32,7 +32,8 @@ export default async function FilmsPage() {
       const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true })
       return count ?? 0
     }),
-    supabase.from('week_films').select('film_id').eq('active', true).order('created_at', { ascending: false }).limit(1).single().then(({ data }) => data ?? null),
+    supabase.from('week_films').select('id, film_id, created_at').eq('active', true).order('created_at', { ascending: false }).limit(1).single().then(({ data }) => data ?? null),
+    supabase.from('week_films').select('id, film_id').eq('active', false).order('created_at', { ascending: false }).limit(1).single().then(({ data }) => data ?? null),
     withCache('film_stats', 90, async () => {
       const { data, error } = await (supabase as any).rpc('get_film_stats')
       return error ? null : (data ?? null)
@@ -56,15 +57,20 @@ export default async function FilmsPage() {
   let negativeRatings: any[] = []
   let hasRageuxEgg = false
   let userWatchlists: any[] = []
+  let weekFilmBonusClaimed = false
 
   if (user) {
-    const [{ data: w }, { data: r }, { data: p }, { data: nr }, { data: eggs }, wl] = await Promise.all([
+    const bonusTargetId = (latestArchivedWeekFilm as any)?.id ?? null
+    const [{ data: w }, { data: r }, { data: p }, { data: nr }, { data: eggs }, wl, { data: bonusClaim }] = await Promise.all([
       supabase.from('watched').select('film_id, pre').eq('user_id', user.id),
       supabase.from('ratings').select('film_id, score').eq('user_id', user.id),
       supabase.from('profiles').select('*').eq('id', user.id).single(),
       (supabase as any).from('negative_ratings').select('film_id, score').eq('user_id', user.id),
       supabase.from('discovered_eggs').select('egg_id').eq('user_id', user.id),
       getUserWatchlists(),
+      bonusTargetId
+        ? (supabase as any).from('week_film_bonus_claims').select('week_film_id').eq('user_id', user.id).eq('week_film_id', bonusTargetId).single()
+        : Promise.resolve({ data: null }),
     ])
     watched = w ?? []
     ratings = r ?? []
@@ -72,6 +78,7 @@ export default async function FilmsPage() {
     negativeRatings = nr ?? []
     hasRageuxEgg = (eggs ?? []).some((e: any) => e.egg_id === 'rageux')
     userWatchlists = wl ?? []
+    weekFilmBonusClaimed = !!bonusClaim
   }
 
   // Agréger les stats globales par film
@@ -110,7 +117,12 @@ export default async function FilmsPage() {
   watched.forEach((w: { film_id: number; pre: boolean }) => { watchedPreMap[w.film_id] = w.pre })
   const myRatings = Object.fromEntries(ratings.map((r: { film_id: number; score: number }) => [r.film_id, r.score]))
   const myNegativeRatings = Object.fromEntries(negativeRatings.map((r: { film_id: number; score: number }) => [r.film_id, r.score]))
-  const weekFilmId = (weekFilm as { film_id: number } | null)?.film_id ?? null
+  const weekFilmId = (weekFilm as any)?.film_id ?? null
+  const weekFilmCreatedAt = (weekFilm as any)?.created_at ?? null
+  // Bonus : cible le dernier film archivé, visible pendant 48h après l'annonce du nouveau
+  const bonusFilmId = (latestArchivedWeekFilm as any)?.film_id ?? null
+  const bonusWeekFilmDbId = (latestArchivedWeekFilm as any)?.id ?? null
+  const bonusAvailable = !!(weekFilmCreatedAt && bonusFilmId && ((Date.now() - new Date(weekFilmCreatedAt).getTime()) / (1000 * 60 * 60) <= 48))
 
   // Filtrer les duel winners éligibles : user a voté + clôturé < 48h
   const now = Date.now()
@@ -153,6 +165,10 @@ export default async function FilmsPage() {
       userWatchlists={userWatchlists}
       preMarathonWindowUntil={(profile as any)?.pre_marathon_window_until ?? null}
       duelWinnerIds={duelWinnerIds}
+      bonusFilmId={bonusFilmId}
+      bonusWeekFilmDbId={bonusWeekFilmDbId}
+      bonusAvailable={bonusAvailable}
+      weekFilmBonusClaimed={weekFilmBonusClaimed}
     />
   )
 }

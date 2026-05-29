@@ -725,6 +725,62 @@ export async function markWeekFilmWatched(weekFilmId: number) {
   return { success: true, filmId: weekFilm.film_id }
 }
 
+// Réclamer le bonus 48h du film de la semaine (+15 EXP)
+// Le bonus est claimable sur le dernier film archivé, pendant 48h après l'annonce du nouveau.
+export async function claimWeekFilmBonus(weekFilmId: number) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+  if (!isMarathonLive()) return { error: 'Le marathon n\'a pas encore commencé.' }
+
+  const { data: weekFilm } = await supabase
+    .from('week_films')
+    .select('id, film_id, active')
+    .eq('id', weekFilmId)
+    .single()
+  if (!weekFilm) return { error: 'Film de la semaine introuvable.' }
+  if (weekFilm.active) return { error: 'Le bonus n\'est disponible qu\'après l\'archivage du film.' }
+
+  // Vérifier que le nouveau film actif a été annoncé il y a moins de 48h
+  const { data: activeFilm } = await supabase
+    .from('week_films')
+    .select('created_at')
+    .eq('active', true)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+  if (!activeFilm) return { error: 'Aucun nouveau film de la semaine annoncé.' }
+
+  const elapsed = (Date.now() - new Date(activeFilm.created_at).getTime()) / (1000 * 60 * 60)
+  if (elapsed > 48) return { error: 'Le bonus de 48h a expiré.' }
+
+  // Vérifier que l'utilisateur a vu le film
+  const { data: watched } = await supabase
+    .from('watched')
+    .select('film_id')
+    .eq('user_id', user.id)
+    .eq('film_id', weekFilm.film_id)
+    .single()
+  if (!watched) return { error: 'Tu dois d\'abord marquer ce film comme vu.' }
+
+  const { data: existing } = await (supabase as any)
+    .from('week_film_bonus_claims')
+    .select('week_film_id')
+    .eq('user_id', user.id)
+    .eq('week_film_id', weekFilmId)
+    .single()
+  if (existing) return { error: 'Bonus déjà réclamé.' }
+
+  await (supabase as any).from('week_film_bonus_claims').insert({ user_id: user.id, week_film_id: weekFilmId })
+  await supabase.rpc('increment_exp', { user_id: user.id, amount: CONFIG.EXP_FDLS_BONUS })
+  await deleteCacheKeys([`user:${user.id}:profile`])
+  revalidatePath('/films')
+  revalidatePath('/semaine')
+  revalidatePath('/profil')
+  revalidatePath('/classement')
+  return { success: true }
+}
+
 // Marquer un film vainqueur de duel comme vu pendant la séance du duel
 export async function markWatchedDuelWinner(filmId: number) {
   const supabase = await createClient()

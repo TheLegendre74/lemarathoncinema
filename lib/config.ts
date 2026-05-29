@@ -17,6 +17,7 @@ export const CONFIG = {
   EXP_FDLS:        parseInt(process.env.NEXT_PUBLIC_EXP_FDLS       ?? '10'),
   EXP_DUEL_WIN:    parseInt(process.env.NEXT_PUBLIC_EXP_DUEL_WIN   ?? '15'),
   EXP_VOTE:        parseInt(process.env.NEXT_PUBLIC_EXP_VOTE       ?? '2'),
+  EXP_FDLS_BONUS:  parseInt(process.env.NEXT_PUBLIC_EXP_FDLS_BONUS ?? '15'),
 } as const
 
 export function isMarathonLive(): boolean {
@@ -32,6 +33,7 @@ export const SPECIAL_BADGES = [
   { id: 'tama_chasseur',   label: 'Chasseur Spatial',    icon: '🎯', cls: 'badge-tama',  desc: 'Tamagotchi niveau 5 — Chasseur Spatial redouté' },
   { id: 'tama_legende',    label: 'Légende Noire',       icon: '🌑', cls: 'badge-tama',  desc: 'Tamagotchi niveau 8 — Légende Noire de l\'univers' },
   { id: 'tama_maitre',     label: 'Maître de l\'Espace', icon: '👑', cls: 'badge-tama',   desc: 'Tamagotchi niveau 10 — Maître absolu de l\'espace' },
+  { id: 'fever-night', label: 'Fever Night', icon: '🔥', cls: 'badge-fever', desc: 'A survécu au Fever Night — L\'enfer dansant' },
   { id: 'legende-vivante', label: 'Légende Vivante',    icon: '🏆', cls: 'badge-master', desc: 'A dompté la bête — Clippy lui obéit désormais' },
 ] as const
 

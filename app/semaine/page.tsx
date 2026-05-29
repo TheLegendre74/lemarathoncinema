@@ -33,11 +33,16 @@ export default async function SemainePage() {
   const archiveFilmIds = ((weekFilmHistory as any[]) ?? []).map((entry) => entry.film_id)
   const visibleFilmIds = [film?.id, ...archiveFilmIds].filter(Boolean) as number[]
 
-  const [profileResult, isWatchedResult, watchedRowsResult, myWatchedRowsResult] = await Promise.all([
+  const latestArchivedId = ((weekFilmHistory as any[]) ?? [])[0]?.id ?? null
+
+  const [profileResult, isWatchedResult, watchedRowsResult, myWatchedRowsResult, bonusClaimResult] = await Promise.all([
     user ? supabase.from('profiles').select('*').eq('id', user.id).single() : Promise.resolve({ data: null }),
     (film && user) ? supabase.from('watched').select('film_id').eq('user_id', user.id).eq('film_id', film.id).single() : Promise.resolve({ data: null }),
     visibleFilmIds.length ? supabase.from('watched').select('film_id').in('film_id', visibleFilmIds) : Promise.resolve({ data: [] }),
     (user && visibleFilmIds.length) ? supabase.from('watched').select('film_id').eq('user_id', user.id).in('film_id', visibleFilmIds) : Promise.resolve({ data: [] }),
+    (user && latestArchivedId)
+      ? (supabase as any).from('week_film_bonus_claims').select('week_film_id').eq('user_id', user.id).eq('week_film_id', latestArchivedId).single()
+      : Promise.resolve({ data: null }),
   ])
 
   const profile = profileResult.data
@@ -63,6 +68,12 @@ export default async function SemainePage() {
       canMarkLatestArchive={canMarkLatestArchiveNow()}
       watchCountMap={watchCountMap}
       totalUsers={totalUsers ?? 0}
+      bonusClaimed={!!bonusClaimResult?.data}
+      bonusAvailable={(() => {
+        if (!weekFilm || !(weekFilm as any).created_at) return false
+        const elapsed = (Date.now() - new Date((weekFilm as any).created_at).getTime()) / (1000 * 60 * 60)
+        return elapsed <= 48
+      })()}
     />
   )
 }

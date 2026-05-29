@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import Forum from '@/components/Forum'
-import { adminDeleteWeekFilmArchive, markWeekFilmWatched } from '@/lib/actions'
+import { adminDeleteWeekFilmArchive, markWeekFilmWatched, claimWeekFilmBonus } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
 import { CONFIG } from '@/lib/config'
 import { useRouter } from 'next/navigation'
@@ -34,14 +34,29 @@ interface Props {
   canMarkLatestArchive: boolean
   watchCountMap: Record<number, number>
   totalUsers: number
+  bonusClaimed: boolean
+  bonusAvailable: boolean
 }
 
-export default function SemaineClient({ profile, weekFilm, film, isWatched, watchProviders, weekFilmHistory, watchedFilmIds, latestArchivedWeekFilmId, canMarkLatestArchive, watchCountMap, totalUsers }: Props) {
+export default function SemaineClient({ profile, weekFilm, film, isWatched, watchProviders, weekFilmHistory, watchedFilmIds, latestArchivedWeekFilmId, canMarkLatestArchive, watchCountMap, totalUsers, bonusClaimed: initialBonusClaimed, bonusAvailable }: Props) {
   const [forumOpen, setForumOpen] = useState(false)
   const [selectedArchive, setSelectedArchive] = useState<any | null>(null)
   const [markingWeekFilmId, setMarkingWeekFilmId] = useState<number | null>(null)
+  const [bonusClaimed, setBonusClaimed] = useState(initialBonusClaimed)
+  const [bonusClaiming, setBonusClaiming] = useState(false)
   const { addToast } = useToast()
   const router = useRouter()
+
+  async function handleClaimBonus() {
+    if (!latestArchivedWeekFilmId || bonusClaimed || bonusClaiming) return
+    setBonusClaiming(true)
+    const res = await claimWeekFilmBonus(latestArchivedWeekFilmId)
+    setBonusClaiming(false)
+    if (res.error) { addToast(res.error, '⚠️'); return }
+    setBonusClaimed(true)
+    addToast(`+${CONFIG.EXP_FDLS_BONUS} EXP — Bonus film de la semaine !`, '⭐')
+    router.refresh()
+  }
 
   async function markSeen(entry: any) {
     const targetFilm = entry?.films ?? film
@@ -187,6 +202,10 @@ export default function SemaineClient({ profile, weekFilm, film, isWatched, watc
               const watchCount = watchCountMap[archivedFilm.id] ?? 0
               const watchPct = totalUsers ? Math.round((watchCount / totalUsers) * 100) : 0
 
+              const isLatestArchive = entry.id === latestArchivedWeekFilmId
+              const hasWatchedThis = watchedSet.has(archivedFilm.id)
+              const showBonus = isLatestArchive && bonusAvailable && hasWatchedThis && profile
+
               return (
                 <button key={entry.id} className="card" type="button" onClick={() => setSelectedArchive(entry)} style={{ display: 'flex', gap: '.75rem', alignItems: 'center', padding: '.8rem', textAlign: 'left', width: '100%', cursor: 'pointer', position: 'relative' }}>
                   {profile?.is_admin && (
@@ -201,16 +220,50 @@ export default function SemaineClient({ profile, weekFilm, film, isWatched, watc
                       ×
                     </span>
                   )}
-                  <div style={{ width: 46, height: 69, borderRadius: 5, overflow: 'hidden', flexShrink: 0, background: 'var(--bg3)' }}>
+                  <div style={{ width: 46, height: 69, borderRadius: 5, overflow: 'hidden', flexShrink: 0, background: 'var(--bg3)', position: 'relative' }}>
                     {archivedFilm.poster ? (
                       <Image src={archivedFilm.poster} alt={archivedFilm.titre} width={46} height={69} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
                     ) : (
-                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>ðŸŽ¬</div>
+                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>🎬</div>
+                    )}
+                    {showBonus && !bonusClaimed && (
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={(event) => { event.stopPropagation(); handleClaimBonus() }}
+                        onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); handleClaimBonus() } }}
+                        style={{
+                          position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: 'rgba(0,0,0,.55)',
+                          borderRadius: 5, cursor: 'pointer',
+                        }}
+                      >
+                        <span style={{
+                          background: 'linear-gradient(135deg, #f5a623, #e8c46a)',
+                          color: '#0a0a0f', fontSize: '.5rem', fontWeight: 800,
+                          padding: '3px 5px', borderRadius: 99, whiteSpace: 'nowrap',
+                          boxShadow: '0 1px 6px rgba(232,196,106,.6)',
+                          animation: 'pulse 2s ease-in-out infinite',
+                        }}>
+                          {bonusClaiming ? '...' : `+${CONFIG.EXP_FDLS_BONUS}`}
+                        </span>
+                      </span>
+                    )}
+                    {showBonus && bonusClaimed && (
+                      <span style={{
+                        position: 'absolute', bottom: 2, left: '50%', transform: 'translateX(-50%)',
+                        background: 'rgba(79,217,138,.25)', color: 'var(--green)',
+                        fontSize: '.45rem', fontWeight: 700, padding: '1px 4px', borderRadius: 99, whiteSpace: 'nowrap',
+                      }}>
+                        ✓ +{CONFIG.EXP_FDLS_BONUS}
+                      </span>
                     )}
                   </div>
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ display: 'flex', gap: '.45rem', alignItems: 'center', marginBottom: '.2rem' }}>
                       {entry.active && <span style={{ color: 'var(--gold)', border: '1px solid rgba(232,196,106,.35)', borderRadius: 99, padding: '1px 6px', fontSize: '.58rem', textTransform: 'uppercase', letterSpacing: 1 }}>Actuel</span>}
+                      {showBonus && !bonusClaimed && <span style={{ color: 'var(--gold)', border: '1px solid rgba(232,196,106,.35)', borderRadius: 99, padding: '1px 6px', fontSize: '.58rem', fontWeight: 700, background: 'rgba(232,196,106,.1)' }}>+{CONFIG.EXP_FDLS_BONUS} EXP</span>}
+                      {showBonus && bonusClaimed && <span style={{ color: 'var(--green)', border: '1px solid rgba(79,217,138,.35)', borderRadius: 99, padding: '1px 6px', fontSize: '.58rem', fontWeight: 700, background: 'rgba(79,217,138,.08)' }}>✓ Bonus</span>}
                       <span style={{ color: 'var(--text3)', fontSize: '.68rem' }}>
                         {new Date(entry.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
                       </span>

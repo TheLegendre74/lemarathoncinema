@@ -5,7 +5,7 @@ import Image from 'next/image'
 import Poster from '@/components/Poster'
 import Forum from '@/components/Forum'
 import { useToast } from '@/components/ToastProvider'
-import { toggleWatched, markWatched, markWatchedDuelWinner, upsertRating, upsertNegativeRating, addFilm, updateFilm, reportFilm, discoverEgg, getFilmWatchProviders, adminSetFilmCategory, setFilmRattrapage, submitMarathonWatchRequest, addFilmToWatchlist, removeFilmFromWatchlist, createWatchlist, adminCreateDuelFromFilms } from '@/lib/actions'
+import { toggleWatched, markWatched, markWatchedDuelWinner, upsertRating, upsertNegativeRating, addFilm, updateFilm, reportFilm, discoverEgg, getFilmWatchProviders, adminSetFilmCategory, setFilmRattrapage, submitMarathonWatchRequest, addFilmToWatchlist, removeFilmFromWatchlist, createWatchlist, adminCreateDuelFromFilms, claimWeekFilmBonus } from '@/lib/actions'
 import type { TMDBSuggestion } from '@/lib/tmdb'
 import { CONFIG } from '@/lib/config'
 import { useRouter } from 'next/navigation'
@@ -38,6 +38,10 @@ interface Props {
   userWatchlists: WatchlistInfo[]
   preMarathonWindowUntil: string | null
   duelWinnerIds: number[]
+  bonusFilmId: number | null
+  bonusWeekFilmDbId: number | null
+  bonusAvailable: boolean
+  weekFilmBonusClaimed: boolean
 }
 
 function avgRating(scores: number[] | undefined) {
@@ -1016,7 +1020,7 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
 
 
 // ─── MAIN FILMS CLIENT ───────────────────────────────────────────────────────
-export default function FilmsClient({ films, profile, watchedIds, watchedPreMap, myRatings, myNegativeRatings, watchCountMap, ratingMap, negativeRatingMap, totalUsers, weekFilmId, isMarathonLive, saisonNumero, age18confirmed, hasRageuxEgg, rattrapageMap: initialRattrapageMap, userWatchlists: initialWatchlists, preMarathonWindowUntil, duelWinnerIds }: Props) {
+export default function FilmsClient({ films, profile, watchedIds, watchedPreMap, myRatings, myNegativeRatings, watchCountMap, ratingMap, negativeRatingMap, totalUsers, weekFilmId, isMarathonLive, saisonNumero, age18confirmed, hasRageuxEgg, rattrapageMap: initialRattrapageMap, userWatchlists: initialWatchlists, preMarathonWindowUntil, duelWinnerIds, bonusFilmId, bonusWeekFilmDbId, bonusAvailable, weekFilmBonusClaimed }: Props) {
   const router = useRouter()
   const { addToast } = useToast()
   const canMarkPre = true
@@ -1038,6 +1042,8 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
   // Override optimiste pour la valeur pre (évite l'affichage temporaire "⏳ avant" après un clic marathon)
   const [localPreOverride, setLocalPreOverride] = useState<Record<number, boolean>>({})
   const [duelPick, setDuelPick] = useState<number | null>(null)
+  const [bonusClaimed, setBonusClaimed] = useState(weekFilmBonusClaimed)
+  const [bonusClaiming, setBonusClaiming] = useState(false)
 
   // ── Watchlist state ─────────────────────���──────────────────
   const [watchlists, setWatchlists] = useState<WatchlistInfo[]>(initialWatchlists ?? [])
@@ -1222,6 +1228,21 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
   }
 
   const duelWinnerSet = useMemo(() => new Set(duelWinnerIds), [duelWinnerIds])
+
+  async function handleClaimBonus(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (!bonusWeekFilmDbId || bonusClaimed || bonusClaiming) return
+    setBonusClaiming(true)
+    const res = await claimWeekFilmBonus(bonusWeekFilmDbId)
+    setBonusClaiming(false)
+    if (res.error) {
+      addToast(res.error, '⚠️')
+      return
+    }
+    setBonusClaimed(true)
+    addToast(`+${CONFIG.EXP_FDLS_BONUS} EXP — Bonus film de la semaine !`, '⭐')
+    router.refresh()
+  }
 
   // Marquer "vu pendant le duel" — film vainqueur uniquement, récompense EXP_DUEL_WIN
   async function handleQuickDuelWin(e: React.MouseEvent, filmId: number, filmTitre: string) {
@@ -1426,6 +1447,34 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                 {s2 && <div style={{ position: 'absolute', top: 7, left: 7, background: 'rgba(8,8,14,.82)', border: '1px solid rgba(232,90,90,.55)', color: '#ff9999', fontSize: '.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: 99, letterSpacing: '.3px', zIndex: 4 }}>🔒 Saison 2</div>}
                 {!isWatched && maj && <div style={{ position: 'absolute', top: 7, right: 7, background: 'rgba(255,255,255,.12)', color: '#aaa', fontSize: '.58rem', padding: '2px 7px', borderRadius: 99 }}>60%+</div>}
                 {isWeek && <div style={{ position: 'absolute', bottom: 7, left: 7, background: 'var(--gold)', color: '#0a0a0f', fontSize: '.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: 99 }}>⭐ SEMAINE</div>}
+
+                {film.id === bonusFilmId && profile && bonusAvailable && isWatched && !bonusClaimed && (
+                  <button
+                    onClick={handleClaimBonus}
+                    disabled={bonusClaiming}
+                    style={{
+                      position: 'absolute', bottom: 7, right: 7, zIndex: 6,
+                      background: 'linear-gradient(135deg, #f5a623, #e8c46a)',
+                      color: '#0a0a0f', fontSize: '.6rem', fontWeight: 800,
+                      padding: '4px 8px', borderRadius: 99, border: 'none',
+                      cursor: 'pointer', letterSpacing: '.3px',
+                      boxShadow: '0 2px 8px rgba(232,196,106,.5)',
+                      animation: 'pulse 2s ease-in-out infinite',
+                    }}
+                  >
+                    {bonusClaiming ? '...' : `+${CONFIG.EXP_FDLS_BONUS} EXP`}
+                  </button>
+                )}
+                {film.id === bonusFilmId && bonusClaimed && (
+                  <div style={{
+                    position: 'absolute', bottom: 7, right: 7, zIndex: 6,
+                    background: 'rgba(79,217,138,.2)', border: '1px solid rgba(79,217,138,.4)',
+                    color: 'var(--green)', fontSize: '.55rem', fontWeight: 700,
+                    padding: '3px 7px', borderRadius: 99,
+                  }}>
+                    ✓ +{CONFIG.EXP_FDLS_BONUS}
+                  </div>
+                )}
 
                 {/* Bannière 18+ (rouge) */}
                 {is18 && !isStrange && (
