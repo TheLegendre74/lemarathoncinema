@@ -127,12 +127,21 @@ const GUARD_BLOCK = [
   'Tu frappes du vent, minable.',
 ]
 
+const RAGE = [
+  'TU VAS PAYER POUR ÇA !!!',
+  'C\'EST FINI DE RIGOLER, DÉCHET !',
+  'MODE TURBO ACTIVÉ — PRÉPARE-TOI !',
+  'JE VAIS T\'ÉCRASER COMME UN BUG !',
+  'ERREUR FATALE... POUR TOI !',
+  'Tu crois m\'avoir ? JE SUIS CLIPPY !',
+]
+
 function pick(arr: string[]): string {
   return arr[Math.floor(Math.random() * arr.length)]
 }
 
 export function pickTaunt(
-  category: 'idle' | 'hit' | 'dodge' | 'counter' | 'panic' | 'confident' | 'frenzy' | 'feint' | 'taunt' | 'guard_block',
+  category: 'idle' | 'hit' | 'dodge' | 'counter' | 'panic' | 'confident' | 'frenzy' | 'feint' | 'taunt' | 'guard_block' | 'rage',
   hpRatio: number,
 ): string {
   const isHigh = hpRatio > 0.5
@@ -147,5 +156,6 @@ export function pickTaunt(
     case 'feint':       return pick(FEINT)
     case 'taunt':       return pick(TAUNT)
     case 'guard_block': return pick(GUARD_BLOCK)
+    case 'rage':        return pick(RAGE)
   }
 }

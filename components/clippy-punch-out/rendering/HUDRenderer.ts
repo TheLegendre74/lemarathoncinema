@@ -20,7 +20,6 @@ export class HUDRenderer {
   private BAR_H = 20
   private BAR_W = 0
   private STAM_H = 10
-  private HYPE_H = 14
   private nowAlpha = 0
 
   constructor(
@@ -45,11 +44,9 @@ export class HUDRenderer {
     this.drawStamina(ctx)
     this.drawClippyHP(ctx)
     this.drawStars(ctx)
-    this.drawHypeBar(ctx)
     this.drawBubble(ctx)
     if (ctx.tutorial.active) this.drawAttackIndicator(ctx)
     this.drawKeyHints(ctx)
-    this.drawFrenzyBorder(ctx)
     this.drawProjectileWarnings(ctx)
 
     this.nowAlpha = Math.max(0, this.nowAlpha - ctx.dt * 2.2)
@@ -79,7 +76,7 @@ export class HUDRenderer {
     })
   }
 
-  private drawTopBar(ctx: GameContext) {
+  private drawTopBar(_ctx: GameContext) {
     const g = this.gHUD
     g.fillStyle(0x050510, 0.80)
     g.fillRoundedRect(0, 0, this.W, this.BAR_Y + this.BAR_H + this.STAM_H + 18, { tl: 0, tr: 0, bl: 8, br: 8 })
@@ -103,7 +100,6 @@ export class HUDRenderer {
     const g = this.gHUD
     const y = this.BAR_Y + this.BAR_H + 4
     const pct = Math.max(0, ctx.player.stamina / CFG.player.maxStamina)
-    const isLow = ctx.player.stamina < CFG.player.lowStaminaThreshold
     const isExhausted = ctx.player.isExhausted
 
     g.fillStyle(0x0d0d1e, 1).fillRoundedRect(14, y, this.BAR_W, this.STAM_H, 3)
@@ -113,7 +109,7 @@ export class HUDRenderer {
       if (isExhausted) {
         col = 0xff2222
         alpha = 0.4 + Math.sin(ctx.totalTime * 0.012) * 0.4
-      } else if (isLow) {
+      } else if (pct < 0.2) {
         col = 0xff6600
         alpha = 0.6 + Math.sin(ctx.totalTime * 0.008) * 0.3
       } else {
@@ -139,16 +135,13 @@ export class HUDRenderer {
     }
     g.lineStyle(2, 0x111122, 0.9).strokeRoundedRect(x, this.BAR_Y, this.BAR_W, this.BAR_H, 5)
 
-    const phase = ctx.combatPhase
-    if (phase >= 2) {
-      const label = phase === 3 ? 'CHAOS' : 'AGRESSIF'
-      const col = phase === 3 ? 0xff2222 : 0xff8844
+    if (ctx.combatPhase === 2 && !ctx.tutorial.active) {
       const bw = Math.round(this.W * 0.12)
       const bh = 16
       const bx = this.W / 2 - bw / 2
       const by = this.BAR_Y + this.BAR_H + this.STAM_H + 8
-      g.fillStyle(col, 0.25).fillRoundedRect(bx, by, bw, bh, 4)
-      g.lineStyle(1, col, 0.6).strokeRoundedRect(bx, by, bw, bh, 4)
+      g.fillStyle(0xff2222, 0.25).fillRoundedRect(bx, by, bw, bh, 4)
+      g.lineStyle(1, 0xff2222, 0.6).strokeRoundedRect(bx, by, bw, bh, 4)
     }
   }
 
@@ -161,36 +154,7 @@ export class HUDRenderer {
     }
   }
 
-  private drawHypeBar(ctx: GameContext) {
-    if (ctx.tutorial.active) return
-    const g = this.gHUD
-    const barW = Math.round(this.W * 0.28)
-    const x = this.W / 2 - barW / 2
-    const y = this.BAR_Y + this.BAR_H + 5
-    const pct = ctx.hype.value / CFG.hype.max
-
-    g.fillStyle(0x0d0d1e, 1).fillRoundedRect(x, y, barW, this.HYPE_H, 4)
-
-    let col: number
-    if (ctx.hype.level === 'delirious') col = 0x44ff88
-    else if (ctx.hype.level === 'hostile') col = 0xff4422
-    else col = 0x8888aa
-
-    if (pct > 0) {
-      const pulse = ctx.frenzy.state === 'active' ? 0.7 + Math.sin(ctx.totalTime * 0.01) * 0.3 : 1
-      g.fillStyle(col, pulse)
-      g.fillRoundedRect(x, y, Math.round(barW * pct), this.HYPE_H, 4)
-    }
-    g.lineStyle(1.5, 0x222244, 0.8).strokeRoundedRect(x, y, barW, this.HYPE_H, 4)
-
-    const hostileX = x + Math.round(barW * (CFG.hype.thresholds.hostile / 100))
-    const delirX = x + Math.round(barW * (CFG.hype.thresholds.delirious / 100))
-    g.lineStyle(1, 0xffffff, 0.3)
-    g.beginPath(); g.moveTo(hostileX, y); g.lineTo(hostileX, y + this.HYPE_H); g.strokePath()
-    g.beginPath(); g.moveTo(delirX, y); g.lineTo(delirX, y + this.HYPE_H); g.strokePath()
-  }
-
-  private drawBubble(ctx: GameContext) {
+  private drawBubble(_ctx: GameContext) {
     const g = this.gBubble
     const text = this.texts.bubble.text
     if (!text) return
@@ -233,8 +197,8 @@ export class HUDRenderer {
     const cy = by + boxSz / 2
     const radius = boxSz / 2 - 4
 
-    const startup = this.getStartupMs(cs.attack!.type)
-    const pct = Math.min(1, cs.timer / startup)
+    const windUp = this.getWindUpMs(cs.attack!.type, ctx)
+    const pct = Math.min(1, cs.timer / windUp)
     const ready = pct >= 1
 
     g.fillStyle(0x080814, 0.88)
@@ -303,23 +267,14 @@ export class HUDRenderer {
     }
   }
 
-  private drawFrenzyBorder(ctx: GameContext) {
-    if (ctx.frenzy.state !== 'active') return
-    const g = this.gHUD
-    const pulse = 0.15 + Math.sin(ctx.totalTime * 0.006) * 0.1
-    g.lineStyle(6, 0xffcc00, pulse)
-    g.strokeRect(0, 0, this.W, this.H)
-    g.lineStyle(3, 0xff6600, pulse * 0.7)
-    g.strokeRect(3, 3, this.W - 6, this.H - 6)
-  }
-
   private drawProjectileWarnings(ctx: GameContext) {
     const g = this.gHUD
     for (const proj of ctx.projectiles) {
       if (!proj.warned || !proj.active) continue
       const wx = proj.side === 'left' ? 30 : this.W - 30
       const wy = Math.round(this.H * 0.4)
-      g.fillStyle(0xff4400, 0.6 + Math.sin(ctx.totalTime * 0.012) * 0.3)
+      const col = proj.type === 'rose' ? 0x44ff88 : 0xff4400
+      g.fillStyle(col, 0.6 + Math.sin(ctx.totalTime * 0.012) * 0.3)
       g.fillTriangle(wx, wy - 15, wx - 10, wy + 10, wx + 10, wy + 10)
     }
   }
@@ -337,6 +292,8 @@ export class HUDRenderer {
       }
     }
 
+    if (cs.action === 'charge_freeze' || cs.action === 'charge_rush') return 1
+
     if (cs.action === 'stunned' && cs.stunHitsRemaining > 0) return 3
 
     if (ps.action === 'idle' && ctx.player.stars >= CFG.player.starPunch.starsRequired) return 3
@@ -348,14 +305,16 @@ export class HUDRenderer {
     const cs = ctx.clippy.state
     if (cs.action === 'stunned' && cs.stunHitsRemaining > 0) return 0x44ff88
     if (cs.action === 'telegraph' || cs.action === 'attack') return 0xff2222
+    if (cs.action === 'charge_freeze' || cs.action === 'charge_rush') return 0xff2222
     if (ctx.player.stars >= CFG.player.starPunch.starsRequired) return 0xffcc00
     return 0xff2222
   }
 
-  private getStartupMs(type: string): number {
-    if (type === 'jab') return CFG.clippy.jab.startup
-    if (type === 'hook') return CFG.clippy.hook.startup
-    return CFG.clippy.charge.startup
+  private getWindUpMs(type: string, ctx: GameContext): number {
+    const p = ctx.combatPhase
+    if (type === 'jab') return p === 1 ? CFG.windUp.jabP1 : CFG.windUp.jabP2
+    if (type === 'hook') return p === 1 ? CFG.windUp.hookP1 : CFG.windUp.hookP2
+    return 300
   }
 
   private drawStarShape(g: Phaser.GameObjects.Graphics, x: number, y: number, r1: number, r2: number) {

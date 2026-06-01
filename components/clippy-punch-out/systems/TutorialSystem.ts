@@ -8,10 +8,21 @@ interface TutStep {
   hint: string
   missMsg: string
   clippyAttack: { type: 'jab' | 'hook' | 'charge'; side: AttackSide } | null
-  expect: 'dodge_right' | 'dodge_left' | 'duck' | 'jab' | 'heavy' | 'guard' | 'dodge_punish'
+  expect: 'none' | 'dodge_right' | 'dodge_left' | 'duck' | 'jab' | 'heavy' | 'guard' | 'dodge_punish'
+  autoAdvanceMs?: number
 }
 
 const STEPS: TutStep[] = [
+  {
+    id: 'intro_stun',
+    title: 'RÈGLE D\'OR',
+    instruction: 'Clippy n\'est touchable QUE quand des étoiles\ntournent au-dessus de sa tête.\nEsquive toutes ses attaques pour l\'étourdir !',
+    hint: '',
+    missMsg: '',
+    clippyAttack: null,
+    expect: 'none',
+    autoAdvanceMs: 3000,
+  },
   {
     id: 'dodge_right',
     title: 'ÉTAPE 1 — ESQUIVE DROITE',
@@ -42,7 +53,7 @@ const STEPS: TutStep[] = [
   {
     id: 'attack',
     title: 'ÉTAPE 4 — ATTAQUEZ',
-    instruction: 'Clippy est ouvert. Frappez-le !',
+    instruction: 'Clippy est étourdi. Frappez-le !',
     hint: 'Clic droit = Jab, Clic gauche = Direct lourd',
     missMsg: 'Cliquez pour frapper !',
     clippyAttack: null,
@@ -65,6 +76,7 @@ export class TutorialSystem {
   private resultTimer = 0
   private stepSuccess = false
   private dodgePunishPhase: 0 | 1 = 0
+  private autoAdvanceTimer = 0
 
   get totalSteps() { return STEPS.length }
 
@@ -84,13 +96,27 @@ export class TutorialSystem {
     const step = this.getCurrentStep(ctx)
     if (!step) return ''
     if (step.expect === 'dodge_punish' && this.dodgePunishPhase === 1) return 'Maintenant frappez-le !'
-    return step.hint
+    return step.expect === 'none' ? step.instruction : step.hint
   }
 
   isDodgePunishWaitingHit(): boolean { return this.dodgePunishPhase === 1 }
 
   update(ctx: GameContext, dt: number) {
     if (!ctx.tutorial.active) return
+
+    const step = this.getCurrentStep(ctx)
+    if (!step) return
+
+    if (step.expect === 'none') {
+      this.autoAdvanceTimer += dt * 1000
+      if (this.autoAdvanceTimer >= (step.autoAdvanceMs ?? 3000)) {
+        this.autoAdvanceTimer = 0
+        ctx.tutorial.step++
+        if (ctx.tutorial.step >= STEPS.length) { ctx.tutorial.active = false }
+        this.waitTimer = 0
+      }
+      return
+    }
 
     if (this.showingResult) {
       this.resultTimer += dt * 1000
@@ -106,9 +132,6 @@ export class TutorialSystem {
       }
       return
     }
-
-    const step = this.getCurrentStep(ctx)
-    if (!step) return
 
     if (step.clippyAttack && this.dodgePunishPhase === 0) {
       this.waitTimer += dt * 1000

@@ -2,19 +2,19 @@ export const CFG = {
   player: {
     maxHP: 100,
     maxStamina: 100,
-    lowStaminaThreshold: 20,
-    exhaustedExitThreshold: 15,
 
-    staminaRegen: {
-      idle: 12,
-      moving: 6,
-      guarding: 0,
-      exhausted: 6,
+    stamina: {
+      drainPerSec: 1.2,
+      costDodge: 6,
+      costDodgePerfect: 0,
+      costHitStun: 4,
+      costHitGuard: 12,
+      roseRecovery: 40,
+      exhaustedDurationMs: 2000,
     },
 
     jab: {
       damage: 6,
-      staminaCost: 8,
       startup: 120,
       active: 90,
       recovery: 220,
@@ -23,7 +23,6 @@ export const CFG = {
 
     heavy: {
       damage: 16,
-      staminaCost: 22,
       startup: 280,
       active: 140,
       recovery: 600,
@@ -32,11 +31,8 @@ export const CFG = {
 
     guard: {
       damageReduction: 0.70,
-      staminaCostPerSec: 7,
       activation: 80,
       exit: 120,
-      maxComfortMs: 3000,
-      penaltyDrainMult: 3,
     },
 
     mouse: {
@@ -45,21 +41,9 @@ export const CFG = {
     },
 
     dodge: {
-      staminaCost: 18,
       invulnMs: 180,
       totalMs: 450,
       cooldown: 700,
-      staminaBonus: 25,
-    },
-
-    perfectDodge: {
-      windowMs: 70,
-    },
-
-    counterPunch: {
-      windowMs: 80,
-      damageMultiplier: 1.8,
-      staminaGain: 20,
     },
 
     starPunch: {
@@ -71,20 +55,15 @@ export const CFG = {
   clippy: {
     maxHP: 140,
 
-    jab: { damage: 5, startup: 180, recovery: 250 },
-    hook: { damage: 12, startup: 420, recovery: 500 },
-    charge: { damage: 22, startup: 850, recovery: 900 },
-
-    guard: {
-      playerStaminaMult: 2.0,
-      hypePenalty: 5,
-      starLoss: 1,
-    },
+    jab: { damage: 5, recovery: 250 },
+    hook: { damage: 12, recovery: 500 },
+    charge: { damage: 22, recovery: 900 },
 
     stun: {
-      duration: 700,
-      maxHits: 3,
-      chargePhase3MaxHits: 5,
+      hitsAllDodged: 2,
+      hitsPartial: 1,
+      hitsChargePerfect: 5,
+      durationMs: 1500,
     },
 
     taunt: {
@@ -122,82 +101,78 @@ export const CFG = {
       slowAttacksThreshold: 60,
       bigPausesThreshold: 85,
     },
-    idleBase: 800,
-    idleRandom: 1200,
-    comboRecoveryMult: 0.5,
   },
 
   tells: {
-    blinkPreDelayMs: 500,
+    amplitudeHighConf: 0.65,
+    amplitudeMedConf: 0.85,
+    amplitudeLowConf: 1.0,
+    confidenceHighThreshold: 80,
+    confidenceMedThreshold: 50,
     blinkDurationMs: 80,
     blinkAlpha: 0.15,
-    amplitudeHighThreshold: 80,
-    amplitudeMediumThreshold: 50,
-    amplitudeHigh: 0.65,
-    amplitudeMedium: 0.82,
-    amplitudeLow: 1.2,
   },
 
-  hype: {
-    initial: 55,
-    min: 0,
-    max: 100,
-    gains: {
-      jabHit: 2,
-      heavyHit: 6,
-      perfectDodge: 8,
-      counterPunch: 15,
-      combo: 10,
-      tauntHit: 1,
-    },
-    losses: {
-      jabMiss: 3,
-      heavyMiss: 10,
-      playerHit: 6,
-      guardPerSec: 2,
-      guardBlock: 5,
-    },
-    thresholds: { delirious: 70, hostile: 35 },
-    deliriousRegenMult: 1.30,
+  windUp: {
+    jabP1: 1800,
+    hookP1: 2000,
+    jabP2: 1400,
+    hookP2: 1600,
+  },
+
+  charge: {
+    recoilPx: 30,
+    freezeMs: 1000,
+    blinkIntervalMs: 200,
+  },
+
+  series: {
+    comboMinP1: 1,
+    comboMaxP1: 3,
+    comboMinP2: 3,
+    comboMaxP2: 5,
+    delayBetweenAttacksP1: 600,
+    delayBetweenAttacksP2: 400,
+    idleDelayMinP1: 1200,
+    idleDelayMaxP1: 2000,
+    idleDelayMinP2: 800,
+    idleDelayMaxP2: 1400,
+  },
+
+  distribution: {
+    p1: { jab: 0.55, hook: 0.30, charge: 0.15 },
+    p2: { jab: 0.30, hook: 0.35, charge: 0.35 },
+  },
+
+  crowd: {
+    errorThresholdProjectile: 3,
+    successStreakRose: 5,
+    earlyDodgeToleranceMs: 500,
+    dodgeWindowMs: 400,
   },
 
   projectiles: {
-    intervals: [
-      { hypeMin: 30, hypeMax: 35, ms: 12000 },
-      { hypeMin: 20, hypeMax: 29, ms: 8000 },
-      { hypeMin: 10, hypeMax: 19, ms: 5000 },
-      { hypeMin: 0,  hypeMax: 9,  ms: 3000 },
-    ] as const,
     types: {
       can:      { damage: 6,  weight: 3 },
-      mug:      { damage: 4,  weight: 2, blur: true },
+      mug:      { damage: 4,  weight: 2 },
       keyboard: { damage: 12, weight: 1 },
       mouse:    { damage: 3,  weight: 4 },
     },
     warningMs: 800,
     travelMs: 600,
-    dodgeWindowMs: 300,
+    roseTravelMs: 900,
   },
 
-  frenzy: {
-    activationThreshold: 90,
-    activationDuration: 5000,
-    staminaRegenMult: 1.60,
-    staminaCostMult: 0.80,
-    panicPerSec: 2,
+  phases: {
+    transitionThreshold: 0.50,
   },
-
-  phases: { phase1: 0.66, phase2: 0.33 },
 
   combat: {
-    comboWindowMs: 2000,
-    comboHypeGain: 10,
     playerStunDuration: 400,
   },
 
   tutorial: {
     clippyAttackSpeed: 0.35,
     noDamage: true,
-    noStaminaDrain: false,
   },
 } as const

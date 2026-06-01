@@ -7,20 +7,14 @@ export class DodgeCounterSystem {
     const ps = ctx.player.state
     if (ps.action !== 'idle' && ps.action !== 'guard') return false
     if (ps.cooldownRemaining > 0) return false
-    if (ctx.player.stamina < CFG.player.dodge.staminaCost) return false
     if (ctx.player.isExhausted) return false
 
     const cs = ctx.clippy.state
-    let isPerfect = false
+    let correctDir: DodgeDirection | null = null
 
-    if (cs.action === 'telegraph' && cs.attack) {
-      const correctDir = requiredDodge[cs.attack.side]
-      if (direction !== correctDir) return false
-      const startup = this.getAttackStartup(cs.attack.type)
-      const remaining = startup - cs.timer
-      isPerfect = remaining <= CFG.player.perfectDodge.windowMs && remaining >= 0
-    } else if (cs.action === 'attack' && cs.attack) {
-      const correctDir = requiredDodge[cs.attack.side]
+    if ((cs.action === 'telegraph' || cs.action === 'attack'
+         || cs.action === 'charge_freeze' || cs.action === 'charge_rush') && cs.attack) {
+      correctDir = requiredDodge[cs.attack.side]
       if (direction !== correctDir) return false
     }
 
@@ -28,7 +22,7 @@ export class DodgeCounterSystem {
     ps.phase = null
     ps.timer = 0
     ps.dodgeDir = direction
-    ps.isPerfectDodge = isPerfect
+    ps.isPerfectDodge = false
     ps.cooldownRemaining = CFG.player.dodge.cooldown
     return true
   }
@@ -62,11 +56,5 @@ export class DodgeCounterSystem {
   isInvulnerable(ctx: GameContext): boolean {
     const ps = ctx.player.state
     return ps.action === 'dodge' && ps.timer <= CFG.player.dodge.invulnMs
-  }
-
-  private getAttackStartup(type: string): number {
-    if (type === 'jab') return CFG.clippy.jab.startup
-    if (type === 'hook') return CFG.clippy.hook.startup
-    return CFG.clippy.charge.startup
   }
 }

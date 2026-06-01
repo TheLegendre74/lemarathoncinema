@@ -1,12 +1,10 @@
 import Phaser from 'phaser'
 import { CFG } from './config'
-import { REQUIRED_DODGE, DODGE_KEY_IDX } from './types'
+import { REQUIRED_DODGE } from './types'
 import type { GameContext, DodgeDirection, CombatEvent } from './types'
 import { pickTaunt } from './data/taunts'
 
 import { StaminaSystem } from './systems/StaminaSystem'
-import { HypeSystem } from './systems/HypeSystem'
-import { FrenzySystem } from './systems/FrenzySystem'
 import { ClippyAI } from './systems/ClippyAI'
 import { DodgeCounterSystem } from './systems/DodgeCounterSystem'
 import { CombatSystem } from './systems/CombatSystem'
@@ -37,8 +35,6 @@ export class PunchScene extends Phaser.Scene {
 
   // Systems
   private staminaSys!: StaminaSystem
-  private hypeSys!: HypeSystem
-  private frenzySys!: FrenzySystem
   private clippyAI!: ClippyAI
   private dodgeSys!: DodgeCounterSystem
   private combatSys!: CombatSystem
@@ -95,8 +91,17 @@ export class PunchScene extends Phaser.Scene {
   private eyePulse = 0
   private introTimer = 0
   private prevClippyAction = 'idle'
-  private prevBlinkFired = false
   private clippyScreenPos = { x: 0, y: 0 }
+
+  // Glitch tell state
+  private yellowFlashActive = false
+  private yellowFlashTimer = 0
+  private yellowFlashCount = 0
+  private warningFired = false
+  private chargeFreezeBlinkTimer = 0
+
+  // Phase transition
+  private prevCombatPhase = 1
 
   constructor() { super({ key: 'Punch' }) }
 
@@ -119,12 +124,19 @@ export class PunchScene extends Phaser.Scene {
     this.load.image(P_GLOVE_LEFT, '/gant-joueur-gauche.png')
     this.load.image(P_GLOVE_RIGHT, '/gant-joueur-droit.png')
 
-    // Placeholder sounds — will be replaced with real assets later
     this.load.audio('snd_guard_block', '/sfx/guard-block.mp3')
-    this.load.audio('snd_counter', '/sfx/counter.mp3')
-    this.load.audio('snd_star_earned', '/sfx/star-earned.mp3')
     this.load.audio('snd_stun', '/sfx/stun.mp3')
-    this.load.audio('snd_stamina_low', '/sfx/stamina-low.mp3')
+    this.load.audio('snd_clippy_hit', '/sfx/clippy-hit.mp3')
+    this.load.audio('snd_glitch_jab', '/sfx/glitch-jab.mp3')
+    this.load.audio('snd_glitch_hook', '/sfx/glitch-hook.mp3')
+    this.load.audio('snd_glitch_charge', '/sfx/glitch-charge.mp3')
+    this.load.audio('snd_charge_freeze', '/sfx/charge-freeze.mp3')
+    this.load.audio('snd_attack_warning', '/sfx/attack-warning.mp3')
+    this.load.audio('snd_yellow_flash', '/sfx/yellow-flash.mp3')
+    this.load.audio('snd_crowd_boo', '/sfx/crowd-boo.mp3')
+    this.load.audio('snd_crowd_cheer', '/sfx/crowd-cheer.mp3')
+    this.load.audio('snd_rose_catch', '/sfx/rose-catch.mp3')
+    this.load.audio('snd_phase_transition', '/sfx/phase-transition.mp3')
   }
 
   // ── CREATE ───────────────────────────────────────────────────────────
@@ -136,14 +148,11 @@ export class PunchScene extends Phaser.Scene {
     this.CY = Math.round(this.H * 0.375)
     const W = this.W, H = this.H
 
-    // Context
     this.ctx = this.createContext()
 
-    // Background
     this.add.image(W / 2, H / 2, 'arena').setDisplaySize(W, H)
     this.add.graphics().fillStyle(0x040412, 0.38).fillRect(0, 0, W, H)
 
-    // Graphics layers
     this.gSpots = this.add.graphics().setDepth(1).setAlpha(0.35)
     this.gStun = this.add.graphics().setDepth(5)
     this.gProj = this.add.graphics().setDepth(6)
@@ -152,14 +161,12 @@ export class PunchScene extends Phaser.Scene {
     this.gKeys = this.add.graphics().setDepth(9)
     this.gFlash = this.add.graphics().setDepth(10)
 
-    // Clippy sprite
     const sc = Math.min(W / 800, H / 520)
     const clipW = Math.round(160 * sc)
     const clipH = Math.round(216 * sc)
     this.sprClipy = this.add.image(this.CX, this.CY, 'evilClipy')
       .setDisplaySize(clipW, clipH).setDepth(3)
 
-    // Clippy gloves
     const guardLImg = this.textures.get('cGloveGuardL').getSourceImage() as HTMLImageElement
     const guardLAR = (guardLImg.naturalHeight || 420) / (guardLImg.naturalWidth || 400)
     const cGloveW = Math.round(clipW * 0.82)
@@ -181,7 +188,6 @@ export class PunchScene extends Phaser.Scene {
     const cPR = this.add.image(this.CX - guardOffX, gloveBaseY, 'cGlovePunchR')
       .setDisplaySize(cPunchW, cPunchH).setDepth(4).setVisible(false)
 
-    // Player gloves
     const pGuardSrc = this.textures.get(P_GLOVE_DEFAULT).getSourceImage() as HTMLImageElement
     const pGuardRatio = pGuardSrc.naturalHeight && pGuardSrc.naturalWidth
       ? pGuardSrc.naturalHeight / pGuardSrc.naturalWidth : 0.38
@@ -198,7 +204,6 @@ export class PunchScene extends Phaser.Scene {
     const pRight = this.add.image(Math.round(W * 0.90), gY, P_GLOVE_RIGHT)
       .setDisplaySize(gW2, gH2).setDepth(7).setVisible(false)
 
-    // Texts
     const tf = { fontFamily: FONT, stroke: '#000', strokeThickness: 5 }
     const tfB = { ...tf, strokeThickness: 8 }
 
@@ -241,7 +246,6 @@ export class PunchScene extends Phaser.Scene {
       ...tf, fontSize: '19px', color: '#888899', align: 'center', strokeThickness: 3,
     }).setOrigin(0.5, 1).setDepth(9).setAlpha(0)
 
-    // Key indicators (desktop: mouse + keyboard)
     const keyLabels = ['← souris', '↓', 'souris →', 'clic D', 'clic G', '⎵']
     const kBoxW = Math.round(W * 0.09)
     const kBoxH = Math.round(H * 0.055)
@@ -258,14 +262,12 @@ export class PunchScene extends Phaser.Scene {
       }).setOrigin(0.5, 0.5).setDepth(10)
     })
 
-    // Keyboard
     const kb = this.input.keyboard!
     this.kLeft = kb.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT)
     this.kRight = kb.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT)
     this.kDown = kb.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN)
     this.kSpace = kb.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
 
-    // Mouse
     this.input.mouse?.disableContextMenu()
     this.prevMouseX = this.input.activePointer.x
     this.prevMouseY = this.input.activePointer.y
@@ -275,7 +277,6 @@ export class PunchScene extends Phaser.Scene {
       if (pointer.rightButtonDown()) this.mouseRightClicked = true
     })
 
-    // Volume
     try { this.volume = parseFloat(localStorage.getItem('clippy_volume') ?? '0.5') || 0.5 } catch {}
     this.applyVolume()
     this.input.on('wheel', (_p: any, _gx: any, _gy: any, _gz: any, dy: number) => {
@@ -284,19 +285,15 @@ export class PunchScene extends Phaser.Scene {
       try { localStorage.setItem('clippy_volume', this.volume.toFixed(2)) } catch {}
     })
 
-    // Init systems
     this.staminaSys = new StaminaSystem()
-    this.hypeSys = new HypeSystem()
-    this.frenzySys = new FrenzySystem()
     this.clippyAI = new ClippyAI()
     this.dodgeSys = new DodgeCounterSystem()
-    this.combatSys = new CombatSystem(this.staminaSys, this.hypeSys, this.clippyAI, this.dodgeSys)
+    this.combatSys = new CombatSystem(this.staminaSys, this.clippyAI, this.dodgeSys)
     this.projectileSys = new ProjectileSystem()
     this.tutorialSys = new TutorialSystem()
     this.mobileSys = new MobileInputSystem()
     this.mobileSys.init(W, H)
 
-    // Touch input for mobile
     if (this.mobileSys.isMobile) {
       this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
         this.mobileSys.handlePointerDown(p.x, p.y, p.pointerId)
@@ -309,7 +306,6 @@ export class PunchScene extends Phaser.Scene {
       })
     }
 
-    // Init renderers
     this.effectsR = new EffectsRenderer(this, this.gFlash, this.gSpots, W, H)
     this.gloveR = new GloveRenderer(this, W, H, this.CX, this.CY)
     this.gloveR.init(
@@ -332,7 +328,6 @@ export class PunchScene extends Phaser.Scene {
   update(time: number, delta: number) {
     const ctx = this.ctx
 
-    // Freeze frame
     if (ctx.effects.freezeMs > 0) {
       this.effectsR.update(ctx, delta / 1000)
       this.effectsR.draw(ctx)
@@ -345,7 +340,6 @@ export class PunchScene extends Phaser.Scene {
     ctx.dt = dt
     ctx.totalTime += delta
 
-    // Eye pulse
     const cs = ctx.clippy.state
     if (cs.action === 'telegraph' || cs.action === 'attack' || cs.action === 'feint_telegraph') {
       this.eyePulse = 0.5 + 0.5 * Math.sin(time * 0.009)
@@ -353,7 +347,6 @@ export class PunchScene extends Phaser.Scene {
       this.eyePulse = Math.max(0, this.eyePulse - rawDt * 4)
     }
 
-    // Phase: intro
     if (ctx.gamePhase === 'intro') {
       this.introTimer += delta
       this.updateClippyVisuals(ctx, time)
@@ -364,7 +357,6 @@ export class PunchScene extends Phaser.Scene {
       return
     }
 
-    // Phase: win/lose
     if (ctx.gamePhase === 'win' || ctx.gamePhase === 'lose') {
       this.effectsR.update(ctx, rawDt)
       this.effectsR.draw(ctx)
@@ -373,10 +365,8 @@ export class PunchScene extends Phaser.Scene {
       return
     }
 
-    // 1. Input
     this.handleInput(ctx)
 
-    // 2. Systems
     if (ctx.tutorial.active) {
       this.tutorialSys.update(ctx, dt)
       this.updateTutorialUI(ctx)
@@ -386,41 +376,24 @@ export class PunchScene extends Phaser.Scene {
       this.clippyAI.update(ctx, dt)
     }
 
-    // 3. Blink detection
-    if (ctx.clippy.blinkFired && !this.prevBlinkFired) {
-      this.effectsR.blink()
-    }
-    this.prevBlinkFired = ctx.clippy.blinkFired
-
-    // 4. Stamina low warning
-    if (this.staminaSys.consumeLowWarning()) {
-      this.snd('snd_stamina_low')
-    }
-
-    // 5. Detect Clippy state transitions (visuals/sounds)
     this.detectClippyTransitions(ctx)
+    this.updateTellTiming(ctx, rawDt)
 
-    // 6. Combat resolution
     this.combatSys.update(ctx, dt)
-
-    // 7. Process combat events → visual/sound feedback
     this.processCombatEvents(ctx)
 
-    // 8. Meta systems
-    this.hypeSys.update(ctx, dt)
-    this.frenzySys.update(ctx, dt)
     if (!ctx.tutorial.active) {
       this.projectileSys.update(ctx, dt)
     }
 
-    // 9. Win/lose check
+    this.checkPhaseTransition(ctx)
+
     if (ctx.clippy.hp <= 0 && ctx.gamePhase === 'combat') {
       this.doWin()
     } else if (ctx.player.hp <= 0 && ctx.gamePhase === 'combat') {
       this.doLose()
     }
 
-    // Render
     this.gloveR.update(ctx, rawDt)
     this.updateClippyVisuals(ctx, time)
     this.drawStunStars(ctx, time)
@@ -430,6 +403,59 @@ export class PunchScene extends Phaser.Scene {
     this.drawVolumeIndicator()
     this.drawProjectiles(ctx)
     this.drawMobileButtons()
+  }
+
+  // ── TELL TIMING (universal timing sequence) ─────────────────────────
+
+  private updateTellTiming(ctx: GameContext, dt: number) {
+    const cs = ctx.clippy.state
+
+    if (cs.action === 'telegraph' && cs.attack && !ctx.tutorial.active) {
+      const windUp = this.clippyAI.getWindUp(cs.attack.type, ctx)
+      const warningTime = Math.max(0, windUp - 1000)
+
+      if (!this.warningFired && cs.timer >= warningTime) {
+        this.warningFired = true
+        this.snd('snd_attack_warning')
+      }
+
+      const blinkTime = Math.max(0, windUp - 500)
+      if (cs.timer >= blinkTime && cs.timer < blinkTime + 100) {
+        this.cameras.main.flash(80, 255, 255, 255, false, undefined, 0.12 as any)
+      }
+    }
+
+    if (this.yellowFlashActive) {
+      this.yellowFlashTimer += dt * 1000
+      if (this.yellowFlashTimer >= 100) {
+        this.yellowFlashTimer = 0
+        this.yellowFlashCount++
+        if (this.yellowFlashCount >= 6) {
+          this.yellowFlashActive = false
+          this.sprClipy.clearTint()
+        } else {
+          if (this.yellowFlashCount % 2 === 0) {
+            this.sprClipy.setTint(0xFFFF00)
+          } else {
+            this.sprClipy.clearTint()
+          }
+        }
+      }
+    }
+
+    if (cs.action === 'charge_freeze') {
+      this.chargeFreezeBlinkTimer += dt * 1000
+      if (this.chargeFreezeBlinkTimer >= CFG.charge.blinkIntervalMs) {
+        this.chargeFreezeBlinkTimer -= CFG.charge.blinkIntervalMs
+        const tinted = (this.sprClipy.tintTopLeft & 0xFFFF00) === 0xFFFF00
+        if (tinted) this.sprClipy.clearTint()
+        else this.sprClipy.setTint(0xFFFF00)
+      }
+    }
+
+    if (cs.action !== 'telegraph') {
+      this.warningFired = false
+    }
   }
 
   // ── COMBAT EVENTS ────────────────────────────────────────────────────
@@ -454,42 +480,46 @@ export class PunchScene extends Phaser.Scene {
           }
           break
 
-        case 'counter_punch':
-          this.snd('snd_counter')
-          this.effectsR.flash(ctx, 0xffee22, 0.6)
-          this.effectsR.shake(ctx, 25)
-          this.effectsR.freezeFrame(ctx, 120)
-          this.effectsR.slowMo(ctx, 0.4, 400)
-          this.effectsR.popup('CONTRE PARFAIT !', '#ffee22')
-          this.gloveR.animateCounterHit()
-          this.hudR.setBubble(pickTaunt('counter', hpRatio))
-          break
-
-        case 'taunt_hit':
-          this.snd('snd_hit')
-          this.effectsR.shake(ctx, 12)
-          if (ev.damage) this.effectsR.popup(`-${ev.damage}`, '#ff8844')
-          this.hudR.setBubble(pickTaunt('hit', hpRatio))
-          break
-
         case 'stun_start':
           this.snd('snd_stun')
           this.gloveR.resetGloves()
+          this.effectsR.popup('ÉTOURDI !', '#ffee22')
           break
 
         case 'stun_hit':
-          this.snd('snd_hit')
+          this.snd('snd_clippy_hit')
           if (ev.damage) this.effectsR.popup(`-${ev.damage}`, '#ffaa44')
-          this.effectsR.shake(ctx, 6)
+          this.effectsR.shake(ctx, 4)
           break
 
         case 'star_earned':
-          this.snd('snd_star_earned')
           this.effectsR.popup('★', '#ffd700')
           break
 
-        case 'star_lost':
-          this.effectsR.popup('★ perdue', '#ff4444')
+        case 'error':
+          if (!ctx.tutorial.active) {
+            this.projectileSys.onError(ctx)
+          }
+          break
+
+        case 'success':
+          if (!ctx.tutorial.active) {
+            this.projectileSys.onSuccess(ctx)
+          }
+          break
+
+        case 'rose_catch':
+          this.snd('snd_rose_catch')
+          this.staminaSys.restoreRose(ctx)
+          this.effectsR.popup('+STAMINA', '#44ff88')
+          break
+
+        case 'phase_transition':
+          this.snd('snd_phase_transition')
+          this.effectsR.shake(ctx, 12)
+          this.effectsR.flash(ctx, 0xff2222, 0.5)
+          this.hudR.setBubble(pickTaunt('rage', hpRatio))
+          this.hudR.setRound('PHASE 2', '#ff2222')
           break
       }
     }
@@ -511,7 +541,6 @@ export class PunchScene extends Phaser.Scene {
     let dPr = JD(this.kDown)
     let spaceDown = this.kSpace.isDown
 
-    // Mouse dodge detection
     const mouseX = this.input.activePointer.x
     const mouseY = this.input.activePointer.y
     const mouseDx = mouseX - this.prevMouseX
@@ -530,7 +559,6 @@ export class PunchScene extends Phaser.Scene {
       }
     }
 
-    // Mobile input
     this.mobileSys.update(ctx.dt)
     const mobileActions = this.mobileSys.consumeActions()
     for (const action of mobileActions) {
@@ -551,13 +579,11 @@ export class PunchScene extends Phaser.Scene {
 
     const ps = ctx.player.state
 
-    // Tutorial
     if (ctx.tutorial.active) {
       this.handleTutorialInput(ctx, lPr, rPr, dPr, jPr, kPr, spaceDown)
       return
     }
 
-    // Star punch (left click when 3 stars + idle)
     if (kPr && ps.action === 'idle' && ctx.player.stars >= CFG.player.starPunch.starsRequired) {
       if (this.dodgeSys.tryStarPunch(ctx)) {
         this.onStarPunch(ctx)
@@ -565,28 +591,24 @@ export class PunchScene extends Phaser.Scene {
       }
     }
 
-    // Jab (right click)
     if (jPr && this.combatSys.tryJab(ctx)) {
       ctx.player.lastPunchHand = ctx.player.lastPunchHand === 'right' ? 'left' : 'right'
       this.gloveR.punchGlove(ctx.player.lastPunchHand)
       return
     }
 
-    // Heavy (left click, no star punch)
     if (kPr && this.combatSys.tryHeavy(ctx)) {
       ctx.player.lastPunchHand = ctx.player.lastPunchHand === 'right' ? 'left' : 'right'
       this.gloveR.punchGlove(ctx.player.lastPunchHand)
       return
     }
 
-    // Guard
     if (spaceDown) {
       this.combatSys.tryGuard(ctx)
     } else if (ps.action === 'guard') {
       this.combatSys.releaseGuard(ctx)
     }
 
-    // Dodge
     if (lPr) this.tryDodge(ctx, 'left')
     if (rPr) this.tryDodge(ctx, 'right')
     if (dPr) this.tryDodge(ctx, 'down')
@@ -594,16 +616,51 @@ export class PunchScene extends Phaser.Scene {
 
   private tryDodge(ctx: GameContext, dir: DodgeDirection) {
     if (this.dodgeSys.tryDodge(ctx, dir, REQUIRED_DODGE)) {
-      this.staminaSys.spend(ctx, CFG.player.dodge.staminaCost)
+      const cs = ctx.clippy.state
+      const isAttacking = cs.action === 'telegraph' || cs.action === 'attack'
+        || cs.action === 'charge_freeze' || cs.action === 'charge_rush'
+
+      let isPerfect = false
+      if (isAttacking && cs.attack) {
+        const correctDir = REQUIRED_DODGE[cs.attack.side]
+        if (dir === correctDir) {
+          if (cs.action === 'charge_freeze') {
+            isPerfect = true
+            this.clippyAI.onSeriesDodgeSuccess(ctx)
+            this.clippyAI.stun(ctx, CFG.clippy.stun.hitsChargePerfect)
+            this.combatSys.events.push({ type: 'stun_start' })
+            this.combatSys.events.push({ type: 'star_earned' })
+            ctx.player.stars = Math.min(3, ctx.player.stars + 1)
+            this.combatSys.events.push({ type: 'success' })
+          } else {
+            const windUp = this.clippyAI.getWindUp(cs.attack.type, ctx)
+            const yellowStart = windUp
+            const timeSinceYellow = cs.timer - yellowStart
+            isPerfect = timeSinceYellow >= -CFG.crowd.dodgeWindowMs / 2
+              && timeSinceYellow <= CFG.crowd.dodgeWindowMs / 2
+
+            if (cs.timer < yellowStart - CFG.crowd.earlyDodgeToleranceMs) {
+              this.combatSys.events.push({ type: 'error' })
+            } else {
+              this.clippyAI.onSeriesDodgeSuccess(ctx)
+              this.combatSys.events.push({ type: 'success' })
+            }
+          }
+        } else {
+          this.combatSys.events.push({ type: 'error' })
+        }
+      }
+
+      this.staminaSys.spendDodge(ctx, isPerfect)
+      ctx.player.state.isPerfectDodge = isPerfect
       this.snd('snd_parry')
       this.effectsR.flash(ctx, 0x44ff88, 0.25)
       this.gloveR.resetGloves()
 
-      if (ctx.player.state.isPerfectDodge) {
+      if (isPerfect) {
         this.effectsR.popup('PARFAIT !', '#44ff88')
         this.effectsR.freezeFrame(ctx, 80)
         this.effectsR.shake(ctx, 10)
-        this.hypeSys.onPerfectDodge(ctx)
         this.hudR.setBubble(pickTaunt('dodge', ctx.clippy.hp / CFG.clippy.maxHP))
       } else {
         this.effectsR.popup('ESQUIVÉ', '#88ccff')
@@ -621,10 +678,10 @@ export class PunchScene extends Phaser.Scene {
   ) {
     const step = this.tutorialSys.getCurrentStep(ctx)
     if (!step) return
+    if (step.expect === 'none') return
 
     const cs = ctx.clippy.state
 
-    // Attack step
     if (step.expect === 'jab' || step.expect === 'heavy') {
       if (jPr || kPr) {
         this.tutorialSys.onSuccess(ctx)
@@ -634,7 +691,6 @@ export class PunchScene extends Phaser.Scene {
       return
     }
 
-    // Guard step
     if (step.expect === 'guard') {
       if (_spaceDown) {
         this.tutorialSys.onSuccess(ctx)
@@ -644,7 +700,6 @@ export class PunchScene extends Phaser.Scene {
       return
     }
 
-    // Dodge+Punish step (two-part)
     if (step.expect === 'dodge_punish') {
       if (this.tutorialSys.isDodgePunishWaitingHit()) {
         if (jPr || kPr) {
@@ -677,7 +732,6 @@ export class PunchScene extends Phaser.Scene {
       return
     }
 
-    // Simple dodge steps
     if (cs.action !== 'telegraph' && cs.action !== 'attack') return
 
     const expectedDodge = step.expect === 'dodge_right' ? 'right'
@@ -708,13 +762,16 @@ export class PunchScene extends Phaser.Scene {
     const cs = ctx.clippy.state
     const prev = this.prevClippyAction
 
-    // Telegraph started
     if ((cs.action === 'telegraph' || cs.action === 'feint_telegraph') && prev !== cs.action) {
       if (cs.attack) {
         const amp = this.clippyAI.getTellAmplitude(ctx)
-        const startup = this.clippyAI.getStartup(cs.attack.type, ctx)
-        this.gloveR.animateTelegraph(ctx, cs.attack.type, startup, amp)
+        const windUp = this.clippyAI.getWindUp(cs.attack.type, ctx)
+        this.gloveR.animateTelegraph(ctx, cs.attack.type, windUp, amp)
         this.hudR.setBubble('')
+
+        const glitchSnd = cs.attack.type === 'jab' ? 'snd_glitch_jab'
+          : cs.attack.type === 'hook' ? 'snd_glitch_hook' : 'snd_glitch_jab'
+        this.snd(glitchSnd)
 
         if (cs.action === 'feint_telegraph') {
           this.hudR.setRound('FEINTE ?', '#ff8800')
@@ -726,43 +783,74 @@ export class PunchScene extends Phaser.Scene {
       }
     }
 
-    // Attack fired
-    if (cs.action === 'attack' && prev !== 'attack') {
+    if (cs.action === 'charge_recoil' && prev !== 'charge_recoil') {
+      this.snd('snd_glitch_charge')
+      this.hudR.setRound('CHARGE !', '#ff2222')
+      this.hudR.setBubble('')
+    }
+
+    if (cs.action === 'charge_freeze' && prev !== 'charge_freeze') {
+      this.snd('snd_charge_freeze')
+      this.chargeFreezeBlinkTimer = 0
+    }
+
+    if (cs.action === 'charge_rush' && prev !== 'charge_rush') {
       this.gloveR.animateAttack(ctx)
       this.snd('snd_swoosh')
       this.hudR.flashNow('!')
     }
 
-    // Feint cancelled
+    if (cs.action === 'attack' && prev !== 'attack') {
+      this.startYellowFlash()
+      this.snd('snd_yellow_flash')
+      this.gloveR.animateAttack(ctx)
+      this.snd('snd_swoosh')
+      this.hudR.flashNow('!')
+    }
+
     if (cs.action === 'feint_cancel' && prev !== 'feint_cancel') {
       this.gloveR.animateFeintCancel()
       this.hudR.setBubble(pickTaunt('feint', ctx.clippy.hp / CFG.clippy.maxHP))
     }
 
-    // Taunt started
     if (cs.action === 'taunt' && prev !== 'taunt') {
       this.gloveR.setShowoff(true)
       this.sprClipy.setFlipX(true)
       this.hudR.setBubble(pickTaunt('taunt', ctx.clippy.hp / CFG.clippy.maxHP))
     }
 
-    // Taunt ended
     if (prev === 'taunt' && cs.action !== 'taunt') {
       this.gloveR.setShowoff(false)
       this.sprClipy.setFlipX(false)
     }
 
-    // Stunned started
     if (cs.action === 'stunned' && prev !== 'stunned') {
       this.gloveR.resetGloves()
     }
 
-    // Back to idle
     if (cs.action === 'idle' && prev !== 'idle') {
       this.hudR.setBubble(pickTaunt('idle', ctx.clippy.hp / CFG.clippy.maxHP))
     }
 
     this.prevClippyAction = cs.action
+  }
+
+  private startYellowFlash() {
+    this.yellowFlashActive = true
+    this.yellowFlashTimer = 0
+    this.yellowFlashCount = 0
+    this.sprClipy.setTint(0xFFFF00)
+  }
+
+  // ── PHASE TRANSITION ────────────────────────────────────────────────
+
+  private checkPhaseTransition(ctx: GameContext) {
+    if (ctx.combatPhase === 2 && this.prevCombatPhase === 1 && !ctx.phaseTransitioned) {
+      ctx.phaseTransitioned = true
+      this.combatSys.events.push({ type: 'phase_transition' })
+      this.effectsR.freezeFrame(ctx, 500)
+    }
+    this.prevCombatPhase = ctx.combatPhase
   }
 
   // ── STAR PUNCH ───────────────────────────────────────────────────────
@@ -898,26 +986,40 @@ export class PunchScene extends Phaser.Scene {
     let angle = 0
 
     const cs = ctx.clippy.state
-    this.sprClipy.clearTint()
 
-    // Body tell animations during telegraph
+    if (!this.yellowFlashActive && cs.action !== 'charge_freeze') {
+      this.sprClipy.clearTint()
+    }
+
     if ((cs.action === 'telegraph' || cs.action === 'feint_telegraph') && cs.attack) {
       const amp = this.clippyAI.getTellAmplitude(ctx)
-      const startup = this.clippyAI.getStartup(cs.attack.type, ctx)
-      const progress = Math.min(1, cs.timer / startup)
+      const windUp = this.clippyAI.getWindUp(cs.attack.type, ctx)
+      const progress = Math.min(1, cs.timer / windUp)
 
-      if (cs.attack.type === 'charge') {
-        cy -= Math.round(35 * amp * progress)
-        const v = Math.round(80 * amp * progress)
-        this.sprClipy.setTint(Phaser.Display.Color.GetColor(255, Math.max(175, 255 - v), Math.max(175, 255 - v)))
-      } else if (cs.attack.type === 'hook') {
+      if (cs.attack.type === 'hook') {
         const dir = cs.attack.side === 'left' ? 1 : cs.attack.side === 'right' ? -1 : 0
-        angle = dir * 5 * amp * progress
-        const v = Math.round(40 * amp * progress)
-        this.sprClipy.setTint(Phaser.Display.Color.GetColor(255, Math.max(215, 255 - v), Math.max(215, 255 - v)))
-      } else {
-        cy -= Math.round(12 * amp * Math.sin(progress * Math.PI))
+        angle = dir * 4 * amp * progress
+      } else if (cs.attack.type === 'jab') {
+        const dir = cs.attack.side === 'left' ? -1 : 1
+        if (cs.timer < 50) {
+          cx += dir * 8 * amp
+        }
       }
+    }
+
+    if (cs.action === 'charge_recoil') {
+      const amp = this.clippyAI.getTellAmplitude(ctx)
+      const progress = Math.min(1, cs.timer / 300)
+      cy -= Math.round(CFG.charge.recoilPx * amp * progress)
+    }
+
+    if (cs.action === 'charge_freeze') {
+      const amp = this.clippyAI.getTellAmplitude(ctx)
+      cy -= Math.round(CFG.charge.recoilPx * amp)
+    }
+
+    if (cs.action === 'charge_rush') {
+      cy += Math.round(20 * Math.min(1, cs.timer / 100))
     }
 
     this.sprClipy.setPosition(cx, cy)
@@ -932,7 +1034,8 @@ export class PunchScene extends Phaser.Scene {
       this.sprClipy.setTint(0xffee88)
     } else if (cs.action === 'taunt') {
       this.sprClipy.angle = Math.sin(time * 0.01) * 3
-    } else if (this.eyePulse > 0.1 && cs.action !== 'telegraph' && cs.action !== 'feint_telegraph') {
+    } else if (this.eyePulse > 0.1 && cs.action !== 'telegraph' && cs.action !== 'feint_telegraph'
+               && !this.yellowFlashActive && cs.action !== 'charge_freeze') {
       const v = Math.round(this.eyePulse * 80)
       this.sprClipy.setTint(Phaser.Display.Color.GetColor(255, 255 - v, 255 - v))
       this.sprClipy.angle = angle
@@ -940,7 +1043,6 @@ export class PunchScene extends Phaser.Scene {
       this.sprClipy.angle = angle
     }
 
-    // Clippy glove tracking during idle
     const glovesTrack = cs.action === 'idle' || ctx.gamePhase === 'intro'
     if (glovesTrack) {
       const gloves = this.gloveR.getGuardGloves()
@@ -977,25 +1079,38 @@ export class PunchScene extends Phaser.Scene {
       const px = proj.x + (proj.targetX - proj.x) * proj.progress
       const py = proj.y + (proj.targetY - proj.y) * proj.progress
 
-      let color: number
-      let size: number
-      switch (proj.type) {
-        case 'can': color = 0xaaaaaa; size = 10; break
-        case 'mug': color = 0x885533; size = 12; break
-        case 'keyboard': color = 0x444466; size = 18; break
-        case 'mouse': color = 0x666666; size = 8; break
+      if (proj.type === 'rose') {
+        this.gProj.fillStyle(0xff2266, 0.9)
+        this.gProj.fillCircle(px, py, 8)
+        this.gProj.fillStyle(0x22aa44, 0.8)
+        this.gProj.fillRect(px - 1, py + 4, 2, 12)
+      } else {
+        let color: number
+        let size: number
+        switch (proj.type) {
+          case 'can': color = 0xaaaaaa; size = 10; break
+          case 'mug': color = 0x885533; size = 12; break
+          case 'keyboard': color = 0x444466; size = 18; break
+          case 'mouse': color = 0x666666; size = 8; break
+          default: color = 0xaaaaaa; size = 10
+        }
+
+        this.gProj.fillStyle(color, 0.9)
+        this.gProj.fillRoundedRect(px - size / 2, py - size / 2, size, size * 0.7, 3)
+        this.gProj.lineStyle(1.5, 0xffffff, 0.4)
+        this.gProj.strokeRoundedRect(px - size / 2, py - size / 2, size, size * 0.7, 3)
       }
 
-      this.gProj.fillStyle(color, 0.9)
-      this.gProj.fillRoundedRect(px - size / 2, py - size / 2, size, size * 0.7, 3)
-      this.gProj.lineStyle(1.5, 0xffffff, 0.4)
-      this.gProj.strokeRoundedRect(px - size / 2, py - size / 2, size, size * 0.7, 3)
-
       if (proj.progress >= 0.85 && proj.active) {
-        if (this.projectileSys.checkHit(ctx, proj)) {
+        const result = this.projectileSys.checkHit(ctx, proj)
+        if (result === 'hit') {
           this.effectsR.shake(ctx, 8)
           this.effectsR.flash(ctx, 0xff6600, 0.3)
           this.effectsR.popup(`-${proj.damage}`, '#ff6600')
+          this.snd('snd_crowd_boo')
+          proj.active = false
+        } else if (result === 'rose_catch') {
+          this.combatSys.events.push({ type: 'rose_catch' })
           proj.active = false
         }
       }
@@ -1088,6 +1203,7 @@ export class PunchScene extends Phaser.Scene {
         comboTimer: 0,
         guardDuration: 0,
         isExhausted: false,
+        exhaustedTimer: 0,
       },
 
       clippy: {
@@ -1106,10 +1222,21 @@ export class PunchScene extends Phaser.Scene {
         lastTauntTime: 0,
       },
 
-      hype: { value: CFG.hype.initial, level: 'neutral' },
-      frenzy: { state: 'inactive', highHypeTimer: 0 },
+      series: {
+        total: 0,
+        dodgedCount: 0,
+        currentIndex: 0,
+        active: false,
+      },
+
+      crowd: {
+        errorCount: 0,
+        successStreak: 0,
+      },
+
       effects: { shake: 0, flashColor: 0, flashAlpha: 0, freezeMs: 0, slowMo: 1, slowMoTimer: 0 },
       projectiles: [],
+      phaseTransitioned: false,
       tutorial: { active: !(this.cfg.skipTutorial ?? false), step: 0 },
     }
   }

@@ -44,6 +44,8 @@ export interface PlayerState {
 export type ClippyActionType =
   | 'idle' | 'telegraph' | 'attack' | 'recovery'
   | 'feint_telegraph' | 'feint_cancel' | 'stunned' | 'taunt' | 'down'
+  | 'charge_recoil' | 'charge_freeze' | 'charge_rush'
+  | 'series_pause'
 
 export interface ClippyActionState {
   action: ClippyActionType
@@ -64,13 +66,11 @@ export interface ClippyPsyche {
 // ─── Game ────────────────────────────────────────────────────────────
 
 export type GamePhase = 'intro' | 'tutorial' | 'combat' | 'win' | 'lose'
-export type CombatPhase = 1 | 2 | 3
-export type HypeLevel = 'hostile' | 'neutral' | 'delirious'
-export type FrenzyState = 'inactive' | 'building' | 'active'
+export type CombatPhase = 1 | 2
 
 // ─── Projectiles ─────────────────────────────────────────────────────
 
-export type ProjectileType = 'can' | 'mug' | 'keyboard' | 'mouse'
+export type ProjectileType = 'can' | 'mug' | 'keyboard' | 'mouse' | 'rose'
 
 export interface Projectile {
   type: ProjectileType
@@ -100,8 +100,9 @@ export interface EffectState {
 // ─── Combat Events ──────────────────────────────────────────────────
 
 export type CombatEventType =
-  | 'guard_block' | 'hit' | 'counter_punch' | 'taunt_hit'
-  | 'star_earned' | 'star_lost' | 'stun_start' | 'stun_hit'
+  | 'guard_block' | 'hit' | 'stun_start' | 'stun_hit'
+  | 'star_earned' | 'error' | 'success'
+  | 'rose_catch' | 'phase_transition'
 
 export interface CombatEvent {
   type: CombatEventType
@@ -126,6 +127,7 @@ export interface GameContext {
     comboTimer: number
     guardDuration: number
     isExhausted: boolean
+    exhaustedTimer: number
   }
 
   clippy: {
@@ -140,18 +142,21 @@ export interface GameContext {
     lastTauntTime: number
   }
 
-  hype: {
-    value: number
-    level: HypeLevel
+  series: {
+    total: number
+    dodgedCount: number
+    currentIndex: number
+    active: boolean
   }
 
-  frenzy: {
-    state: FrenzyState
-    highHypeTimer: number
+  crowd: {
+    errorCount: number
+    successStreak: number
   }
 
   effects: EffectState
   projectiles: Projectile[]
+  phaseTransitioned: boolean
 
   tutorial: {
     active: boolean

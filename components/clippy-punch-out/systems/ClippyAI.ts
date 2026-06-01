@@ -4,14 +4,6 @@ import type {
 } from '../types'
 import { FeintSystem } from './FeintSystem'
 
-const PATTERNS: Record<CombatPhase, ClippyAttackType[]> = {
-  1: ['jab', 'jab', 'hook'],
-  2: ['hook', 'jab'],
-  3: ['charge', 'hook', 'jab'],
-}
-
-const MAX_PATTERN_REPEATS: Record<CombatPhase, number> = { 1: 3, 2: 3, 3: 2 }
-
 export class ClippyAI {
   private feintSys = new FeintSystem()
   private nextActionDelay = 0
@@ -23,20 +15,15 @@ export class ClippyAI {
     switch (cs.action) {
       case 'idle':
         ctx.clippy.idleDuration += dt * 1000
-        if (!ctx.clippy.blinkFired
-            && this.nextActionDelay > CFG.tells.blinkPreDelayMs
-            && ctx.clippy.idleDuration >= this.nextActionDelay - CFG.tells.blinkPreDelayMs) {
-          ctx.clippy.blinkFired = true
-        }
         if (ctx.clippy.idleDuration >= this.nextActionDelay) {
-          this.decideAction(ctx)
+          this.startSeries(ctx)
         }
         break
 
       case 'telegraph':
       case 'feint_telegraph': {
-        const startup = this.getStartup(cs.attack!.type, ctx)
-        if (cs.timer >= startup) {
+        const windUp = this.getWindUp(cs.attack!.type, ctx)
+        if (cs.timer >= windUp) {
           if (cs.action === 'feint_telegraph') {
             cs.action = 'feint_cancel'
             cs.timer = 0
@@ -66,18 +53,35 @@ export class ClippyAI {
 
       case 'recovery':
         if (cs.timer >= cs.recoveryDuration) {
-          if (cs.comboRemaining > 0) {
-            cs.comboRemaining--
-            const atk = this.pickFromQueueOrRandom(ctx)
-            this.startTelegraph(ctx, atk)
-          } else {
-            this.goIdle(ctx)
-          }
+          this.advanceSeries(ctx)
         }
         break
 
+      case 'series_pause':
+        if (cs.timer >= this.getSeriesPauseDelay(ctx)) {
+          this.launchNextInSeries(ctx)
+        }
+        break
+
+      case 'charge_recoil':
+        if (cs.timer >= 300) {
+          cs.action = 'charge_freeze'
+          cs.timer = 0
+        }
+        break
+
+      case 'charge_freeze':
+        if (cs.timer >= CFG.charge.freezeMs) {
+          cs.action = 'charge_rush'
+          cs.timer = 0
+        }
+        break
+
+      case 'charge_rush':
+        break
+
       case 'stunned':
-        if (cs.timer >= CFG.clippy.stun.duration || cs.stunHitsRemaining <= 0) {
+        if (cs.timer >= CFG.clippy.stun.durationMs || cs.stunHitsRemaining <= 0) {
           this.goIdle(ctx)
         }
         break
@@ -93,7 +97,9 @@ export class ClippyAI {
     this.updatePhase(ctx)
   }
 
-  private decideAction(ctx: GameContext) {
+  // ── Series management ────────────────────────────────────────────────
+
+  private startSeries(ctx: GameContext) {
     if (ctx.totalTime - ctx.clippy.lastTauntTime >= CFG.clippy.taunt.minInterval
         && Math.random() < CFG.clippy.taunt.chance) {
       ctx.clippy.state.action = 'taunt'
@@ -102,8 +108,55 @@ export class ClippyAI {
       return
     }
 
-    const attack = this.pickFromQueueOrRandom(ctx)
-    const comboLen = this.pickComboLength(ctx)
+    const phase = ctx.combatPhase
+    const min = phase === 1 ? CFG.series.comboMinP1 : CFG.series.comboMinP2
+    const max = phase === 1 ? CFG.series.comboMaxP1 : CFG.series.comboMaxP2
+    const total = min + Math.floor(Math.random() * (max - min + 1))
+
+    ctx.series.total = total
+    ctx.series.dodgedCount = 0
+    ctx.series.currentIndex = 0
+    ctx.series.active = true
+
+    this.launchNextInSeries(ctx)
+  }
+
+  private advanceSeries(ctx: GameContext) {
+    if (!ctx.series.active) {
+      this.goIdle(ctx)
+      return
+    }
+
+    ctx.series.currentIndex++
+
+    if (ctx.series.currentIndex >= ctx.series.total) {
+      this.endSeries(ctx)
+      return
+    }
+
+    const cs = ctx.clippy.state
+    cs.action = 'series_pause'
+    cs.timer = 0
+  }
+
+  private endSeries(ctx: GameContext) {
+    ctx.series.active = false
+    const allDodged = ctx.series.dodgedCount >= ctx.series.total
+    const maxHits = allDodged ? CFG.clippy.stun.hitsAllDodged : CFG.clippy.stun.hitsPartial
+    this.stun(ctx, maxHits)
+    if (allDodged) {
+      ctx.player.stars = Math.min(3, ctx.player.stars + 1)
+    }
+  }
+
+  private launchNextInSeries(ctx: GameContext) {
+    const attack = this.pickAttack(ctx)
+
+    if (attack.type === 'charge') {
+      attack.side = 'body'
+      this.startChargeSequence(ctx, attack)
+      return
+    }
 
     if (this.feintSys.shouldFeint(ctx)) {
       const fakeAttack = this.pickFeintAttack(attack)
@@ -112,31 +165,40 @@ export class ClippyAI {
       cs.realAttack = attack
       cs.action = 'feint_telegraph'
       cs.timer = 0
-      cs.comboRemaining = comboLen - 1
+      cs.comboRemaining = 0
     } else {
-      ctx.clippy.state.comboRemaining = comboLen - 1
       this.startTelegraph(ctx, attack)
     }
   }
 
-  private pickFromQueueOrRandom(ctx: GameContext): ClippyAttack {
-    const queue = ctx.clippy.patternQueue
-    if (queue.length > 0) {
-      return { type: queue.shift()!, side: this.pickSide() }
-    }
-
-    const phase = ctx.combatPhase
-    if (ctx.clippy.patternRepeats < MAX_PATTERN_REPEATS[phase]) {
-      ctx.clippy.patternRepeats++
-      const pattern = [...PATTERNS[phase]]
-      const first = pattern.shift()!
-      ctx.clippy.patternQueue = pattern
-      return { type: first, side: this.pickSide() }
-    }
-
-    ctx.clippy.patternRepeats = 0
-    return { type: this.pickAttackType(ctx), side: this.pickSide() }
+  private startChargeSequence(ctx: GameContext, attack: ClippyAttack) {
+    const cs = ctx.clippy.state
+    cs.attack = attack
+    cs.action = 'charge_recoil'
+    cs.timer = 0
+    cs.realAttack = null
   }
+
+  onSeriesDodgeSuccess(ctx: GameContext) {
+    ctx.series.dodgedCount++
+  }
+
+  // ── Wind-up per phase ────────────────────────────────────────────────
+
+  getWindUp(type: ClippyAttackType, ctx: GameContext): number {
+    const phase = ctx.combatPhase
+    if (type === 'jab') return phase === 1 ? CFG.windUp.jabP1 : CFG.windUp.jabP2
+    if (type === 'hook') return phase === 1 ? CFG.windUp.hookP1 : CFG.windUp.hookP2
+    return 300
+  }
+
+  private getSeriesPauseDelay(ctx: GameContext): number {
+    return ctx.combatPhase === 1
+      ? CFG.series.delayBetweenAttacksP1
+      : CFG.series.delayBetweenAttacksP2
+  }
+
+  // ── Telegraph ────────────────────────────────────────────────────────
 
   private startTelegraph(ctx: GameContext, attack: ClippyAttack) {
     const cs = ctx.clippy.state
@@ -155,56 +217,37 @@ export class ClippyAI {
     cs.stunHitsRemaining = 0
     ctx.clippy.idleDuration = 0
     ctx.clippy.blinkFired = false
+    ctx.series.active = false
 
-    const aggression = this.getAggression(ctx)
-    const baseDelay = CFG.ai.idleBase + Math.random() * CFG.ai.idleRandom
-    this.nextActionDelay = baseDelay * (1 - aggression * 0.5)
+    const phase = ctx.combatPhase
+    const min = phase === 1 ? CFG.series.idleDelayMinP1 : CFG.series.idleDelayMinP2
+    const max = phase === 1 ? CFG.series.idleDelayMaxP1 : CFG.series.idleDelayMaxP2
+    this.nextActionDelay = min + Math.random() * (max - min)
 
     if (ctx.clippy.psyche.fatigue >= CFG.ai.fatigue.bigPausesThreshold) {
       this.nextActionDelay *= 2.2
     }
-    if (this.nextActionDelay < CFG.tells.blinkPreDelayMs + 100) {
-      this.nextActionDelay = CFG.tells.blinkPreDelayMs + 100
-    }
   }
 
-  private pickAttackType(ctx: GameContext): ClippyAttackType {
-    const phase = ctx.combatPhase
-    const confidence = ctx.clippy.psyche.confidence
-    const r = Math.random()
+  // ── Attack picking ───────────────────────────────────────────────────
 
-    if (phase === 1) {
-      if (r < 0.55) return 'jab'
-      if (r < 0.85) return 'hook'
-      return 'charge'
-    }
-    if (phase === 2) {
-      if (confidence >= CFG.ai.confidence.aggressiveThreshold) {
-        if (r < 0.25) return 'jab'
-        if (r < 0.60) return 'hook'
-        return 'charge'
-      }
-      if (r < 0.40) return 'jab'
-      if (r < 0.75) return 'hook'
-      return 'charge'
-    }
-    if (r < 0.30) return 'jab'
-    if (r < 0.60) return 'hook'
-    return 'charge'
+  private pickAttack(ctx: GameContext): ClippyAttack {
+    const dist = ctx.combatPhase === 1 ? CFG.distribution.p1 : CFG.distribution.p2
+    const r = Math.random()
+    let type: ClippyAttackType
+    if (r < dist.jab) type = 'jab'
+    else if (r < dist.jab + dist.hook) type = 'hook'
+    else type = 'charge'
+
+    const side = type === 'charge' ? 'body' as const : this.pickSide()
+    return { type, side }
   }
 
   private pickSide(): AttackSide {
     const r = Math.random()
-    if (r < 0.38) return 'left'
-    if (r < 0.76) return 'right'
+    if (r < 0.45) return 'left'
+    if (r < 0.90) return 'right'
     return 'body'
-  }
-
-  private pickComboLength(ctx: GameContext): number {
-    const aggression = this.getAggression(ctx)
-    if (ctx.combatPhase === 1) return 1
-    if (ctx.combatPhase === 2) return aggression > 0.6 ? 2 : 1
-    return aggression > 0.7 ? 3 : 2
   }
 
   private pickFeintAttack(real: ClippyAttack): ClippyAttack {
@@ -213,19 +256,13 @@ export class ClippyAI {
     return { type: real.type, side: fakeSide[Math.floor(Math.random() * fakeSide.length)] }
   }
 
+  // ── Tells ────────────────────────────────────────────────────────────
+
   getTellAmplitude(ctx: GameContext): number {
     const conf = ctx.clippy.psyche.confidence
-    if (conf >= CFG.tells.amplitudeHighThreshold) return CFG.tells.amplitudeHigh
-    if (conf >= CFG.tells.amplitudeMediumThreshold) return CFG.tells.amplitudeMedium
-    return CFG.tells.amplitudeLow
-  }
-
-  getStartup(type: ClippyAttackType, ctx: GameContext): number {
-    const base = CFG.clippy[type].startup
-    let mult = 1
-    if (ctx.clippy.psyche.confidence >= CFG.ai.confidence.speedThreshold) mult *= 0.85
-    if (ctx.clippy.psyche.fatigue >= CFG.ai.fatigue.slowAttacksThreshold) mult *= 1.25
-    return base * mult
+    if (conf >= CFG.tells.confidenceHighThreshold) return CFG.tells.amplitudeHighConf
+    if (conf >= CFG.tells.confidenceMedThreshold) return CFG.tells.amplitudeMedConf
+    return CFG.tells.amplitudeLowConf
   }
 
   getRecovery(type: ClippyAttackType, ctx: GameContext): number {
@@ -240,20 +277,23 @@ export class ClippyAI {
     return CFG.clippy[type].damage
   }
 
-  private getAggression(ctx: GameContext): number {
-    const conf = ctx.clippy.psyche.confidence / 100
-    const panic = ctx.clippy.psyche.panic / 100
-    const fatigue = ctx.clippy.psyche.fatigue / 100
-    return Math.max(0, Math.min(1, conf * 0.5 + (1 - fatigue) * 0.3 + (1 - panic) * 0.2))
+  // ── Stun ─────────────────────────────────────────────────────────────
+
+  stun(ctx: GameContext, maxHits: number) {
+    ctx.clippy.state.action = 'stunned'
+    ctx.clippy.state.timer = 0
+    ctx.clippy.state.stunHitsRemaining = maxHits
+    ctx.clippy.state.comboRemaining = 0
+    ctx.series.active = false
   }
+
+  endStun(ctx: GameContext) { this.goIdle(ctx) }
+
+  // ── Psyche callbacks ─────────────────────────────────────────────────
 
   onPlayerHit(ctx: GameContext) {
     ctx.clippy.psyche.confidence = Math.min(100, ctx.clippy.psyche.confidence + CFG.ai.confidence.onPlayerHit)
     ctx.clippy.missStreak = 0
-  }
-
-  onPlayerHeavyMiss(ctx: GameContext) {
-    ctx.clippy.psyche.confidence = Math.min(100, ctx.clippy.psyche.confidence + CFG.ai.confidence.onPlayerHeavyMiss)
   }
 
   onMissedAttack(ctx: GameContext) {
@@ -264,43 +304,15 @@ export class ClippyAI {
     }
   }
 
-  onPerfectCounter(ctx: GameContext) {
-    ctx.clippy.psyche.panic = Math.min(100, ctx.clippy.psyche.panic + CFG.ai.panic.onPerfectCounter)
-  }
-
-  onComboTaken(ctx: GameContext) {
-    ctx.clippy.psyche.fatigue = Math.min(100, ctx.clippy.psyche.fatigue + CFG.ai.fatigue.onComboTaken)
-    ctx.clippy.psyche.panic = Math.min(100, ctx.clippy.psyche.panic + CFG.ai.panic.onPlayerCombo)
-  }
-
-  stun(ctx: GameContext, maxHits: number) {
-    ctx.clippy.state.action = 'stunned'
-    ctx.clippy.state.timer = 0
-    ctx.clippy.state.stunHitsRemaining = maxHits
-    ctx.clippy.state.comboRemaining = 0
-  }
-
-  endStun(ctx: GameContext) { this.goIdle(ctx) }
-
   private decayPsyche(ctx: GameContext, dt: number) {
     const p = ctx.clippy.psyche
     p.confidence = Math.max(0, p.confidence - dt * 0.8)
     p.panic = Math.max(0, p.panic - dt * 0.5)
     p.fatigue = Math.max(0, p.fatigue - dt * 0.3)
-    if (ctx.player.state.action === 'guard') {
-      p.confidence = Math.min(100, p.confidence + CFG.ai.confidence.onPlayerGuardPerSec * dt)
-    }
   }
 
   private updatePhase(ctx: GameContext) {
     const ratio = ctx.clippy.hp / CFG.clippy.maxHP
-    const prev = ctx.combatPhase
-    if (ratio > CFG.phases.phase1) ctx.combatPhase = 1
-    else if (ratio > CFG.phases.phase2) ctx.combatPhase = 2
-    else ctx.combatPhase = 3
-    if (ctx.combatPhase !== prev) {
-      ctx.clippy.patternQueue = []
-      ctx.clippy.patternRepeats = 0
-    }
+    ctx.combatPhase = ratio > CFG.phases.transitionThreshold ? 1 : 2
   }
 }
