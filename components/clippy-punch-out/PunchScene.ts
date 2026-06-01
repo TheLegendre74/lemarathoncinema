@@ -102,6 +102,7 @@ export class PunchScene extends Phaser.Scene {
 
   // Phase transition
   private prevCombatPhase = 1
+  private wasExhausted = false
 
   constructor() { super({ key: 'Punch' }) }
 
@@ -124,19 +125,28 @@ export class PunchScene extends Phaser.Scene {
     this.load.image(P_GLOVE_LEFT, '/gant-joueur-gauche.png')
     this.load.image(P_GLOVE_RIGHT, '/gant-joueur-droit.png')
 
-    this.load.audio('snd_guard_block', '/sfx/guard-block.mp3')
+    this.load.audio('snd_guard_block', '/sfx/Coup/guard-block.wav')
+    this.load.audio('snd_counter', '/sfx/Coup/counter.wav')
     this.load.audio('snd_stun', '/sfx/stun.mp3')
-    this.load.audio('snd_clippy_hit', '/sfx/clippy-hit.mp3')
-    this.load.audio('snd_glitch_jab', '/sfx/glitch-jab.mp3')
-    this.load.audio('snd_glitch_hook', '/sfx/glitch-hook.mp3')
-    this.load.audio('snd_glitch_charge', '/sfx/glitch-charge.mp3')
-    this.load.audio('snd_charge_freeze', '/sfx/charge-freeze.mp3')
-    this.load.audio('snd_attack_warning', '/sfx/attack-warning.mp3')
-    this.load.audio('snd_yellow_flash', '/sfx/yellow-flash.mp3')
-    this.load.audio('snd_crowd_boo', '/sfx/crowd-boo.mp3')
-    this.load.audio('snd_crowd_cheer', '/sfx/crowd-cheer.mp3')
-    this.load.audio('snd_rose_catch', '/sfx/rose-catch.mp3')
-    this.load.audio('snd_phase_transition', '/sfx/phase-transition.mp3')
+    this.load.audio('snd_hit_left', '/sfx/Coup/coup reçu gauche.wav')
+    this.load.audio('snd_hit_right', '/sfx/Coup/coup reçu droite.wav')
+    this.load.audio('snd_star_earned', '/sfx/star earned.mp3')
+    this.load.audio('snd_stamina_low', '/sfx/stamina low.mp3')
+    this.load.audio('snd_dodge', '/sfx/esquive.wav')
+    this.load.audio('snd_glitch_jab', '/sfx/Glitch Jab.wav')
+    this.load.audio('snd_glitch_hook', '/sfx/glitch hook.mp3')
+    this.load.audio('snd_glitch_charge', '/sfx/glitch charge.wav')
+    this.load.audio('snd_charge_freeze', '/sfx/charge freeze.mp3')
+    this.load.audio('snd_attack_warning', '/sfx/attack warning.mp3')
+    this.load.audio('snd_yellow_flash', '/sfx/yellow flash.mp3')
+    this.load.audio('snd_crowd_boo1', '/sfx/Public/crowd-boo.wav')
+    this.load.audio('snd_crowd_boo2', '/sfx/Public/crowd-boo 2.wav')
+    this.load.audio('snd_crowd_cheer1', '/sfx/Public/crowd-cheer.wav')
+    this.load.audio('snd_crowd_cheer2', '/sfx/Public/crowd cheer 2.wav')
+    this.load.audio('snd_crowd_cheer3', '/sfx/Public/crowd cheer 3.wav')
+    this.load.audio('snd_crowd_whistle', '/sfx/Public/public siffle.wav')
+    this.load.audio('snd_rose_catch', '/sfx/rose catch.mp3')
+    this.load.audio('snd_phase_transition', '/sfx/phase-transition .wav')
   }
 
   // ── CREATE ───────────────────────────────────────────────────────────
@@ -372,6 +382,10 @@ export class PunchScene extends Phaser.Scene {
       this.updateTutorialUI(ctx)
     }
     this.staminaSys.update(ctx, dt)
+    if (ctx.player.isExhausted && !this.wasExhausted) {
+      this.snd('snd_stamina_low')
+    }
+    this.wasExhausted = ctx.player.isExhausted
     if (!ctx.tutorial.active) {
       this.clippyAI.update(ctx, dt)
     }
@@ -486,13 +500,16 @@ export class PunchScene extends Phaser.Scene {
           this.effectsR.popup('ÉTOURDI !', '#ffee22')
           break
 
-        case 'stun_hit':
-          this.snd('snd_clippy_hit')
+        case 'stun_hit': {
+          const hand = ctx.player.lastPunchHand
+          this.snd(hand === 'left' ? 'snd_hit_left' : 'snd_hit_right')
           if (ev.damage) this.effectsR.popup(`-${ev.damage}`, '#ffaa44')
           this.effectsR.shake(ctx, 4)
           break
+        }
 
         case 'star_earned':
+          this.snd('snd_star_earned')
           this.effectsR.popup('★', '#ffd700')
           break
 
@@ -510,6 +527,7 @@ export class PunchScene extends Phaser.Scene {
 
         case 'rose_catch':
           this.snd('snd_rose_catch')
+          this.snd('snd_crowd_whistle')
           this.staminaSys.restoreRose(ctx)
           this.effectsR.popup('+STAMINA', '#44ff88')
           break
@@ -653,7 +671,7 @@ export class PunchScene extends Phaser.Scene {
 
       this.staminaSys.spendDodge(ctx, isPerfect)
       ctx.player.state.isPerfectDodge = isPerfect
-      this.snd('snd_parry')
+      this.snd('snd_dodge')
       this.effectsR.flash(ctx, 0x44ff88, 0.25)
       this.gloveR.resetGloves()
 
@@ -862,7 +880,7 @@ export class PunchScene extends Phaser.Scene {
     this.effectsR.freezeFrame(ctx, 200)
     this.effectsR.slowMo(ctx, 0.3, 600)
     this.effectsR.popup('★ UPPERCUT ÉTOILE ★', '#ffd700')
-    this.snd('snd_hit')
+    this.snd('snd_counter')
     this.gloveR.animateStarPunch()
     this.hudR.setBubble(pickTaunt('counter', ctx.clippy.hp / CFG.clippy.maxHP))
   }
@@ -1107,10 +1125,11 @@ export class PunchScene extends Phaser.Scene {
           this.effectsR.shake(ctx, 8)
           this.effectsR.flash(ctx, 0xff6600, 0.3)
           this.effectsR.popup(`-${proj.damage}`, '#ff6600')
-          this.snd('snd_crowd_boo')
+          this.sndRandom(['snd_crowd_boo1', 'snd_crowd_boo2'])
           proj.active = false
         } else if (result === 'rose_catch') {
           this.combatSys.events.push({ type: 'rose_catch' })
+          this.sndRandom(['snd_crowd_cheer1', 'snd_crowd_cheer2', 'snd_crowd_cheer3'])
           proj.active = false
         }
       }
@@ -1177,6 +1196,11 @@ export class PunchScene extends Phaser.Scene {
 
   private snd(key: string) {
     try { this.sound.play(key, { volume: this.volume }) } catch {}
+  }
+
+  private sndRandom(keys: string[]) {
+    const key = keys[Math.floor(Math.random() * keys.length)]
+    this.snd(key)
   }
 
   private applyVolume() {
