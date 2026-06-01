@@ -487,17 +487,6 @@ export class PunchScene extends Phaser.Scene {
           break
 
         case 'hit':
-          this.snd('snd_hit')
-          if (ev.damage) {
-            this.effectsR.popup(`-${ev.damage}`, '#ff4444')
-            this.effectsR.shake(ctx, 8)
-          }
-          break
-
-        case 'stun_start':
-          this.snd('snd_stun')
-          this.gloveR.resetGloves()
-          this.effectsR.popup('ÉTOURDI !', '#ffee22')
           break
 
         case 'stun_hit': {
@@ -515,13 +504,21 @@ export class PunchScene extends Phaser.Scene {
 
         case 'error':
           if (!ctx.tutorial.active) {
+            const willBoo = (ctx.crowd.errorCount + 1) % CFG.crowd.errorThresholdProjectile === 0
             this.projectileSys.onError(ctx)
+            if (willBoo) {
+              this.sndRandom(['snd_crowd_boo1', 'snd_crowd_boo2'])
+            }
           }
           break
 
         case 'success':
           if (!ctx.tutorial.active) {
+            const willRose = ctx.crowd.successStreak + 1 >= CFG.crowd.successStreakRose
             this.projectileSys.onSuccess(ctx)
+            if (willRose) {
+              this.sndRandom(['snd_crowd_cheer1', 'snd_crowd_cheer2', 'snd_crowd_cheer3'])
+            }
           }
           break
 
@@ -843,6 +840,8 @@ export class PunchScene extends Phaser.Scene {
     }
 
     if (cs.action === 'stunned' && prev !== 'stunned') {
+      this.snd('snd_stun')
+      this.effectsR.popup('ÉTOURDI !', '#ffee22')
       this.gloveR.resetGloves()
     }
 
@@ -1125,11 +1124,10 @@ export class PunchScene extends Phaser.Scene {
           this.effectsR.shake(ctx, 8)
           this.effectsR.flash(ctx, 0xff6600, 0.3)
           this.effectsR.popup(`-${proj.damage}`, '#ff6600')
-          this.sndRandom(['snd_crowd_boo1', 'snd_crowd_boo2'])
+          this.snd('snd_hit')
           proj.active = false
         } else if (result === 'rose_catch') {
           this.combatSys.events.push({ type: 'rose_catch' })
-          this.sndRandom(['snd_crowd_cheer1', 'snd_crowd_cheer2', 'snd_crowd_cheer3'])
           proj.active = false
         }
       }
