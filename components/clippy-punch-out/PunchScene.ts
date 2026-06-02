@@ -676,12 +676,20 @@ export class PunchScene extends Phaser.Scene {
           this.combatSys.events.push({ type: 'star_earned' })
           ctx.player.stars = Math.min(3, ctx.player.stars + 1)
           this.combatSys.events.push({ type: 'success' })
+        } else if (cs.action === 'attack' || cs.action === 'charge_rush') {
+          isPerfect = true
+          cs.action = 'recovery'
+          cs.recoveryDuration = this.clippyAI.getRecovery(cs.attack!.type, ctx)
+          cs.timer = 0
+          this.clippyAI.onSeriesDodgeSuccess(ctx)
+          this.clippyAI.onMissedAttack(ctx)
+          this.combatSys.events.push({ type: 'success' })
         } else {
           const windUp = this.clippyAI.getWindUp(cs.attack.type, ctx)
           const blinkStart = Math.max(0, windUp - CFG.yellowBlink.startBeforeMs)
           const blinkEnd = blinkStart + CFG.yellowBlink.durationMs
 
-          if (cs.timer >= blinkStart && cs.timer <= blinkEnd) {
+          if (cs.timer >= blinkStart && cs.timer <= blinkEnd + 200) {
             isPerfect = true
             cs.action = 'recovery'
             cs.recoveryDuration = this.clippyAI.getRecovery(cs.attack!.type, ctx)
