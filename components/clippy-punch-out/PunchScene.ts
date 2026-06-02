@@ -94,6 +94,7 @@ export class PunchScene extends Phaser.Scene {
 
   private leanGraceTimer = 0
   private leanGraceDir: DodgeDirection | null = null
+  private staminaWarningShown = false
   private eyePulse = 0
   private introTimer = 0
   private prevClippyAction = 'idle'
@@ -264,9 +265,9 @@ export class PunchScene extends Phaser.Scene {
       wordWrap: { width: Math.round(W * 0.70) },
     }).setOrigin(0.5, 0).setDepth(9)
 
-    this.tAtkLabel = this.add.text(Math.round(W / 2), Math.round(H * 0.50), 'ESQUIVE', {
-      ...tf, fontSize: '19px', color: '#888899', align: 'center', strokeThickness: 3,
-    }).setOrigin(0.5, 1).setDepth(9).setAlpha(0)
+    this.tAtkLabel = this.add.text(Math.round(W / 2), Math.round(H * 0.08), 'ESQUIVE', {
+      ...tf, fontSize: '22px', color: '#ffcc44', align: 'center', strokeThickness: 4,
+    }).setOrigin(0.5, 0).setDepth(9).setAlpha(0)
 
     const keyLabels = ['← souris', '↓', 'souris →', 'clic D', 'clic G', '⎵']
     const kBoxW = Math.round(W * 0.09)
@@ -634,13 +635,19 @@ export class PunchScene extends Phaser.Scene {
       ctx.player.leanTime += ctx.dt
       const drainRate = CFG.player.lean.baseDrainPerSec * (1 + ctx.player.leanTime)
       ctx.player.stamina = Math.max(0, ctx.player.stamina - drainRate * ctx.dt)
+      if (ctx.player.leanTime >= 1.5 && !this.staminaWarningShown) {
+        this.staminaWarningShown = true
+        this.effectsR.popup('/!\\ Stamina !', '#ffaa22')
+      }
       if (ctx.player.stamina <= 0) {
         ctx.player.state.dodgeDir = null
         leanDir = null
         this.leanGraceDir = null
+        this.snd('snd_stamina_low')
       }
     } else if (leanDir === null) {
       ctx.player.leanTime = 0
+      this.staminaWarningShown = false
     }
 
     const ps = ctx.player.state
@@ -1145,8 +1152,8 @@ export class PunchScene extends Phaser.Scene {
       const px = proj.x + (proj.targetX - proj.x) * proj.progress
       const py = proj.y + (proj.targetY - proj.y) * proj.progress
 
-      const minSize = 12
-      const maxSize = 64
+      const minSize = 16
+      const maxSize = 96
       const size = minSize + (maxSize - minSize) * proj.progress
 
       spr.setTexture(this.getProjTextureKey(proj.type))

@@ -172,7 +172,7 @@ export const CFG = {
       popcorn:  { damage: 4, weight: 3 },
     },
     warningMs: 800,
-    travelMs: 600,
+    travelMs: 1600,
     roseClickMs: 2000,
     dodgeRewardStamina: 30,
     dodgeRewardHP: 20,
