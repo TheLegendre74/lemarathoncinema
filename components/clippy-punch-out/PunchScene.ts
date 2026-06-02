@@ -576,6 +576,10 @@ export class PunchScene extends Phaser.Scene {
     this.mouseRightClicked = false
     this.mouseLeftClicked = false
 
+    if ((jPr || kPr) && this.tryVolumeClick(this.virtualMouseX, this.virtualMouseY)) {
+      jPr = false; kPr = false
+    }
+
     if ((jPr || kPr) && ctx.roseSquare.active) {
       const px = this.virtualMouseX
       const py = this.virtualMouseY
@@ -1241,27 +1245,46 @@ export class PunchScene extends Phaser.Scene {
 
   private drawVolumeIndicator() {
     const g = this.gHUD
-    const x = this.W - 14
-    const y = Math.round(this.H * 0.50)
-    const barH = 60
-    const barW = 6
+    const x = this.W - 18
+    const y = Math.round(this.H * 0.45)
+    const barH = 80
+    const barW = 14
     const filled = Math.round(barH * this.volume)
     const label = this.volume <= 0 ? '🔇' : this.volume < 0.35 ? '🔈' : this.volume < 0.7 ? '🔉' : '🔊'
 
     g.fillStyle(0x0d0d1e, 0.7)
-    g.fillRoundedRect(x - barW, y, barW, barH, 3)
+    g.fillRoundedRect(x - barW, y, barW, barH, 4)
     if (filled > 0) {
       g.fillStyle(0x88aacc, 0.8)
-      g.fillRoundedRect(x - barW, y + barH - filled, barW, filled, 3)
+      g.fillRoundedRect(x - barW, y + barH - filled, barW, filled, 4)
     }
+    g.lineStyle(1, 0x88aacc, 0.4)
+    g.strokeRoundedRect(x - barW, y, barW, barH, 4)
 
     if (!this.tVol) {
       this.tVol = this.add.text(x - barW / 2, y - 14, label, {
-        fontFamily: FONT, fontSize: '14px', color: '#88aacc',
+        fontFamily: FONT, fontSize: '16px', color: '#88aacc',
         stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5, 0.5).setDepth(9)
     }
     this.tVol.setText(label)
+  }
+
+  private tryVolumeClick(mx: number, my: number): boolean {
+    const x = this.W - 18
+    const y = Math.round(this.H * 0.45)
+    const barH = 80
+    const barW = 14
+    const hitPad = 15
+    if (mx >= x - barW - hitPad && mx <= x + hitPad &&
+        my >= y - hitPad && my <= y + barH + hitPad) {
+      const clickY = Phaser.Math.Clamp(my, y, y + barH)
+      this.volume = 1 - (clickY - y) / barH
+      this.applyVolume()
+      try { localStorage.setItem('clippy_volume', this.volume.toFixed(2)) } catch {}
+      return true
+    }
+    return false
   }
 
   private tVol: Phaser.GameObjects.Text | null = null
