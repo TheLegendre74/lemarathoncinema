@@ -1,10 +1,10 @@
 export const CFG = {
   player: {
     maxHP: 100,
-    maxStamina: 100,
+    maxStamina: 120,
 
     stamina: {
-      regenPerSec: 5,
+      regenPerSec: 6,
       costDodge: 6,
       costDodgePerfect: 0,
       costHitStun: 5,
@@ -49,7 +49,7 @@ export const CFG = {
     lean: {
       zoneThreshold: 0.15,
       graceMs: 150,
-      baseDrainPerSec: 10,
+      baseDrainPerSec: 5,
     },
 
     starPunch: {
