@@ -450,7 +450,7 @@ export class PunchScene extends Phaser.Scene {
       if (this.yellowFlashTimer >= 100) {
         this.yellowFlashTimer = 0
         this.yellowFlashCount++
-        if (this.yellowFlashCount >= 7) {
+        if (this.yellowFlashCount >= 10) {
           this.yellowFlashActive = false
           this.sprClipy.clearTint()
         } else {

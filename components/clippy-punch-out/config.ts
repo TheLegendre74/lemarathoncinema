@@ -4,7 +4,7 @@ export const CFG = {
     maxStamina: 100,
 
     stamina: {
-      regenPerSec: 3,
+      regenPerSec: 3.45,
       costDodge: 6,
       costDodgePerfect: 0,
       costHitStun: 5,
@@ -48,7 +48,7 @@ export const CFG = {
 
     lean: {
       zoneThreshold: 0.25,
-      baseDrainPerSec: 15,
+      baseDrainPerSec: 10,
     },
 
     starPunch: {
@@ -60,9 +60,9 @@ export const CFG = {
   clippy: {
     maxHP: 140,
 
-    jab: { damage: 5, recovery: 150 },
+    jab: { damage: 5, recovery: 300 },
     hook: { damage: 12, recovery: 300 },
-    charge: { damage: 22, recovery: 600 },
+    charge: { damage: 22, recovery: 300 },
 
     counterPunchDamage: 8,
 
@@ -113,7 +113,7 @@ export const CFG = {
 
   yellowBlink: {
     startBeforeMs: 1000,
-    durationMs: 700,
+    durationMs: 1000,
   },
 
   tells: {
@@ -127,10 +127,10 @@ export const CFG = {
   },
 
   windUp: {
-    jabP1: 2400,
-    hookP1: 2700,
-    jabP2: 1900,
-    hookP2: 2100,
+    jabP1: 2000,
+    hookP1: 2200,
+    jabP2: 1600,
+    hookP2: 1800,
   },
 
   charge: {
@@ -144,12 +144,12 @@ export const CFG = {
     comboMaxP1: 5,
     comboMinP2: 3,
     comboMaxP2: 7,
-    delayBetweenAttacksP1: 900,
-    delayBetweenAttacksP2: 650,
-    idleDelayMinP1: 1800,
-    idleDelayMaxP1: 2800,
-    idleDelayMinP2: 1200,
-    idleDelayMaxP2: 2000,
+    delayBetweenAttacksP1: 700,
+    delayBetweenAttacksP2: 500,
+    idleDelayMinP1: 1400,
+    idleDelayMaxP1: 2200,
+    idleDelayMinP2: 900,
+    idleDelayMaxP2: 1600,
   },
 
   distribution: {
