@@ -157,6 +157,7 @@ export class CombatSystem {
   // ── Clippy attack hit check ──────────────────────────────────────────
 
   checkClippyAttackHit(ctx: GameContext) {
+    if (ctx.tutorial.active) return
     const cs = ctx.clippy.state
     if (cs.action !== 'attack' && cs.action !== 'charge_rush') return
     if (!cs.attack) return
