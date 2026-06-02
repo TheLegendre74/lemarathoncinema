@@ -265,25 +265,11 @@ export class PunchScene extends Phaser.Scene {
       wordWrap: { width: Math.round(W * 0.70) },
     }).setOrigin(0.5, 0).setDepth(9)
 
-    this.tAtkLabel = this.add.text(Math.round(W / 2), Math.round(H * 0.08), 'ESQUIVE', {
-      ...tf, fontSize: '22px', color: '#ffcc44', align: 'center', strokeThickness: 4,
-    }).setOrigin(0.5, 0).setDepth(9).setAlpha(0)
+    this.tAtkLabel = this.add.text(0, 0, '', {
+      ...tf, fontSize: '1px', color: '#000000',
+    }).setDepth(0).setAlpha(0)
 
-    const keyLabels = ['Souris = Esquive', 'Clic D = Jab', 'Clic G = Lourd']
-    const kBoxW = Math.round(W * 0.18)
-    const kBoxH = Math.round(H * 0.055)
-    const kGap = Math.round(W * 0.015)
-    const kTotalW = keyLabels.length * kBoxW + (keyLabels.length - 1) * kGap
-    const kStartX = (W - kTotalW) / 2
-    const kY2 = Math.round(H * 0.04)
-    this.tK = keyLabels.map((lbl, i) => {
-      const bx = kStartX + i * (kBoxW + kGap) + kBoxW / 2
-      return this.add.text(bx, kY2, lbl, {
-        fontFamily: FONT, fontSize: `${Math.round(H * 0.028)}px`,
-        color: '#aaaacc', align: 'center', fontStyle: 'bold',
-        stroke: '#000', strokeThickness: 3,
-      }).setOrigin(0.5, 0.5).setDepth(10)
-    })
+    this.tK = []
 
     const kb = this.input.keyboard!
     this.kLeft = kb.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT)
@@ -437,6 +423,7 @@ export class PunchScene extends Phaser.Scene {
     this.effectsR.update(ctx, rawDt)
     this.effectsR.draw(ctx)
     this.hudR.draw(ctx)
+    this.drawDodgeArrow(ctx)
     this.drawVolumeIndicator()
     this.drawProjectiles(ctx)
     this.drawMobileButtons()
@@ -808,18 +795,15 @@ export class PunchScene extends Phaser.Scene {
         this.snd(glitchSnd)
 
         if (cs.action === 'feint_telegraph') {
-          this.hudR.setRound('FEINTE ?', '#ff8800')
+          void 0
         } else {
-          const label = cs.attack.type === 'charge' ? 'CHARGE !'
-            : cs.attack.type === 'hook' ? 'CROCHET' : ''
-          this.hudR.setRound(label, cs.attack.type === 'charge' ? '#ff2222' : '#ffcc44')
+          void 0
         }
       }
     }
 
     if (cs.action === 'charge_recoil' && prev !== 'charge_recoil') {
       this.snd('snd_glitch_charge')
-      this.hudR.setRound('CHARGE !', '#ff2222')
       this.hudR.setBubble('')
     }
 
@@ -833,13 +817,11 @@ export class PunchScene extends Phaser.Scene {
     if (cs.action === 'charge_rush' && prev !== 'charge_rush') {
       this.gloveR.animateAttack(ctx)
       this.snd('snd_swoosh')
-      this.hudR.flashNow('!')
     }
 
     if (cs.action === 'attack' && prev !== 'attack') {
       this.gloveR.animateAttack(ctx)
       this.snd('snd_swoosh')
-      this.hudR.flashNow('!')
     }
 
     if (cs.action === 'feint_cancel' && prev !== 'feint_cancel') {
@@ -1281,6 +1263,52 @@ export class PunchScene extends Phaser.Scene {
   }
 
   private tVol: Phaser.GameObjects.Text | null = null
+
+  private drawDodgeArrow(ctx: GameContext) {
+    const cs = ctx.clippy.state
+    if (cs.action !== 'telegraph' && cs.action !== 'attack'
+        && cs.action !== 'charge_recoil' && cs.action !== 'charge_freeze'
+        && cs.action !== 'charge_rush') return
+    if (!cs.attack) return
+
+    const g = this.gHUD
+    const cx = this.clippyScreenPos.x
+    const cy = this.clippyScreenPos.y
+    const correctDir = REQUIRED_DODGE[cs.attack.side]
+    const pulse = 0.7 + 0.3 * Math.sin(ctx.totalTime * 0.008)
+
+    const arrowSize = 18
+    const offset = 55
+
+    g.fillStyle(0xffcc00, pulse)
+    g.lineStyle(2, 0xff8800, pulse)
+
+    if (correctDir === 'right') {
+      const ax = cx - offset
+      const ay = cy
+      g.beginPath()
+      g.moveTo(ax + arrowSize, ay)
+      g.lineTo(ax - arrowSize * 0.5, ay - arrowSize * 0.7)
+      g.lineTo(ax - arrowSize * 0.5, ay + arrowSize * 0.7)
+      g.closePath(); g.fillPath(); g.strokePath()
+    } else if (correctDir === 'left') {
+      const ax = cx + offset
+      const ay = cy
+      g.beginPath()
+      g.moveTo(ax - arrowSize, ay)
+      g.lineTo(ax + arrowSize * 0.5, ay - arrowSize * 0.7)
+      g.lineTo(ax + arrowSize * 0.5, ay + arrowSize * 0.7)
+      g.closePath(); g.fillPath(); g.strokePath()
+    } else {
+      const ax = cx
+      const ay = cy - offset
+      g.beginPath()
+      g.moveTo(ax, ay + arrowSize)
+      g.lineTo(ax - arrowSize * 0.7, ay - arrowSize * 0.5)
+      g.lineTo(ax + arrowSize * 0.7, ay - arrowSize * 0.5)
+      g.closePath(); g.fillPath(); g.strokePath()
+    }
+  }
 
   private drawCustomCursor() {
     const g = this.gHUD
