@@ -606,7 +606,7 @@ export class PunchScene extends Phaser.Scene {
     const prevLean = ctx.player.state.dodgeDir
     ctx.player.state.dodgeDir = leanDir
 
-    if (leanDir !== null && ctx.player.stamina > 0) {
+    if (leanDir !== null && ctx.player.stamina > 0 && !ctx.tutorial.active) {
       ctx.player.leanTime += ctx.dt
       const drainRate = CFG.player.lean.baseDrainPerSec * (1 + ctx.player.leanTime)
       ctx.player.stamina = Math.max(0, ctx.player.stamina - drainRate * ctx.dt)
@@ -729,98 +729,20 @@ export class PunchScene extends Phaser.Scene {
 
   private handleTutorialInput(
     ctx: GameContext,
-    lPr: boolean, rPr: boolean, dPr: boolean,
+    _lPr: boolean, _rPr: boolean, _dPr: boolean,
     jPr: boolean, kPr: boolean, _spaceDown: boolean,
   ) {
-    const step = this.tutorialSys.getCurrentStep(ctx)
-    if (!step) return
-    if (step.expect === 'none') return
-
-    const cs = ctx.clippy.state
-
-    if (step.expect === 'jab' || step.expect === 'heavy') {
-      if (jPr || kPr) {
+    if (jPr || kPr) {
+      const step = this.tutorialSys.getCurrentStep(ctx)
+      if (step && (step.expect === 'jab' || (step.expect === 'dodge_punish' && this.tutorialSys.isDodgePunishWaitingHit()))) {
         ctx.player.lastPunchHand = ctx.player.lastPunchHand === 'right' ? 'left' : 'right'
         this.gloveR.punchGlove(ctx.player.lastPunchHand)
-        this.tutorialSys.onSuccess(ctx)
-        this.effectsR.popup('BIEN !', '#44ff88')
-        this.effectsR.flash(ctx, 0x44ff88, 0.3)
+        this.tutorialSys.onPunch(ctx)
+        const label = step.expect === 'jab' ? 'BIEN !' : 'COMBO !'
+        const color = step.expect === 'jab' ? '#44ff88' : '#ffee22'
+        this.effectsR.popup(label, color)
+        this.effectsR.flash(ctx, step.expect === 'jab' ? 0x44ff88 : 0xffee22, 0.4)
       }
-      return
-    }
-
-    if (step.expect === 'guard') {
-      if (_spaceDown) {
-        this.tutorialSys.onSuccess(ctx)
-        this.effectsR.popup('GARDÉ !', '#44ff88')
-        this.effectsR.flash(ctx, 0x4488ff, 0.3)
-      }
-      return
-    }
-
-    if (step.expect === 'dodge_punish') {
-      if (this.tutorialSys.isDodgePunishWaitingHit()) {
-        if (jPr || kPr) {
-          ctx.player.lastPunchHand = ctx.player.lastPunchHand === 'right' ? 'left' : 'right'
-          this.gloveR.punchGlove(ctx.player.lastPunchHand)
-          this.tutorialSys.onSuccess(ctx)
-          this.effectsR.popup('COMBO !', '#ffee22')
-          this.effectsR.flash(ctx, 0xffee22, 0.4)
-        }
-        return
-      }
-
-      if (cs.action !== 'telegraph' && cs.action !== 'attack') return
-
-      let pressed: DodgeDirection | null = null
-      if (lPr) pressed = 'left'
-      else if (rPr) pressed = 'right'
-      else if (dPr) pressed = 'down'
-      if (!pressed) return
-
-      if (cs.attack) {
-        const correctDir = REQUIRED_DODGE[cs.attack.side]
-        if (pressed === correctDir) {
-          ctx.player.state.action = 'dodge'
-          ctx.player.state.dodgeDir = pressed
-          ctx.player.state.timer = 0
-          this.snd('snd_dodge')
-          this.tutorialSys.onDodgePunishDodge(ctx)
-          this.effectsR.popup('ESQUIVÉ !', '#44ff88')
-          this.effectsR.flash(ctx, 0x44ff88, 0.3)
-          this.gloveR.resetGloves()
-        } else {
-          this.tutorialSys.onFail(ctx)
-        }
-      }
-      return
-    }
-
-    if (cs.action !== 'telegraph' && cs.action !== 'attack') return
-
-    const expectedDodge = step.expect === 'dodge_right' ? 'right'
-      : step.expect === 'dodge_left' ? 'left'
-      : step.expect === 'duck' ? 'down' : null
-
-    if (!expectedDodge) return
-
-    let pressed: DodgeDirection | null = null
-    if (lPr) pressed = 'left'
-    else if (rPr) pressed = 'right'
-    else if (dPr) pressed = 'down'
-    if (!pressed) return
-
-    if (pressed === expectedDodge) {
-      ctx.player.state.action = 'dodge'
-      ctx.player.state.dodgeDir = pressed
-      ctx.player.state.timer = 0
-      this.snd('snd_dodge')
-      this.tutorialSys.onSuccess(ctx)
-      this.effectsR.popup('ESQUIVÉ !', '#44ff88')
-      this.effectsR.flash(ctx, 0x44ff88, 0.3)
-      this.gloveR.resetGloves()
-    } else {
-      this.tutorialSys.onFail(ctx)
     }
   }
 
