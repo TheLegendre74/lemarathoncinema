@@ -167,9 +167,9 @@ export const CFG = {
 
   projectiles: {
     types: {
-      can:     { damage: 6, weight: 3 },
-      tomato:  { damage: 4, weight: 3 },
-      popcorn: { damage: 5, weight: 2 },
+      can:      { damage: 6, weight: 3 },
+      keyboard: { damage: 8, weight: 2 },
+      popcorn:  { damage: 4, weight: 3 },
     },
     warningMs: 800,
     travelMs: 600,

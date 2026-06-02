@@ -154,6 +154,11 @@ export class PunchScene extends Phaser.Scene {
     this.load.audio('snd_crowd_whistle', '/sfx/Public/public siffle.wav')
     this.load.audio('snd_rose_catch', '/sfx/rose catch.mp3')
     this.load.audio('snd_phase_transition', '/sfx/phase-transition .wav')
+
+    this.load.image('proj_canette', '/sprites/public/canette.png')
+    this.load.image('proj_clavier', '/sprites/public/clavier.png')
+    this.load.image('proj_popcorn', '/sprites/public/popcorn.png')
+    this.load.image('proj_rose', '/sprites/public/rose.png')
   }
 
   // ── CREATE ───────────────────────────────────────────────────────────
@@ -1098,41 +1103,62 @@ export class PunchScene extends Phaser.Scene {
 
   // ── PROJECTILE RENDERING ─────────────────────────────────────────────
 
+  private projSprites: Phaser.GameObjects.Image[] = []
+  private roseSprite: Phaser.GameObjects.Image | null = null
+
+  private getProjTextureKey(type: string): string {
+    switch (type) {
+      case 'can': return 'proj_canette'
+      case 'keyboard': return 'proj_clavier'
+      case 'popcorn': return 'proj_popcorn'
+      default: return 'proj_canette'
+    }
+  }
+
   private drawProjectiles(ctx: GameContext) {
     this.gProj.clear()
 
     if (ctx.roseSquare.active) {
       const r = ctx.roseSquare
-      const size = 96
-      const pulse = 0.8 + 0.2 * Math.sin(r.timer * 0.015)
-      this.gProj.fillStyle(0xff2266, 0.85 * pulse)
-      this.gProj.fillRoundedRect(r.x - size / 2, r.y - size / 2, size, size, 10)
-      this.gProj.lineStyle(4, 0xff88aa, 0.9)
-      this.gProj.strokeRoundedRect(r.x - size / 2, r.y - size / 2, size, size, 10)
-      this.gProj.fillStyle(0xffffff, 0.9)
-      this.gProj.fillCircle(r.x, r.y, 16)
-      this.gProj.fillStyle(0xff2266, 0.9)
-      this.gProj.fillCircle(r.x, r.y, 10)
+      if (!this.roseSprite) {
+        this.roseSprite = this.add.image(r.x, r.y, 'proj_rose').setDepth(6)
+      }
+      this.roseSprite.setVisible(true).setPosition(r.x, r.y)
+      const pulse = 0.9 + 0.1 * Math.sin(r.timer * 0.015)
+      this.roseSprite.setDisplaySize(96 * pulse, 96 * pulse)
+      this.gProj.lineStyle(3, 0xff88aa, 0.7)
+      this.gProj.strokeRoundedRect(r.x - 50, r.y - 50, 100, 100, 10)
+    } else if (this.roseSprite) {
+      this.roseSprite.setVisible(false)
     }
 
-    for (const proj of ctx.projectiles) {
-      if (!proj.active) continue
+    while (this.projSprites.length < ctx.projectiles.length) {
+      const spr = this.add.image(0, 0, 'proj_canette').setDepth(6).setVisible(false)
+      this.projSprites.push(spr)
+    }
+
+    for (let i = 0; i < this.projSprites.length; i++) {
+      const proj = ctx.projectiles[i]
+      const spr = this.projSprites[i]
+      if (!proj || !proj.active) { spr.setVisible(false); continue }
+
       const px = proj.x + (proj.targetX - proj.x) * proj.progress
       const py = proj.y + (proj.targetY - proj.y) * proj.progress
 
-      let color: number
-      let size: number
-      switch (proj.type) {
-        case 'can': color = 0xaaaaaa; size = 26; break
-        case 'tomato': color = 0xcc2222; size = 30; break
-        case 'popcorn': color = 0xffcc44; size = 40; break
-        default: color = 0xaaaaaa; size = 26
-      }
+      const minSize = 12
+      const maxSize = 64
+      const size = minSize + (maxSize - minSize) * proj.progress
 
-      this.gProj.fillStyle(color, 0.9)
-      this.gProj.fillRoundedRect(px - size / 2, py - size / 2, size, size * 0.7, 3)
-      this.gProj.lineStyle(1.5, 0xffffff, 0.4)
-      this.gProj.strokeRoundedRect(px - size / 2, py - size / 2, size, size * 0.7, 3)
+      spr.setTexture(this.getProjTextureKey(proj.type))
+      spr.setVisible(true).setPosition(px, py).setDisplaySize(size, size)
+
+      const dodgeZone = proj.progress >= 0.6
+      if (dodgeZone) {
+        const blinkPhase = Math.floor(proj.progress * 20) % 2 === 0
+        spr.setTint(blinkPhase ? 0xff3333 : 0xffffff)
+      } else {
+        spr.clearTint()
+      }
 
       if (proj.progress >= 0.85 && proj.active) {
         const result = this.projectileSys.checkHit(ctx, proj)
@@ -1142,6 +1168,7 @@ export class PunchScene extends Phaser.Scene {
           this.effectsR.popup(`-${proj.damage}`, '#ff6600')
           this.snd('snd_hit')
           proj.active = false
+          spr.setVisible(false)
         } else if (result === 'dodged') {
           this.staminaSys.rewardProjectileDodge(ctx)
           const stRatio = ctx.player.stamina / CFG.player.maxStamina
@@ -1153,6 +1180,7 @@ export class PunchScene extends Phaser.Scene {
           this.effectsR.flash(ctx, 0x44aaff, 0.2)
           this.snd('snd_dodge')
           proj.active = false
+          spr.setVisible(false)
         }
       }
     }

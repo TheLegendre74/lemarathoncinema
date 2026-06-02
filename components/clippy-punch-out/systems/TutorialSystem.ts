@@ -80,6 +80,16 @@ const STEPS: TutStep[] = [
     clippyAttack: { type: 'hook', side: 'left' },
     expect: 'dodge_punish',
   },
+  {
+    id: 'crowd_info',
+    title: 'LE PUBLIC',
+    instruction: '3 esquives réussies → le public lance une ROSE.\nCliquez dessus pour récupérer de la stamina !\n3 erreurs → il jette des OBJETS à esquiver.\nLes objets clignotent ROUGE = esquivez !',
+    hint: '',
+    missMsg: '',
+    clippyAttack: null,
+    expect: 'none',
+    autoAdvanceMs: 6000,
+  },
 ]
 
 export class TutorialSystem {

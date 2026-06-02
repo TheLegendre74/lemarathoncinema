@@ -71,7 +71,7 @@ export type CombatPhase = 1 | 2
 
 // ─── Projectiles ─────────────────────────────────────────────────────
 
-export type ProjectileType = 'can' | 'tomato' | 'popcorn' | 'rose'
+export type ProjectileType = 'can' | 'keyboard' | 'popcorn' | 'rose'
 
 export interface Projectile {
   type: ProjectileType
