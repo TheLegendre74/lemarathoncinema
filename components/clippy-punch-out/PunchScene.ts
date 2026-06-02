@@ -292,13 +292,15 @@ export class PunchScene extends Phaser.Scene {
     this.kSpace = kb.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
 
     this.input.mouse?.disableContextMenu()
-    this.game.canvas.style.cursor = 'none'
     this.prevMouseX = this.input.activePointer.x
     this.prevMouseY = this.input.activePointer.y
     this.virtualMouseX = W / 2
     this.virtualMouseY = H / 2
 
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (!this.input.mouse?.locked) {
+        this.input.mouse?.requestPointerLock()
+      }
       if (pointer.leftButtonDown()) this.mouseLeftClicked = true
       if (pointer.rightButtonDown()) this.mouseRightClicked = true
     })
@@ -575,8 +577,8 @@ export class PunchScene extends Phaser.Scene {
     this.mouseLeftClicked = false
 
     if ((jPr || kPr) && ctx.roseSquare.active) {
-      const px = this.input.activePointer.x
-      const py = this.input.activePointer.y
+      const px = this.virtualMouseX
+      const py = this.virtualMouseY
       if (this.projectileSys.tryClickRose(ctx, px, py)) {
         this.staminaSys.restoreRose(ctx)
         this.snd('snd_rose_catch')
@@ -602,8 +604,16 @@ export class PunchScene extends Phaser.Scene {
     }
     if (this.mobileSys.isGuardHeld()) spaceDown = true
 
-    const mouseX = Phaser.Math.Clamp(this.input.activePointer.x, 0, this.W)
-    const mouseY = Phaser.Math.Clamp(this.input.activePointer.y, 0, this.H)
+    const pointer = this.input.activePointer
+    if (this.input.mouse?.locked) {
+      this.virtualMouseX = Phaser.Math.Clamp(this.virtualMouseX + pointer.movementX, 0, this.W)
+      this.virtualMouseY = Phaser.Math.Clamp(this.virtualMouseY + pointer.movementY, 0, this.H)
+    } else {
+      this.virtualMouseX = Phaser.Math.Clamp(pointer.x, 0, this.W)
+      this.virtualMouseY = Phaser.Math.Clamp(pointer.y, 0, this.H)
+    }
+    const mouseX = this.virtualMouseX
+    const mouseY = this.virtualMouseY
     this.prevMouseX = mouseX
     this.prevMouseY = mouseY
     const th = CFG.player.lean.zoneThreshold
@@ -1258,8 +1268,8 @@ export class PunchScene extends Phaser.Scene {
 
   private drawCustomCursor() {
     const g = this.gHUD
-    const mx = Phaser.Math.Clamp(this.input.activePointer.x, 0, this.W)
-    const my = Phaser.Math.Clamp(this.input.activePointer.y, 0, this.H)
+    const mx = this.virtualMouseX
+    const my = this.virtualMouseY
     const s = 8
     g.lineStyle(2, 0xffffff, 0.8)
     g.beginPath()
@@ -1351,7 +1361,7 @@ export class PunchScene extends Phaser.Scene {
   shutdown() {
     try { this.bgMusic?.pause(); this.bgMusic = null } catch {}
     if (this.stunSound) { try { this.stunSound.stop(); this.stunSound.destroy() } catch {} this.stunSound = null }
-    try { this.game.canvas.style.cursor = 'default' } catch {}
+    try { if (this.input.mouse?.locked) this.input.mouse.releasePointerLock() } catch {}
     this.effectsR.cleanup()
     this.mobileSys.destroy()
   }
