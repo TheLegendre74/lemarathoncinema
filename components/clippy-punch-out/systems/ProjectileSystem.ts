@@ -74,7 +74,7 @@ export class ProjectileSystem {
   tryClickRose(ctx: GameContext, px: number, py: number): boolean {
     const r = ctx.roseSquare
     if (!r.active) return false
-    const size = 60
+    const size = 96
     if (px >= r.x - size / 2 && px <= r.x + size / 2 &&
         py >= r.y - size / 2 && py <= r.y + size / 2) {
       r.active = false

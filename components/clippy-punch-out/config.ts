@@ -47,7 +47,8 @@ export const CFG = {
     },
 
     lean: {
-      zoneThreshold: 0.25,
+      zoneThreshold: 0.15,
+      graceMs: 150,
       baseDrainPerSec: 10,
     },
 
@@ -172,7 +173,7 @@ export const CFG = {
     },
     warningMs: 800,
     travelMs: 600,
-    roseClickMs: 800,
+    roseClickMs: 2000,
     dodgeRewardStamina: 30,
     dodgeRewardHP: 20,
     dodgeRewardHPThreshold: 0.8,

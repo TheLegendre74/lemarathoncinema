@@ -90,6 +90,8 @@ export class PunchScene extends Phaser.Scene {
   private bgMusic: HTMLAudioElement | null = null
   private stunSound: Phaser.Sound.BaseSound | null = null
 
+  private leanGraceTimer = 0
+  private leanGraceDir: DodgeDirection | null = null
   private eyePulse = 0
   private introTimer = 0
   private prevClippyAction = 'idle'
@@ -603,7 +605,18 @@ export class PunchScene extends Phaser.Scene {
       leanDir = 'down'
     }
 
-    const prevLean = ctx.player.state.dodgeDir
+    if (leanDir !== null) {
+      this.leanGraceDir = leanDir
+      this.leanGraceTimer = 0
+    } else if (this.leanGraceDir !== null) {
+      this.leanGraceTimer += ctx.dt * 1000
+      if (this.leanGraceTimer < CFG.player.lean.graceMs) {
+        leanDir = this.leanGraceDir
+      } else {
+        this.leanGraceDir = null
+      }
+    }
+
     ctx.player.state.dodgeDir = leanDir
 
     if (leanDir !== null && ctx.player.stamina > 0 && !ctx.tutorial.active) {
@@ -613,6 +626,7 @@ export class PunchScene extends Phaser.Scene {
       if (ctx.player.stamina <= 0) {
         ctx.player.state.dodgeDir = null
         leanDir = null
+        this.leanGraceDir = null
       }
     } else if (leanDir === null) {
       ctx.player.leanTime = 0
@@ -1083,16 +1097,16 @@ export class PunchScene extends Phaser.Scene {
 
     if (ctx.roseSquare.active) {
       const r = ctx.roseSquare
-      const size = 60
+      const size = 96
       const pulse = 0.8 + 0.2 * Math.sin(r.timer * 0.015)
       this.gProj.fillStyle(0xff2266, 0.85 * pulse)
-      this.gProj.fillRoundedRect(r.x - size / 2, r.y - size / 2, size, size, 8)
-      this.gProj.lineStyle(3, 0xff88aa, 0.9)
-      this.gProj.strokeRoundedRect(r.x - size / 2, r.y - size / 2, size, size, 8)
+      this.gProj.fillRoundedRect(r.x - size / 2, r.y - size / 2, size, size, 10)
+      this.gProj.lineStyle(4, 0xff88aa, 0.9)
+      this.gProj.strokeRoundedRect(r.x - size / 2, r.y - size / 2, size, size, 10)
       this.gProj.fillStyle(0xffffff, 0.9)
-      this.gProj.fillCircle(r.x, r.y, 10)
+      this.gProj.fillCircle(r.x, r.y, 16)
       this.gProj.fillStyle(0xff2266, 0.9)
-      this.gProj.fillCircle(r.x, r.y, 6)
+      this.gProj.fillCircle(r.x, r.y, 10)
     }
 
     for (const proj of ctx.projectiles) {
@@ -1103,10 +1117,10 @@ export class PunchScene extends Phaser.Scene {
       let color: number
       let size: number
       switch (proj.type) {
-        case 'can': color = 0xaaaaaa; size = 16; break
-        case 'tomato': color = 0xcc2222; size = 19; break
-        case 'popcorn': color = 0xffcc44; size = 26; break
-        default: color = 0xaaaaaa; size = 16
+        case 'can': color = 0xaaaaaa; size = 26; break
+        case 'tomato': color = 0xcc2222; size = 30; break
+        case 'popcorn': color = 0xffcc44; size = 40; break
+        default: color = 0xaaaaaa; size = 26
       }
 
       this.gProj.fillStyle(color, 0.9)
