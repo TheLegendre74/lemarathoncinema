@@ -173,6 +173,8 @@ export class CombatSystem {
     const ps = ctx.player.state
     if (ps.action === 'dodge') {
       this.ai.onMissedAttack(ctx)
+      this.ai.onSeriesDodgeSuccess(ctx)
+      this.events.push({ type: 'success' })
       cs.action = 'recovery'
       cs.recoveryDuration = this.ai.getRecovery(attackType, ctx)
       cs.timer = 0

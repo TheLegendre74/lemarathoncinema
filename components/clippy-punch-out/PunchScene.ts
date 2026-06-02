@@ -691,12 +691,6 @@ export class PunchScene extends Phaser.Scene {
 
           if (cs.timer >= blinkStart && cs.timer <= blinkEnd + 200) {
             isPerfect = true
-            cs.action = 'recovery'
-            cs.recoveryDuration = this.clippyAI.getRecovery(cs.attack!.type, ctx)
-            cs.timer = 0
-            this.clippyAI.onSeriesDodgeSuccess(ctx)
-            this.clippyAI.onMissedAttack(ctx)
-            this.combatSys.events.push({ type: 'success' })
           } else {
             this.applyCounterPunch(ctx)
             return
@@ -1188,10 +1182,10 @@ export class PunchScene extends Phaser.Scene {
       let color: number
       let size: number
       switch (proj.type) {
-        case 'can': color = 0xaaaaaa; size = 10; break
-        case 'tomato': color = 0xcc2222; size = 12; break
-        case 'popcorn': color = 0xffcc44; size = 16; break
-        default: color = 0xaaaaaa; size = 10
+        case 'can': color = 0xaaaaaa; size = 16; break
+        case 'tomato': color = 0xcc2222; size = 19; break
+        case 'popcorn': color = 0xffcc44; size = 26; break
+        default: color = 0xaaaaaa; size = 16
       }
 
       this.gProj.fillStyle(color, 0.9)

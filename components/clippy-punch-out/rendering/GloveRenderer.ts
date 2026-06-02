@@ -67,7 +67,9 @@ export class GloveRenderer {
       const t = Math.min(1, ps.timer / CFG.player.dodge.totalMs)
 
       let ease: number
-      if (t < 0.25) ease = 1 - Math.pow(1 - t / 0.25, 3)
+      if (ps.isPerfectDodge && t >= 1) {
+        ease = 1
+      } else if (t < 0.25) ease = 1 - Math.pow(1 - t / 0.25, 3)
       else if (t < 0.65) ease = 1
       else ease = Math.pow(1 - (t - 0.65) / 0.35, 2)
 

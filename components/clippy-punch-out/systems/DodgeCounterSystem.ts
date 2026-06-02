@@ -46,6 +46,10 @@ export class DodgeCounterSystem {
 
     ps.timer += dt * 1000
     if (ps.timer >= CFG.player.dodge.totalMs) {
+      if (ps.isPerfectDodge) {
+        const cs = ctx.clippy.state
+        if (cs.action === 'telegraph' || cs.action === 'attack') return
+      }
       ps.action = 'idle'
       ps.timer = 0
       ps.dodgeDir = null
