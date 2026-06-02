@@ -13,7 +13,7 @@ interface TutStep {
   autoAdvanceMs?: number
 }
 
-const TUT_WIND_UP = 3000
+const TUT_WIND_UP = 2000
 
 const STEPS: TutStep[] = [
   {

@@ -435,7 +435,7 @@ export class PunchScene extends Phaser.Scene {
   private updateTellTiming(ctx: GameContext, dt: number) {
     const cs = ctx.clippy.state
 
-    if (cs.action === 'telegraph' && cs.attack && !ctx.tutorial.active) {
+    if (cs.action === 'telegraph' && cs.attack) {
       const windUp = this.clippyAI.getWindUp(cs.attack.type, ctx)
       const blinkStart = Math.max(0, windUp - CFG.yellowBlink.startBeforeMs)
 
@@ -784,11 +784,6 @@ export class PunchScene extends Phaser.Scene {
         const windUp = this.clippyAI.getWindUp(cs.attack.type, ctx)
         this.gloveR.animateTelegraph(ctx, cs.attack.type, windUp, amp)
         this.hudR.setBubble('')
-
-        if (ctx.tutorial.active) {
-          this.startYellowFlash()
-          this.snd('snd_yellow_flash')
-        }
 
         const glitchSnd = cs.attack.type === 'jab' ? 'snd_glitch_jab'
           : cs.attack.type === 'hook' ? 'snd_glitch_hook' : 'snd_glitch_jab'
@@ -1276,8 +1271,8 @@ export class PunchScene extends Phaser.Scene {
     const correctDir = REQUIRED_DODGE[cs.attack.side]
     const pulse = 0.7 + 0.3 * Math.sin(ctx.totalTime * 0.008)
 
-    const arrowSize = 18
-    const offset = 55
+    const arrowSize = 27
+    const offset = 65
 
     g.fillStyle(0xffcc00, pulse)
     g.lineStyle(2, 0xff8800, pulse)
