@@ -859,7 +859,14 @@ export class PunchScene extends Phaser.Scene {
       this.gloveR.resetGloves()
     }
 
+    if (prev === 'attack' || prev === 'charge_rush') {
+      if (cs.action !== 'attack' && cs.action !== 'charge_rush') {
+        this.gloveR.resetGloves()
+      }
+    }
+
     if (cs.action === 'idle' && prev !== 'idle') {
+      this.gloveR.resetGloves()
       this.hudR.setBubble(pickTaunt('idle', ctx.clippy.hp / CFG.clippy.maxHP))
     }
 

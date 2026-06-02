@@ -49,7 +49,7 @@ export const CFG = {
     lean: {
       zoneThreshold: 0.15,
       graceMs: 150,
-      baseDrainPerSec: 5,
+      baseDrainPerSec: 10,
     },
 
     starPunch: {
