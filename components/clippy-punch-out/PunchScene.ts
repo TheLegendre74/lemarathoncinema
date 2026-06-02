@@ -1014,8 +1014,7 @@ export class PunchScene extends Phaser.Scene {
   private updateClippyVisuals(ctx: GameContext, time: number) {
     const shakeX = this.effectsR.getShakeX(ctx)
     const pos = this.gloveR.updateClippyPosition(ctx, shakeX)
-    const dodgeOff = this.gloveR.getDodgeOffset()
-    let cx = pos.cx + dodgeOff.x * 0.7
+    let cx = pos.cx
     let cy = pos.cy
     let angle = 0
 
