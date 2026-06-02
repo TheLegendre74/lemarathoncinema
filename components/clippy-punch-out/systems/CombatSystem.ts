@@ -161,6 +161,7 @@ export class CombatSystem {
     const cs = ctx.clippy.state
     if (cs.action !== 'attack' && cs.action !== 'charge_rush') return
     if (!cs.attack) return
+    if (cs.timer < 300) return
 
     const attackType = cs.attack.type
 
