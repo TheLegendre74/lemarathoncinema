@@ -58,7 +58,7 @@ export class ProjectileSystem {
     if (proj.progress < 0.85) return null
 
     const ps = ctx.player.state
-    const dodging = ps.action === 'dodge' && ps.dodgeDir === proj.requiredDodge && ps.timer <= 300
+    const dodging = ps.dodgeDir === proj.requiredDodge
 
     if (dodging) return 'dodged'
 

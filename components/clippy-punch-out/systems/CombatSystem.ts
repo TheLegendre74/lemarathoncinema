@@ -149,7 +149,6 @@ export class CombatSystem {
     }
 
     this.stamina.spendHitGuard(ctx)
-    ctx.player.hp = Math.max(0, ctx.player.hp - CFG.clippy.counterPunchDamage)
     this.events.push({ type: 'guard_block' })
     this.events.push({ type: 'error' })
   }
