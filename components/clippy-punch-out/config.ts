@@ -103,6 +103,11 @@ export const CFG = {
     },
   },
 
+  yellowBlink: {
+    startBeforeMs: 1000,
+    durationMs: 700,
+  },
+
   tells: {
     amplitudeHighConf: 0.65,
     amplitudeMedConf: 0.85,

@@ -100,6 +100,7 @@ export class PunchScene extends Phaser.Scene {
   private yellowFlashTimer = 0
   private yellowFlashCount = 0
   private warningFired = false
+  private yellowBlinkFired = false
   private chargeFreezeBlinkTimer = 0
 
   // Phase transition
@@ -434,16 +435,13 @@ export class PunchScene extends Phaser.Scene {
 
     if (cs.action === 'telegraph' && cs.attack && !ctx.tutorial.active) {
       const windUp = this.clippyAI.getWindUp(cs.attack.type, ctx)
-      const warningTime = Math.max(0, windUp - 1000)
+      const blinkStart = Math.max(0, windUp - CFG.yellowBlink.startBeforeMs)
 
-      if (!this.warningFired && cs.timer >= warningTime) {
-        this.warningFired = true
+      if (!this.yellowBlinkFired && cs.timer >= blinkStart) {
+        this.yellowBlinkFired = true
+        this.startYellowFlash()
+        this.snd('snd_yellow_flash')
         this.snd('snd_attack_warning')
-      }
-
-      const blinkTime = Math.max(0, windUp - 500)
-      if (cs.timer >= blinkTime && cs.timer < blinkTime + 100) {
-        this.cameras.main.flash(80, 255, 255, 255, false, undefined, 0.12 as any)
       }
     }
 
@@ -452,7 +450,7 @@ export class PunchScene extends Phaser.Scene {
       if (this.yellowFlashTimer >= 100) {
         this.yellowFlashTimer = 0
         this.yellowFlashCount++
-        if (this.yellowFlashCount >= 6) {
+        if (this.yellowFlashCount >= 7) {
           this.yellowFlashActive = false
           this.sprClipy.clearTint()
         } else {
@@ -463,6 +461,10 @@ export class PunchScene extends Phaser.Scene {
           }
         }
       }
+    }
+
+    if (cs.action !== 'telegraph') {
+      this.yellowBlinkFired = false
     }
 
     if (cs.action === 'charge_freeze') {
@@ -657,16 +659,19 @@ export class PunchScene extends Phaser.Scene {
             this.combatSys.events.push({ type: 'success' })
           } else {
             const windUp = this.clippyAI.getWindUp(cs.attack.type, ctx)
-            const yellowStart = windUp
-            const timeSinceYellow = cs.timer - yellowStart
-            isPerfect = timeSinceYellow >= -CFG.crowd.dodgeWindowMs / 2
-              && timeSinceYellow <= CFG.crowd.dodgeWindowMs / 2
+            const blinkStart = Math.max(0, windUp - CFG.yellowBlink.startBeforeMs)
+            const blinkEnd = blinkStart + CFG.yellowBlink.durationMs
 
-            if (cs.timer < yellowStart - CFG.crowd.earlyDodgeToleranceMs) {
-              this.combatSys.events.push({ type: 'error' })
-            } else {
+            if (cs.timer >= blinkStart && cs.timer <= blinkEnd) {
+              isPerfect = true
+              cs.action = 'recovery'
+              cs.recoveryDuration = this.clippyAI.getRecovery(cs.attack!.type, ctx)
+              cs.timer = 0
               this.clippyAI.onSeriesDodgeSuccess(ctx)
+              this.clippyAI.onMissedAttack(ctx)
               this.combatSys.events.push({ type: 'success' })
+            } else {
+              this.combatSys.events.push({ type: 'error' })
             }
           }
         } else {
@@ -707,6 +712,8 @@ export class PunchScene extends Phaser.Scene {
 
     if (step.expect === 'jab' || step.expect === 'heavy') {
       if (jPr || kPr) {
+        ctx.player.lastPunchHand = ctx.player.lastPunchHand === 'right' ? 'left' : 'right'
+        this.gloveR.punchGlove(ctx.player.lastPunchHand)
         this.tutorialSys.onSuccess(ctx)
         this.effectsR.popup('BIEN !', '#44ff88')
         this.effectsR.flash(ctx, 0x44ff88, 0.3)
@@ -726,6 +733,8 @@ export class PunchScene extends Phaser.Scene {
     if (step.expect === 'dodge_punish') {
       if (this.tutorialSys.isDodgePunishWaitingHit()) {
         if (jPr || kPr) {
+          ctx.player.lastPunchHand = ctx.player.lastPunchHand === 'right' ? 'left' : 'right'
+          this.gloveR.punchGlove(ctx.player.lastPunchHand)
           this.tutorialSys.onSuccess(ctx)
           this.effectsR.popup('COMBO !', '#ffee22')
           this.effectsR.flash(ctx, 0xffee22, 0.4)
@@ -744,6 +753,10 @@ export class PunchScene extends Phaser.Scene {
       if (cs.attack) {
         const correctDir = REQUIRED_DODGE[cs.attack.side]
         if (pressed === correctDir) {
+          ctx.player.state.action = 'dodge'
+          ctx.player.state.dodgeDir = pressed
+          ctx.player.state.timer = 0
+          this.snd('snd_dodge')
           this.tutorialSys.onDodgePunishDodge(ctx)
           this.effectsR.popup('ESQUIVÉ !', '#44ff88')
           this.effectsR.flash(ctx, 0x44ff88, 0.3)
@@ -770,6 +783,10 @@ export class PunchScene extends Phaser.Scene {
     if (!pressed) return
 
     if (pressed === expectedDodge) {
+      ctx.player.state.action = 'dodge'
+      ctx.player.state.dodgeDir = pressed
+      ctx.player.state.timer = 0
+      this.snd('snd_dodge')
       this.tutorialSys.onSuccess(ctx)
       this.effectsR.popup('ESQUIVÉ !', '#44ff88')
       this.effectsR.flash(ctx, 0x44ff88, 0.3)
@@ -824,8 +841,6 @@ export class PunchScene extends Phaser.Scene {
     }
 
     if (cs.action === 'attack' && prev !== 'attack') {
-      this.startYellowFlash()
-      this.snd('snd_yellow_flash')
       this.gloveR.animateAttack(ctx)
       this.snd('snd_swoosh')
       this.hudR.flashNow('!')
