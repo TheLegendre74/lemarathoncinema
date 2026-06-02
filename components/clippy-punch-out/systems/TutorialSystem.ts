@@ -188,14 +188,22 @@ export class TutorialSystem {
         if (cs.action === 'telegraph') {
           cs.timer += dt * 1000
           if (cs.timer >= TUT_WIND_UP) {
+            cs.action = 'attack'
+            cs.timer = 0
+          }
+        }
+
+        if (cs.action === 'attack') {
+          cs.timer += dt * 1000
+          if (cs.timer >= 300) {
             const correctDir = REQUIRED_DODGE[step.clippyAttack.side]
             if (lean === correctDir) {
               if (step.expect === 'dodge_punish') {
                 this.dodgePunishPhase = 1
                 cs.action = 'stunned'
                 cs.timer = 0
-                cs.stunHitsRemaining = 3
-                cs.stunDurationMs = 8000
+                cs.stunHitsRemaining = 1
+                cs.stunDurationMs = 30000
                 this.waitTimer = 0
               } else {
                 this.onSuccess(ctx)
@@ -231,11 +239,10 @@ export class TutorialSystem {
     this.resultTimer = 0
     this.waitTimer = 0
     this.leanHoldTimer = 0
-    if (ctx.clippy.state.action !== 'stunned') {
-      ctx.clippy.state.action = 'idle'
-      ctx.clippy.state.timer = 0
-      ctx.clippy.state.attack = null
-    }
+    ctx.clippy.state.action = 'idle'
+    ctx.clippy.state.timer = 0
+    ctx.clippy.state.attack = null
+    ctx.clippy.state.stunHitsRemaining = 0
   }
 
   private onFail(ctx: GameContext) {

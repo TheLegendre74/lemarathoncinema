@@ -202,7 +202,7 @@ export class GloveRenderer {
       .setScale(m.punchBaseScX, m.punchBaseScY)
       .setAngle(0)
 
-    const lungeX = isLeft ? -Math.round(this.W * 0.05) : isRight ? Math.round(this.W * 0.05) : 0
+    const lungeX = 0
     const lungeY = Math.round(this.H * 0.12)
     const lungeScale = atk.type === 'charge' ? 1.6 : atk.type === 'hook' ? 1.4 : 1.25
     const lungeAngle = isLeft ? -12 : isRight ? 12 : 0

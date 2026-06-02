@@ -269,18 +269,18 @@ export class PunchScene extends Phaser.Scene {
       ...tf, fontSize: '22px', color: '#ffcc44', align: 'center', strokeThickness: 4,
     }).setOrigin(0.5, 0).setDepth(9).setAlpha(0)
 
-    const keyLabels = ['← souris', '↓', 'souris →', 'clic D', 'clic G', '⎵']
-    const kBoxW = Math.round(W * 0.09)
+    const keyLabels = ['Souris = Esquive', 'Clic D = Jab', 'Clic G = Lourd']
+    const kBoxW = Math.round(W * 0.18)
     const kBoxH = Math.round(H * 0.055)
-    const kGap = Math.round(W * 0.010)
+    const kGap = Math.round(W * 0.015)
     const kTotalW = keyLabels.length * kBoxW + (keyLabels.length - 1) * kGap
     const kStartX = (W - kTotalW) / 2
-    const kY2 = Math.round(H * 0.935)
+    const kY2 = Math.round(H * 0.04)
     this.tK = keyLabels.map((lbl, i) => {
       const bx = kStartX + i * (kBoxW + kGap) + kBoxW / 2
       return this.add.text(bx, kY2, lbl, {
-        fontFamily: FONT, fontSize: `${Math.round(H * 0.036)}px`,
-        color: '#555577', align: 'center', fontStyle: 'bold',
+        fontFamily: FONT, fontSize: `${Math.round(H * 0.028)}px`,
+        color: '#aaaacc', align: 'center', fontStyle: 'bold',
         stroke: '#000', strokeThickness: 3,
       }).setOrigin(0.5, 0.5).setDepth(10)
     })
@@ -297,10 +297,9 @@ export class PunchScene extends Phaser.Scene {
     this.virtualMouseX = W / 2
     this.virtualMouseY = H / 2
 
+    this.game.canvas.style.cursor = 'none'
+
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (!this.input.mouse?.locked) {
-        this.input.mouse?.requestPointerLock()
-      }
       if (pointer.leftButtonDown()) this.mouseLeftClicked = true
       if (pointer.rightButtonDown()) this.mouseRightClicked = true
     })
@@ -608,14 +607,8 @@ export class PunchScene extends Phaser.Scene {
     }
     if (this.mobileSys.isGuardHeld()) spaceDown = true
 
-    const pointer = this.input.activePointer
-    if (this.input.mouse?.locked) {
-      this.virtualMouseX = Phaser.Math.Clamp(this.virtualMouseX + pointer.movementX, 0, this.W)
-      this.virtualMouseY = Phaser.Math.Clamp(this.virtualMouseY + pointer.movementY, 0, this.H)
-    } else {
-      this.virtualMouseX = Phaser.Math.Clamp(pointer.x, 0, this.W)
-      this.virtualMouseY = Phaser.Math.Clamp(pointer.y, 0, this.H)
-    }
+    this.virtualMouseX = Phaser.Math.Clamp(this.input.activePointer.x, 0, this.W)
+    this.virtualMouseY = Phaser.Math.Clamp(this.input.activePointer.y, 0, this.H)
     const mouseX = this.virtualMouseX
     const mouseY = this.virtualMouseY
     this.prevMouseX = mouseX
@@ -1384,7 +1377,7 @@ export class PunchScene extends Phaser.Scene {
   shutdown() {
     try { this.bgMusic?.pause(); this.bgMusic = null } catch {}
     if (this.stunSound) { try { this.stunSound.stop(); this.stunSound.destroy() } catch {} this.stunSound = null }
-    try { if (this.input.mouse?.locked) this.input.mouse.releasePointerLock() } catch {}
+    try { this.game.canvas.style.cursor = 'default' } catch {}
     this.effectsR.cleanup()
     this.mobileSys.destroy()
   }
