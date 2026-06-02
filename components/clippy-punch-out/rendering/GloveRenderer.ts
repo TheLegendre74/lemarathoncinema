@@ -60,32 +60,24 @@ export class GloveRenderer {
     const ps = ctx.player.state
     const s = this.sprites
 
-    if (ps.action === 'dodge' && ps.dodgeDir) {
+    if (ps.dodgeDir) {
       const maxX = Math.round(this.W * 0.15)
       const maxY = Math.round(this.H * 0.10)
       const maxA = 8
-      const t = Math.min(1, ps.timer / CFG.player.dodge.totalMs)
+      const lerpSpeed = Math.min(1, 12 * dt)
 
-      let ease: number
-      if (ps.isPerfectDodge && t >= 1) {
-        ease = 1
-      } else if (t < 0.25) ease = 1 - Math.pow(1 - t / 0.25, 3)
-      else if (t < 0.65) ease = 1
-      else ease = Math.pow(1 - (t - 0.65) / 0.35, 2)
-
+      let tx = 0, ty = 0, ta = 0
       if (ps.dodgeDir === 'left') {
-        this.dodgePOV.x = -maxX * ease
-        this.dodgePOV.y = 0
-        this.dodgePOV.angle = -maxA * ease
+        tx = -maxX; ta = -maxA
       } else if (ps.dodgeDir === 'right') {
-        this.dodgePOV.x = maxX * ease
-        this.dodgePOV.y = 0
-        this.dodgePOV.angle = maxA * ease
+        tx = maxX; ta = maxA
       } else {
-        this.dodgePOV.x = 0
-        this.dodgePOV.y = maxY * ease
-        this.dodgePOV.angle = 0
+        ty = maxY
       }
+
+      this.dodgePOV.x += (tx - this.dodgePOV.x) * lerpSpeed
+      this.dodgePOV.y += (ty - this.dodgePOV.y) * lerpSpeed
+      this.dodgePOV.angle += (ta - this.dodgePOV.angle) * lerpSpeed
     } else {
       const decay = Math.min(1, 10 * dt)
       this.dodgePOV.x *= 1 - decay

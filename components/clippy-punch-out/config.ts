@@ -46,6 +46,11 @@ export const CFG = {
       cooldown: 700,
     },
 
+    lean: {
+      zoneThreshold: 0.25,
+      baseDrainPerSec: 15,
+    },
+
     starPunch: {
       starsRequired: 3,
       damage: 35,

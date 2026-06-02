@@ -1,5 +1,6 @@
 import { CFG } from '../config'
 import type { GameContext, CombatEvent } from '../types'
+import { REQUIRED_DODGE } from '../types'
 import { StaminaSystem } from './StaminaSystem'
 import { ClippyAI } from './ClippyAI'
 import { DodgeCounterSystem } from './DodgeCounterSystem'
@@ -162,16 +163,9 @@ export class CombatSystem {
 
     const attackType = cs.attack.type
 
-    if (this.dodge.isInvulnerable(ctx)) {
-      this.ai.onMissedAttack(ctx)
-      cs.action = 'recovery'
-      cs.recoveryDuration = this.ai.getRecovery(attackType, ctx)
-      cs.timer = 0
-      return
-    }
-
     const ps = ctx.player.state
-    if (ps.action === 'dodge') {
+    const correctDir = REQUIRED_DODGE[cs.attack.side]
+    if (ps.dodgeDir === correctDir) {
       this.ai.onMissedAttack(ctx)
       this.ai.onSeriesDodgeSuccess(ctx)
       this.events.push({ type: 'success' })

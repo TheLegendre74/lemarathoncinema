@@ -573,40 +573,13 @@ export class PunchScene extends Phaser.Scene {
       }
     }
 
-    const JD = Phaser.Input.Keyboard.JustDown
-    let lPr = JD(this.kLeft)
-    let rPr = JD(this.kRight)
-    let dPr = JD(this.kDown)
     let spaceDown = this.kSpace.isDown
-
-    const mouseX = this.input.activePointer.x
-    const mouseY = this.input.activePointer.y
-    const mouseDx = mouseX - this.prevMouseX
-    const mouseDy = mouseY - this.prevMouseY
-    this.prevMouseX = mouseX
-    this.prevMouseY = mouseY
-    const now = performance.now()
-    if (now >= this.mouseDodgeCooldown) {
-      if (Math.abs(mouseDx) >= CFG.player.mouse.swipeThreshold) {
-        if (mouseDx < 0) lPr = true
-        else rPr = true
-        this.mouseDodgeCooldown = now + CFG.player.mouse.dodgeCooldownMs
-      } else if (mouseDy >= CFG.player.mouse.swipeThreshold) {
-        dPr = true
-        this.mouseDodgeCooldown = now + CFG.player.mouse.dodgeCooldownMs
-      }
-    }
 
     this.mobileSys.update(ctx.dt)
     const mobileActions = this.mobileSys.consumeActions()
     for (const action of mobileActions) {
       if (!action) continue
       switch (action.type) {
-        case 'dodge':
-          if (action.dir === 'left') lPr = true
-          else if (action.dir === 'right') rPr = true
-          else if (action.dir === 'down') dPr = true
-          break
         case 'jab': jPr = true; break
         case 'heavy': kPr = true; break
         case 'guard_start': spaceDown = true; break
@@ -615,10 +588,40 @@ export class PunchScene extends Phaser.Scene {
     }
     if (this.mobileSys.isGuardHeld()) spaceDown = true
 
+    const mouseX = this.input.activePointer.x
+    const mouseY = this.input.activePointer.y
+    this.prevMouseX = mouseX
+    this.prevMouseY = mouseY
+    const th = CFG.player.lean.zoneThreshold
+    const relX = (mouseX - this.W / 2) / (this.W / 2)
+    const relY = (mouseY - this.H / 2) / (this.H / 2)
+
+    let leanDir: DodgeDirection | null = null
+    if (Math.abs(relX) > Math.abs(relY) && Math.abs(relX) > th) {
+      leanDir = relX < 0 ? 'left' : 'right'
+    } else if (relY > th) {
+      leanDir = 'down'
+    }
+
+    const prevLean = ctx.player.state.dodgeDir
+    ctx.player.state.dodgeDir = leanDir
+
+    if (leanDir !== null && ctx.player.stamina > 0) {
+      ctx.player.leanTime += ctx.dt
+      const drainRate = CFG.player.lean.baseDrainPerSec * (1 + ctx.player.leanTime)
+      ctx.player.stamina = Math.max(0, ctx.player.stamina - drainRate * ctx.dt)
+      if (ctx.player.stamina <= 0) {
+        ctx.player.state.dodgeDir = null
+        leanDir = null
+      }
+    } else if (leanDir === null) {
+      ctx.player.leanTime = 0
+    }
+
     const ps = ctx.player.state
 
     if (ctx.tutorial.active) {
-      this.handleTutorialInput(ctx, lPr, rPr, dPr, jPr, kPr, spaceDown)
+      this.handleTutorialInput(ctx, false, false, false, jPr, kPr, spaceDown)
       return
     }
 
@@ -646,10 +649,6 @@ export class PunchScene extends Phaser.Scene {
     } else if (ps.action === 'guard') {
       this.combatSys.releaseGuard(ctx)
     }
-
-    if (lPr) this.tryDodge(ctx, 'left')
-    if (rPr) this.tryDodge(ctx, 'right')
-    if (dPr) this.tryDodge(ctx, 'down')
   }
 
   private tryDodge(ctx: GameContext, dir: DodgeDirection) {
@@ -1309,6 +1308,7 @@ export class PunchScene extends Phaser.Scene {
         guardDuration: 0,
         isExhausted: false,
         exhaustedTimer: 0,
+        leanTime: 0,
       },
 
       clippy: {

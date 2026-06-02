@@ -130,6 +130,7 @@ export interface GameContext {
     guardDuration: number
     isExhausted: boolean
     exhaustedTimer: number
+    leanTime: number
   }
 
   clippy: {
