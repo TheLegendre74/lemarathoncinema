@@ -467,7 +467,7 @@ export class PunchScene extends Phaser.Scene {
       this.yellowBlinkFired = false
     }
 
-    if (cs.action === 'charge_freeze') {
+    if (cs.action === 'charge_freeze' && !this.yellowFlashActive) {
       this.chargeFreezeBlinkTimer += dt * 1000
       if (this.chargeFreezeBlinkTimer >= CFG.charge.blinkIntervalMs) {
         this.chargeFreezeBlinkTimer -= CFG.charge.blinkIntervalMs
@@ -836,6 +836,11 @@ export class PunchScene extends Phaser.Scene {
         this.gloveR.animateTelegraph(ctx, cs.attack.type, windUp, amp)
         this.hudR.setBubble('')
 
+        if (ctx.tutorial.active) {
+          this.startYellowFlash()
+          this.snd('snd_yellow_flash')
+        }
+
         const glitchSnd = cs.attack.type === 'jab' ? 'snd_glitch_jab'
           : cs.attack.type === 'hook' ? 'snd_glitch_hook' : 'snd_glitch_jab'
         this.snd(glitchSnd)
@@ -859,6 +864,8 @@ export class PunchScene extends Phaser.Scene {
     if (cs.action === 'charge_freeze' && prev !== 'charge_freeze') {
       this.snd('snd_charge_freeze')
       this.chargeFreezeBlinkTimer = 0
+      this.startYellowFlash()
+      this.snd('snd_yellow_flash')
     }
 
     if (cs.action === 'charge_rush' && prev !== 'charge_rush') {
