@@ -45,8 +45,6 @@ export class HUDRenderer {
     this.drawClippyHP(ctx)
     this.drawStars(ctx)
     this.drawBubble(ctx)
-    if (ctx.tutorial.active) this.drawAttackIndicator(ctx)
-    this.drawKeyHints(ctx)
     this.drawProjectileWarnings(ctx)
 
     this.nowAlpha = Math.max(0, this.nowAlpha - ctx.dt * 2.2)
