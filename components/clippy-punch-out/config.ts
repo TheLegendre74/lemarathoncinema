@@ -5,10 +5,11 @@ export const CFG = {
 
     stamina: {
       regenPerSec: 3,
-      costDodge: 4,
+      costDodge: 6,
       costDodgePerfect: 0,
-      costHitStun: 3,
-      costHitGuard: 8,
+      costHitStun: 5,
+      costHitGuard: 12,
+      hitStunReward: 15,
       exhaustedDurationMs: 2000,
     },
 
@@ -54,9 +55,11 @@ export const CFG = {
   clippy: {
     maxHP: 140,
 
-    jab: { damage: 5, recovery: 250 },
-    hook: { damage: 12, recovery: 500 },
-    charge: { damage: 22, recovery: 900 },
+    jab: { damage: 5, recovery: 150 },
+    hook: { damage: 12, recovery: 300 },
+    charge: { damage: 22, recovery: 600 },
+
+    counterPunchDamage: 8,
 
     stun: {
       hitsAllDodged: 2,
@@ -132,10 +135,10 @@ export const CFG = {
   },
 
   series: {
-    comboMinP1: 1,
-    comboMaxP1: 3,
+    comboMinP1: 2,
+    comboMaxP1: 5,
     comboMinP2: 3,
-    comboMaxP2: 5,
+    comboMaxP2: 7,
     delayBetweenAttacksP1: 900,
     delayBetweenAttacksP2: 650,
     idleDelayMinP1: 1800,
@@ -158,14 +161,16 @@ export const CFG = {
 
   projectiles: {
     types: {
-      can:      { damage: 6,  weight: 3 },
-      mug:      { damage: 4,  weight: 2 },
-      keyboard: { damage: 12, weight: 1 },
-      mouse:    { damage: 3,  weight: 4 },
+      can:     { damage: 6, weight: 3 },
+      tomato:  { damage: 4, weight: 3 },
+      popcorn: { damage: 5, weight: 2 },
     },
     warningMs: 800,
     travelMs: 600,
-    roseTravelMs: 900,
+    roseClickMs: 800,
+    dodgeRewardStamina: 30,
+    dodgeRewardHP: 20,
+    dodgeRewardHPThreshold: 0.8,
   },
 
   phases: {

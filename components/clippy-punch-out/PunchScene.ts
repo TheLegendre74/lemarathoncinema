@@ -560,6 +560,19 @@ export class PunchScene extends Phaser.Scene {
     this.mouseRightClicked = false
     this.mouseLeftClicked = false
 
+    if ((jPr || kPr) && ctx.roseSquare.active) {
+      const px = this.input.activePointer.x
+      const py = this.input.activePointer.y
+      if (this.projectileSys.tryClickRose(ctx, px, py)) {
+        this.staminaSys.restoreRose(ctx)
+        this.snd('snd_rose_catch')
+        this.snd('snd_crowd_whistle')
+        this.effectsR.popup('+STAMINA MAX', '#44ff88')
+        this.effectsR.flash(ctx, 0x44ff88, 0.3)
+        jPr = false; kPr = false
+      }
+    }
+
     const JD = Phaser.Input.Keyboard.JustDown
     let lPr = JD(this.kLeft)
     let rPr = JD(this.kRight)
@@ -640,42 +653,46 @@ export class PunchScene extends Phaser.Scene {
   }
 
   private tryDodge(ctx: GameContext, dir: DodgeDirection) {
-    if (this.dodgeSys.tryDodge(ctx, dir, REQUIRED_DODGE)) {
-      const cs = ctx.clippy.state
-      const isAttacking = cs.action === 'telegraph' || cs.action === 'attack'
-        || cs.action === 'charge_freeze' || cs.action === 'charge_rush'
+    const cs = ctx.clippy.state
+    const isAttacking = cs.action === 'telegraph' || cs.action === 'attack'
+      || cs.action === 'charge_freeze' || cs.action === 'charge_rush'
 
+    if (isAttacking && cs.attack) {
+      const correctDir = REQUIRED_DODGE[cs.attack.side]
+      if (dir !== correctDir) {
+        this.applyCounterPunch(ctx)
+        return
+      }
+    }
+
+    if (this.dodgeSys.tryDodge(ctx, dir, REQUIRED_DODGE)) {
       let isPerfect = false
       if (isAttacking && cs.attack) {
-        const correctDir = REQUIRED_DODGE[cs.attack.side]
-        if (dir === correctDir) {
-          if (cs.action === 'charge_freeze') {
+        if (cs.action === 'charge_freeze') {
+          isPerfect = true
+          this.clippyAI.onSeriesDodgeSuccess(ctx)
+          this.clippyAI.stun(ctx, CFG.clippy.stun.hitsChargePerfect)
+          this.combatSys.events.push({ type: 'stun_start' })
+          this.combatSys.events.push({ type: 'star_earned' })
+          ctx.player.stars = Math.min(3, ctx.player.stars + 1)
+          this.combatSys.events.push({ type: 'success' })
+        } else {
+          const windUp = this.clippyAI.getWindUp(cs.attack.type, ctx)
+          const blinkStart = Math.max(0, windUp - CFG.yellowBlink.startBeforeMs)
+          const blinkEnd = blinkStart + CFG.yellowBlink.durationMs
+
+          if (cs.timer >= blinkStart && cs.timer <= blinkEnd) {
             isPerfect = true
+            cs.action = 'recovery'
+            cs.recoveryDuration = this.clippyAI.getRecovery(cs.attack!.type, ctx)
+            cs.timer = 0
             this.clippyAI.onSeriesDodgeSuccess(ctx)
-            this.clippyAI.stun(ctx, CFG.clippy.stun.hitsChargePerfect)
-            this.combatSys.events.push({ type: 'stun_start' })
-            this.combatSys.events.push({ type: 'star_earned' })
-            ctx.player.stars = Math.min(3, ctx.player.stars + 1)
+            this.clippyAI.onMissedAttack(ctx)
             this.combatSys.events.push({ type: 'success' })
           } else {
-            const windUp = this.clippyAI.getWindUp(cs.attack.type, ctx)
-            const blinkStart = Math.max(0, windUp - CFG.yellowBlink.startBeforeMs)
-            const blinkEnd = blinkStart + CFG.yellowBlink.durationMs
-
-            if (cs.timer >= blinkStart && cs.timer <= blinkEnd) {
-              isPerfect = true
-              cs.action = 'recovery'
-              cs.recoveryDuration = this.clippyAI.getRecovery(cs.attack!.type, ctx)
-              cs.timer = 0
-              this.clippyAI.onSeriesDodgeSuccess(ctx)
-              this.clippyAI.onMissedAttack(ctx)
-              this.combatSys.events.push({ type: 'success' })
-            } else {
-              this.combatSys.events.push({ type: 'error' })
-            }
+            this.applyCounterPunch(ctx)
+            return
           }
-        } else {
-          this.combatSys.events.push({ type: 'error' })
         }
       }
 
@@ -695,6 +712,16 @@ export class PunchScene extends Phaser.Scene {
         this.hudR.setBubble(pickTaunt('dodge', ctx.clippy.hp / CFG.clippy.maxHP))
       }
     }
+  }
+
+  private applyCounterPunch(ctx: GameContext) {
+    ctx.player.hp = Math.max(0, ctx.player.hp - CFG.clippy.counterPunchDamage)
+    this.effectsR.popup(`-${CFG.clippy.counterPunchDamage}`, '#ff4444')
+    this.effectsR.shake(ctx, 6)
+    this.snd('snd_hit')
+    ctx.player.state.action = 'stunned'
+    ctx.player.state.timer = 0
+    this.combatSys.events.push({ type: 'error' })
   }
 
   // ── TUTORIAL INPUT ───────────────────────────────────────────────────
@@ -1123,32 +1150,39 @@ export class PunchScene extends Phaser.Scene {
 
   private drawProjectiles(ctx: GameContext) {
     this.gProj.clear()
+
+    if (ctx.roseSquare.active) {
+      const r = ctx.roseSquare
+      const size = 60
+      const pulse = 0.8 + 0.2 * Math.sin(r.timer * 0.015)
+      this.gProj.fillStyle(0xff2266, 0.85 * pulse)
+      this.gProj.fillRoundedRect(r.x - size / 2, r.y - size / 2, size, size, 8)
+      this.gProj.lineStyle(3, 0xff88aa, 0.9)
+      this.gProj.strokeRoundedRect(r.x - size / 2, r.y - size / 2, size, size, 8)
+      this.gProj.fillStyle(0xffffff, 0.9)
+      this.gProj.fillCircle(r.x, r.y, 10)
+      this.gProj.fillStyle(0xff2266, 0.9)
+      this.gProj.fillCircle(r.x, r.y, 6)
+    }
+
     for (const proj of ctx.projectiles) {
       if (!proj.active) continue
       const px = proj.x + (proj.targetX - proj.x) * proj.progress
       const py = proj.y + (proj.targetY - proj.y) * proj.progress
 
-      if (proj.type === 'rose') {
-        this.gProj.fillStyle(0xff2266, 0.9)
-        this.gProj.fillCircle(px, py, 8)
-        this.gProj.fillStyle(0x22aa44, 0.8)
-        this.gProj.fillRect(px - 1, py + 4, 2, 12)
-      } else {
-        let color: number
-        let size: number
-        switch (proj.type) {
-          case 'can': color = 0xaaaaaa; size = 10; break
-          case 'mug': color = 0x885533; size = 12; break
-          case 'keyboard': color = 0x444466; size = 18; break
-          case 'mouse': color = 0x666666; size = 8; break
-          default: color = 0xaaaaaa; size = 10
-        }
-
-        this.gProj.fillStyle(color, 0.9)
-        this.gProj.fillRoundedRect(px - size / 2, py - size / 2, size, size * 0.7, 3)
-        this.gProj.lineStyle(1.5, 0xffffff, 0.4)
-        this.gProj.strokeRoundedRect(px - size / 2, py - size / 2, size, size * 0.7, 3)
+      let color: number
+      let size: number
+      switch (proj.type) {
+        case 'can': color = 0xaaaaaa; size = 10; break
+        case 'tomato': color = 0xcc2222; size = 12; break
+        case 'popcorn': color = 0xffcc44; size = 16; break
+        default: color = 0xaaaaaa; size = 10
       }
+
+      this.gProj.fillStyle(color, 0.9)
+      this.gProj.fillRoundedRect(px - size / 2, py - size / 2, size, size * 0.7, 3)
+      this.gProj.lineStyle(1.5, 0xffffff, 0.4)
+      this.gProj.strokeRoundedRect(px - size / 2, py - size / 2, size, size * 0.7, 3)
 
       if (proj.progress >= 0.85 && proj.active) {
         const result = this.projectileSys.checkHit(ctx, proj)
@@ -1158,8 +1192,16 @@ export class PunchScene extends Phaser.Scene {
           this.effectsR.popup(`-${proj.damage}`, '#ff6600')
           this.snd('snd_hit')
           proj.active = false
-        } else if (result === 'rose_catch') {
-          this.combatSys.events.push({ type: 'rose_catch' })
+        } else if (result === 'dodged') {
+          this.staminaSys.rewardProjectileDodge(ctx)
+          const stRatio = ctx.player.stamina / CFG.player.maxStamina
+          if (stRatio >= CFG.projectiles.dodgeRewardHPThreshold) {
+            this.effectsR.popup('+HP', '#44ff88')
+          } else {
+            this.effectsR.popup('+STAMINA', '#44aaff')
+          }
+          this.effectsR.flash(ctx, 0x44aaff, 0.2)
+          this.snd('snd_dodge')
           proj.active = false
         }
       }
@@ -1293,6 +1335,7 @@ export class PunchScene extends Phaser.Scene {
       projectiles: [],
       phaseTransitioned: false,
       tutorial: { active: !(this.cfg.skipTutorial ?? false), step: 0 },
+      roseSquare: { active: false, x: 0, y: 0, timer: 0 },
     }
   }
 

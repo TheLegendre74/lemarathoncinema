@@ -43,6 +43,22 @@ export class StaminaSystem {
     this.checkExhausted(ctx)
   }
 
+  rewardHitStun(ctx: GameContext) {
+    const reward = CFG.player.maxStamina * CFG.player.stamina.hitStunReward / 100
+    ctx.player.stamina = Math.min(CFG.player.maxStamina, ctx.player.stamina + reward)
+  }
+
+  rewardProjectileDodge(ctx: GameContext) {
+    const staminaRatio = ctx.player.stamina / CFG.player.maxStamina
+    if (staminaRatio >= CFG.projectiles.dodgeRewardHPThreshold) {
+      const hpBonus = CFG.player.maxHP * CFG.projectiles.dodgeRewardHP / 100
+      ctx.player.hp = Math.min(CFG.player.maxHP, ctx.player.hp + hpBonus)
+    } else {
+      const reward = CFG.player.maxStamina * CFG.projectiles.dodgeRewardStamina / 100
+      ctx.player.stamina = Math.min(CFG.player.maxStamina, ctx.player.stamina + reward)
+    }
+  }
+
   restoreRose(ctx: GameContext) {
     ctx.player.stamina = CFG.player.maxStamina
     if (ctx.player.isExhausted) {

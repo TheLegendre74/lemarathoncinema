@@ -71,7 +71,7 @@ export type CombatPhase = 1 | 2
 
 // ─── Projectiles ─────────────────────────────────────────────────────
 
-export type ProjectileType = 'can' | 'mug' | 'keyboard' | 'mouse' | 'rose'
+export type ProjectileType = 'can' | 'tomato' | 'popcorn' | 'rose'
 
 export interface Projectile {
   type: ProjectileType
@@ -84,7 +84,8 @@ export interface Projectile {
   active: boolean
   warned: boolean
   damage: number
-  side: 'left' | 'right'
+  side: 'left' | 'right' | 'top'
+  requiredDodge: DodgeDirection
 }
 
 // ─── Effects ─────────────────────────────────────────────────────────
@@ -162,5 +163,12 @@ export interface GameContext {
   tutorial: {
     active: boolean
     step: number
+  }
+
+  roseSquare: {
+    active: boolean
+    x: number
+    y: number
+    timer: number
   }
 }

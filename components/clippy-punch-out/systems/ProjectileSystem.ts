@@ -1,5 +1,5 @@
 import { CFG } from '../config'
-import type { GameContext, Projectile, ProjectileType } from '../types'
+import type { GameContext, Projectile, ProjectileType, DodgeDirection } from '../types'
 
 export class ProjectileSystem {
   private pendingBoo = false
@@ -28,7 +28,14 @@ export class ProjectileSystem {
     }
     if (this.pendingRose) {
       this.pendingRose = false
-      this.spawnRose(ctx)
+      this.spawnRoseSquare(ctx)
+    }
+
+    if (ctx.roseSquare.active) {
+      ctx.roseSquare.timer += dt * 1000
+      if (ctx.roseSquare.timer >= CFG.projectiles.roseClickMs) {
+        ctx.roseSquare.active = false
+      }
     }
 
     for (let i = ctx.projectiles.length - 1; i >= 0; i--) {
@@ -41,29 +48,19 @@ export class ProjectileSystem {
       }
 
       if (p.progress >= 1) {
-        if (p.type === 'rose') {
-          p.active = false
-          ctx.projectiles.splice(i, 1)
-        } else {
-          p.active = false
-          ctx.projectiles.splice(i, 1)
-        }
+        p.active = false
+        ctx.projectiles.splice(i, 1)
       }
     }
   }
 
-  checkHit(ctx: GameContext, proj: Projectile): 'hit' | 'rose_catch' | null {
+  checkHit(ctx: GameContext, proj: Projectile): 'hit' | 'dodged' | null {
     if (proj.progress < 0.85) return null
 
     const ps = ctx.player.state
-    const dodging = ps.action === 'dodge' && ps.timer <= 180
+    const dodging = ps.action === 'dodge' && ps.dodgeDir === proj.requiredDodge && ps.timer <= 300
 
-    if (proj.type === 'rose') {
-      if (!dodging) return 'rose_catch'
-      return null
-    }
-
-    if (dodging) return null
+    if (dodging) return 'dodged'
 
     if (ps.action === 'guard') {
       const reduced = Math.round(proj.damage * (1 - CFG.player.guard.damageReduction))
@@ -74,12 +71,43 @@ export class ProjectileSystem {
     return 'hit'
   }
 
+  tryClickRose(ctx: GameContext, px: number, py: number): boolean {
+    const r = ctx.roseSquare
+    if (!r.active) return false
+    const size = 60
+    if (px >= r.x - size / 2 && px <= r.x + size / 2 &&
+        py >= r.y - size / 2 && py <= r.y + size / 2) {
+      r.active = false
+      return true
+    }
+    return false
+  }
+
+  private spawnRoseSquare(ctx: GameContext) {
+    ctx.roseSquare.active = true
+    ctx.roseSquare.timer = 0
+    ctx.roseSquare.x = 100 + Math.random() * 600
+    ctx.roseSquare.y = 150 + Math.random() * 250
+  }
+
   private spawnHostile(ctx: GameContext) {
     const type = this.pickHostileType()
     const cfg = CFG.projectiles.types[type]
-    const side = Math.random() > 0.5 ? 'right' as const : 'left' as const
-    const startX = side === 'left' ? -20 : 820
-    const startY = 100 + Math.random() * 150
+    const directions: Array<{ side: 'left' | 'right' | 'top'; requiredDodge: DodgeDirection }> = [
+      { side: 'left', requiredDodge: 'right' },
+      { side: 'right', requiredDodge: 'left' },
+      { side: 'top', requiredDodge: 'down' },
+    ]
+    const dir = directions[Math.floor(Math.random() * directions.length)]
+
+    let startX: number, startY: number
+    if (dir.side === 'left') {
+      startX = -20; startY = 150 + Math.random() * 200
+    } else if (dir.side === 'right') {
+      startX = 820; startY = 150 + Math.random() * 200
+    } else {
+      startX = 200 + Math.random() * 400; startY = -20
+    }
 
     ctx.projectiles.push({
       type,
@@ -92,27 +120,8 @@ export class ProjectileSystem {
       active: true,
       warned: false,
       damage: cfg.damage,
-      side,
-    })
-  }
-
-  private spawnRose(ctx: GameContext) {
-    const side = Math.random() > 0.5 ? 'right' as const : 'left' as const
-    const startX = side === 'left' ? -20 : 820
-    const startY = 100 + Math.random() * 100
-
-    ctx.projectiles.push({
-      type: 'rose',
-      x: startX,
-      y: startY,
-      targetX: 400 + (Math.random() - 0.5) * 80,
-      targetY: 370 + Math.random() * 60,
-      progress: 0,
-      duration: CFG.projectiles.roseTravelMs,
-      active: true,
-      warned: false,
-      damage: 0,
-      side,
+      side: dir.side,
+      requiredDodge: dir.requiredDodge,
     })
   }
 

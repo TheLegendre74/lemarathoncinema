@@ -138,6 +138,7 @@ export class CombatSystem {
 
     if (cs.action === 'stunned' && cs.stunHitsRemaining > 0) {
       this.stamina.spendHitStun(ctx)
+      this.stamina.rewardHitStun(ctx)
       this.damageClippy(ctx, baseDamage)
       cs.stunHitsRemaining--
       this.events.push({ type: 'stun_hit', damage: baseDamage })
@@ -147,6 +148,7 @@ export class CombatSystem {
     }
 
     this.stamina.spendHitGuard(ctx)
+    ctx.player.hp = Math.max(0, ctx.player.hp - CFG.clippy.counterPunchDamage)
     this.events.push({ type: 'guard_block' })
     this.events.push({ type: 'error' })
   }
