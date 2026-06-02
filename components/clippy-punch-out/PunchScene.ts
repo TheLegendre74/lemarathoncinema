@@ -81,6 +81,8 @@ export class PunchScene extends Phaser.Scene {
   // Mouse controls
   private prevMouseX = 0
   private prevMouseY = 0
+  private virtualMouseX = 0
+  private virtualMouseY = 0
   private mouseDodgeCooldown = 0
   private mouseLeftClicked = false
   private mouseRightClicked = false
@@ -286,8 +288,13 @@ export class PunchScene extends Phaser.Scene {
     this.input.mouse?.disableContextMenu()
     this.prevMouseX = this.input.activePointer.x
     this.prevMouseY = this.input.activePointer.y
+    this.virtualMouseX = W / 2
+    this.virtualMouseY = H / 2
 
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (!this.input.mouse?.locked) {
+        this.input.mouse?.requestPointerLock()
+      }
       if (pointer.leftButtonDown()) this.mouseLeftClicked = true
       if (pointer.rightButtonDown()) this.mouseRightClicked = true
     })
@@ -590,8 +597,16 @@ export class PunchScene extends Phaser.Scene {
     }
     if (this.mobileSys.isGuardHeld()) spaceDown = true
 
-    const mouseX = this.input.activePointer.x
-    const mouseY = this.input.activePointer.y
+    const pointer = this.input.activePointer
+    if (this.input.mouse?.locked) {
+      this.virtualMouseX = Phaser.Math.Clamp(this.virtualMouseX + pointer.movementX, 0, this.W)
+      this.virtualMouseY = Phaser.Math.Clamp(this.virtualMouseY + pointer.movementY, 0, this.H)
+    } else {
+      this.virtualMouseX = pointer.x
+      this.virtualMouseY = pointer.y
+    }
+    const mouseX = this.virtualMouseX
+    const mouseY = this.virtualMouseY
     this.prevMouseX = mouseX
     this.prevMouseY = mouseY
     const th = CFG.player.lean.zoneThreshold
@@ -1289,6 +1304,7 @@ export class PunchScene extends Phaser.Scene {
   shutdown() {
     try { this.bgMusic?.pause(); this.bgMusic = null } catch {}
     if (this.stunSound) { try { this.stunSound.stop(); this.stunSound.destroy() } catch {} this.stunSound = null }
+    try { if (this.input.mouse?.locked) this.input.mouse.releasePointerLock() } catch {}
     this.effectsR.cleanup()
     this.mobileSys.destroy()
   }

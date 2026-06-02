@@ -4,7 +4,7 @@ export const CFG = {
     maxStamina: 100,
 
     stamina: {
-      regenPerSec: 3.45,
+      regenPerSec: 5,
       costDodge: 6,
       costDodgePerfect: 0,
       costHitStun: 5,
