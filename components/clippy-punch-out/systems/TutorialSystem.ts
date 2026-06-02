@@ -149,6 +149,7 @@ export class TutorialSystem {
     ctx.clippy.state.action = 'stunned'
     ctx.clippy.state.timer = 0
     ctx.clippy.state.stunHitsRemaining = 3
+    ctx.clippy.state.stunDurationMs = 5000
     this.waitTimer = 0
   }
 

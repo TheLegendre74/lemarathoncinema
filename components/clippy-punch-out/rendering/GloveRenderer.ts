@@ -248,6 +248,11 @@ export class GloveRenderer {
     const s = this.sprites
     const isLeft = hand === 'left'
     const glove = isLeft ? s.pLeft : s.pRight
+    const otherGlove = isLeft ? s.pRight : s.pLeft
+
+    this.scene.tweens.killTweensOf(otherGlove)
+    otherGlove.setVisible(false)
+    this.scene.tweens.killTweensOf(s.pGuard)
     s.pGuard.setVisible(false)
     glove.setVisible(true).setFlipX(false)
 

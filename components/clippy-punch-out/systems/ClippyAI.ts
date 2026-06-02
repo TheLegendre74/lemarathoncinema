@@ -81,7 +81,7 @@ export class ClippyAI {
         break
 
       case 'stunned':
-        if (cs.timer >= CFG.clippy.stun.durationMs || cs.stunHitsRemaining <= 0) {
+        if (cs.timer >= cs.stunDurationMs || cs.stunHitsRemaining <= 0) {
           this.goIdle(ctx)
         }
         break
@@ -280,9 +280,12 @@ export class ClippyAI {
   // ── Stun ─────────────────────────────────────────────────────────────
 
   stun(ctx: GameContext, maxHits: number) {
+    const min = CFG.clippy.stun.durationMinMs
+    const max = CFG.clippy.stun.durationMaxMs
     ctx.clippy.state.action = 'stunned'
     ctx.clippy.state.timer = 0
     ctx.clippy.state.stunHitsRemaining = maxHits
+    ctx.clippy.state.stunDurationMs = min + Math.random() * (max - min)
     ctx.clippy.state.comboRemaining = 0
     ctx.series.active = false
   }

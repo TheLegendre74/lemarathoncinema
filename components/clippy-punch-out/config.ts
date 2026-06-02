@@ -4,12 +4,11 @@ export const CFG = {
     maxStamina: 100,
 
     stamina: {
-      drainPerSec: 1.2,
-      costDodge: 6,
+      regenPerSec: 3,
+      costDodge: 4,
       costDodgePerfect: 0,
-      costHitStun: 4,
-      costHitGuard: 12,
-      roseRecovery: 40,
+      costHitStun: 3,
+      costHitGuard: 8,
       exhaustedDurationMs: 2000,
     },
 
@@ -18,7 +17,7 @@ export const CFG = {
       startup: 120,
       active: 90,
       recovery: 220,
-      cooldown: 430,
+      cooldown: 500,
     },
 
     heavy: {
@@ -26,7 +25,7 @@ export const CFG = {
       startup: 280,
       active: 140,
       recovery: 600,
-      cooldown: 1020,
+      cooldown: 500,
     },
 
     guard: {
@@ -63,7 +62,8 @@ export const CFG = {
       hitsAllDodged: 2,
       hitsPartial: 1,
       hitsChargePerfect: 5,
-      durationMs: 1500,
+      durationMinMs: 1000,
+      durationMaxMs: 2500,
     },
 
     taunt: {
@@ -114,15 +114,15 @@ export const CFG = {
   },
 
   windUp: {
-    jabP1: 1800,
-    hookP1: 2000,
-    jabP2: 1400,
-    hookP2: 1600,
+    jabP1: 2400,
+    hookP1: 2700,
+    jabP2: 1900,
+    hookP2: 2100,
   },
 
   charge: {
     recoilPx: 30,
-    freezeMs: 1000,
+    freezeMs: 1400,
     blinkIntervalMs: 200,
   },
 
@@ -131,12 +131,12 @@ export const CFG = {
     comboMaxP1: 3,
     comboMinP2: 3,
     comboMaxP2: 5,
-    delayBetweenAttacksP1: 600,
-    delayBetweenAttacksP2: 400,
-    idleDelayMinP1: 1200,
-    idleDelayMaxP1: 2000,
-    idleDelayMinP2: 800,
-    idleDelayMaxP2: 1400,
+    delayBetweenAttacksP1: 900,
+    delayBetweenAttacksP2: 650,
+    idleDelayMinP1: 1800,
+    idleDelayMaxP1: 2800,
+    idleDelayMinP2: 1200,
+    idleDelayMaxP2: 2000,
   },
 
   distribution: {

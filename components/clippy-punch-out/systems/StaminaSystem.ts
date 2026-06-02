@@ -20,14 +20,7 @@ export class StaminaSystem {
       return
     }
 
-    p.stamina = Math.max(0, p.stamina - CFG.player.stamina.drainPerSec * dt)
-    if (p.stamina <= 0 && !p.isExhausted) {
-      p.isExhausted = true
-      p.exhaustedTimer = 0
-      p.state.action = 'exhausted'
-      p.state.phase = null
-      p.state.timer = 0
-    }
+    p.stamina = Math.min(CFG.player.maxStamina, p.stamina + CFG.player.stamina.regenPerSec * dt)
   }
 
   canAct(ctx: GameContext): boolean {
@@ -51,7 +44,7 @@ export class StaminaSystem {
   }
 
   restoreRose(ctx: GameContext) {
-    ctx.player.stamina = Math.min(CFG.player.maxStamina, ctx.player.stamina + CFG.player.stamina.roseRecovery)
+    ctx.player.stamina = CFG.player.maxStamina
     if (ctx.player.isExhausted) {
       ctx.player.isExhausted = false
       ctx.player.exhaustedTimer = 0

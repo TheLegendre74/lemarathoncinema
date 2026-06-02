@@ -52,6 +52,7 @@ export class PunchScene extends Phaser.Scene {
   private CX = 400; private CY = 195
 
   // Phaser objects
+  private sprArena!: Phaser.GameObjects.Image
   private sprClipy!: Phaser.GameObjects.Image
   private gHUD!: Phaser.GameObjects.Graphics
   private gFlash!: Phaser.GameObjects.Graphics
@@ -87,6 +88,7 @@ export class PunchScene extends Phaser.Scene {
   // Volume
   private volume = 0.5
   private bgMusic: HTMLAudioElement | null = null
+  private stunSound: Phaser.Sound.BaseSound | null = null
 
   private eyePulse = 0
   private introTimer = 0
@@ -160,7 +162,7 @@ export class PunchScene extends Phaser.Scene {
 
     this.ctx = this.createContext()
 
-    this.add.image(W / 2, H / 2, 'arena').setDisplaySize(W, H)
+    this.sprArena = this.add.image(W / 2, H / 2, 'arena').setDisplaySize(W * 1.3, H * 1.1)
     this.add.graphics().fillStyle(0x040412, 0.38).fillRect(0, 0, W, H)
 
     this.gSpots = this.add.graphics().setDepth(1).setAlpha(0.35)
@@ -396,6 +398,10 @@ export class PunchScene extends Phaser.Scene {
     this.combatSys.update(ctx, dt)
     this.processCombatEvents(ctx)
 
+    if (ctx.clippy.state.action !== 'stunned' && this.stunSound) {
+      this.stunSound.stop(); this.stunSound.destroy(); this.stunSound = null
+    }
+
     if (!ctx.tutorial.active) {
       this.projectileSys.update(ctx, dt)
     }
@@ -409,6 +415,8 @@ export class PunchScene extends Phaser.Scene {
     }
 
     this.gloveR.update(ctx, rawDt)
+    const dodgeOff = this.gloveR.getDodgeOffset()
+    this.sprArena.x = this.W / 2 + dodgeOff.x * 0.7
     this.updateClippyVisuals(ctx, time)
     this.drawStunStars(ctx, time)
     this.effectsR.update(ctx, rawDt)
@@ -840,7 +848,9 @@ export class PunchScene extends Phaser.Scene {
     }
 
     if (cs.action === 'stunned' && prev !== 'stunned') {
-      this.snd('snd_stun')
+      if (this.stunSound) { this.stunSound.stop(); this.stunSound.destroy() }
+      this.stunSound = this.sound.add('snd_stun', { volume: this.volume })
+      this.stunSound.play()
       this.effectsR.popup('ÉTOURDI !', '#ffee22')
       this.gloveR.resetGloves()
     }
@@ -938,7 +948,13 @@ export class PunchScene extends Phaser.Scene {
     this.ctx.gamePhase = 'combat'
     this.ctx.clippy.state.action = 'idle'
     this.ctx.clippy.state.timer = 0
+    this.ctx.clippy.state.attack = null
+    this.ctx.clippy.state.realAttack = null
+    this.ctx.clippy.state.stunHitsRemaining = 0
+    this.ctx.clippy.state.stunDurationMs = 0
     this.ctx.clippy.idleDuration = 0
+    this.ctx.series.active = false
+    if (this.stunSound) { this.stunSound.stop(); this.stunSound.destroy(); this.stunSound = null }
     this.hudR.setBubble(pickTaunt('idle', this.ctx.clippy.hp / CFG.clippy.maxHP))
     this.hudR.setRound('ROUND 1', '#ffcc44')
   }
@@ -998,7 +1014,8 @@ export class PunchScene extends Phaser.Scene {
   private updateClippyVisuals(ctx: GameContext, time: number) {
     const shakeX = this.effectsR.getShakeX(ctx)
     const pos = this.gloveR.updateClippyPosition(ctx, shakeX)
-    let cx = pos.cx
+    const dodgeOff = this.gloveR.getDodgeOffset()
+    let cx = pos.cx + dodgeOff.x * 0.7
     let cy = pos.cy
     let angle = 0
 
@@ -1234,6 +1251,7 @@ export class PunchScene extends Phaser.Scene {
           action: 'idle', attack: null, timer: 0,
           recoveryDuration: 0, comboRemaining: 0, realAttack: null,
           stunHitsRemaining: 0,
+          stunDurationMs: 0,
         },
         psyche: { confidence: 0, panic: 0, fatigue: 0 },
         missStreak: 0,
@@ -1267,6 +1285,7 @@ export class PunchScene extends Phaser.Scene {
 
   shutdown() {
     try { this.bgMusic?.pause(); this.bgMusic = null } catch {}
+    if (this.stunSound) { try { this.stunSound.stop(); this.stunSound.destroy() } catch {} this.stunSound = null }
     this.effectsR.cleanup()
     this.mobileSys.destroy()
   }

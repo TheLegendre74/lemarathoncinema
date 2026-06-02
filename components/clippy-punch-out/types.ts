@@ -55,6 +55,7 @@ export interface ClippyActionState {
   comboRemaining: number
   realAttack: ClippyAttack | null
   stunHitsRemaining: number
+  stunDurationMs: number
 }
 
 export interface ClippyPsyche {
