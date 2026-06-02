@@ -207,9 +207,9 @@ export class PunchScene extends Phaser.Scene {
     const cPunchW = Math.round(clipW * 0.88)
     const cPunchH = Math.round(cPunchW * punchLAR)
     const cPL = this.add.image(this.CX + guardOffX, gloveBaseY, 'cGlovePunchL')
-      .setDisplaySize(cPunchW, cPunchH).setDepth(4).setVisible(false)
+      .setDisplaySize(cPunchW, cPunchH).setDepth(8).setVisible(false)
     const cPR = this.add.image(this.CX - guardOffX, gloveBaseY, 'cGlovePunchR')
-      .setDisplaySize(cPunchW, cPunchH).setDepth(4).setVisible(false)
+      .setDisplaySize(cPunchW, cPunchH).setDepth(8).setVisible(false)
 
     const pGuardSrc = this.textures.get(P_GLOVE_DEFAULT).getSourceImage() as HTMLImageElement
     const pGuardRatio = pGuardSrc.naturalHeight && pGuardSrc.naturalWidth
