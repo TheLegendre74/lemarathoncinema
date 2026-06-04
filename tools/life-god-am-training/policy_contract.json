@@ -2,11 +2,14 @@
   "model_path": "public/models/life-god-game/am-policy.onnx",
   "onnx_input_name": "input",
   "onnx_output_name": "output",
-  "input_size": 46,
+  "input_size": 52,
   "output_size": 15,
   "mission_features": [
     "mission:expandingPopulation",
     "mission:terraforming",
+    "mission:ceremonyChattering",
+    "mission:ceremonyCircleForming",
+    "mission:ceremonyPraying",
     "mission:requestingPlayerPatterns",
     "mission:applyingPlayerPatterns",
     "mission:stable"
@@ -28,7 +31,10 @@
     "behavior:shapingRock",
     "behavior:escapingStuckArea",
     "behavior:requestingPattern",
-    "behavior:resting"
+    "behavior:resting",
+    "behavior:ceremonyWandering",
+    "behavior:ceremonyApproaching",
+    "behavior:ceremonyPraying"
   ],
   "role_features": [
     "role:builder",

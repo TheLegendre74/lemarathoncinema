@@ -1,0 +1,218 @@
+{
+  "meta": {
+    "date": "2026-06-04T13:45:27.428Z",
+    "populationSize": 2,
+    "generations": 1,
+    "ticksPerEval": 200,
+    "runsPerIndividual": 1,
+    "bestFitness": 177.6,
+    "baselineFitness": 102.1,
+    "improvementPercent": 60.1,
+    "totalSessions": 2
+  },
+  "weights": {
+    "builder": {
+      "explore": 0.46456300879652185,
+      "seekCells": 1.7362600324577917,
+      "gatherCells": 1.9372872895502695,
+      "carryToSite": 1.878964928915909,
+      "buildAm": 1.653450687854674,
+      "avoidWall": 2.6361476146229212,
+      "avoidCrowd": 2.939668960788544,
+      "seekFrozenMatter": 1.737517719391276,
+      "terraform": 2.3058091158092067,
+      "rest": 2.481321375310651
+    },
+    "gatherer": {
+      "explore": 2.1461910196002716,
+      "seekCells": 1.8914187403871867,
+      "gatherCells": 1.4296821388465983,
+      "carryToSite": 2.5751700502197052,
+      "buildAm": 1.9242867191854987,
+      "avoidWall": 1.9453941414641938,
+      "avoidCrowd": 1.295858247295636,
+      "seekFrozenMatter": 0.3152958922181422,
+      "terraform": 0.38135688418752217,
+      "rest": 0.9834316045439697
+    },
+    "explorer": {
+      "explore": 1.8012304415696074,
+      "seekCells": 1.0745005431557508,
+      "gatherCells": 0.4180204286823822,
+      "carryToSite": 0.6212975342964717,
+      "buildAm": 1.5628810409676246,
+      "avoidWall": 2.6753696307516717,
+      "avoidCrowd": 2.469639821193287,
+      "seekFrozenMatter": 2.8054176977493337,
+      "terraform": 0.977319994299432,
+      "rest": 0.5880651640471212
+    }
+  },
+  "breakdown": {
+    "total": 177.6,
+    "expansion": 3,
+    "terraform": 0,
+    "cooperation": 91.3,
+    "specialization": 23.3,
+    "efficiency": 60,
+    "penalties": 0
+  },
+  "top10": [
+    {
+      "rank": 1,
+      "fitness": 177.6,
+      "breakdown": {
+        "total": 177.6,
+        "expansion": 3,
+        "terraform": 0,
+        "cooperation": 91.3,
+        "specialization": 23.3,
+        "efficiency": 60,
+        "penalties": 0
+      },
+      "weights": {
+        "builder": {
+          "explore": 0.46456300879652185,
+          "seekCells": 1.7362600324577917,
+          "gatherCells": 1.9372872895502695,
+          "carryToSite": 1.878964928915909,
+          "buildAm": 1.653450687854674,
+          "avoidWall": 2.6361476146229212,
+          "avoidCrowd": 2.939668960788544,
+          "seekFrozenMatter": 1.737517719391276,
+          "terraform": 2.3058091158092067,
+          "rest": 2.481321375310651
+        },
+        "gatherer": {
+          "explore": 2.1461910196002716,
+          "seekCells": 1.8914187403871867,
+          "gatherCells": 1.4296821388465983,
+          "carryToSite": 2.5751700502197052,
+          "buildAm": 1.9242867191854987,
+          "avoidWall": 1.9453941414641938,
+          "avoidCrowd": 1.295858247295636,
+          "seekFrozenMatter": 0.3152958922181422,
+          "terraform": 0.38135688418752217,
+          "rest": 0.9834316045439697
+        },
+        "explorer": {
+          "explore": 1.8012304415696074,
+          "seekCells": 1.0745005431557508,
+          "gatherCells": 0.4180204286823822,
+          "carryToSite": 0.6212975342964717,
+          "buildAm": 1.5628810409676246,
+          "avoidWall": 2.6753696307516717,
+          "avoidCrowd": 2.469639821193287,
+          "seekFrozenMatter": 2.8054176977493337,
+          "terraform": 0.977319994299432,
+          "rest": 0.5880651640471212
+        }
+      },
+      "session": 2
+    },
+    {
+      "rank": 2,
+      "fitness": 171.3,
+      "breakdown": {
+        "total": 171.3,
+        "expansion": 3,
+        "terraform": 0,
+        "cooperation": 85,
+        "specialization": 23.3,
+        "efficiency": 60,
+        "penalties": 0
+      },
+      "weights": {
+        "builder": {
+          "explore": 0.46456300879652185,
+          "seekCells": 1.7362600324577917,
+          "gatherCells": 2.5815739694737796,
+          "carryToSite": 1.878964928915909,
+          "buildAm": 1.4598787019809818,
+          "avoidWall": 2.6361476146229212,
+          "avoidCrowd": 2.939668960788544,
+          "seekFrozenMatter": 1.737517719391276,
+          "terraform": 2.3058091158092067,
+          "rest": 2.675763834294649
+        },
+        "gatherer": {
+          "explore": 1.2462580886085652,
+          "seekCells": 2.5371858050179843,
+          "gatherCells": 1.8461418523787243,
+          "carryToSite": 2.5751700502197052,
+          "buildAm": 2.296961858957273,
+          "avoidWall": 1.0405653551281637,
+          "avoidCrowd": 2.476117895599629,
+          "seekFrozenMatter": 0.3152958922181422,
+          "terraform": 0.38135688418752217,
+          "rest": 0.9834316045439697
+        },
+        "explorer": {
+          "explore": 1.9615399710074966,
+          "seekCells": 1.0745005431557508,
+          "gatherCells": 2.8184421083485933,
+          "carryToSite": 0.6212975342964717,
+          "buildAm": 1.3404475412448587,
+          "avoidWall": 2.6753696307516717,
+          "avoidCrowd": 2.469639821193287,
+          "seekFrozenMatter": 2.8054176977493337,
+          "terraform": 0.977319994299432,
+          "rest": 0.49220251609231896
+        }
+      },
+      "session": 2
+    },
+    {
+      "rank": 3,
+      "fitness": 158.8,
+      "breakdown": {
+        "total": 158.8,
+        "expansion": 3,
+        "terraform": 0,
+        "cooperation": 72.5,
+        "specialization": 23.3,
+        "efficiency": 60,
+        "penalties": 0
+      },
+      "weights": {
+        "builder": {
+          "explore": 2.11248377424376,
+          "seekCells": 2.0302896192791726,
+          "gatherCells": 1.9372872895502695,
+          "carryToSite": 1.3984704636972622,
+          "buildAm": 1.667342148346102,
+          "avoidWall": 0.3294468468095243,
+          "avoidCrowd": 1.0165643430036948,
+          "seekFrozenMatter": 0.8414417451112755,
+          "terraform": 2.022796672334715,
+          "rest": 2.274658342396499
+        },
+        "gatherer": {
+          "explore": 2.2032687048022233,
+          "seekCells": 1.8914187403871867,
+          "gatherCells": 1.4296821388465983,
+          "carryToSite": 0.6795058861044015,
+          "buildAm": 1.9242867191854987,
+          "avoidWall": 1.9453941414641938,
+          "avoidCrowd": 1.3026351841060806,
+          "seekFrozenMatter": 2.8066518104172786,
+          "terraform": 1.0203264376715777,
+          "rest": 2.403643701446272
+        },
+        "explorer": {
+          "explore": 1.0997211310309287,
+          "seekCells": 0.20760084405519696,
+          "gatherCells": 0.4180204286823822,
+          "carryToSite": 1.027588149664361,
+          "buildAm": 1.5628810409676246,
+          "avoidWall": 0.9741023119083743,
+          "avoidCrowd": 0.5234296840931759,
+          "seekFrozenMatter": 1.5465742532199007,
+          "terraform": 2.3811142171297224,
+          "rest": 0.5880651640471212
+        }
+      },
+      "session": 2
+    }
+  ]
+}

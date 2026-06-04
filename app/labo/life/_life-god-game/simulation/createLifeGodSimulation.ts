@@ -1931,20 +1931,21 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
   function getTerrainRoleScore(am: LifeGodAmEntity, terrainType: LifeGodTerrainType) {
     if (terrainType === 0) return -999
     if (am.role === 'builder') {
-      if (terrainType === 4) return 22
-      if (terrainType === 1) return 10
-      if (terrainType === 2) return 2
-      return -10
+      if (terrainType === 4) return 12
+      if (terrainType === 1) return 12
+      if (terrainType === 2) return 4
+      return -8
     }
     if (am.role === 'gatherer') {
       if (terrainType === 2) return 18
       if (terrainType === 1) return 10
-      if (terrainType === 4) return -4
-      return -8
+      if (terrainType === 4) return 3
+      return -6
     }
     if (terrainType === 3) return 17
     if (terrainType === 2) return 10
     if (terrainType === 1) return 8
+    if (terrainType === 4) return 2
     return -6
   }
 
@@ -1978,7 +1979,7 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
       if (stats.waterNeighbors === 0 && terrainNearby > 0) terrainShapeScore -= 8
       if (stats.waterNeighbors === 0 && terrainNearby === 0) terrainShapeScore -= 12
     } else if (terrainType === 4) {
-      terrainShapeScore += stats.rockNeighbors * 24 + stats.soilNeighbors * 8
+      terrainShapeScore += stats.rockNeighbors * 10 + stats.soilNeighbors * 4
     }
 
     return (
@@ -2052,6 +2053,24 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
     }
 
     candidates.sort((a, b) => b.score - a.score)
+
+    // Seed missing terrain types so all 4 exist for ceremony completion
+    const diversityTotal = countTerrain(1) + countTerrain(2) + countTerrain(3) + countTerrain(4)
+    if (diversityTotal > 80 && candidates.length > 0) {
+      const missingTypes: LifeGodTerrainType[] = []
+      if (countTerrain(4) === 0) missingTypes.push(4)
+      if (countTerrain(3) === 0) missingTypes.push(3)
+      if (countTerrain(2) === 0) missingTypes.push(2)
+      if (countTerrain(1) === 0) missingTypes.push(1)
+      if (missingTypes.length > 0) {
+        const seedType = missingTypes[Math.floor(Math.random() * missingTypes.length)]
+        const seedCount = Math.min(2, candidates.length)
+        for (let i = 0; i < seedCount; i++) {
+          candidates[i].terrainType = seedType
+          candidates[i].stats = getTerrainNeighborStats(candidates[i].x, candidates[i].y, seedType)
+        }
+      }
+    }
 
     let converted = 0
     let primaryTerrainType: LifeGodTerrainType = 1

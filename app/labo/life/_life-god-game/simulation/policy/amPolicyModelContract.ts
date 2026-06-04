@@ -6,6 +6,9 @@ export const POLICY_INFERENCE_INTERVAL_TICKS = 6
 export const POLICY_MISSION_FEATURES = [
   'mission:expandingPopulation',
   'mission:terraforming',
+  'mission:ceremonyChattering',
+  'mission:ceremonyCircleForming',
+  'mission:ceremonyPraying',
   'mission:requestingPlayerPatterns',
   'mission:applyingPlayerPatterns',
   'mission:stable',
@@ -29,6 +32,9 @@ export const POLICY_BEHAVIOR_FEATURES = [
   'behavior:escapingStuckArea',
   'behavior:requestingPattern',
   'behavior:resting',
+  'behavior:ceremonyWandering',
+  'behavior:ceremonyApproaching',
+  'behavior:ceremonyPraying',
 ] as const
 
 export const POLICY_ROLE_FEATURES = [
