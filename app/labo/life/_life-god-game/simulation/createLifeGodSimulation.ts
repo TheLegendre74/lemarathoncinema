@@ -3395,6 +3395,37 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
       }, 6, 'escaped_stuck_area')
     }
 
+    if (am.memory.escapeTicksRemaining <= 0) {
+      const safeX = Math.round(GRID_WIDTH * (0.25 + Math.random() * 0.5))
+      const safeY = Math.round(GRID_HEIGHT * (0.25 + Math.random() * 0.5))
+      const safePosition = { x: safeX, y: safeY }
+      return {
+        ...am,
+        position: safePosition,
+        absoluteCells: computeAbsoluteCells(am.cells, safePosition),
+        currentGoal: getPostEscapeGoal(am),
+        behaviorState: getPostEscapeBehaviorState(am),
+        targetCell: null,
+        targetPosition: null,
+        movementDirection: null,
+        memory: {
+          ...am.memory,
+          escapeTarget: null,
+          escapeTicksRemaining: 0,
+          stuckAreaTicks: 0,
+          wallStickTicks: 0,
+          lastUsefulActionTick: generation,
+          lastStuckReason: 'teleported_from_stuck',
+          failedAreas: [],
+          failedTargets: [],
+          failedTerraformTargets: [],
+          recentBlockedPositions: [],
+          recentTimedPositions: [],
+          recentPositions: [],
+        },
+      }
+    }
+
     const moved = moveTowardEscapeTarget({
       ...am,
       targetCell: null,
