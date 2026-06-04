@@ -88,13 +88,14 @@ export default function LifeGodGame() {
   }, [])
 
   const activePatternRequest = simulationState?.currentPatternRequest ?? null
+  const isCeremonyDrawing = simulationState?.ceremonyPhase === 'drawing'
 
   useEffect(() => {
     const requestId = activePatternRequest?.id ?? null
     const simulation = runtimeRef.current?.simulation
     if (!simulation) return
 
-    if (requestId && previousPatternRequestIdRef.current === null) {
+    if (requestId && previousPatternRequestIdRef.current === null && !isCeremonyDrawing) {
       wasPlayingBeforePatternRef.current = simulationState?.status === 'playing'
       simulation.pause()
     }
@@ -105,23 +106,15 @@ export default function LifeGodGame() {
     }
 
     previousPatternRequestIdRef.current = requestId
-  }, [activePatternRequest?.id, simulationState?.status])
+  }, [activePatternRequest?.id, simulationState?.status, isCeremonyDrawing])
 
-  const patternSpeakerBubble = (() => {
-    if (!simulationState?.currentPatternRequest || !simulationState.currentPatternSpokespersonAmId) return null
-    const speaker = simulationState.amEntities.find((am) => am.id === simulationState.currentPatternSpokespersonAmId)
+  const ceremonyDrawPosition = (() => {
+    if (!simulationState?.ceremonyCenterPoint || simulationState.ceremonyPhase !== 'drawing') return null
     const metrics = runtimeRef.current?.renderer.getViewportMetrics()
-    if (!speaker || !metrics || speaker.absoluteCells.length === 0) return null
-    const center = speaker.absoluteCells.reduce(
-      (sum, cell) => ({ x: sum.x + cell.x, y: sum.y + cell.y }),
-      { x: 0, y: 0 }
-    )
-    center.x /= speaker.absoluteCells.length
-    center.y /= speaker.absoluteCells.length
+    if (!metrics) return null
     return {
-      x: metrics.x + center.x * metrics.cellSize,
-      y: metrics.y + center.y * metrics.cellSize,
-      text: `${simulationState.currentPatternRequest.label}!`,
+      screenX: metrics.x + simulationState.ceremonyCenterPoint.x * metrics.cellSize,
+      screenY: metrics.y + simulationState.ceremonyCenterPoint.y * metrics.cellSize,
     }
   })()
 
@@ -133,6 +126,32 @@ export default function LifeGodGame() {
     }
     return accepted
   }
+
+  const speechBubbleElements = simulationState?.speechBubbles.map(bubble => {
+    const am = simulationState.amEntities.find(a => a.id === bubble.amId)
+    const metrics = runtimeRef.current?.renderer.getViewportMetrics()
+    if (!am || !metrics || am.absoluteCells.length === 0) return null
+    let sx = 0, sy = 0
+    for (const cell of am.absoluteCells) { sx += cell.x; sy += cell.y }
+    const cx = sx / am.absoluteCells.length
+    const cy = sy / am.absoluteCells.length
+    const age = (simulationState.generation - bubble.startTick) / bubble.durationTicks
+    const opacity = age > 0.8 ? 1 - (age - 0.8) / 0.2 : Math.min(1, age / 0.15)
+
+    return (
+      <div
+        key={`${bubble.amId}-${bubble.startTick}`}
+        className="life-god-speech-bubble"
+        style={{
+          left: metrics.x + cx * metrics.cellSize,
+          top: metrics.y + cy * metrics.cellSize,
+          opacity,
+        }}
+      >
+        {bubble.text}
+      </div>
+    )
+  }) ?? []
 
   return (
     <div
@@ -180,23 +199,14 @@ export default function LifeGodGame() {
               inset: 0,
             }}
           />
-          {patternSpeakerBubble && (
-            <div
-              className="life-god-pattern-bubble"
-              style={{
-                left: patternSpeakerBubble.x,
-                top: patternSpeakerBubble.y,
-              }}
-            >
-              {patternSpeakerBubble.text}
-            </div>
-          )}
+          {speechBubbleElements}
           {patternFeedback && <div className="life-god-pattern-feedback">{patternFeedback}</div>}
           {activePatternRequest && (
             <PatternDrawingOverlay
               key={activePatternRequest.id}
               request={activePatternRequest}
               onSubmit={submitPattern}
+              inWorldPosition={ceremonyDrawPosition}
             />
           )}
         </div>
@@ -253,33 +263,34 @@ export default function LifeGodGame() {
           line-height: 1;
         }
 
-        .life-god-pattern-bubble {
+        .life-god-speech-bubble {
           position: absolute;
           z-index: 11;
-          transform: translate(-50%, calc(-100% - 14px));
-          max-width: 160px;
-          padding: 0.35rem 0.58rem;
-          border: 1px solid rgba(255, 255, 255, 0.22);
-          border-radius: 6px;
-          background: rgba(235, 241, 255, 0.94);
-          color: #111827;
-          font-size: 13px;
-          font-weight: 800;
+          transform: translate(-50%, calc(-100% - 12px));
+          max-width: 120px;
+          padding: 0.25rem 0.45rem;
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          border-radius: 5px;
+          background: rgba(235, 241, 255, 0.88);
+          color: #1a2233;
+          font-size: 11px;
+          font-weight: 700;
           pointer-events: none;
-          box-shadow: 0 10px 24px rgba(0, 0, 0, 0.34);
+          white-space: nowrap;
+          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
         }
 
-        .life-god-pattern-bubble::after {
+        .life-god-speech-bubble::after {
           content: '';
           position: absolute;
           left: 50%;
-          bottom: -6px;
-          width: 10px;
-          height: 10px;
+          bottom: -5px;
+          width: 8px;
+          height: 8px;
           transform: translateX(-50%) rotate(45deg);
-          background: rgba(235, 241, 255, 0.94);
-          border-right: 1px solid rgba(255, 255, 255, 0.22);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.22);
+          background: rgba(235, 241, 255, 0.88);
+          border-right: 1px solid rgba(255, 255, 255, 0.18);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.18);
         }
 
         .life-god-pattern-feedback {

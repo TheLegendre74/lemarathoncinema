@@ -24,6 +24,17 @@ export async function createPixiViewport({
   app.canvas.style.width = '100%'
   app.canvas.style.height = '100%'
   app.canvas.style.touchAction = 'none'
+  app.canvas.style.position = 'absolute'
+  app.canvas.style.inset = '0'
+
+  const overlayCanvas = document.createElement('canvas')
+  const overlayContext = overlayCanvas.getContext('2d')
+  overlayCanvas.style.position = 'absolute'
+  overlayCanvas.style.inset = '0'
+  overlayCanvas.style.width = '100%'
+  overlayCanvas.style.height = '100%'
+  overlayCanvas.style.pointerEvents = 'none'
+  host.appendChild(overlayCanvas)
 
   const backdrop = new PIXI.Graphics()
   const frame = new PIXI.Graphics()
@@ -35,6 +46,7 @@ export async function createPixiViewport({
   const protoAuras = new PIXI.Graphics()
   const protoCells = new PIXI.Graphics()
   const protoOutlines = new PIXI.Graphics()
+  const worldAssetCells = new PIXI.Graphics()
   const amAuras = new PIXI.Graphics()
   const amCells = new PIXI.Graphics()
   const amOutlines = new PIXI.Graphics()
@@ -46,6 +58,7 @@ export async function createPixiViewport({
     liveCells,
     constructionGhosts,
     constructionBuilt,
+    worldAssetCells,
     protoAuras,
     protoCells,
     protoOutlines,
@@ -63,7 +76,21 @@ export async function createPixiViewport({
     cellSize: 1,
   }
 
+  function ensureRendererSize() {
+    const rect = host.getBoundingClientRect()
+    const width = Math.max(1, Math.floor(rect.width))
+    const height = Math.max(1, Math.floor(rect.height))
+    if (app.renderer.width !== width || app.renderer.height !== height) {
+      app.renderer.resize(width, height)
+    }
+    if (overlayCanvas.width !== width || overlayCanvas.height !== height) {
+      overlayCanvas.width = width
+      overlayCanvas.height = height
+    }
+  }
+
   function computeMetrics() {
+    ensureRendererSize()
     const width = app.renderer.width
     const height = app.renderer.height
     const padding = 24
@@ -116,6 +143,68 @@ export async function createPixiViewport({
     gridLines.stroke({ color: 0x7f8ba5, alpha: 0.12, width: 1 })
   }
 
+  function drawCanvasOverlay(state: LifeGodSimulationState, reservedCells: Set<string>) {
+    if (!overlayContext) return
+
+    overlayContext.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height)
+    overlayContext.imageSmoothingEnabled = false
+
+    const drawCell = (x: number, y: number, color: string, alpha = 1) => {
+      overlayContext.globalAlpha = alpha
+      overlayContext.fillStyle = color
+      overlayContext.fillRect(
+        metrics.x + x * metrics.cellSize + 1,
+        metrics.y + y * metrics.cellSize + 1,
+        Math.max(metrics.cellSize - 1, 1),
+        Math.max(metrics.cellSize - 1, 1)
+      )
+    }
+
+    for (let y = 0; y < state.gridHeight; y += 1) {
+      const rowOffset = y * state.gridWidth
+      for (let x = 0; x < state.gridWidth; x += 1) {
+        if (reservedCells.has(`${x}:${y}`)) continue
+        const terrain = state.terrainGrid[rowOffset + x]
+        if (terrain === 1) drawCell(x, y, '#5f735f', 0.5)
+        if (terrain === 2) drawCell(x, y, '#59b779', 0.62)
+        if (terrain === 3) drawCell(x, y, '#3b7fb6', 0.58)
+        if (terrain === 4) drawCell(x, y, '#8a92a0', 0.56)
+        if (state.cells[rowOffset + x] === 1) drawCell(x, y, '#b8d7ff', 0.92)
+      }
+    }
+
+    for (const site of state.constructionSites) {
+      const lineage = state.amLineages.find((item) => item.id === site.lineageId)
+      const color = lineage?.color ?? '#69f0c1'
+      for (const cell of site.absoluteCells) {
+        drawCell(cell.x, cell.y, color, 0.35)
+      }
+    }
+
+    for (const proto of state.protoEntities) {
+      for (const cell of proto.cells) {
+        drawCell(cell.x, cell.y, '#e4ecff', proto.state === 'metamorphosing' ? 0.9 : 0.72)
+      }
+    }
+
+    for (const am of state.amEntities) {
+      const lineage = state.amLineages.find((item) => item.id === am.lineageId)
+      const color = lineage?.color ?? am.color ?? '#69f0c1'
+      const visibleRatio =
+        am.state === 'alive'
+          ? 1
+          : am.state === 'adapting'
+            ? 0.8
+            : 0.48
+      const visibleCount = Math.max(1, Math.ceil(am.absoluteCells.length * visibleRatio))
+      for (const cell of am.absoluteCells.slice(0, visibleCount)) {
+        drawCell(cell.x, cell.y, color, state.selectedAmId === am.id ? 1 : 0.86)
+      }
+    }
+
+    overlayContext.globalAlpha = 1
+  }
+
   function draw(state: LifeGodSimulationState) {
     latestState = state
     computeMetrics()
@@ -137,6 +226,8 @@ export async function createPixiViewport({
       ...state.amEntities.flatMap((am) => am.absoluteCells.map((cell) => `${cell.x}:${cell.y}`)),
     ])
 
+    drawCanvasOverlay(state, reservedCells)
+
     const terrainColors: Record<number, { color: number; alpha: number }> = {
       1: { color: 0x5f735f, alpha: 0.5 },
       2: { color: 0x59b779, alpha: 0.62 },
@@ -157,8 +248,20 @@ export async function createPixiViewport({
       terrainCells.fill(terrainColors[terrainType])
     }
 
+    worldAssetCells.clear()
+    for (const asset of state.worldAssets) {
+      const colorValue = Number.parseInt(asset.colorHint.replace('#', ''), 16)
+      for (const cell of asset.absoluteCells) {
+        const px = metrics.x + cell.x * metrics.cellSize
+        const py = metrics.y + cell.y * metrics.cellSize
+        worldAssetCells.rect(px + 1, py + 1, Math.max(metrics.cellSize - 1, 1), Math.max(metrics.cellSize - 1, 1))
+        reservedCells.add(`${cell.x}:${cell.y}`)
+      }
+      worldAssetCells.fill({ color: colorValue, alpha: 0.82 })
+    }
+
     for (let y = 0; y < state.gridHeight; y += 1) {
-        const rowOffset = y * state.gridWidth
+      const rowOffset = y * state.gridWidth
       for (let x = 0; x < state.gridWidth; x += 1) {
         if (state.cells[rowOffset + x] !== 1) continue
         if (reservedCells.has(`${x}:${y}`)) continue

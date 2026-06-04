@@ -8,11 +8,15 @@ export type LifeGodInfluenceMode = 'attract' | 'repel'
 export type LifeGodAmMission =
   | 'expandingPopulation'
   | 'terraforming'
+  | 'ceremonyChattering'
+  | 'ceremonyCircleForming'
+  | 'ceremonyPraying'
   | 'requestingPlayerPatterns'
   | 'applyingPlayerPatterns'
   | 'stable'
 export type LifeGodTerrainType = 0 | 1 | 2 | 3 | 4
-export type LifeGodPlayerPatternType = 'tree' | 'animal' | 'rock' | 'river'
+export type LifeGodPlayerPatternType = 'house' | 'tree' | 'animal' | 'tool' | 'rock' | 'river'
+export type LifeGodCeremonyPhase = 'none' | 'chattering' | 'circleForming' | 'praying' | 'drawing'
 export type LifeGodAmBehaviorState =
   | 'idle'
   | 'wandering'
@@ -31,6 +35,9 @@ export type LifeGodAmBehaviorState =
   | 'escapingStuckArea'
   | 'requestingPattern'
   | 'resting'
+  | 'ceremonyWandering'
+  | 'ceremonyApproaching'
+  | 'ceremonyPraying'
 
 export interface LifeGodRelativeCell {
   x: number
@@ -99,6 +106,36 @@ export interface LifeGodProtoEntity {
   state: 'awakening' | 'gathering' | 'metamorphosing'
 }
 
+export interface LifeGodAmBrainWeights {
+  explore: number
+  seekCells: number
+  gatherCells: number
+  carryToSite: number
+  buildAm: number
+  avoidWall: number
+  avoidCrowd: number
+  seekFrozenMatter: number
+  terraform: number
+  rest: number
+}
+
+export interface LifeGodAmBrainRewardEvent {
+  generation: number
+  amount: number
+  reason: string
+}
+
+export interface LifeGodAmBrain {
+  weights: LifeGodAmBrainWeights
+  learningRate: number
+  totalReward: number
+  lastRewardReason: string | null
+  recentRewardEvents: LifeGodAmBrainRewardEvent[]
+  generation: number
+  lastLearningGeneration: number
+  parentId?: string
+}
+
 export interface LifeGodAmEntity {
   id: string
   lineageId: string
@@ -124,6 +161,7 @@ export interface LifeGodAmEntity {
   carriedCell: LifeGodRelativeCell | null
   movementDirection: LifeGodRelativeCell | null
   gatheredCells: LifeGodRelativeCell[]
+  brain: LifeGodAmBrain
   memory: {
     lastTargetCell: LifeGodRelativeCell | null
     lastBuildSite: LifeGodRelativeCell | null
@@ -215,6 +253,23 @@ export interface LifeGodPlayerPattern {
   colorHint: string
 }
 
+export interface LifeGodSpeechBubble {
+  amId: string
+  text: string
+  startTick: number
+  durationTicks: number
+}
+
+export interface LifeGodWorldAsset {
+  id: string
+  type: LifeGodPlayerPatternType
+  position: { x: number; y: number }
+  cells: LifeGodRelativeCell[]
+  absoluteCells: LifeGodRelativeCell[]
+  colorHint: string
+  placedAtGeneration: number
+}
+
 export interface LifeGodViewportMetrics {
   x: number
   y: number
@@ -254,6 +309,8 @@ export interface LifeGodSimulationState {
   waterCount: number
   rockCount: number
   terraformationProgress: number
+  terraformCoherenceScore: number
+  isolatedTerrainCount: number
   terraformationComplete: boolean
   terraformationStabilized: boolean
   criticallyBlockedAmCount: number
@@ -266,6 +323,13 @@ export interface LifeGodSimulationState {
   animalPatternLibrary: LifeGodPlayerPattern[]
   rockPatternLibrary: LifeGodPlayerPattern[]
   riverPatternLibrary: LifeGodPlayerPattern[]
+  housePatternLibrary: LifeGodPlayerPattern[]
+  toolPatternLibrary: LifeGodPlayerPattern[]
+  ceremonyPhase: LifeGodCeremonyPhase
+  ceremonyCenterPoint: LifeGodRelativeCell | null
+  ceremonyRequestType: LifeGodPlayerPatternType | null
+  speechBubbles: LifeGodSpeechBubble[]
+  worldAssets: LifeGodWorldAsset[]
   createdAmCount: number
   targetAmCount: number
   aliveAmTarget: number
@@ -278,6 +342,17 @@ export interface LifeGodSimulationState {
   amEntities: LifeGodAmEntity[]
   constructionSites: LifeGodConstructionSite[]
   selectedAmId: string | null
+}
+
+export interface LifeGodTrainingWeights {
+  builder: LifeGodAmBrainWeights
+  gatherer: LifeGodAmBrainWeights
+  explorer: LifeGodAmBrainWeights
+}
+
+export interface LifeGodTrainingConfig {
+  headless: boolean
+  initialWeights?: LifeGodTrainingWeights
 }
 
 export interface LifeGodSimulationController {
@@ -295,6 +370,7 @@ export interface LifeGodSimulationController {
   paintCell(x: number, y: number, mode: LifeGodPaintMode): void
   submitPlayerPattern(pattern: Omit<LifeGodPlayerPattern, 'id' | 'createdAt'>): boolean
   selectAm(amId: string | null): void
+  stepSync(): void
   destroy(): void
 }
 

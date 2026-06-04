@@ -43,11 +43,18 @@ export function LifeGodGameHud({
   const selectedSite = selectedAm
     ? simulationState?.constructionSites.find((site) => site.builderAmId === selectedAm.id) ?? null
     : null
+  const selectedRecentRewardEvents = selectedAm
+    ? selectedAm.brain.recentRewardEvents.slice(-5).reverse()
+    : []
   const seekingAmCount = simulationState?.amEntities.filter((am) =>
     am.behaviorState === 'seekingFixedCell' || am.behaviorState === 'movingToFixedCell'
   ).length ?? 0
   const carryingAmCount = simulationState?.amEntities.filter((am) => am.behaviorState === 'carryingCellToSite').length ?? 0
   const terraformingPercent = simulationState ? Math.round(simulationState.terraformationProgress * 100) : 0
+  const terraformCoherencePercent = simulationState ? Math.round(simulationState.terraformCoherenceScore * 100) : 0
+  const debugAmEntities = simulationState
+    ? [...simulationState.amEntities].sort((a, b) => a.color.localeCompare(b.color) || a.id.localeCompare(b.id))
+    : []
 
   return (
     <div
@@ -136,16 +143,22 @@ export function LifeGodGameHud({
                 <div>Water : {simulationState.waterCount}</div>
                 <div>Rock : {simulationState.rockCount}</div>
                 <div>Terraforming : {terraformingPercent}%</div>
+                <div>Coherence terrain : {terraformCoherencePercent}%</div>
+                <div>Terrains isoles : {simulationState.isolatedTerrainCount}</div>
                 <div>Terraform complete : {simulationState.terraformationComplete ? 'oui' : 'non'}</div>
                 <div>AM bloquées : {simulationState.criticallyBlockedAmCount}</div>
                 <div>Cellules vivantes : {simulationState.aliveCount}</div>
                 <div>Lignées : {simulationState.amLineages.length} / 3</div>
                 <div>Patterns actifs : {simulationState.activePatternIds.length} / {simulationState.maxActivePatternsPerSeed}</div>
+                <div>Maisons : {simulationState.housePatternLibrary.length} / 2</div>
                 <div>Arbres : {simulationState.treePatternLibrary.length} / 3</div>
                 <div>Animaux : {simulationState.animalPatternLibrary.length} / 3</div>
-                <div>Rochers : {simulationState.rockPatternLibrary.length} / 3</div>
+                <div>Outils : {simulationState.toolPatternLibrary.length} / 2</div>
+                <div>Rochers : {simulationState.rockPatternLibrary.length} / 2</div>
                 <div>Riviere : {simulationState.riverPatternLibrary.length} / 1</div>
-                <div>Porte-parole : {simulationState.currentPatternSpokespersonAmId ?? 'aucun'}</div>
+                <div>Ceremonie : {simulationState.ceremonyPhase === 'none' ? 'aucune' : simulationState.ceremonyPhase === 'chattering' ? 'Bavardage' : simulationState.ceremonyPhase === 'circleForming' ? 'Formation' : simulationState.ceremonyPhase === 'praying' ? 'Priere' : 'Dessin'}</div>
+                {simulationState.ceremonyRequestType && <div>Demande : {simulationState.ceremonyRequestType}</div>}
+                <div>Assets monde : {simulationState.worldAssets.length}</div>
                 <div>Collection patterns : {simulationState.playerPatternCollectionComplete ? 'complete' : 'en cours'}</div>
               </div>
               {selectedAm && selectedLineage && (
@@ -171,6 +184,45 @@ export function LifeGodGameHud({
                   <div>Independence : {selectedAm.memory.independenceScore.toFixed(2)}</div>
                   <div>Total reward : {selectedAm.memory.totalReward.toFixed(1)}</div>
                   <div>Last reward : {selectedAm.memory.lastRewardReason ?? 'aucune'}</div>
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: 6, paddingTop: 6 }}>
+                    <div>Brain / apprentissage</div>
+                    <div>Learning rate : {selectedAm.brain.learningRate.toFixed(3)}</div>
+                    <div>Total reward : {selectedAm.brain.totalReward.toFixed(1)}</div>
+                    <div>Last reward : {selectedAm.brain.lastRewardReason ?? 'aucune'}</div>
+                    <div>Generation : {selectedAm.brain.generation}</div>
+                    <div>Parent : {selectedAm.brain.parentId ?? 'aucun'}</div>
+                    <div>Last learning generation : {selectedAm.brain.lastLearningGeneration}</div>
+                    <div>Recent reward events : {selectedAm.brain.recentRewardEvents.length}</div>
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                        gap: '2px 10px',
+                        marginTop: 4,
+                      }}
+                    >
+                      <div>explore : {selectedAm.brain.weights.explore.toFixed(2)}</div>
+                      <div>seekCells : {selectedAm.brain.weights.seekCells.toFixed(2)}</div>
+                      <div>gatherCells : {selectedAm.brain.weights.gatherCells.toFixed(2)}</div>
+                      <div>carryToSite : {selectedAm.brain.weights.carryToSite.toFixed(2)}</div>
+                      <div>buildAm : {selectedAm.brain.weights.buildAm.toFixed(2)}</div>
+                      <div>avoidWall : {selectedAm.brain.weights.avoidWall.toFixed(2)}</div>
+                      <div>avoidCrowd : {selectedAm.brain.weights.avoidCrowd.toFixed(2)}</div>
+                      <div>seekFrozen : {selectedAm.brain.weights.seekFrozenMatter.toFixed(2)}</div>
+                      <div>terraform : {selectedAm.brain.weights.terraform.toFixed(2)}</div>
+                      <div>rest : {selectedAm.brain.weights.rest.toFixed(2)}</div>
+                    </div>
+                    <div style={{ marginTop: 4 }}>Derniers events :</div>
+                    {selectedRecentRewardEvents.length > 0 ? (
+                      selectedRecentRewardEvents.map((event, index) => (
+                        <div key={`${event.generation}-${event.reason}-${index}`}>
+                          g{event.generation} / {event.amount.toFixed(1)} / {event.reason}
+                        </div>
+                      ))
+                    ) : (
+                      <div>aucun</div>
+                    )}
+                  </div>
                   <div>Terraform stuck : {selectedAm.memory.terraformStuckTicks}</div>
                   <div>Terraform target : {selectedAm.targetCell ? `${selectedAm.targetCell.x},${selectedAm.targetCell.y}` : 'aucune'}</div>
                   <div>Failed terraform targets : {selectedAm.memory.failedTerraformTargets.length}</div>
@@ -196,6 +248,56 @@ export function LifeGodGameHud({
                   )}
                 </div>
               )}
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: 8, paddingTop: 8 }}>
+                <div style={{ marginBottom: 6 }}>AM debug / comparaison</div>
+                {debugAmEntities.length > 0 ? (
+                  debugAmEntities.map((am) => (
+                    <div
+                      key={am.id}
+                      style={{
+                        borderTop: '1px solid rgba(255,255,255,0.06)',
+                        paddingTop: 6,
+                        marginTop: 6,
+                        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                        fontSize: 11,
+                        lineHeight: 1.35,
+                      }}
+                    >
+                      <div>
+                        id={am.id} color=<span style={{ color: am.color }}>{am.color}</span> lineageId={am.lineageId}
+                      </div>
+                      <div>role={am.role} state={am.state} behaviorState={am.behaviorState}</div>
+                      <div>currentGoal={am.currentGoal}</div>
+                      <div>position={Math.round(am.position.x)},{Math.round(am.position.y)}</div>
+                      <div>
+                        movementDirection={am.movementDirection ? `${am.movementDirection.x},${am.movementDirection.y}` : 'null'}
+                      </div>
+                      <div>behaviorCooldown={am.behaviorCooldown} reproductionCooldown={am.reproductionCooldown}</div>
+                      <div>energy={am.energy.toFixed(1)}</div>
+                      <div>targetCell={am.targetCell ? `${am.targetCell.x},${am.targetCell.y}` : 'null'}</div>
+                      <div>buildSite={am.buildSite ? `${am.buildSite.x},${am.buildSite.y}` : 'null'}</div>
+                      <div>targetPosition={am.targetPosition ? `${Math.round(am.targetPosition.x)},${Math.round(am.targetPosition.y)}` : 'null'}</div>
+                      <div>stuckAreaTicks={am.memory.stuckAreaTicks}</div>
+                      <div>escapeTarget={am.memory.escapeTarget ? `${am.memory.escapeTarget.x},${am.memory.escapeTarget.y}` : 'null'}</div>
+                      <div>failedAreas={am.memory.failedAreas.length}</div>
+                      <div>lastRewardReason={am.brain.lastRewardReason ?? am.memory.lastRewardReason ?? 'null'}</div>
+                      <div>
+                        weights e={am.brain.weights.explore.toFixed(2)}
+                        {' '}aw={am.brain.weights.avoidWall.toFixed(2)}
+                        {' '}ac={am.brain.weights.avoidCrowd.toFixed(2)}
+                        {' '}sc={am.brain.weights.seekCells.toFixed(2)}
+                      </div>
+                      <div>
+                        weights carry={am.brain.weights.carryToSite.toFixed(2)}
+                        {' '}build={am.brain.weights.buildAm.toFixed(2)}
+                        {' '}rest={am.brain.weights.rest.toFixed(2)}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div>aucune AM</div>
+                )}
+              </div>
             </>
           )}
           {status === 'error' && (errorMessage ?? 'Life God Game failed to start.')}

@@ -4,14 +4,18 @@ import type { LifeGodPatternRequest, LifeGodPlayerPattern, LifeGodPlayerPatternT
 
 const DRAWING_SIZE = 16
 const MIN_CELLS_BY_TYPE: Record<LifeGodPlayerPatternType, number> = {
+  house: 5,
   tree: 4,
   animal: 3,
+  tool: 3,
   rock: 3,
   river: 3,
 }
 const COLOR_BY_TYPE: Record<LifeGodPlayerPatternType, string> = {
+  house: '#c9a86c',
   tree: '#48b86b',
   animal: '#8a5d3b',
+  tool: '#7a8fb0',
   rock: '#9aa1aa',
   river: '#3d8ed8',
 }
@@ -19,16 +23,18 @@ const COLOR_BY_TYPE: Record<LifeGodPlayerPatternType, string> = {
 interface PatternDrawingOverlayProps {
   request: LifeGodPatternRequest
   onSubmit: (pattern: Omit<LifeGodPlayerPattern, 'id' | 'createdAt'>) => boolean
+  inWorldPosition?: { screenX: number; screenY: number } | null
 }
 
 function cellKey(cell: LifeGodRelativeCell) {
   return `${cell.x}:${cell.y}`
 }
 
-export function PatternDrawingOverlay({ request, onSubmit }: PatternDrawingOverlayProps) {
+export function PatternDrawingOverlay({ request, onSubmit, inWorldPosition }: PatternDrawingOverlayProps) {
   const [cells, setCells] = useState<Set<string>>(() => new Set())
   const [paintMode, setPaintMode] = useState<'draw' | 'erase'>('draw')
-  const [message, setMessage] = useState('Simulation en pause')
+  const [message, setMessage] = useState(inWorldPosition ? '' : 'Simulation en pause')
+  const isInWorld = !!inWorldPosition
   const activeColor = COLOR_BY_TYPE[request.type]
   const cellsArray = useMemo(() => {
     return [...cells].map((entry) => {
@@ -83,14 +89,25 @@ export function PatternDrawingOverlay({ request, onSubmit }: PatternDrawingOverl
     setMessage('Pattern enregistre')
   }
 
+  const overlayStyle: CSSProperties = isInWorld
+    ? {
+        position: 'absolute',
+        zIndex: 12,
+        left: inWorldPosition!.screenX,
+        top: inWorldPosition!.screenY,
+        transform: 'translate(-50%, -50%)',
+        pointerEvents: 'auto',
+      }
+    : {}
+
   return (
-    <div className="life-god-pattern-overlay" role="dialog" aria-modal="true" aria-label="Dessin de pattern">
-      <div className="life-god-pattern-panel" onContextMenu={(event) => event.preventDefault()}>
+    <div className={isInWorld ? 'life-god-pattern-overlay-inworld' : 'life-god-pattern-overlay'} role="dialog" aria-modal={!isInWorld} aria-label="Dessin de pattern" style={isInWorld ? overlayStyle : undefined}>
+      <div className={isInWorld ? 'life-god-pattern-panel life-god-pattern-panel-compact' : 'life-god-pattern-panel'} onContextMenu={(event) => event.preventDefault()}>
         <div className="life-god-pattern-header">
           <div>
-            <div className="life-god-pattern-kicker">Mode dessin</div>
+            <div className="life-god-pattern-kicker">{isInWorld ? 'Priere des AMs' : 'Mode dessin'}</div>
             <div className="life-god-pattern-title">
-              Dessinez un {request.label.toLowerCase()} ({request.requestIndex}/{request.totalForType})
+              {isInWorld ? `${request.label}!` : `Dessinez un ${request.label.toLowerCase()} (${request.requestIndex}/${request.totalForType})`}
             </div>
           </div>
           <div className="life-god-pattern-count" style={{ borderColor: activeColor, color: activeColor }}>
@@ -145,6 +162,10 @@ export function PatternDrawingOverlay({ request, onSubmit }: PatternDrawingOverl
           pointer-events: auto;
         }
 
+        .life-god-pattern-overlay-inworld {
+          pointer-events: none;
+        }
+
         .life-god-pattern-panel {
           width: min(92vw, 520px);
           padding: 16px;
@@ -153,6 +174,14 @@ export function PatternDrawingOverlay({ request, onSubmit }: PatternDrawingOverl
           background: rgba(8, 11, 18, 0.96);
           box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
           color: rgba(235, 241, 255, 0.96);
+        }
+
+        .life-god-pattern-panel-compact {
+          width: min(82vw, 360px);
+          background: rgba(8, 11, 18, 0.88);
+          border-color: rgba(200, 215, 240, 0.28);
+          box-shadow: 0 16px 50px rgba(0, 0, 0, 0.6);
+          pointer-events: auto;
         }
 
         .life-god-pattern-header {
