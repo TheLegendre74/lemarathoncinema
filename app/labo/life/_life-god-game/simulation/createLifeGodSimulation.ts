@@ -82,7 +82,7 @@ const MAX_RECENT_BRAIN_REWARD_EVENTS = 12
 const AM_LEARNING_INTERVAL_TICKS = 12
 const MIN_BRAIN_WEIGHT = 0.2
 const MAX_BRAIN_WEIGHT = 3
-const TERRAFORM_STUCK_TICK_LIMIT = 14
+const TERRAFORM_STUCK_TICK_LIMIT = 200
 const TERRAFORM_CRITICAL_STUCK_TICKS = 34
 const TERRAFORM_RESERVATION_RADIUS = 10
 const TERRAFORM_RESERVATION_TTL = 80
@@ -490,7 +490,7 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
     if (terrainType === 0 || neighborType === 0) return false
     if (terrainType === 1) return true
     if (terrainType === 2) return neighborType === 1 || neighborType === 2
-    if (terrainType === 3) return neighborType === 3
+    if (terrainType === 3) return neighborType === 3 || neighborType === 1
     if (terrainType === 4) return neighborType === 1 || neighborType === 4
     return false
   }
@@ -1880,13 +1880,17 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
     return matterFrozen || !requireStable || stabilityGrid[indexAt(x, y)] >= STABILITY_THRESHOLD
   }
 
-  function isFrozenMatterAvailable(x: number, y: number, amId: string) {
+  function isFrozenMatterCell(x: number, y: number) {
     if (!frozenMatterGrid) return false
     if (x <= 0 || y <= 0 || x >= GRID_WIDTH - 1 || y >= GRID_HEIGHT - 1) return false
     if (frozenMatterGrid[indexAt(x, y)] !== 1) return false
     if (terrainGrid[indexAt(x, y)] !== 0) return false
+    return true
+  }
+
+  function isFrozenMatterAvailable(x: number, y: number, amId: string) {
+    if (!isFrozenMatterCell(x, y)) return false
     if (isReservedByEntity(x, y) || isReservedByConstruction(x, y) || isReservedByProto(x, y)) return false
-    if (isCellReservedByOtherAm(x, y, amId)) return false
     return true
   }
 
@@ -1927,8 +1931,8 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
   function getTerrainRoleScore(am: LifeGodAmEntity, terrainType: LifeGodTerrainType) {
     if (terrainType === 0) return -999
     if (am.role === 'builder') {
-      if (terrainType === 1) return 16
-      if (terrainType === 4) return 12
+      if (terrainType === 4) return 22
+      if (terrainType === 1) return 10
       if (terrainType === 2) return 2
       return -10
     }
@@ -1945,11 +1949,11 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
   }
 
   function scoreTerraformCell(x: number, y: number, terrainType: LifeGodTerrainType, am: LifeGodAmEntity) {
-    if (terrainType === 0 || !isFrozenMatterAvailable(x, y, am.id)) return -Infinity
+    if (terrainType === 0 || !isFrozenMatterCell(x, y)) return -Infinity
 
     const cell = { x, y }
     const stats = getTerrainNeighborStats(x, y, terrainType)
-    const similarScore = stats.sameNeighbors * 18
+    const similarScore = stats.sameNeighbors * 2
     const compatibleScore = stats.compatibleNeighbors * 12
     const terrainNearby = countLocalGridDensity(terrainGrid, cell, 5, (value) => value > 0)
     const frozenDensity = countLocalGridDensity(frozenMatterGrid, cell, TERRAFORM_PATCH_RADIUS, (value) => value === 1)
@@ -1967,16 +1971,14 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
       terrainShapeScore += stats.terrainNeighbors > 0 ? 8 : 2
     } else if (terrainType === 2) {
       terrainShapeScore += (stats.soilNeighbors + stats.vegetationNeighbors) * 18
-      if (stats.soilNeighbors + stats.vegetationNeighbors === 0) terrainShapeScore -= 32
+      if (stats.soilNeighbors + stats.vegetationNeighbors === 0) terrainShapeScore -= 6
     } else if (terrainType === 3) {
       terrainShapeScore += stats.waterNeighbors * 24
       terrainShapeScore += Math.max(stats.horizontalSame, stats.verticalSame) * 18
-      if (stats.waterNeighbors === 0 && terrainNearby > 0) terrainShapeScore -= 26
-      if (stats.waterNeighbors === 0 && terrainNearby === 0) terrainShapeScore -= 42
+      if (stats.waterNeighbors === 0 && terrainNearby > 0) terrainShapeScore -= 8
+      if (stats.waterNeighbors === 0 && terrainNearby === 0) terrainShapeScore -= 12
     } else if (terrainType === 4) {
       terrainShapeScore += stats.rockNeighbors * 24 + stats.soilNeighbors * 8
-      if (stats.rockNeighbors === 0 && terrainNearby > 0) terrainShapeScore -= 12
-      if (stats.rockNeighbors === 0 && terrainNearby === 0) terrainShapeScore -= 34
     }
 
     return (
@@ -2035,7 +2037,7 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
         if (Math.max(Math.abs(ox), Math.abs(oy)) > TERRAFORM_PATCH_RADIUS) continue
         const x = origin.x + ox
         const y = origin.y + oy
-        if (!isFrozenMatterAvailable(x, y, am.id)) continue
+        if (!isFrozenMatterCell(x, y)) continue
         const terrainType = chooseTerraformTerrainType(am, x, y)
         const score = scoreTerraformCell(x, y, terrainType, am)
         if (!Number.isFinite(score)) continue
@@ -2063,7 +2065,7 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
 
     for (const candidate of candidates) {
       if (converted >= TERRAFORM_CELLS_PER_ACTION) break
-      if (!isFrozenMatterAvailable(candidate.x, candidate.y, am.id)) continue
+      if (!isFrozenMatterCell(candidate.x, candidate.y)) continue
       const idx = indexAt(candidate.x, candidate.y)
       frozenMatterGrid[idx] = 0
       current[idx] = 0
@@ -2994,8 +2996,46 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
 
   function moveToward(am: LifeGodAmEntity, targetPosition: LifeGodRelativeCell): LifeGodAmEntity {
     const currentDistance = Math.abs(getAmCenter(am).x - targetPosition.x) + Math.abs(getAmCenter(am).y - targetPosition.y)
-    const candidates = getMovementCandidates(am).filter((position) => canMoveAmTo(am, position))
+    const isTerraforming = am.currentGoal === 'terraforming'
+    const candidates = getMovementCandidates(am).filter((position) =>
+      isTerraforming
+        ? canMoveAmThroughStaticObstacles(am, position)
+        : canMoveAmTo(am, position)
+    )
     if (candidates.length === 0) return moveAwayFromWallOrObstacle(am)
+
+    if (isTerraforming) {
+      const terraScored = candidates.map((position) => {
+        const center = getAmCenter(am, position)
+        const distance = Math.abs(center.x - targetPosition.x) + Math.abs(center.y - targetPosition.y)
+        const step = { x: position.x - am.position.x, y: position.y - am.position.y }
+        const waits = step.x === 0 && step.y === 0 ? -200 : 0
+        const reverses = am.movementDirection && step.x === -am.movementDirection.x && step.y === -am.movementDirection.y ? -3 : 0
+        return {
+          position,
+          step,
+          score: -distance * 100 + waits + reverses + getInwardWallScore(position, am) * 0.5,
+        }
+      }).sort((a, b) => b.score - a.score)
+      const best = terraScored[0]
+      if (!best) return moveAwayFromWallOrObstacle(am)
+      const movedIntoTarget =
+        (best.step.x !== 0 || best.step.y !== 0) &&
+        distanceBetweenCells(getAmCenter(am, best.position), targetPosition) <= 2
+      return {
+        ...am,
+        position: best.position,
+        absoluteCells: computeAbsoluteCells(am.cells, best.position),
+        targetPosition,
+        movementDirection: best.step,
+        behaviorCooldown: ROLE_CONFIG[am.role].movementInterval,
+        memory: {
+          ...am.memory,
+          lastUsefulActionTick: movedIntoTarget ? generation : am.memory.lastUsefulActionTick,
+        },
+      }
+    }
+
     const policy = getPolicyOutputForAm(am)
     const targetWeight =
       am.behaviorState === 'movingToFixedCell' || am.behaviorState === 'seekingFixedCell'
@@ -3004,9 +3044,7 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
           ? getBrainWeight(am, 'carryToSite')
           : am.behaviorState === 'assemblingAm'
             ? getBrainWeight(am, 'buildAm')
-            : am.currentGoal === 'terraforming'
-              ? getBrainWeight(am, 'seekFrozenMatter')
-              : getBrainWeight(am, 'explore')
+            : getBrainWeight(am, 'explore')
     const avoidWallWeight = getBrainWeight(am, 'avoidWall')
     const avoidCrowdWeight = getBrainWeight(am, 'avoidCrowd')
     const exploreWeight = getBrainWeight(am, 'explore')
@@ -3146,6 +3184,7 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
 
   function isAmStuckInLocalArea(am: LifeGodAmEntity) {
     if (am.state !== 'alive' || am.behaviorState === 'escapingStuckArea') return false
+    if (am.currentGoal === 'terraforming' && am.targetCell && isFrozenMatterCell(am.targetCell.x, am.targetCell.y)) return false
     const windowStart = generation - getLocalStuckWindowTicks()
     const recent = am.memory.recentTimedPositions.filter((position) => position.tick >= windowStart)
     if (recent.length < Math.max(10, Math.floor(getLocalStuckWindowTicks() * 0.45))) return false
@@ -3173,7 +3212,7 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
           if (distanceBetweenCells(cell, stuckCenter) < ESCAPE_MIN_DISTANCE) continue
           if (isNearFailedArea(am, cell, LOCAL_STUCK_RADIUS)) continue
           const targetBonus =
-            am.currentGoal === 'terraforming' && frozenMatterGrid && isFrozenMatterAvailable(cell.x, cell.y, am.id)
+            am.currentGoal === 'terraforming' && frozenMatterGrid && isFrozenMatterCell(cell.x, cell.y)
               ? 35
               : am.currentGoal === 'expandingPopulation' && hasLivingCell(cell.x, cell.y)
                 ? 18
@@ -3208,7 +3247,7 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
 
   function isTargetCellValidForCurrentGoal(am: LifeGodAmEntity, targetCell: LifeGodRelativeCell | null) {
     if (!targetCell) return false
-    if (am.currentGoal === 'terraforming') return isFrozenMatterTargetAvailable(targetCell, am.id)
+    if (am.currentGoal === 'terraforming') return isFrozenMatterCell(targetCell.x, targetCell.y)
     if (am.currentGoal === 'expandingPopulation') return isFixedCellAvailable(targetCell.x, targetCell.y, am.id, false)
     return targetCell.x > 0 && targetCell.y > 0 && targetCell.x < GRID_WIDTH - 1 && targetCell.y < GRID_HEIGHT - 1
   }
@@ -3233,10 +3272,14 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
     if (am.currentGoal === 'terraforming') releaseTerraformReservation(am.id)
     const escapingWall = reason === 'wall_hugging'
     if (escapingWall && am.carriedCell) releaseGatheredCells(am)
+    const isTerraforming = am.currentGoal === 'terraforming'
+    const preservedTargetCell = isTerraforming && am.targetCell && isFrozenMatterCell(am.targetCell.x, am.targetCell.y)
+      ? am.targetCell
+      : null
     const penalizedAm = penalizeAm({
       ...am,
       behaviorState: 'escapingStuckArea',
-      targetCell: null,
+      targetCell: preservedTargetCell,
       buildTarget: escapingWall ? null : am.buildTarget,
       carriedCell: escapingWall ? null : am.carriedCell,
       gatheredCells: escapingWall ? [] : am.gatheredCells,
@@ -3250,8 +3293,8 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
         escapeTarget,
         escapeTicksRemaining: ESCAPE_TICKS,
         failedAreas: rememberCell(am.memory.failedAreas, center, MAX_MEMORY_HINTS),
-        failedTargets: am.targetCell ? rememberCell(am.memory.failedTargets, am.targetCell, MAX_MEMORY_HINTS) : am.memory.failedTargets,
-        failedTerraformTargets: am.currentGoal === 'terraforming' && am.targetCell
+        failedTargets: !isTerraforming && am.targetCell ? rememberCell(am.memory.failedTargets, am.targetCell, MAX_MEMORY_HINTS) : am.memory.failedTargets,
+        failedTerraformTargets: am.currentGoal === 'terraforming' && am.targetCell && !preservedTargetCell
           ? rememberCell(am.memory.failedTerraformTargets, am.targetCell, MAX_MEMORY_HINTS)
           : am.memory.failedTerraformTargets,
         recentBlockedPositions: rememberCell(am.memory.recentBlockedPositions, getAmCenter(am), MAX_MEMORY_HINTS),
@@ -3310,12 +3353,15 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
   function tickEscapingStuckArea(am: LifeGodAmEntity) {
     const stuckCenter = am.memory.stuckAreaCenter
     const escapeTarget = am.memory.escapeTarget
+    const terraformTarget = am.targetCell && am.currentGoal === 'terraforming' && isFrozenMatterCell(am.targetCell.x, am.targetCell.y)
+      ? am.targetCell
+      : null
     if (!stuckCenter || !escapeTarget) {
       return {
         ...am,
         currentGoal: getPostEscapeGoal(am),
         behaviorState: getPostEscapeBehaviorState(am),
-        targetCell: null,
+        targetCell: terraformTarget,
         targetPosition: null,
         memory: {
           ...am.memory,
@@ -3335,7 +3381,7 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
         ...am,
         currentGoal: getPostEscapeGoal(am),
         behaviorState: getPostEscapeBehaviorState(am),
-        targetCell: null,
+        targetCell: terraformTarget,
         targetPosition: null,
         movementDirection: null,
         memory: {
@@ -3360,7 +3406,7 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
     return {
       ...moved,
       behaviorState: 'escapingStuckArea' as const,
-      targetCell: null,
+      targetCell: terraformTarget,
       targetPosition: escapeTarget,
       memory: {
         ...moved.memory,
@@ -3504,9 +3550,10 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
     const best = candidates[0]
     if (!best) {
       const escaped = moveAwayFromWallOrObstacle(am)
+      const keepTarget = am.carriedCell || (am.currentGoal === 'terraforming' && am.targetCell && isFrozenMatterCell(am.targetCell.x, am.targetCell.y))
       return {
         ...escaped,
-        targetCell: am.carriedCell ? am.targetCell : null,
+        targetCell: keepTarget ? am.targetCell : null,
         memory: {
           ...escaped.memory,
           stationaryTicks: am.memory.stationaryTicks,
@@ -3619,9 +3666,10 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
 
     if (hasRepeatedPathLoop(tracked)) {
       tracked = penalizeAm(tracked, 3.2, 'repeated_path_loop')
+      const keepTerraformTarget = tracked.currentGoal === 'terraforming' && tracked.targetCell && isFrozenMatterCell(tracked.targetCell.x, tracked.targetCell.y)
       tracked = {
         ...tracked,
-        targetCell: null,
+        targetCell: keepTerraformTarget ? tracked.targetCell : null,
         targetPosition: null,
         memory: {
           ...tracked.memory,
@@ -3958,7 +4006,8 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
 
       if (
         getWallDangerAt(am.position, am) > 0 &&
-        am.memory.wallStickTicks > WALL_HUGGING_TICK_LIMIT
+        am.memory.wallStickTicks > WALL_HUGGING_TICK_LIMIT &&
+        !(am.currentGoal === 'terraforming' && am.targetCell && isFrozenMatterCell(am.targetCell.x, am.targetCell.y))
       ) {
         return startEscapingStuckArea(am, 'wall_hugging')
       }
@@ -3984,11 +4033,11 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
       const wantsToBuild = canCreateMoreVisibleAms()
 
       if (currentMission === 'terraforming') {
+        const lastConv = am.memory.lastTerraformConversionTick || generation
         if (
           am.memory.terraformStuckTicks >= TERRAFORM_STUCK_TICK_LIMIT ||
-          (am.targetCell && !isFrozenMatterTargetAvailable(am.targetCell, am.id)) ||
-          generation - am.memory.lastTerraformConversionTick > TERRAFORM_STUCK_TICK_LIMIT * 3 ||
-          am.memory.wallStickTicks > WALL_HUGGING_TICK_LIMIT + 2
+          (am.targetCell && !isFrozenMatterCell(am.targetCell.x, am.targetCell.y)) ||
+          generation - lastConv > TERRAFORM_STUCK_TICK_LIMIT * 3
         ) {
           return recoverTerraformingAm(am)
         }
@@ -4004,7 +4053,7 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
           }
         }
 
-        const targetCell = am.targetCell && isFrozenMatterAvailable(am.targetCell.x, am.targetCell.y, am.id)
+        const targetCell = am.targetCell && isFrozenMatterCell(am.targetCell.x, am.targetCell.y)
           ? am.targetCell
           : findKnownFrozenHint(am) ??
             findNearestFrozenMatter(Math.round(getAmCenter(am).x), Math.round(getAmCenter(am).y), am) ??
@@ -4056,6 +4105,8 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
         }
 
         const moved = moveToward({ ...informedAm, currentGoal: 'terraforming', targetCell }, targetCell)
+        const didMove = moved.position.x !== am.position.x || moved.position.y !== am.position.y
+        const closerToTarget = didMove && distanceToCell(moved, targetCell) < distanceToCell(am, targetCell)
         return {
           ...moved,
           currentGoal: 'terraforming',
@@ -4063,8 +4114,9 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
           targetCell,
           memory: {
             ...moved.memory,
-            terraformStuckTicks: moved.position.x === am.position.x && moved.position.y === am.position.y ? moved.memory.terraformStuckTicks + 1 : Math.max(0, moved.memory.terraformStuckTicks - 1),
+            terraformStuckTicks: didMove ? Math.max(0, moved.memory.terraformStuckTicks - 1) : moved.memory.terraformStuckTicks + 1,
             lastTerraformAction: 'moving_to_target',
+            lastUsefulActionTick: closerToTarget ? generation : moved.memory.lastUsefulActionTick,
             recoveryTriggered: false,
           },
         }
