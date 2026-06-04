@@ -385,7 +385,7 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
       vegetationCount > 0 &&
       (waterCount > 0 || terraformationProgress >= 0.82) &&
       rockCount > 0 &&
-      criticallyBlockedAmCount === 0
+      (frozenMatterCount === 0 || criticallyBlockedAmCount === 0)
     const terraformationStabilized = terraformationComplete && getCompleteAmCount() > 0
     const amPopulationStable =
       completeAmCount === MAX_TOTAL_AMS &&
@@ -930,7 +930,7 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
       vegetationCount > 0 &&
       (waterCount > 0 || progress >= 0.82) &&
       rockCount > 0 &&
-      criticallyBlockedAmCount === 0 &&
+      (frozenMatterCount === 0 || criticallyBlockedAmCount === 0) &&
       getCompleteAmCount() > 0
     )
   }

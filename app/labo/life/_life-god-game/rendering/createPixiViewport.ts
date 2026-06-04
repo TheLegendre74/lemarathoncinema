@@ -165,10 +165,10 @@ export async function createPixiViewport({
       for (let x = 0; x < state.gridWidth; x += 1) {
         if (reservedCells.has(`${x}:${y}`)) continue
         const terrain = state.terrainGrid[rowOffset + x]
-        if (terrain === 1) drawCell(x, y, '#5f735f', 0.5)
-        if (terrain === 2) drawCell(x, y, '#59b779', 0.62)
-        if (terrain === 3) drawCell(x, y, '#3b7fb6', 0.58)
-        if (terrain === 4) drawCell(x, y, '#8a92a0', 0.56)
+        if (terrain === 1) drawCell(x, y, '#8B5E3C', 0.7)
+        if (terrain === 2) drawCell(x, y, '#2E8B57', 0.75)
+        if (terrain === 3) drawCell(x, y, '#1E90FF', 0.8)
+        if (terrain === 4) drawCell(x, y, '#808080', 0.7)
         if (state.cells[rowOffset + x] === 1) drawCell(x, y, '#b8d7ff', 0.92)
       }
     }
@@ -229,10 +229,10 @@ export async function createPixiViewport({
     drawCanvasOverlay(state, reservedCells)
 
     const terrainColors: Record<number, { color: number; alpha: number }> = {
-      1: { color: 0x5f735f, alpha: 0.5 },
-      2: { color: 0x59b779, alpha: 0.62 },
-      3: { color: 0x3b7fb6, alpha: 0.58 },
-      4: { color: 0x8a92a0, alpha: 0.56 },
+      1: { color: 0x8B5E3C, alpha: 0.7 },
+      2: { color: 0x2E8B57, alpha: 0.75 },
+      3: { color: 0x1E90FF, alpha: 0.8 },
+      4: { color: 0x808080, alpha: 0.7 },
     }
     for (const terrainType of [1, 2, 3, 4]) {
       for (let y = 0; y < state.gridHeight; y += 1) {
