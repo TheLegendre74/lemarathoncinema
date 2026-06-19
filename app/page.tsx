@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { getUserCached } from '@/lib/auth'
 import { withCache } from '@/lib/redis'
@@ -43,7 +44,31 @@ export default async function HomePage() {
     return data ?? []
   })
 
-  if (!user) redirect('/auth')
+  const cookieStore = await cookies()
+  const isGuest = cookieStore.get('guest_mode')?.value === '1'
+
+  if (!user && !isGuest) redirect('/auth')
+
+  if (!user && isGuest) {
+    return (
+      <div>
+        <Countdown marathonStart={cfg.MARATHON_START.toISOString()} />
+        <div style={{ background: 'rgba(232,196,106,.07)', border: '1px solid rgba(232,196,106,.25)', borderRadius: 'var(--r)', padding: '1rem 1.3rem', marginBottom: '1.5rem', textAlign: 'center' }}>
+          <div style={{ fontSize: '.85rem', color: 'var(--text2)', lineHeight: 1.6 }}>
+            👁 Tu navigues en <strong style={{ color: 'var(--gold)' }}>mode invité</strong> — consultation uniquement.
+          </div>
+          <a href="/auth" style={{ fontSize: '.8rem', color: 'var(--gold)', marginTop: '.4rem', display: 'inline-block' }}>
+            Se connecter ou s'inscrire →
+          </a>
+        </div>
+        <NewsSection newsList={(newsList as any[]) ?? []} />
+        <RulesSection cfg={cfg} />
+      </div>
+    )
+  }
+
+  // À ce stade, user est garanti non-null (les branches guest/redirect ont retourné)
+  const userId = user!.id
 
   // Toutes les requêtes qui ne dépendent pas du profil tournent en parallèle
   const [
@@ -55,13 +80,13 @@ export default async function HomePage() {
     { count: totalS1Count },
     { data: recentWatched },
   ] = await Promise.all([
-    (supabase as any).from('profiles').select('id, pseudo, exp, saison, notify_marathon, active_badge, pre_marathon_window_until').eq('id', user.id).single(),
-    supabase.from('watched').select('film_id', { count: 'exact', head: true }).eq('user_id', user.id),
-    supabase.from('votes').select('duel_id', { count: 'exact', head: true }).eq('user_id', user.id),
+    (supabase as any).from('profiles').select('id, pseudo, exp, saison, notify_marathon, active_badge, pre_marathon_window_until').eq('id', userId).single(),
+    supabase.from('watched').select('film_id', { count: 'exact', head: true }).eq('user_id', userId),
+    supabase.from('votes').select('duel_id', { count: 'exact', head: true }).eq('user_id', userId),
     supabase.from('week_films').select('id, active, films(id, titre, annee, poster)').eq('active', true).order('created_at', { ascending: false }).limit(1).single(),
     supabase.from('duels').select('id, week_num, film1:films!duels_film1_id_fkey(id, titre, annee, poster), film2:films!duels_film2_id_fkey(id, titre, annee, poster)').eq('closed', false).order('created_at', { ascending: false }).limit(1).single(),
     supabase.from('films').select('id', { count: 'exact', head: true }).eq('saison', 1),
-    supabase.from('watched').select('film_id, watched_at, pre, films(titre)').eq('user_id', user.id).order('watched_at', { ascending: false }).limit(5),
+    supabase.from('watched').select('film_id, watched_at, pre, films(titre)').eq('user_id', userId).order('watched_at', { ascending: false }).limit(5),
   ])
 
   if (!profile) {
