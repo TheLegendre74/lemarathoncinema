@@ -109,6 +109,24 @@ export default function AuthPageClient({ marathonStart, saisonLabel, saisonNumer
     }}>
       <CountdownMini marathonStart={marathonStart} />
 
+      <a
+        href="https://discord.gg/nrGkqKgrtj"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: '.5rem',
+          background: '#5865F2', color: '#fff', fontSize: '.82rem', fontWeight: 500,
+          fontFamily: 'var(--font-body)', padding: '.5rem 1.2rem', borderRadius: 99,
+          textDecoration: 'none', boxShadow: '0 2px 10px rgba(88,101,242,.4)',
+          transition: 'transform .15s, box-shadow .15s',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.05)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(88,101,242,.6)' }}
+        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 2px 10px rgba(88,101,242,.4)' }}
+      >
+        <img src="/discord.png" alt="" width={18} height={18} style={{ objectFit: 'contain' }} />
+        Rejoindre le Discord
+      </a>
+
       <div style={{ width: '100%', maxWidth: 400, background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--rxl)', padding: '2.5rem' }}>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: '2.2rem', color: 'var(--gold)', textAlign: 'center', lineHeight: 1.1, marginBottom: '.3rem' }}>
           Ciné<br />Marathon

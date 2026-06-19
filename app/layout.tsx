@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from 'next'
-import Image from 'next/image'
 import { Playfair_Display, Syne } from 'next/font/google'
 
 const playfairDisplay = Playfair_Display({
@@ -24,13 +23,16 @@ export const viewport: Viewport = {
   maximumScale: 1,
 }
 import './globals.css'
+import './weekly-theme.css'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import ClientShell from '@/components/ClientShell'
 import { ToastProvider } from '@/components/ToastProvider'
 import EasterEggsLoader from '@/components/EasterEggsLoader'
+import WeeklyThemeProvider from '@/components/WeeklyTheme/WeeklyThemeProvider'
 import { getServerConfig } from '@/lib/serverConfig'
 import { getUnreadMessageCountForUser } from '@/lib/messages'
 import { getUserCached } from '@/lib/auth'
+import DiscordFab from '@/components/DiscordFab'
 import { withCache } from '@/lib/redis'
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -60,14 +62,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
         return data
       }),
-      withCache(`user:${user.id}:eggs`, 60, async () => {
+      withCache(`user:${user.id}:eggs`, 300, async () => {
         const { data } = await supabase.from('discovered_eggs').select('egg_id').eq('user_id', user.id).in('egg_id', ['rageux', 'tamagotchi', 'clippy'])
         return data ?? []
       }),
       withCache(`user:${user.id}:unread`, 15, () =>
         getUnreadMessageCountForUser(user.id, supabase)
       ),
-      withCache(`user:${user.id}:watched_count`, 60, async () => {
+      withCache(`user:${user.id}:watched_count`, 120, async () => {
         const { count } = await supabase.from('watched').select('*', { count: 'exact', head: true }).eq('user_id', user.id)
         return count ?? 0
       }),
@@ -116,6 +118,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="fr" className={`${playfairDisplay.variable} ${syne.variable}`}>
       <body>
         <ToastProvider>
+          <WeeklyThemeProvider />
           <EasterEggsLoader config={eeConfig} isGuest={!user} watchedCount={watchedCount} hasClippyEgg={hasClippyEgg} isAdmin={!!(profile as any)?.is_admin} userId={user?.id} />
           <ClientShell
             profile={profile}
@@ -126,15 +129,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           >
             {children}
           </ClientShell>
-          <a
-            href="https://discord.gg/nrGkqKgrtj"
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Rejoindre le Discord"
-            className="discord-fab"
-          >
-            <Image src="/discord.png" alt="Discord" width={26} height={26} style={{ objectFit: 'contain' }} />
-          </a>
+          <DiscordFab />
         </ToastProvider>
       </body>
     </html>
