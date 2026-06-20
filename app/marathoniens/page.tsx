@@ -1,9 +1,10 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getBadge, levelFromExp, getActiveBadge, CONFIG } from '@/lib/config'
+import { withCache } from '@/lib/redis'
 import Image from 'next/image'
 import Link from 'next/link'
 
-export const revalidate = 60
+export const revalidate = 120
 
 export default async function MarathoniensPage() {
   const supabase = await createClient()
@@ -21,26 +22,27 @@ export default async function MarathoniensPage() {
 
   const totalFilms = (totalFilmsResult as any).count ?? 0
 
-  // Paginer watched jusqu'à épuisement (bypass de la limite 1000 lignes PostgREST)
-  const allWatched: { user_id: string; pre: boolean }[] = [...((firstPage as any) ?? [])]
-  let pageFrom = 1000
-  while ((firstPage as any)?.length === 1000) {
-    const { data: nextPage } = await adminClient
-      .from('watched')
-      .select('user_id, pre')
-      .range(pageFrom, pageFrom + 999)
-    if (!nextPage || nextPage.length === 0) break
-    allWatched.push(...(nextPage as any))
-    if (nextPage.length < 1000) break
-    pageFrom += 1000
-  }
-
-  // Films vus pendant le marathon (non pré) et pré-marathon
-  const watchedMap: Record<string, number> = {}
-  const preMap: Record<string, number> = {}
-  allWatched.forEach((w: any) => {
-    if (w.pre) preMap[w.user_id] = (preMap[w.user_id] ?? 0) + 1
-    else watchedMap[w.user_id] = (watchedMap[w.user_id] ?? 0) + 1
+  // Films vus — cachés 120s car la pagination est coûteuse
+  const { watchedMap, preMap } = await withCache('marathoniens:watched_maps', 120, async () => {
+    const allWatched: { user_id: string; pre: boolean }[] = [...((firstPage as any) ?? [])]
+    let pageFrom = 1000
+    while ((firstPage as any)?.length === 1000) {
+      const { data: nextPage } = await adminClient
+        .from('watched')
+        .select('user_id, pre')
+        .range(pageFrom, pageFrom + 999)
+      if (!nextPage || nextPage.length === 0) break
+      allWatched.push(...(nextPage as any))
+      if (nextPage.length < 1000) break
+      pageFrom += 1000
+    }
+    const wMap: Record<string, number> = {}
+    const pMap: Record<string, number> = {}
+    allWatched.forEach((w: any) => {
+      if (w.pre) pMap[w.user_id] = (pMap[w.user_id] ?? 0) + 1
+      else wMap[w.user_id] = (wMap[w.user_id] ?? 0) + 1
+    })
+    return { watchedMap: wMap, preMap: pMap }
   })
 
   return (

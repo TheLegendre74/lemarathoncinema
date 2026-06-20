@@ -47,7 +47,8 @@ $$;
 
 -- 4. RPC end_season : archive le classement courant puis reset saison_exp
 CREATE OR REPLACE FUNCTION public.end_season(saison_num integer)
-RETURNS void LANGUAGE sql SECURITY DEFINER AS $$
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
   -- Archive le classement actuel
   INSERT INTO season_archives
     (saison, user_id, pseudo, avatar_url, exp_total, exp_saison, films_watched, films_marathon, rank_global)
@@ -67,7 +68,8 @@ RETURNS void LANGUAGE sql SECURITY DEFINER AS $$
   GROUP BY p.id, p.pseudo, p.avatar_url, p.exp, p.saison_exp;
 
   -- Remet saison_exp à zéro pour tout le monde
-  UPDATE public.profiles SET saison_exp = 0;
+  UPDATE public.profiles SET saison_exp = 0 WHERE true;
+END;
 $$;
 
 -- 5. Mise à jour du leaderboard pour inclure saison_exp

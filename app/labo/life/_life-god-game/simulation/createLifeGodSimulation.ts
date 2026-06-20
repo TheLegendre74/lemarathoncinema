@@ -96,6 +96,13 @@ const REPEATED_PATH_SECONDS = 10
 const ESCAPE_MIN_DISTANCE = 14
 const ESCAPE_MAX_DISTANCE = 24
 const ESCAPE_TICKS = Math.round((5 * 1000) / TICK_MS)
+const ASSET_TERRAFORM_RADIUS = 6
+const ASSET_TERRAFORM_CELLS_PER_ACTION = 2
+const ASSET_TERRAFORM_COOLDOWN = 4
+const PATTERN_APPLICATION_MIN_TICKS = Math.round((20 * 1000) / TICK_MS)
+const TERRAIN_FOR_ASSET_TYPE: Record<LifeGodPlayerPatternType, LifeGodTerrainType> = {
+  house: 1, tree: 2, animal: 1, tool: 1, rock: 4, river: 3,
+}
 const PLAYER_PATTERN_LIBRARY_LIMITS: Record<LifeGodPlayerPatternType, number> = {
   house: 2,
   tree: 3,
@@ -268,6 +275,7 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
   let speechBubbles: LifeGodSpeechBubble[] = []
   let lastBubbleTick = 0
   let worldAssets: LifeGodWorldAsset[] = []
+  let patternApplicationStartTick = 0
   let firstAmCandidate: FirstAmCandidate | null = null
   let selectedAmId: string | null = null
   let influencePoint: { x: number; y: number; mode: LifeGodInfluenceMode } | null = null
@@ -815,6 +823,7 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
       speechBubbles = []
       ceremonyRequestType = null
       currentMission = 'applyingPlayerPatterns'
+      patternApplicationStartTick = generation
       currentPatternRequest = null
       currentPatternSpokespersonAmId = null
       amEntities = amEntities.map(am => {
@@ -851,6 +860,7 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
       cells: pattern.cells,
       absoluteCells,
       colorHint: pattern.colorHint,
+      cellColors: pattern.cellColors,
       placedAtGeneration: generation,
     }]
 
@@ -861,12 +871,111 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
     }
   }
 
+  function findAssetTerraformTarget(am: LifeGodAmEntity): { x: number; y: number; expectedTerrain: LifeGodTerrainType } | null {
+    const amCenter = getAmCenter(am)
+    const sorted = [...worldAssets].sort((a, b) => {
+      const da = Math.abs(amCenter.x - a.position.x) + Math.abs(amCenter.y - a.position.y)
+      const db = Math.abs(amCenter.x - b.position.x) + Math.abs(amCenter.y - b.position.y)
+      return da - db
+    })
+
+    for (const asset of sorted.slice(0, 3)) {
+      const expectedTerrain = TERRAIN_FOR_ASSET_TYPE[asset.type]
+      let bestDist = Infinity
+      let bestCell: { x: number; y: number } | null = null
+      const cx = asset.position.x + Math.floor(asset.cells.length > 0 ? 2 : 0)
+      const cy = asset.position.y + Math.floor(asset.cells.length > 0 ? 2 : 0)
+      for (let dy = -ASSET_TERRAFORM_RADIUS; dy <= ASSET_TERRAFORM_RADIUS; dy++) {
+        for (let dx = -ASSET_TERRAFORM_RADIUS; dx <= ASSET_TERRAFORM_RADIUS; dx++) {
+          if (Math.abs(dx) + Math.abs(dy) > ASSET_TERRAFORM_RADIUS) continue
+          const nx = cx + dx
+          const ny = cy + dy
+          if (nx < 1 || nx >= GRID_WIDTH - 1 || ny < 1 || ny >= GRID_HEIGHT - 1) continue
+          if (terrainGrid[indexAt(nx, ny)] === expectedTerrain) continue
+          const dist = Math.abs(amCenter.x - nx) + Math.abs(amCenter.y - ny)
+          if (dist < bestDist) {
+            bestDist = dist
+            bestCell = { x: nx, y: ny }
+          }
+        }
+      }
+      if (bestCell) return { x: bestCell.x, y: bestCell.y, expectedTerrain }
+    }
+    return null
+  }
+
+  function applyPatternTerraformAt(am: LifeGodAmEntity, origin: LifeGodRelativeCell, expectedTerrain: LifeGodTerrainType): LifeGodAmEntity {
+    let converted = 0
+    for (let dy = -2; dy <= 2; dy++) {
+      for (let dx = -2; dx <= 2; dx++) {
+        if (converted >= ASSET_TERRAFORM_CELLS_PER_ACTION) break
+        const nx = origin.x + dx
+        const ny = origin.y + dy
+        if (nx < 1 || nx >= GRID_WIDTH - 1 || ny < 1 || ny >= GRID_HEIGHT - 1) continue
+        const idx = indexAt(nx, ny)
+        if (terrainGrid[idx] === expectedTerrain) continue
+        if (isReservedByEntity(nx, ny)) continue
+        terrainGrid[idx] = expectedTerrain
+        converted++
+      }
+      if (converted >= ASSET_TERRAFORM_CELLS_PER_ACTION) break
+    }
+
+    const rewardedAm = converted > 0 ? rewardAm(am, converted * 3, 'pattern_terraform') : am
+    return {
+      ...rewardedAm,
+      behaviorState: converted > 0 ? terrainBehaviorState(expectedTerrain) : 'seekingFrozenMatter',
+      currentGoal: 'applyingPlayerPatterns',
+      targetCell: null,
+      targetPosition: origin,
+      behaviorCooldown: ASSET_TERRAFORM_COOLDOWN,
+      memory: {
+        ...rewardedAm.memory,
+        terraformedCells: rewardedAm.memory.terraformedCells + converted,
+        terraformStuckTicks: converted > 0 ? 0 : rewardedAm.memory.terraformStuckTicks + 1,
+        lastTerraformConversionTick: converted > 0 ? generation : rewardedAm.memory.lastTerraformConversionTick,
+        lastUsefulActionTick: converted > 0 ? generation : rewardedAm.memory.lastUsefulActionTick,
+      },
+    }
+  }
+
+  function isPatternApplicationComplete(): boolean {
+    if (worldAssets.length === 0) return false
+    if (generation - patternApplicationStartTick < PATTERN_APPLICATION_MIN_TICKS) return false
+    for (const asset of worldAssets) {
+      const expectedTerrain = TERRAIN_FOR_ASSET_TYPE[asset.type]
+      let total = 0
+      let matching = 0
+      const cx = asset.position.x + (asset.absoluteCells.length > 0 ? 2 : 0)
+      const cy = asset.position.y + (asset.absoluteCells.length > 0 ? 2 : 0)
+      for (let dy = -ASSET_TERRAFORM_RADIUS; dy <= ASSET_TERRAFORM_RADIUS; dy++) {
+        for (let dx = -ASSET_TERRAFORM_RADIUS; dx <= ASSET_TERRAFORM_RADIUS; dx++) {
+          if (Math.abs(dx) + Math.abs(dy) > ASSET_TERRAFORM_RADIUS) continue
+          const nx = cx + dx
+          const ny = cy + dy
+          if (nx < 1 || nx >= GRID_WIDTH - 1 || ny < 1 || ny >= GRID_HEIGHT - 1) continue
+          total++
+          if (terrainGrid[indexAt(nx, ny)] === expectedTerrain) matching++
+        }
+      }
+      if (total > 0 && matching / total < 0.5) return false
+    }
+    return true
+  }
+
   // ── Mission management ────────────────────────────────────────────────
 
   function updateCurrentMission() {
     if (ceremonyPhase !== 'none') return
 
     if (isPlayerPatternCollectionComplete()) {
+      if (currentMission !== 'applyingPlayerPatterns') {
+        patternApplicationStartTick = generation
+      }
+      if (isPatternApplicationComplete()) {
+        currentMission = 'stable'
+        return
+      }
       currentMission = 'applyingPlayerPatterns'
       currentPatternRequest = null
       currentPatternSpokespersonAmId = null
@@ -4079,6 +4188,52 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
 
       const collisionEscape = moveOutOfAmCollision(am)
       if (collisionEscape) return collisionEscape
+
+      if (currentMission === 'applyingPlayerPatterns') {
+        const terraformStates: LifeGodAmBehaviorState[] = ['shapingSoil', 'shapingVegetation', 'shapingWater', 'shapingRock']
+        if (terraformStates.includes(am.behaviorState)) {
+          const nextCooldown = Math.max(0, am.behaviorCooldown - 1)
+          return {
+            ...am,
+            currentGoal: 'applyingPlayerPatterns',
+            behaviorState: nextCooldown > 0 ? am.behaviorState : 'seekingFrozenMatter',
+            behaviorCooldown: nextCooldown,
+          }
+        }
+
+        const target = findAssetTerraformTarget(am)
+        if (!target) {
+          return wanderAm({ ...am, currentGoal: 'applyingPlayerPatterns', targetCell: null })
+        }
+
+        if (distanceToCell(am, target) <= 2) {
+          return applyPatternTerraformAt(
+            { ...am, targetCell: target, currentGoal: 'applyingPlayerPatterns' },
+            target,
+            target.expectedTerrain,
+          )
+        }
+
+        const nextCooldown = Math.max(0, am.behaviorCooldown - 1)
+        if (nextCooldown > 0) {
+          return {
+            ...am,
+            currentGoal: 'applyingPlayerPatterns',
+            behaviorState: 'seekingFrozenMatter' as const,
+            targetCell: target,
+            behaviorCooldown: nextCooldown,
+          }
+        }
+
+        const moved = moveToward({ ...am, currentGoal: 'applyingPlayerPatterns', targetCell: target }, target)
+        return {
+          ...moved,
+          currentGoal: 'applyingPlayerPatterns',
+          behaviorState: 'seekingFrozenMatter' as const,
+          targetCell: target,
+        }
+      }
+
       const site = getBuildSiteForAm(am)
       const wantsToBuild = canCreateMoreVisibleAms()
 
@@ -4535,6 +4690,7 @@ export function createLifeGodSimulation(trainingConfig?: LifeGodTrainingConfig):
       speechBubbles = []
       lastBubbleTick = 0
       worldAssets = []
+      patternApplicationStartTick = 0
       firstAmCandidate = null
       selectedAmId = null
       stabilityGrid = createGrid()

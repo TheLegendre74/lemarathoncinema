@@ -20,7 +20,7 @@ export default async function FilmsPage() {
 
   // Données publiques cachées — identiques pour tous les utilisateurs
   const [films, profileCount, weekFilm, latestArchivedWeekFilm, statsRows, duelWinnersData] = await Promise.all([
-    withCache('films:list', 300, async () => {
+    withCache('films:list', 600, async () => {
       const { data } = await supabase
         .from('films')
         .select('id, titre, annee, realisateur, genre, sousgenre, poster, saison, added_by, tmdb_id, flagged_18plus, flagged_16plus, flagged_18_pending, flagged_18strange, pending_admin_approval')
@@ -34,7 +34,7 @@ export default async function FilmsPage() {
     }),
     supabase.from('week_films').select('id, film_id, created_at').eq('active', true).order('created_at', { ascending: false }).limit(1).single().then(({ data }) => data ?? null),
     supabase.from('week_films').select('id, film_id').eq('active', false).order('created_at', { ascending: false }).limit(1).single().then(({ data }) => data ?? null),
-    withCache('film_stats', 90, async () => {
+    withCache('film_stats', 180, async () => {
       const { data, error } = await (supabase as any).rpc('get_film_stats')
       return error ? null : (data ?? null)
     }),

@@ -251,6 +251,7 @@ export interface LifeGodPlayerPattern {
   createdAt: number
   requestIndex: number
   colorHint: string
+  cellColors?: Record<string, string>
 }
 
 export interface LifeGodSpeechBubble {
@@ -267,6 +268,7 @@ export interface LifeGodWorldAsset {
   cells: LifeGodRelativeCell[]
   absoluteCells: LifeGodRelativeCell[]
   colorHint: string
+  cellColors?: Record<string, string>
   placedAtGeneration: number
 }
 

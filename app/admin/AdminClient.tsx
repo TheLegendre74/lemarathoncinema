@@ -548,6 +548,7 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
   const [clippyEditIdx, setClippyEditIdx] = useState<number | null>(null)
   const [clippyEditVal, setClippyEditVal] = useState('')
   const [clippySaving, setClippySaving] = useState(false)
+  const [activeThemePreview, setActiveThemePreview] = useState<string | null>(null)
   const [endingseason, setEndingSeason] = useState(false)
   const [preStats, setPreStats] = useState<{
     most: PreMarathonFilmStat[]
@@ -2075,6 +2076,88 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
 
       {/* Configuration */}
       <ConfigSection serverConfig={serverConfig} siteConfig={siteConfig} onSave={saveConfig} saving={savingConfig} />
+
+      {/* Thèmes hebdomadaires */}
+      <Section icon="🎨" title="Thèmes hebdomadaires — Preview">
+        <div style={{ fontSize: '.78rem', color: 'var(--text2)', marginBottom: '.75rem', lineHeight: 1.6 }}>
+          Clique sur un thème pour le prévisualiser en temps réel sur tout le site.
+          <br /><span style={{ color: 'var(--text3)', fontSize: '.7rem' }}>Chaque semaine de la prochaine saison sera dédiée à un genre — le site changera automatiquement d'esthétique.</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '.6rem', marginBottom: '.75rem' }}>
+          {([
+            { genre: 'Action',    css: 'theme-action',    emoji: '\u{1F525}', film: 'Mad Max: Fury Road',                color: '#ff6b2b' },
+            { genre: 'Animation', css: 'theme-animation', emoji: '\u{1F916}', film: 'Wall-E',                            color: '#5BA3D9' },
+            { genre: 'Aventure',  css: 'theme-aventure',  emoji: '\u{1F3FA}', film: 'Indiana Jones',                     color: '#c17f3a' },
+            { genre: 'Comédie',   css: 'theme-comedie',   emoji: '\u{1F3E8}', film: 'The Grand Budapest Hotel',          color: '#f4b4c8' },
+            { genre: 'Crime',     css: 'theme-crime',     emoji: '\u{1F339}', film: 'Le Parrain',                        color: '#8B4513' },
+            { genre: 'Drame',     css: 'theme-drame',     emoji: '\u{1FAB6}', film: 'Forrest Gump',                      color: '#7ec8e3' },
+            { genre: 'Fantaisie', css: 'theme-fantaisie', emoji: '\u{1F48D}', film: 'Le Seigneur des Anneaux',           color: '#2ecc71' },
+            { genre: 'Guerre',    css: 'theme-guerre',    emoji: '\u{1FA96}', film: 'Il faut sauver le soldat Ryan',     color: '#8a8a78' },
+            { genre: 'Horreur',   css: 'theme-horreur',   emoji: '\u{1FA93}', film: 'Shining',                           color: '#c0392b' },
+            { genre: 'Policier',  css: 'theme-policier',  emoji: '\u{1F526}', film: 'Se7en',                             color: '#6890b8' },
+            { genre: 'SF',        css: 'theme-sf',        emoji: '\u{1F48A}', film: 'Matrix',                            color: '#00ff41' },
+            { genre: 'Thriller',  css: 'theme-thriller',  emoji: '\u{1F52A}', film: 'Psychose',                          color: '#c0c0c0' },
+            { genre: 'Western',   css: 'theme-western',   emoji: '\u{2B50}',  film: 'Le Bon, la Brute et le Truand',     color: '#cc5500' },
+          ] as const).map(t => {
+            const isActive = activeThemePreview === t.genre
+            return (
+              <button
+                key={t.genre}
+                onClick={() => {
+                  if (isActive) {
+                    setActiveThemePreview(null)
+                    document.body.classList.forEach(c => { if (c.startsWith('theme-')) document.body.classList.remove(c) })
+                    window.dispatchEvent(new CustomEvent('weekly-theme:set', { detail: null }))
+                    addToast('Thème désactivé', '🎨')
+                  } else {
+                    setActiveThemePreview(t.genre)
+                    document.body.classList.forEach(c => { if (c.startsWith('theme-')) document.body.classList.remove(c) })
+                    document.body.classList.add(t.css)
+                    window.dispatchEvent(new CustomEvent('weekly-theme:set', { detail: t.genre }))
+                    addToast(`Thème ${t.genre} activé — ${t.film}`, t.emoji)
+                  }
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '.6rem',
+                  padding: '.7rem .9rem',
+                  background: isActive ? `${t.color}15` : 'var(--bg3)',
+                  border: `2px solid ${isActive ? t.color : 'var(--border)'}`,
+                  borderRadius: 'var(--r)',
+                  cursor: 'pointer',
+                  transition: 'all .2s',
+                  textAlign: 'left',
+                  color: isActive ? t.color : 'var(--text2)',
+                  fontFamily: 'var(--font-body)',
+                  fontSize: '.82rem',
+                }}
+              >
+                <span style={{ fontSize: '1.3rem' }}>{t.emoji}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, marginBottom: '.1rem' }}>{t.genre}</div>
+                  <div style={{ fontSize: '.68rem', opacity: .6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.film}</div>
+                </div>
+                {isActive && (
+                  <span style={{ fontSize: '.6rem', background: t.color, color: '#000', padding: '2px 6px', borderRadius: 99, fontWeight: 700, flexShrink: 0 }}>ACTIF</span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+        {activeThemePreview && (
+          <button
+            className="btn btn-outline"
+            style={{ fontSize: '.78rem' }}
+            onClick={() => {
+              setActiveThemePreview(null)
+              document.body.classList.forEach(c => { if (c.startsWith('theme-')) document.body.classList.remove(c) })
+              window.dispatchEvent(new CustomEvent('weekly-theme:set', { detail: null }))
+              addToast('Thème désactivé', '🎨')
+            }}
+          >
+            Désactiver le thème
+          </button>
+        )}
+      </Section>
 
       {/* Clôture de saison */}
       <Section icon="📚" title={`Clôture — Saison ${serverConfig.SAISON_NUMERO}`}>

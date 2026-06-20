@@ -6,7 +6,7 @@ import { withCache } from '@/lib/redis'
 import Countdown from '@/components/Countdown'
 import ClassementClient from './ClassementClient'
 
-export const revalidate = 60
+export const revalidate = 120
 
 export default async function ClassementPage() {
   const [user, cfg, supabase] = await Promise.all([
@@ -38,11 +38,11 @@ export default async function ClassementPage() {
 
   // Données publiques cachées — même pour tous les utilisateurs
   const [ranked, marathonRanked, archives, activeBadges] = await Promise.all([
-    withCache('leaderboard:global', 60, async () => {
+    withCache('leaderboard:global', 120, async () => {
       const { data } = await (supabase as any).rpc('leaderboard', { limit_n: 100 })
       return data ?? []
     }),
-    withCache('leaderboard:marathon', 60, async () => {
+    withCache('leaderboard:marathon', 120, async () => {
       const { data } = await (supabase as any).rpc('marathon_leaderboard', { limit_n: 100 })
       return data ?? []
     }),
@@ -50,7 +50,7 @@ export default async function ClassementPage() {
       const { data } = await (supabase as any).from('season_archives').select('*').order('saison', { ascending: false }).order('rank_global')
       return data ?? []
     }),
-    withCache('profiles:badges', 60, async () => {
+    withCache('profiles:badges', 120, async () => {
       const { data } = await supabase.from('profiles').select('id, active_badge')
       return data ?? []
     }),

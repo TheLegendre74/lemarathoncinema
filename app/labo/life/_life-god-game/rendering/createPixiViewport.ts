@@ -250,14 +250,19 @@ export async function createPixiViewport({
 
     worldAssetCells.clear()
     for (const asset of state.worldAssets) {
-      const colorValue = Number.parseInt(asset.colorHint.replace('#', ''), 16)
-      for (const cell of asset.absoluteCells) {
+      const fallbackColor = Number.parseInt(asset.colorHint.replace('#', ''), 16)
+      for (let i = 0; i < asset.absoluteCells.length; i++) {
+        const cell = asset.absoluteCells[i]
+        const origCell = asset.cells[i]
+        const cellKey = origCell ? `${origCell.x}:${origCell.y}` : null
+        const perCellHex = cellKey && asset.cellColors?.[cellKey]
+        const color = perCellHex ? Number.parseInt(perCellHex.replace('#', ''), 16) : fallbackColor
         const px = metrics.x + cell.x * metrics.cellSize
         const py = metrics.y + cell.y * metrics.cellSize
         worldAssetCells.rect(px + 1, py + 1, Math.max(metrics.cellSize - 1, 1), Math.max(metrics.cellSize - 1, 1))
+        worldAssetCells.fill({ color, alpha: 0.88 })
         reservedCells.add(`${cell.x}:${cell.y}`)
       }
-      worldAssetCells.fill({ color: colorValue, alpha: 0.82 })
     }
 
     for (let y = 0; y < state.gridHeight; y += 1) {

@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Image from 'next/image'
 
-export const revalidate = 60
+export const revalidate = 120
 
 const LEVEL_INFO = {
   debutant: {

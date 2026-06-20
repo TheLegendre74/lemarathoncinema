@@ -18,43 +18,36 @@ export default async function ProfilPage({ searchParams }: { searchParams: Promi
   if (!user) redirect('/auth')
   const { with: withUserId } = await searchParams
 
-  const [{ data: profile }, { data: watched }, { data: votes }, { data: eggs }, { data: tama }] = await Promise.all([
+  const [{ data: profile }, { data: watched }, { data: votes }, { data: eggs }, { data: tama }, conversations, threadMessages, { data: blockedData }] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
     supabase.from('watched').select('*, films(id, titre, annee, genre, realisateur, poster)').eq('user_id', user.id).order('watched_at', { ascending: false }),
     supabase.from('votes').select('duel_id, voted_at').eq('user_id', user.id),
     supabase.from('discovered_eggs').select('egg_id').eq('user_id', user.id),
     (supabase as any).from('tamagotchi').select('xp').eq('user_id', user.id).single(),
+    getMyConversations(),
+    withUserId ? getConversationMessages(withUserId) : Promise.resolve([]),
+    (supabase as any).from('blocked_users').select('blocked_id').eq('blocker_id', user.id),
   ])
 
   if (!profile) redirect('/auth')
-
-  // Messages
-  const [conversations, threadMessages] = await Promise.all([
-    getMyConversations(),
-    withUserId ? getConversationMessages(withUserId) : Promise.resolve([]),
-  ])
-
-  // Interlocuteur initial
-  let initialOtherProfile: { id: string; pseudo: string; avatar_url: string | null } | null = null
-  if (withUserId) {
-    const conv = conversations.find((c: any) => c.otherId === withUserId)
-    if (conv?.profile) {
-      initialOtherProfile = conv.profile
-    } else {
-      const { data: op } = await supabase.from('profiles').select('id, pseudo, avatar_url').eq('id', withUserId).single()
-      initialOtherProfile = op ?? null
-    }
-  }
-
-  // Utilisateurs bloqués par moi
-  const { data: blockedData } = await (supabase as any)
-    .from('blocked_users')
-    .select('blocked_id')
-    .eq('blocker_id', user.id)
   const blockedIds: string[] = (blockedData ?? []).map((b: any) => b.blocked_id)
 
-  const { data: rankData } = await supabase.from('profiles').select('id').gte('exp', profile.exp)
-  const rank = rankData?.length ?? 1
+  // Rank + interlocuteur en parallèle
+  let initialOtherProfile: { id: string; pseudo: string; avatar_url: string | null } | null = null
+  const otherProfilePromise = withUserId
+    ? (() => {
+        const conv = (conversations as any[]).find((c: any) => c.otherId === withUserId)
+        if (conv?.profile) return Promise.resolve(conv.profile)
+        return supabase.from('profiles').select('id, pseudo, avatar_url').eq('id', withUserId).single().then(r => r.data ?? null)
+      })()
+    : Promise.resolve(null)
+
+  const [rankResult, otherProfile] = await Promise.all([
+    supabase.from('profiles').select('id', { count: 'exact', head: true }).gte('exp', profile.exp),
+    otherProfilePromise,
+  ])
+  initialOtherProfile = otherProfile
+  const rank = (rankResult as any).count ?? 1
   const level = levelFromExp(profile.exp)
   const badges = getAllBadges(profile.exp)
   const badge = getActiveBadge(profile.exp, (profile as any).active_badge)

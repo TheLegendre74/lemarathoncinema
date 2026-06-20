@@ -207,6 +207,14 @@ export default function LifeGodGame() {
               request={activePatternRequest}
               onSubmit={submitPattern}
               inWorldPosition={ceremonyDrawPosition}
+              completedCounts={simulationState ? {
+                house: simulationState.housePatternLibrary.length,
+                tree: simulationState.treePatternLibrary.length,
+                animal: simulationState.animalPatternLibrary.length,
+                tool: simulationState.toolPatternLibrary.length,
+                rock: simulationState.rockPatternLibrary.length,
+                river: simulationState.riverPatternLibrary.length,
+              } : undefined}
             />
           )}
         </div>

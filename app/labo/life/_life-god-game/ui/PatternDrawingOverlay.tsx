@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useRef } from 'react'
 import type { CSSProperties } from 'react'
 import type { LifeGodPatternRequest, LifeGodPlayerPattern, LifeGodPlayerPatternType, LifeGodRelativeCell } from '../types'
 
@@ -11,7 +11,14 @@ const MIN_CELLS_BY_TYPE: Record<LifeGodPlayerPatternType, number> = {
   rock: 3,
   river: 3,
 }
-const COLOR_BY_TYPE: Record<LifeGodPlayerPatternType, string> = {
+
+const PALETTE = [
+  '#c9a86c', '#48b86b', '#3d8ed8', '#9aa1aa',
+  '#8a5d3b', '#7a8fb0', '#e74c3c', '#f39c12',
+  '#9b59b6', '#1abc9c', '#ecf0f1', '#2c3e50',
+]
+
+const DEFAULT_COLOR_BY_TYPE: Record<LifeGodPlayerPatternType, string> = {
   house: '#c9a86c',
   tree: '#48b86b',
   animal: '#8a5d3b',
@@ -20,37 +27,59 @@ const COLOR_BY_TYPE: Record<LifeGodPlayerPatternType, string> = {
   river: '#3d8ed8',
 }
 
+interface CompletedCounts {
+  house: number
+  tree: number
+  animal: number
+  tool: number
+  rock: number
+  river: number
+}
+
+const LIBRARY_LIMITS: Record<LifeGodPlayerPatternType, number> = {
+  house: 2, tree: 3, animal: 3, tool: 2, rock: 2, river: 1,
+}
+
+const TYPE_LABELS: Record<LifeGodPlayerPatternType, string> = {
+  house: 'Maison', tree: 'Arbre', animal: 'Animal',
+  tool: 'Outil', rock: 'Rocher', river: 'Riviere',
+}
+
 interface PatternDrawingOverlayProps {
   request: LifeGodPatternRequest
   onSubmit: (pattern: Omit<LifeGodPlayerPattern, 'id' | 'createdAt'>) => boolean
   inWorldPosition?: { screenX: number; screenY: number } | null
+  completedCounts?: CompletedCounts
 }
 
-function cellKey(cell: LifeGodRelativeCell) {
-  return `${cell.x}:${cell.y}`
-}
-
-export function PatternDrawingOverlay({ request, onSubmit, inWorldPosition }: PatternDrawingOverlayProps) {
-  const [cells, setCells] = useState<Set<string>>(() => new Set())
+export function PatternDrawingOverlay({ request, onSubmit, inWorldPosition, completedCounts }: PatternDrawingOverlayProps) {
+  const [cellColors, setCellColors] = useState<Map<string, string>>(() => new Map())
+  const [activeColor, setActiveColor] = useState(DEFAULT_COLOR_BY_TYPE[request.type])
   const [paintMode, setPaintMode] = useState<'draw' | 'erase'>('draw')
-  const [message, setMessage] = useState(inWorldPosition ? '' : 'Simulation en pause')
+  const [message, setMessage] = useState('')
+  const paintingRef = useRef(false)
   const isInWorld = !!inWorldPosition
-  const activeColor = COLOR_BY_TYPE[request.type]
+
   const cellsArray = useMemo(() => {
-    return [...cells].map((entry) => {
-      const [x, y] = entry.split(':').map(Number)
+    return [...cellColors.keys()].map((key) => {
+      const [x, y] = key.split(':').map(Number)
       return { x, y }
     })
-  }, [cells])
+  }, [cellColors])
 
-  function paintCell(index: number, mode: 'draw' | 'erase') {
-    const x = index % DRAWING_SIZE
-    const y = Math.floor(index / DRAWING_SIZE)
+  const cellColorsRecord = useMemo(() => {
+    const rec: Record<string, string> = {}
+    for (const [key, color] of cellColors) rec[key] = color
+    return rec
+  }, [cellColors])
+
+  function paintCell(x: number, y: number, mode: 'draw' | 'erase') {
+    if (x < 0 || x >= DRAWING_SIZE || y < 0 || y >= DRAWING_SIZE) return
     const key = `${x}:${y}`
-    setCells((previous) => {
-      const next = new Set(previous)
+    setCellColors((prev) => {
+      const next = new Map(prev)
       if (mode === 'draw') {
-        next.add(key)
+        next.set(key, activeColor)
       } else {
         next.delete(key)
       }
@@ -58,10 +87,23 @@ export function PatternDrawingOverlay({ request, onSubmit, inWorldPosition }: Pa
     })
   }
 
-  function handlePointerDown(index: number, button: number) {
+  function handlePointerDown(x: number, y: number, button: number) {
     const mode = button === 2 ? 'erase' : 'draw'
     setPaintMode(mode)
-    paintCell(index, mode)
+    paintingRef.current = true
+    paintCell(x, y, mode)
+  }
+
+  function handlePointerMove(x: number, y: number, buttons: number) {
+    if (!paintingRef.current || buttons === 0) {
+      paintingRef.current = false
+      return
+    }
+    paintCell(x, y, buttons === 2 ? 'erase' : paintMode)
+  }
+
+  function handlePointerUp() {
+    paintingRef.current = false
   }
 
   function validate() {
@@ -78,6 +120,7 @@ export function PatternDrawingOverlay({ request, onSubmit, inWorldPosition }: Pa
       cells: cellsArray.sort((a, b) => a.y - b.y || a.x - b.x),
       requestIndex: request.requestIndex,
       colorHint: activeColor,
+      cellColors: cellColorsRecord,
     })
 
     if (!accepted) {
@@ -85,8 +128,8 @@ export function PatternDrawingOverlay({ request, onSubmit, inWorldPosition }: Pa
       return
     }
 
-    setCells(new Set())
-    setMessage('Pattern enregistre')
+    setCellColors(new Map())
+    setMessage('OK!')
   }
 
   const overlayStyle: CSSProperties = isInWorld
@@ -101,13 +144,24 @@ export function PatternDrawingOverlay({ request, onSubmit, inWorldPosition }: Pa
     : {}
 
   return (
-    <div className={isInWorld ? 'life-god-pattern-overlay-inworld' : 'life-god-pattern-overlay'} role="dialog" aria-modal={!isInWorld} aria-label="Dessin de pattern" style={isInWorld ? overlayStyle : undefined}>
-      <div className={isInWorld ? 'life-god-pattern-panel life-god-pattern-panel-compact' : 'life-god-pattern-panel'} onContextMenu={(event) => event.preventDefault()}>
+    <div
+      className={isInWorld ? 'life-god-pattern-overlay-inworld' : 'life-god-pattern-overlay'}
+      role="dialog"
+      aria-modal={!isInWorld}
+      aria-label="Dessin de pattern"
+      style={isInWorld ? overlayStyle : undefined}
+    >
+      <div
+        className={isInWorld ? 'life-god-pattern-panel life-god-pattern-panel-compact' : 'life-god-pattern-panel'}
+        onContextMenu={(e) => e.preventDefault()}
+      >
         <div className="life-god-pattern-header">
           <div>
-            <div className="life-god-pattern-kicker">{isInWorld ? 'Priere des AMs' : 'Mode dessin'}</div>
+            <div className="life-god-pattern-kicker">
+              {isInWorld ? 'Priere des AMs' : 'Mode dessin'}
+            </div>
             <div className="life-god-pattern-title">
-              {isInWorld ? `${request.label}!` : `Dessinez un ${request.label.toLowerCase()} (${request.requestIndex}/${request.totalForType})`}
+              {request.label} ({request.requestIndex}/{request.totalForType})
             </div>
           </div>
           <div className="life-god-pattern-count" style={{ borderColor: activeColor, color: activeColor }}>
@@ -115,24 +169,57 @@ export function PatternDrawingOverlay({ request, onSubmit, inWorldPosition }: Pa
           </div>
         </div>
 
-        <div className="life-god-pattern-grid" style={{ '--pattern-color': activeColor } as CSSProperties}>
+        {completedCounts && (
+          <div className="life-god-pattern-tracker">
+            {(Object.keys(LIBRARY_LIMITS) as LifeGodPlayerPatternType[]).map((type) => {
+              const done = completedCounts[type]
+              const total = LIBRARY_LIMITS[type]
+              const isCurrent = type === request.type
+              return (
+                <span key={type} className={isCurrent ? 'tracker-item current' : 'tracker-item'}>
+                  {TYPE_LABELS[type]} {done}/{total}
+                </span>
+              )
+            })}
+          </div>
+        )}
+
+        <div className="life-god-palette">
+          {PALETTE.map((color) => (
+            <button
+              key={color}
+              type="button"
+              className={color === activeColor ? 'palette-swatch active' : 'palette-swatch'}
+              style={{ background: color }}
+              onClick={() => setActiveColor(color)}
+              aria-label={`Couleur ${color}`}
+            />
+          ))}
+        </div>
+
+        <div
+          className="life-god-pattern-grid"
+          onPointerUp={handlePointerUp}
+          onPointerLeave={handlePointerUp}
+        >
           {Array.from({ length: DRAWING_SIZE * DRAWING_SIZE }, (_, index) => {
             const x = index % DRAWING_SIZE
             const y = Math.floor(index / DRAWING_SIZE)
-            const isActive = cells.has(cellKey({ x, y }))
+            const key = `${x}:${y}`
+            const cellColor = cellColors.get(key)
             return (
               <button
-                key={`${x}:${y}`}
+                key={key}
                 type="button"
                 aria-label={`cellule ${x},${y}`}
-                className={isActive ? 'life-god-pattern-cell active' : 'life-god-pattern-cell'}
-                onPointerDown={(event) => {
-                  event.currentTarget.setPointerCapture(event.pointerId)
-                  handlePointerDown(index, event.button)
+                className={cellColor ? 'life-god-pattern-cell active' : 'life-god-pattern-cell'}
+                style={cellColor ? { background: cellColor, boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.24)' } : undefined}
+                onPointerDown={(e) => {
+                  e.preventDefault()
+                  handlePointerDown(x, y, e.button)
                 }}
-                onPointerEnter={(event) => {
-                  if (event.buttons === 0) return
-                  paintCell(index, event.buttons === 2 ? 'erase' : paintMode)
+                onPointerMove={(e) => {
+                  handlePointerMove(x, y, e.buttons)
                 }}
               />
             )
@@ -141,7 +228,7 @@ export function PatternDrawingOverlay({ request, onSubmit, inWorldPosition }: Pa
 
         <div className="life-god-pattern-actions">
           <span>{message}</span>
-          <button type="button" onClick={() => setCells(new Set())}>
+          <button type="button" onClick={() => setCellColors(new Map())}>
             Effacer
           </button>
           <button type="button" className="primary" onClick={validate}>
@@ -189,7 +276,7 @@ export function PatternDrawingOverlay({ request, onSubmit, inWorldPosition }: Pa
           align-items: center;
           justify-content: space-between;
           gap: 14px;
-          margin-bottom: 12px;
+          margin-bottom: 8px;
         }
 
         .life-god-pattern-kicker {
@@ -216,6 +303,49 @@ export function PatternDrawingOverlay({ request, onSubmit, inWorldPosition }: Pa
           background: rgba(255, 255, 255, 0.04);
         }
 
+        .life-god-pattern-tracker {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          margin-bottom: 10px;
+          font-size: 11px;
+        }
+
+        .tracker-item {
+          padding: 2px 7px;
+          border-radius: 4px;
+          background: rgba(255, 255, 255, 0.06);
+          color: rgba(200, 210, 230, 0.7);
+        }
+
+        .tracker-item.current {
+          background: rgba(87, 143, 212, 0.25);
+          color: rgba(140, 190, 255, 0.95);
+          font-weight: 700;
+        }
+
+        .life-god-palette {
+          display: flex;
+          gap: 4px;
+          margin-bottom: 8px;
+          flex-wrap: wrap;
+        }
+
+        .palette-swatch {
+          width: 24px;
+          height: 24px;
+          border-radius: 4px;
+          border: 2px solid transparent;
+          cursor: pointer;
+          padding: 0;
+          transition: border-color 0.1s;
+        }
+
+        .palette-swatch.active {
+          border-color: #fff;
+          box-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
+        }
+
         .life-god-pattern-grid {
           display: grid;
           grid-template-columns: repeat(16, 1fr);
@@ -237,7 +367,6 @@ export function PatternDrawingOverlay({ request, onSubmit, inWorldPosition }: Pa
         }
 
         .life-god-pattern-cell.active {
-          background: var(--pattern-color);
           box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.24);
         }
 
@@ -246,7 +375,7 @@ export function PatternDrawingOverlay({ request, onSubmit, inWorldPosition }: Pa
           align-items: center;
           justify-content: flex-end;
           gap: 10px;
-          margin-top: 12px;
+          margin-top: 10px;
           color: rgba(191, 202, 224, 0.82);
           font-size: 12px;
         }
