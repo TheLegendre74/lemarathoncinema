@@ -50,6 +50,13 @@ export class MobileInputSystem {
   private pointerLeanDir: DodgeDirection | null = null
   private ptrButtons: PtrButton[] = []
   private buttonZoneY = 0
+  private duckZoneY = 0
+  private prevPointerY = 0
+  private pointerVelocityY = 0
+  private duckSwipeActive = false
+
+  // Volume touch
+  private volumeHandler: ((x: number, y: number) => boolean) | null = null
 
   // Common
   private pendingActions: MobileAction[] = []
@@ -80,6 +87,10 @@ export class MobileInputSystem {
 
   get mobileMode(): MobileMode { return this.mode }
   get gyroEnabled(): boolean { return this.gyro.enabled }
+
+  setVolumeHandler(handler: (x: number, y: number) => boolean) {
+    this.volumeHandler = handler
+  }
 
   // ── Gyro setup ─────────────────────────────────────────────────────
 
@@ -126,6 +137,7 @@ export class MobileInputSystem {
     const btnW = Math.round(totalW / 3)
 
     this.buttonZoneY = btnY - 10
+    this.duckZoneY = btnY - Math.round(this.H * 0.12)
     this.ptrButtons = [
       { id: 'jab', x: gap, y: btnY, w: btnW, h: btnH, label: 'JAB', color: 0x2288cc },
       { id: 'guard', x: gap * 2 + btnW, y: btnY, w: btnW, h: btnH, label: 'GARDE', color: 0x44aa44 },
@@ -146,6 +158,8 @@ export class MobileInputSystem {
     if (!this.isMobile) return
 
     this.activeTouches.add(pointerId)
+
+    if (this.volumeHandler?.(x, y)) return
 
     if (this.mode === 'gyro') {
       if (this.activeTouches.size >= 2) {
@@ -175,6 +189,8 @@ export class MobileInputSystem {
         return
       }
       this.leanPointerId = pointerId
+      this.prevPointerY = y
+      this.pointerVelocityY = 0
       this.updatePointerLean(x, y)
     }
   }
@@ -200,6 +216,7 @@ export class MobileInputSystem {
       if (pointerId === this.leanPointerId) {
         this.leanPointerId = null
         this.pointerLeanDir = null
+        this.duckSwipeActive = false
       }
       if (pointerId === this.guardPointerId) {
         this.guardPointerId = null
@@ -221,12 +238,24 @@ export class MobileInputSystem {
   private updatePointerLean(x: number, y: number) {
     const th = CFG.player.lean.zoneThreshold
     const relX = (x - this.W / 2) / (this.W / 2)
-    const relY = (y - this.H / 2) / (this.H / 2)
 
-    if (Math.abs(relX) > Math.abs(relY) && Math.abs(relX) > th) {
-      this.pointerLeanDir = relX < 0 ? 'left' : 'right'
-    } else if (relY > th) {
+    this.pointerVelocityY = y - this.prevPointerY
+    this.prevPointerY = y
+
+    const inDuckZone = y >= this.duckZoneY && y < this.buttonZoneY
+    const swipingDown = this.pointerVelocityY > 3
+
+    if (inDuckZone && swipingDown) {
+      this.duckSwipeActive = true
+    }
+    if (this.duckSwipeActive && !inDuckZone) {
+      this.duckSwipeActive = false
+    }
+
+    if (this.duckSwipeActive) {
       this.pointerLeanDir = 'down'
+    } else if (Math.abs(relX) > th) {
+      this.pointerLeanDir = relX < 0 ? 'left' : 'right'
     } else {
       this.pointerLeanDir = null
     }
@@ -322,6 +351,15 @@ export class MobileInputSystem {
   }
 
   private drawPointerButtons(g: Phaser.GameObjects.Graphics) {
+    const dzH = this.buttonZoneY - this.duckZoneY
+    const dzAlpha = this.duckSwipeActive ? 0.3 : 0.1
+    g.fillStyle(0x44aaff, dzAlpha)
+    g.fillRoundedRect(6, this.duckZoneY, this.W - 12, dzH, 8)
+    if (this.duckSwipeActive) {
+      g.lineStyle(2, 0x44aaff, 0.6)
+      g.strokeRoundedRect(6, this.duckZoneY, this.W - 12, dzH, 8)
+    }
+
     for (const btn of this.ptrButtons) {
       const isGuardHeld = btn.id === 'guard' && this.guardActive
       g.fillStyle(btn.color, isGuardHeld ? 0.55 : 0.35)
@@ -330,6 +368,8 @@ export class MobileInputSystem {
       g.strokeRoundedRect(btn.x, btn.y, btn.w, btn.h, 10)
     }
   }
+
+  getDuckZoneY(): number { return this.duckZoneY }
 
   getPointerButtons(): readonly PtrButton[] {
     return this.ptrButtons

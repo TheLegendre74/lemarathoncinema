@@ -309,6 +309,7 @@ export class PunchScene extends Phaser.Scene {
     }
 
     if (this.mobileSys.isMobile) {
+      this.mobileSys.setVolumeHandler((x, y) => this.tryVolumeClick(x, y))
       this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
         this.mobileSys.handlePointerDown(p.x, p.y, p.pointerId)
       })
@@ -1264,6 +1265,13 @@ export class PunchScene extends Phaser.Scene {
           ).setOrigin(0.5, 0.5).setDepth(10)
           this.mobileTexts.push(txt)
         }
+        const dzY = this.mobileSys.getDuckZoneY()
+        const dzLabel = this.add.text(
+          this.W / 2, dzY + 2, '↓ BAISSE ↓',
+          { fontFamily: FONT, fontSize: '14px', color: '#88ccff', fontStyle: 'bold',
+            stroke: '#000', strokeThickness: 2, align: 'center' },
+        ).setOrigin(0.5, 0).setDepth(10).setAlpha(0.6)
+        this.mobileTexts.push(dzLabel)
       }
     }
   }
