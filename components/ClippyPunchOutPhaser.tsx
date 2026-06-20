@@ -16,7 +16,9 @@ function needsGyroPermission(): boolean {
 
 function isMobileDevice(): boolean {
   if (typeof window === 'undefined') return false
-  return 'ontouchstart' in window || navigator.maxTouchPoints > 0
+  return 'ontouchstart' in window
+    || navigator.maxTouchPoints > 0
+    || window.matchMedia('(pointer: coarse)').matches
 }
 
 export default function ClippyPunchOutPhaser({
@@ -25,6 +27,7 @@ export default function ClippyPunchOutPhaser({
   const containerRef = useRef<HTMLDivElement>(null)
   const gameRef = useRef<any>(null)
   const [showMobileChoice, setShowMobileChoice] = useState(false)
+  const [shouldStart, setShouldStart] = useState(false)
   const gyroGrantedRef = useRef(false)
   const mobileModeRef = useRef<'gyro' | 'pointer'>('pointer')
 
@@ -62,7 +65,7 @@ export default function ClippyPunchOutPhaser({
     if (isMobileDevice()) {
       setShowMobileChoice(true)
     } else {
-      startGame()
+      setShouldStart(true)
     }
 
     return () => {
@@ -74,6 +77,12 @@ export default function ClippyPunchOutPhaser({
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    if (shouldStart && containerRef.current && !gameRef.current) {
+      startGame()
+    }
+  }, [shouldStart]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleChooseGyro = async () => {
     mobileModeRef.current = 'gyro'
     if (needsGyroPermission()) {
@@ -83,13 +92,13 @@ export default function ClippyPunchOutPhaser({
       } catch {}
     }
     setShowMobileChoice(false)
-    startGame()
+    setShouldStart(true)
   }
 
   const handleChoosePointer = () => {
     mobileModeRef.current = 'pointer'
     setShowMobileChoice(false)
-    startGame()
+    setShouldStart(true)
   }
 
   if (showMobileChoice) {
