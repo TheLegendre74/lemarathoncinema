@@ -1,0 +1,819 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   WEEKLY GENRE THEMES — Cinema Marathon
+   Chaque semaine, un genre, un film de ref, une esthetique unique.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── THEME BANNER ── */
+.theme-banner {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 180;
+  background: rgba(10,10,20,0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--theme-accent, var(--border2));
+  border-radius: 99px;
+  padding: .45rem 1.2rem;
+  font-size: .72rem;
+  color: var(--theme-accent, var(--text2));
+  letter-spacing: .5px;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  animation: banner-in .5s ease;
+  box-shadow: 0 4px 20px rgba(0,0,0,.4);
+  white-space: nowrap;
+}
+.theme-banner-film { opacity: .6; font-style: italic; }
+@keyframes banner-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+@media (max-width: 768px) {
+  .theme-banner { bottom: calc(5.5rem + env(safe-area-inset-bottom)); font-size: .65rem; padding: .35rem .9rem; }
+}
+
+/* ── SHARED ── */
+.theme-overlay { position: fixed; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
+.theme-quote {
+  position: fixed; pointer-events: none; z-index: 0; user-select: none;
+  font-family: var(--font-display); font-style: italic;
+  opacity: .035; letter-spacing: 1px;
+}
+
+/* ═══════════════════════════════════════
+   1. ACTION — Mad Max: Fury Road
+   Fury orange + chrome silver, desert storm
+   ═══════════════════════════════════════ */
+body.theme-action {
+  --bg: #0e0806; --bg2: #1a100a; --bg3: #261710; --bg4: #301e16;
+  --border: rgba(255,107,43,0.06); --border2: rgba(255,107,43,0.13); --border3: rgba(255,107,43,0.22);
+  --text2: #bb8868; --text3: #664a3a;
+  --theme-accent: #ff6b2b;
+  cursor: url('/cursors/cursor-action.svg') 16 16, crosshair;
+}
+body.theme-action .sidebar-logo-text { color: #ff6b2b; }
+body.theme-action .nav-item.active { color: #ff6b2b; border-left-color: #ff6b2b; background: rgba(255,107,43,.04); }
+body.theme-action .btn-gold { background: #ff6b2b; }
+body.theme-action .btn-gold:hover { background: #e05a1f; }
+body.theme-action ::-webkit-scrollbar-thumb { background: #ff6b2b; }
+
+.ember {
+  position: absolute; bottom: -10px; width: 4px; height: 4px;
+  background: #ff6b2b; border-radius: 50%; opacity: 0;
+  animation: ember-rise linear infinite;
+  box-shadow: 0 0 6px #ff6b2b;
+}
+@keyframes ember-rise {
+  0%   { transform: translateY(0) scale(1); opacity: .8; }
+  50%  { opacity: .5; }
+  100% { transform: translateY(-100vh) scale(0); opacity: 0; }
+}
+.action-vignette {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background: radial-gradient(ellipse at bottom, rgba(255,60,0,0.08) 0%, transparent 60%);
+}
+.chrome-text {
+  position: fixed; top: 3rem; right: 2rem;
+  font-family: var(--font-display); font-size: 1rem;
+  background: linear-gradient(180deg, #e0e0e0, #888, #e0e0e0);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  opacity: .06; letter-spacing: 3px; z-index: 0; user-select: none;
+}
+.war-rig-stripe {
+  position: fixed; bottom: 0; left: 0; right: 0; height: 3px;
+  background: repeating-linear-gradient(90deg, #ff6b2b 0px, #ff6b2b 20px, transparent 20px, transparent 30px, #ccc 30px, #ccc 50px, transparent 50px, transparent 60px);
+  opacity: .25; z-index: 2; pointer-events: none;
+}
+.action-sandstorm {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background: linear-gradient(180deg, rgba(200,120,40,0.03) 0%, transparent 30%, transparent 80%, rgba(200,120,40,0.02) 100%);
+}
+
+/* ═══════════════════════════════════════
+   2. ANIMATION — Wall-E
+   Deep space + warm Wall-E brown/blue
+   ═══════════════════════════════════════ */
+body.theme-animation {
+  --bg: #020610; --bg2: #060e1e; --bg3: #0a162c; --bg4: #0e1e3a;
+  --border: rgba(91,163,217,0.06); --border2: rgba(91,163,217,0.12); --border3: rgba(91,163,217,0.20);
+  --text2: #7898bb; --text3: #3a5580;
+  --theme-accent: #5BA3D9;
+  cursor: url('/cursors/cursor-animation.svg') 16 16, auto;
+}
+body.theme-animation .sidebar-logo-text { color: #f5cd79; }
+body.theme-animation .nav-item.active { color: #f5cd79; border-left-color: #f5cd79; background: rgba(245,205,121,.04); }
+body.theme-animation .btn-gold { background: #f5cd79; color: #1a1200; }
+body.theme-animation .btn-gold:hover { background: #e0b860; }
+body.theme-animation ::-webkit-scrollbar-thumb { background: #5BA3D9; }
+
+.star {
+  position: absolute; width: 2px; height: 2px;
+  background: white; border-radius: 50%;
+  animation: twinkle ease-in-out infinite;
+}
+@keyframes twinkle { 0%, 100% { opacity: .15; } 50% { opacity: 1; } }
+.eve-flyby {
+  position: fixed; top: 15%; left: -60px;
+  width: 30px; height: 18px;
+  background: white; border-radius: 50%;
+  opacity: 0; animation: eve-fly 30s linear infinite;
+  box-shadow: 0 0 20px rgba(255,255,255,0.5), 0 0 40px rgba(100,180,255,0.2);
+}
+.eve-flyby::before {
+  content: ''; position: absolute; left: 8px; top: 5px;
+  width: 5px; height: 4px; background: #4a90d9;
+  border-radius: 50%; box-shadow: 9px 0 0 #4a90d9;
+}
+.eve-flyby::after {
+  content: ''; position: absolute; right: -25px; top: 5px;
+  width: 25px; height: 2px;
+  background: linear-gradient(to left, transparent, rgba(100,180,255,0.4));
+  border-radius: 10px; filter: blur(1px);
+}
+@keyframes eve-fly {
+  0%   { left: -60px; top: 12%; opacity: 0; }
+  3%   { opacity: .7; }
+  50%  { top: 6%; }
+  97%  { opacity: .7; }
+  100% { left: calc(100vw + 60px); top: 15%; opacity: 0; }
+}
+.plant-sprout { position: fixed; bottom: 2rem; right: 3rem; font-size: 1.4rem; opacity: .35; animation: sprout-sway 4s ease-in-out infinite; z-index: 2; }
+@keyframes sprout-sway { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+.bnl-logo {
+  position: fixed; top: 2rem; right: 2rem;
+  font-family: var(--font-display); font-size: .7rem;
+  color: rgba(245,205,121,0.06); letter-spacing: 2px;
+  z-index: 0; user-select: none;
+}
+.directive-text {
+  position: fixed; bottom: 5rem; left: 2rem;
+  font-family: 'Courier New', monospace; font-size: .6rem;
+  color: rgba(91,163,217,0.07); z-index: 0; user-select: none;
+}
+
+/* ═══════════════════════════════════════
+   3. AVENTURE — Indiana Jones
+   Earthy leather brown + map red
+   ═══════════════════════════════════════ */
+body.theme-aventure {
+  --bg: #0c0a05; --bg2: #18140a; --bg3: #241e10; --bg4: #302816;
+  --border: rgba(139,90,43,0.08); --border2: rgba(139,90,43,0.15); --border3: rgba(139,90,43,0.24);
+  --text2: #a08050; --text3: #604830;
+  --theme-accent: #c17f3a;
+  cursor: url('/cursors/cursor-aventure.svg') 16 16, auto;
+}
+body.theme-aventure .sidebar-logo-text { color: #c17f3a; }
+body.theme-aventure .nav-item.active { color: #c17f3a; border-left-color: #c17f3a; background: rgba(193,127,58,.04); }
+body.theme-aventure .btn-gold { background: #c17f3a; }
+body.theme-aventure .btn-gold:hover { background: #a06830; }
+body.theme-aventure ::-webkit-scrollbar-thumb { background: #8B5A2B; }
+
+.parchment-overlay {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(139,90,43,0.015) 40px, rgba(139,90,43,0.015) 41px),
+    repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(139,90,43,0.015) 40px, rgba(139,90,43,0.015) 41px);
+}
+.travel-line {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: 100vh; pointer-events: none; z-index: 0;
+  background:
+    linear-gradient(90deg, transparent 49.5%, rgba(180,50,50,0.08) 49.5%, rgba(180,50,50,0.08) 50.5%, transparent 50.5%);
+}
+.travel-line::before {
+  content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 6px; height: 6px; background: rgba(180,50,50,0.2); border-radius: 50%;
+  box-shadow: 0 120px 0 rgba(180,50,50,0.15), 0 280px 0 rgba(180,50,50,0.1), 0 440px 0 rgba(180,50,50,0.15);
+}
+.idol-glow {
+  position: fixed; bottom: 4rem; right: 2.5rem;
+  font-size: 1.6rem; opacity: .12; z-index: 0;
+  animation: idol-pulse 3s ease-in-out infinite;
+}
+@keyframes idol-pulse { 0%, 100% { filter: drop-shadow(0 0 4px rgba(200,160,40,0.3)); } 50% { filter: drop-shadow(0 0 12px rgba(200,160,40,0.6)); } }
+.snakes-text {
+  position: fixed; bottom: 2rem; left: 1.5rem;
+  font-family: var(--font-display); font-style: italic; font-size: .8rem;
+  color: rgba(139,90,43,0.04); z-index: 0; user-select: none;
+}
+.boulder {
+  position: fixed; top: 1.5rem; left: 1.5rem;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #a09080, #605040);
+  opacity: .08; z-index: 0;
+  box-shadow: inset -3px -3px 6px rgba(0,0,0,0.3);
+}
+
+/* ═══════════════════════════════════════
+   4. COMEDIE — The Grand Budapest Hotel
+   Signature Wes Anderson pink + lilac + cream
+   ═══════════════════════════════════════ */
+body.theme-comedie {
+  --bg: #100a0d; --bg2: #1c1018; --bg3: #281822; --bg4: #34202c;
+  --border: rgba(244,180,200,0.08); --border2: rgba(244,180,200,0.14); --border3: rgba(244,180,200,0.22);
+  --text2: #bb88a0; --text3: #804a66;
+  --theme-accent: #f4b4c8;
+  cursor: url('/cursors/cursor-comedie.svg') 16 16, auto;
+}
+body.theme-comedie .sidebar-logo-text { color: #f4b4c8; }
+body.theme-comedie .nav-item.active { color: #f4b4c8; border-left-color: #f4b4c8; background: rgba(244,180,200,.04); }
+body.theme-comedie .btn-gold { background: #f4b4c8; color: #2a0a14; }
+body.theme-comedie .btn-gold:hover { background: #e8a0b8; }
+body.theme-comedie ::-webkit-scrollbar-thumb { background: #f4b4c8; }
+body.theme-comedie .card, body.theme-comedie .film-card {
+  border-width: 2px; border-color: rgba(244,180,200,0.15);
+}
+
+.budapest-frame {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  border: 3px solid rgba(244,180,200,0.07); margin: 6px; border-radius: 2px;
+}
+.budapest-frame::before {
+  content: ''; position: absolute; inset: 4px;
+  border: 1px solid rgba(244,180,200,0.04); border-radius: 1px;
+}
+.budapest-frame::after {
+  content: ''; position: absolute; inset: 9px;
+  border: 1px solid rgba(244,180,200,0.025);
+}
+.mendls-stack {
+  position: fixed; bottom: 3.5rem; right: 2rem; z-index: 0; opacity: .18; pointer-events: none;
+}
+.mendls-box {
+  width: 22px; height: 16px; border-radius: 2px;
+  border: 1.5px solid rgba(244,180,200,0.6);
+  background: linear-gradient(135deg, rgba(244,180,200,0.2), rgba(232,138,173,0.2));
+  margin-bottom: 2px; position: relative;
+}
+.mendls-box::after {
+  content: 'M'; position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .4rem; color: rgba(244,180,200,0.7); font-weight: 700; font-family: var(--font-display);
+}
+.lobby-boy {
+  position: fixed; bottom: 0; left: -40px;
+  width: 14px; height: 28px; z-index: 1; pointer-events: none;
+  animation: lobby-run 20s linear infinite;
+  opacity: 0;
+}
+.lobby-boy::before {
+  content: ''; display: block; width: 10px; height: 10px;
+  background: #5c1a2a; border-radius: 50%; margin: 0 auto;
+}
+.lobby-boy::after {
+  content: ''; display: block; width: 14px; height: 18px;
+  background: #8b2252; border-radius: 2px 2px 0 0; margin-top: 1px;
+}
+@keyframes lobby-run {
+  0%   { left: -40px; bottom: 3%; opacity: 0; }
+  3%   { opacity: .35; }
+  50%  { bottom: 4%; }
+  97%  { opacity: .35; }
+  100% { left: calc(100vw + 40px); bottom: 3%; opacity: 0; }
+}
+.concierge-text {
+  position: fixed; top: 2.5rem; right: 2rem;
+  font-family: var(--font-display); font-size: .65rem;
+  color: rgba(244,180,200,0.05); letter-spacing: 2px; z-index: 0; user-select: none;
+}
+
+/* ═══════════════════════════════════════
+   5. CRIME — Le Parrain
+   Deep mahogany + blood maroon + amber spotlight
+   ═══════════════════════════════════════ */
+body.theme-crime {
+  --bg: #080504; --bg2: #120c08; --bg3: #1c140e; --bg4: #261c14;
+  --border: rgba(139,69,19,0.08); --border2: rgba(139,69,19,0.14); --border3: rgba(139,69,19,0.22);
+  --text2: #907060; --text3: #584038;
+  --theme-accent: #8B4513;
+  cursor: url('/cursors/cursor-crime.svg') 16 16, auto;
+}
+body.theme-crime .sidebar-logo-text { color: #a05a28; }
+body.theme-crime .nav-item.active { color: #a05a28; border-left-color: #a05a28; background: rgba(160,90,40,.04); }
+body.theme-crime .btn-gold { background: #a05a28; }
+body.theme-crime .btn-gold:hover { background: #884820; }
+body.theme-crime ::-webkit-scrollbar-thumb { background: #6b3410; }
+
+.amber-light {
+  position: fixed; top: -20%; left: 40%; transform: translateX(-50%);
+  width: 40vw; height: 50vh;
+  background: radial-gradient(ellipse, rgba(200,140,40,0.06) 0%, transparent 70%);
+  pointer-events: none; z-index: 0;
+}
+.falling-rose {
+  position: absolute; width: 12px; height: 12px; opacity: 0;
+  animation: rose-fall linear infinite;
+}
+.falling-rose::before {
+  content: ''; display: block; width: 10px; height: 10px;
+  background: #8B0000; border-radius: 50% 0 50% 50%;
+  transform: rotate(45deg); box-shadow: 0 0 4px rgba(139,0,0,0.4);
+}
+@keyframes rose-fall {
+  0%   { transform: translate(0, -20px) rotate(0deg); opacity: 0; }
+  10%  { opacity: .6; }
+  50%  { transform: translate(30px, 50vh) rotate(180deg); opacity: .4; }
+  90%  { opacity: .2; }
+  100% { transform: translate(-20px, 110vh) rotate(360deg); opacity: 0; }
+}
+.puppet-strings {
+  position: fixed; top: 0; left: 0; right: 0; height: 30vh;
+  pointer-events: none; z-index: 0;
+  background: linear-gradient(to bottom, rgba(200,140,40,0.04) 0%, transparent 100%);
+}
+.don-cat {
+  position: fixed; bottom: 3rem; left: 1.5rem;
+  font-size: 1.2rem; opacity: .1; z-index: 0;
+  animation: cat-breathe 4s ease-in-out infinite;
+}
+@keyframes cat-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+.offer-text {
+  position: fixed; bottom: 1.5rem; left: 1.5rem;
+  font-family: var(--font-display); font-style: italic; font-size: .7rem;
+  color: rgba(139,69,19,0.035); z-index: 0; user-select: none;
+  max-width: 200px; line-height: 1.4;
+}
+.crime-stripe {
+  position: fixed; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(139,0,0,0.15), transparent);
+  pointer-events: none; z-index: 0;
+}
+
+/* ═══════════════════════════════════════
+   6. DRAME — Forrest Gump
+   Soft sky blue + golden hour warmth
+   ═══════════════════════════════════════ */
+body.theme-drame {
+  --bg: #06080c; --bg2: #0c1220; --bg3: #121a2e; --bg4: #18223c;
+  --border: rgba(126,200,227,0.06); --border2: rgba(126,200,227,0.12); --border3: rgba(126,200,227,0.20);
+  --text2: #7098b0; --text3: #3a5a70;
+  --theme-accent: #7ec8e3;
+  cursor: url('/cursors/cursor-drame.svg') 4 4, auto;
+}
+body.theme-drame .sidebar-logo-text { color: #7ec8e3; }
+body.theme-drame .nav-item.active { color: #7ec8e3; border-left-color: #7ec8e3; background: rgba(126,200,227,.04); }
+body.theme-drame .btn-gold { background: #7ec8e3; color: #0a1a24; }
+body.theme-drame .btn-gold:hover { background: #60b0cc; }
+body.theme-drame ::-webkit-scrollbar-thumb { background: #7ec8e3; }
+
+.floating-feather {
+  position: fixed; top: -5%; width: 30px; height: 40px;
+  z-index: 2; pointer-events: none; opacity: 0;
+  animation: feather-path 18s ease-in-out infinite;
+}
+.floating-feather svg { width: 100%; height: 100%; filter: drop-shadow(0 2px 8px rgba(255,255,255,0.2)); }
+@keyframes feather-path {
+  0%   { left: 65%; top: -5%;  transform: rotate(0deg);   opacity: 0; }
+  5%   { opacity: .7; }
+  15%  { left: 50%; top: 15%;  transform: rotate(25deg); }
+  30%  { left: 60%; top: 30%;  transform: rotate(-10deg); }
+  45%  { left: 45%; top: 45%;  transform: rotate(35deg); }
+  60%  { left: 55%; top: 60%;  transform: rotate(-5deg); }
+  75%  { left: 42%; top: 75%;  transform: rotate(20deg); }
+  90%  { opacity: .5; }
+  100% { left: 50%; top: 105%; transform: rotate(40deg); opacity: 0; }
+}
+.sky-gradient {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background: linear-gradient(to bottom, rgba(126,200,227,0.05) 0%, rgba(249,231,159,0.02) 30%, transparent 50%);
+}
+.bench-silhouette {
+  position: fixed; bottom: 3rem; right: 3rem;
+  width: 50px; height: 25px; opacity: .05; z-index: 0; pointer-events: none;
+}
+.chocolates-text {
+  position: fixed; top: 3rem; right: 2rem;
+  font-family: var(--font-display); font-style: italic; font-size: .7rem;
+  color: rgba(126,200,227,0.04); z-index: 0; user-select: none;
+  max-width: 220px; line-height: 1.4;
+}
+.run-text {
+  position: fixed; bottom: 1.5rem; left: 2rem;
+  font-family: var(--font-display); font-size: 1.2rem; font-weight: 900;
+  color: rgba(126,200,227,0.03); letter-spacing: 4px; z-index: 0; user-select: none;
+}
+
+/* ═══════════════════════════════════════
+   7. FANTAISIE — Le Seigneur des Anneaux
+   Emerald Shire green + ring gold glow
+   ═══════════════════════════════════════ */
+body.theme-fantaisie {
+  --bg: #040a04; --bg2: #0a180a; --bg3: #102610; --bg4: #163016;
+  --border: rgba(40,180,80,0.06); --border2: rgba(40,180,80,0.11); --border3: rgba(40,180,80,0.18);
+  --text2: #60a868; --text3: #306838;
+  --theme-accent: #2ecc71;
+  cursor: url('/cursors/cursor-fantaisie.svg') 16 16, auto;
+}
+body.theme-fantaisie .sidebar-logo-text { color: #2ecc71; }
+body.theme-fantaisie .nav-item.active { color: #2ecc71; border-left-color: #2ecc71; background: rgba(46,204,113,.04); }
+body.theme-fantaisie .btn-gold { background: #2ecc71; color: #0a1a0e; }
+body.theme-fantaisie .btn-gold:hover { background: #25a85c; }
+body.theme-fantaisie ::-webkit-scrollbar-thumb { background: #2ecc71; }
+
+.firefly {
+  position: absolute; width: 4px; height: 4px;
+  background: #ffd700; border-radius: 50%;
+  box-shadow: 0 0 8px #ffd700, 0 0 16px rgba(255,215,0,0.3);
+  animation: firefly-float ease-in-out infinite;
+}
+@keyframes firefly-float {
+  0%, 100% { opacity: .1; transform: translate(0, 0); }
+  25%      { opacity: .8; transform: translate(20px, -30px); }
+  50%      { opacity: .2; transform: translate(-10px, -15px); }
+  75%      { opacity: .7; transform: translate(15px, -40px); }
+}
+.mist-bottom {
+  position: fixed; bottom: 0; left: 0; right: 0; height: 25vh;
+  pointer-events: none; z-index: 1;
+  background: linear-gradient(to top, rgba(180,210,180,0.05) 0%, transparent 100%);
+}
+.sauron-eye {
+  position: fixed; top: 2rem; right: 2.5rem;
+  width: 16px; height: 24px; z-index: 0; pointer-events: none;
+  animation: sauron-pulse 5s ease-in-out infinite;
+}
+.sauron-eye::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse, rgba(255,100,0,0.6) 0%, rgba(255,50,0,0.2) 40%, transparent 70%);
+  border-radius: 50% 50% 50% 50% / 30% 30% 70% 70%;
+}
+.sauron-eye::after {
+  content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 4px; height: 8px; background: #1a0800;
+  border-radius: 50%; box-shadow: 0 0 4px rgba(255,100,0,0.8);
+}
+@keyframes sauron-pulse { 0%, 100% { opacity: .08; } 50% { opacity: .15; } }
+.elvish-inscription {
+  position: fixed; bottom: 2rem; left: 1.5rem;
+  font-family: var(--font-display); font-style: italic; font-size: .55rem;
+  color: rgba(255,215,0,0.04); z-index: 0; user-select: none;
+  max-width: 180px; line-height: 1.6;
+}
+.shire-door {
+  position: fixed; bottom: 3rem; right: 2rem;
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 2px solid rgba(46,204,113,0.1);
+  z-index: 0; pointer-events: none;
+}
+.shire-door::after {
+  content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 4px; height: 4px; background: rgba(46,204,113,0.12); border-radius: 50%;
+}
+
+/* ═══════════════════════════════════════
+   8. GUERRE — Il faut sauver le soldat Ryan
+   Desaturated olive grey, rain, grain
+   ═══════════════════════════════════════ */
+body.theme-guerre {
+  --bg: #080808; --bg2: #111110; --bg3: #1a1a18; --bg4: #222220;
+  --border: rgba(160,160,140,0.07); --border2: rgba(160,160,140,0.12); --border3: rgba(160,160,140,0.18);
+  --text2: #888880; --text3: #505048;
+  --theme-accent: #8a8a70;
+  cursor: url('/cursors/cursor-guerre.svg') 16 16, auto;
+}
+body.theme-guerre .sidebar-logo-text { color: #8a8a70; }
+body.theme-guerre .nav-item.active { color: #8a8a70; border-left-color: #8a8a70; background: rgba(138,138,112,.04); }
+body.theme-guerre .btn-gold { background: #7a7a60; color: #1a1a14; }
+body.theme-guerre .btn-gold:hover { background: #6a6a50; }
+body.theme-guerre .main { filter: saturate(0.2); }
+body.theme-guerre .theme-banner { filter: saturate(5); }
+body.theme-guerre ::-webkit-scrollbar-thumb { background: #6a6a58; }
+
+.rain-drop {
+  position: absolute; top: -10%; width: 1px;
+  background: linear-gradient(to bottom, transparent, rgba(180,190,200,0.3));
+  animation: rain-fall linear infinite;
+}
+@keyframes rain-fall { to { transform: translateY(110vh); } }
+.guerre-grain {
+  position: fixed; inset: 0; pointer-events: none; z-index: 2; opacity: .05;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 256px;
+}
+.medic-cross {
+  position: fixed; top: 3rem; right: 2.5rem;
+  width: 18px; height: 18px; opacity: .06; z-index: 0; pointer-events: none;
+}
+.medic-cross::before, .medic-cross::after {
+  content: ''; position: absolute; background: #cc0000;
+}
+.medic-cross::before { top: 0; left: 6px; width: 6px; height: 18px; }
+.medic-cross::after  { top: 6px; left: 0; width: 18px; height: 6px; }
+.earn-this {
+  position: fixed; bottom: 2rem; right: 2rem;
+  font-family: var(--font-display); font-style: italic; font-size: .8rem;
+  color: rgba(138,138,112,0.04); z-index: 0; user-select: none;
+}
+.dog-tags {
+  position: fixed; top: 1.5rem; left: 1.5rem;
+  width: 12px; height: 18px; border-radius: 3px;
+  border: 1px solid rgba(160,160,140,0.08); z-index: 0;
+  box-shadow: 4px 3px 0 rgba(160,160,140,0.06);
+}
+.dog-tags::after {
+  content: ''; position: absolute; top: 1px; left: 50%; transform: translateX(-50%);
+  width: 3px; height: 3px; border-radius: 50%; border: 1px solid rgba(160,160,140,0.08);
+}
+
+/* ═══════════════════════════════════════
+   9. HORREUR — Shining
+   Blood red + Overlook Hotel dark teal
+   ═══════════════════════════════════════ */
+body.theme-horreur {
+  --bg: #0a0406; --bg2: #140a0e; --bg3: #1e1016; --bg4: #28161e;
+  --border: rgba(192,57,43,0.07); --border2: rgba(192,57,43,0.13); --border3: rgba(192,57,43,0.20);
+  --text2: #996070; --text3: #603040;
+  --theme-accent: #c0392b;
+  cursor: url('/cursors/cursor-horreur.svg') 16 4, auto;
+}
+body.theme-horreur .sidebar-logo-text { color: #c0392b; }
+body.theme-horreur .nav-item.active { color: #c0392b; border-left-color: #c0392b; background: rgba(192,57,43,.04); }
+body.theme-horreur .btn-gold { background: #c0392b; color: #fff; }
+body.theme-horreur .btn-gold:hover { background: #a03020; }
+body.theme-horreur ::-webkit-scrollbar-thumb { background: #8b1a1a; }
+
+.carpet-pattern {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .025;
+  background-image: repeating-conic-gradient(from 30deg, #c0392b 0deg 60deg, #1a5276 60deg 120deg);
+  background-size: 40px 40px;
+}
+.redrum {
+  position: fixed; top: 50%; right: 2rem;
+  transform: translateY(-50%) scaleX(-1);
+  font-family: var(--font-display); font-size: 1.8rem;
+  color: rgba(192,57,43,0.035); letter-spacing: 6px;
+  writing-mode: vertical-lr; z-index: 0; user-select: none;
+}
+.flicker-overlay {
+  position: fixed; inset: 0; pointer-events: none; z-index: 3;
+  background: white; opacity: 0;
+  animation: horror-flicker 45s linear infinite;
+}
+@keyframes horror-flicker {
+  0%, 100% { opacity: 0; }
+  73.2% { opacity: 0; } 73.3% { opacity: .04; } 73.5% { opacity: 0; }
+  73.6% { opacity: .03; } 73.7% { opacity: 0; }
+}
+.blood-drip {
+  position: fixed; top: 0; width: 3px;
+  background: linear-gradient(to bottom, rgba(192,57,43,0.4), rgba(120,20,20,0.1), transparent);
+  border-radius: 0 0 2px 2px;
+  animation: drip 8s ease-in infinite; z-index: 1;
+}
+@keyframes drip {
+  0%   { height: 0; opacity: .6; }
+  70%  { height: 15vh; opacity: .4; }
+  100% { height: 20vh; opacity: 0; }
+}
+.room-237 {
+  position: fixed; top: 2.5rem; right: 2rem;
+  font-family: var(--font-display); font-size: .85rem; font-weight: 700;
+  color: rgba(192,57,43,0.04); z-index: 0; user-select: none;
+  letter-spacing: 2px;
+}
+.typewriter-text {
+  position: fixed; bottom: 2rem; left: 1.5rem;
+  font-family: 'Courier New', monospace; font-size: .5rem;
+  color: rgba(192,57,43,0.03); z-index: 0; user-select: none;
+  line-height: 1.3; max-width: 200px;
+}
+.twins-flash {
+  position: fixed; top: 40%; left: 50%; transform: translate(-50%, -50%);
+  display: flex; gap: 8px; opacity: 0; z-index: 4; pointer-events: none;
+  animation: twins-appear 60s linear infinite;
+}
+.twins-flash::before, .twins-flash::after {
+  content: ''; width: 12px; height: 28px;
+  background: linear-gradient(to bottom, #88ccdd 0%, #88ccdd 40%, #5588aa 40%, #5588aa 100%);
+  border-radius: 6px 6px 0 0;
+}
+@keyframes twins-appear {
+  0%, 100% { opacity: 0; }
+  83% { opacity: 0; } 83.3% { opacity: .15; } 83.8% { opacity: 0; }
+}
+
+/* ═══════════════════════════════════════
+   10. POLICIER — Se7en
+   Cold steel blue + manila folder yellow + noir
+   ═══════════════════════════════════════ */
+body.theme-policier {
+  --bg: #040608; --bg2: #0a0e14; --bg3: #10161e; --bg4: #161e28;
+  --border: rgba(100,130,170,0.07); --border2: rgba(100,130,170,0.12); --border3: rgba(100,130,170,0.18);
+  --text2: #6880a0; --text3: #384860;
+  --theme-accent: #6890b8;
+  cursor: url('/cursors/cursor-policier.svg') 14 14, auto;
+}
+body.theme-policier .sidebar-logo-text { color: #6890b8; }
+body.theme-policier .nav-item.active { color: #6890b8; border-left-color: #6890b8; background: rgba(104,144,184,.04); }
+body.theme-policier .btn-gold { background: #6890b8; color: #0a1018; }
+body.theme-policier .btn-gold:hover { background: #5878a0; }
+body.theme-policier ::-webkit-scrollbar-thumb { background: #4a6888; }
+
+.seven-vignette {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background: radial-gradient(ellipse at center, transparent 25%, rgba(0,0,0,0.45) 100%);
+}
+.seven-grain {
+  position: fixed; inset: 0; pointer-events: none; z-index: 1; opacity: .06;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 256px;
+}
+.notebook-scrawl {
+  position: fixed; bottom: 6rem; left: 1.5rem;
+  font-family: 'Courier New', monospace; font-size: .55rem;
+  color: rgba(200,180,100,0.06); transform: rotate(-2deg);
+  line-height: 1.6; z-index: 0; user-select: none;
+}
+.evidence-board {
+  position: fixed; top: 0; right: 0; bottom: 0; width: 100vw;
+  pointer-events: none; z-index: 0;
+  background:
+    linear-gradient(135deg, transparent 48%, rgba(180,40,40,0.02) 48%, rgba(180,40,40,0.02) 48.3%, transparent 48.3%),
+    linear-gradient(45deg, transparent 52%, rgba(180,40,40,0.02) 52%, rgba(180,40,40,0.02) 52.3%, transparent 52.3%);
+}
+.whats-in-box {
+  position: fixed; bottom: 1.5rem; right: 2rem;
+  font-family: var(--font-display); font-style: italic; font-size: .75rem;
+  color: rgba(104,144,184,0.035); z-index: 0; user-select: none;
+}
+.evidence-pin {
+  position: fixed; width: 6px; height: 6px; border-radius: 50%;
+  background: rgba(180,40,40,0.15); z-index: 0; pointer-events: none;
+  box-shadow: 0 0 4px rgba(180,40,40,0.1);
+}
+
+/* ═══════════════════════════════════════
+   11. SF — Matrix
+   Pure green on black, terminal aesthetic
+   ═══════════════════════════════════════ */
+body.theme-sf {
+  --bg: #000800; --bg2: #001200; --bg3: #001a00; --bg4: #002200;
+  --border: rgba(0,255,65,0.06); --border2: rgba(0,255,65,0.11); --border3: rgba(0,255,65,0.18);
+  --text: #c0ffc0; --text2: #40aa40; --text3: #206020;
+  --theme-accent: #00ff41;
+  cursor: url('/cursors/cursor-sf.svg') 16 16, auto;
+}
+body.theme-sf .sidebar-logo-text { color: #00ff41; }
+body.theme-sf .nav-item.active { color: #00ff41; border-left-color: #00ff41; background: rgba(0,255,65,.04); }
+body.theme-sf .btn-gold { background: #00ff41; color: #000; }
+body.theme-sf .btn-gold:hover { background: #00cc33; }
+body.theme-sf ::-webkit-scrollbar-thumb { background: #00aa28; }
+body.theme-sf .card, body.theme-sf .film-card { border-color: rgba(0,255,65,0.08); }
+body.theme-sf .sidebar { border-right-color: rgba(0,255,65,0.08); }
+
+.matrix-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .12; }
+.wake-up-neo {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  font-family: 'Courier New', monospace; font-size: 1.1rem;
+  color: #00ff41; z-index: 999;
+  text-shadow: 0 0 10px #00ff41;
+  animation: neo-msg 4s ease forwards; white-space: nowrap;
+}
+@keyframes neo-msg {
+  0% { opacity: 0; } 10% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; }
+}
+.no-spoon {
+  position: fixed; bottom: 2rem; right: 2rem;
+  font-family: 'Courier New', monospace; font-size: .6rem;
+  color: rgba(0,255,65,0.05); z-index: 0; user-select: none;
+}
+.white-rabbit {
+  position: fixed; top: 2.5rem; right: 2rem;
+  font-family: 'Courier New', monospace; font-size: .5rem;
+  color: rgba(0,255,65,0.04); z-index: 0; user-select: none;
+}
+.matrix-scanline {
+  position: fixed; inset: 0; pointer-events: none; z-index: 1;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,65,0.008) 2px, rgba(0,255,65,0.008) 4px);
+}
+
+/* ═══════════════════════════════════════
+   12. THRILLER — Psychose
+   Pure B&W, Hitchcock noir
+   ═══════════════════════════════════════ */
+body.theme-thriller {
+  --bg: #080808; --bg2: #121212; --bg3: #1c1c1c; --bg4: #252525;
+  --border: rgba(200,200,200,0.06); --border2: rgba(200,200,200,0.10); --border3: rgba(200,200,200,0.16);
+  --text2: #909090; --text3: #505050;
+  --theme-accent: #b0b0b0;
+  cursor: url('/cursors/cursor-thriller.svg') 16 2, auto;
+}
+body.theme-thriller .sidebar-logo-text { color: #b0b0b0; }
+body.theme-thriller .nav-item.active { color: #e0e0e0; border-left-color: #e0e0e0; background: rgba(255,255,255,.03); }
+body.theme-thriller .btn-gold { background: #b0b0b0; color: #1a1a1a; }
+body.theme-thriller .btn-gold:hover { background: #909090; }
+body.theme-thriller .main { filter: saturate(0.1); }
+body.theme-thriller .theme-banner { filter: saturate(6); }
+body.theme-thriller ::-webkit-scrollbar-thumb { background: #666; }
+
+.venetian-blinds {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background: repeating-linear-gradient(0deg, transparent 0px, transparent 18px, rgba(255,255,255,0.015) 18px, rgba(255,255,255,0.015) 20px);
+  transform: rotate(-15deg) scale(1.5); transform-origin: center;
+}
+.hitchcock-silhouette {
+  position: fixed; bottom: 3rem; right: 2rem;
+  width: 50px; height: 70px; opacity: .06; z-index: 0;
+}
+.bates-motel {
+  position: fixed; top: 2rem; right: 2rem;
+  font-family: 'Courier New', monospace; font-size: .6rem;
+  color: rgba(200,200,200,0.04); letter-spacing: 3px;
+  z-index: 0; user-select: none;
+}
+.shower-curtain {
+  position: fixed; top: 0; right: 0; width: 30vw; height: 100vh;
+  pointer-events: none; z-index: 0;
+  background: repeating-linear-gradient(90deg, transparent 0px, transparent 8px, rgba(255,255,255,0.008) 8px, rgba(255,255,255,0.008) 10px);
+}
+.mothers-quote {
+  position: fixed; bottom: 1.5rem; left: 2rem;
+  font-family: var(--font-display); font-style: italic; font-size: .7rem;
+  color: rgba(176,176,176,0.03); z-index: 0; user-select: none;
+  max-width: 220px; line-height: 1.4;
+}
+.thriller-vignette {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.3) 100%);
+}
+
+/* ═══════════════════════════════════════
+   13. WESTERN — Le Bon, la Brute et le Truand
+   Burnt terracotta + desert dust (NOT gold)
+   ═══════════════════════════════════════ */
+body.theme-western {
+  --bg: #0c0604; --bg2: #180e06; --bg3: #24160a; --bg4: #301e0e;
+  --border: rgba(204,85,0,0.07); --border2: rgba(204,85,0,0.13); --border3: rgba(204,85,0,0.20);
+  --text2: #a07048; --text3: #604028;
+  --theme-accent: #cc5500;
+  cursor: url('/cursors/cursor-western.svg') 16 14, auto;
+}
+body.theme-western .sidebar-logo-text { color: #cc5500; }
+body.theme-western .nav-item.active { color: #cc5500; border-left-color: #cc5500; background: rgba(204,85,0,.04); }
+body.theme-western .btn-gold { background: #cc5500; color: #fff; }
+body.theme-western .btn-gold:hover { background: #aa4400; }
+body.theme-western ::-webkit-scrollbar-thumb { background: #8b3a00; }
+
+.sepia-vignette {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse at center, transparent 50%, rgba(80,40,10,0.1) 100%),
+    linear-gradient(to bottom, rgba(204,85,0,0.03) 0%, transparent 15%, transparent 85%, rgba(204,85,0,0.02) 100%);
+}
+.tumbleweed {
+  position: fixed; bottom: 5%; left: -60px;
+  width: 30px; height: 30px; border-radius: 50%;
+  border: 2px solid rgba(139,90,40,0.35);
+  background: radial-gradient(circle, transparent 40%, rgba(139,90,40,0.12) 100%);
+  animation: tumble 22s linear infinite; z-index: 1; pointer-events: none;
+}
+.tumbleweed::before {
+  content: ''; position: absolute; inset: 4px;
+  border: 1px solid rgba(139,90,40,0.2); border-radius: 50%;
+}
+@keyframes tumble {
+  0%   { left: -60px; transform: rotate(0deg); opacity: 0; }
+  5%   { opacity: .45; }
+  50%  { bottom: 4%; }
+  95%  { opacity: .45; }
+  100% { left: calc(100vw + 60px); transform: rotate(1080deg); opacity: 0; }
+}
+.dust-particle {
+  position: absolute; width: 2px; height: 2px;
+  background: rgba(204,120,40,0.25); border-radius: 50%;
+  animation: dust-drift linear infinite;
+}
+@keyframes dust-drift {
+  0%   { transform: translate(0, 0); opacity: .4; }
+  50%  { opacity: .15; }
+  100% { transform: translate(50px, -40px); opacity: 0; }
+}
+.standoff-circle {
+  position: fixed; bottom: 4rem; left: 50%; transform: translateX(-50%);
+  width: 60px; height: 60px; border-radius: 50%;
+  border: 1px solid rgba(204,85,0,0.04);
+  z-index: 0; pointer-events: none;
+}
+.standoff-circle::before {
+  content: ''; position: absolute; inset: 6px;
+  border: 1px solid rgba(204,85,0,0.03); border-radius: 50%;
+}
+.two-categories {
+  position: fixed; bottom: 1.5rem; left: 2rem;
+  font-family: var(--font-display); font-style: italic; font-size: .65rem;
+  color: rgba(204,85,0,0.03); z-index: 0; user-select: none;
+  max-width: 250px; line-height: 1.4;
+}
+.poncho-fringe {
+  position: fixed; top: 0; left: 0; right: 0; height: 4px;
+  background: repeating-linear-gradient(90deg, rgba(204,85,0,0.12) 0px, rgba(204,85,0,0.12) 3px, transparent 3px, transparent 8px, rgba(139,69,19,0.1) 8px, rgba(139,69,19,0.1) 11px, transparent 11px, transparent 16px);
+  pointer-events: none; z-index: 2;
+}
+.noon-sun {
+  position: fixed; top: -30px; left: 50%; transform: translateX(-50%);
+  width: 60px; height: 60px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,200,100,0.06) 0%, transparent 70%);
+  pointer-events: none; z-index: 0;
+}
