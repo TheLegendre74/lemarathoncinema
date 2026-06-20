@@ -3,7 +3,7 @@ const nextConfig = {
   compress: true,
   poweredByHeader: false,
   experimental: {
-    optimizePackageImports: ['phaser', 'pixi.js', '@pixi/core', '@pixi/display', '@pixi/renderer'],
+    optimizePackageImports: ['phaser', 'pixi.js', '@pixi/core', '@pixi/display', '@pixi/renderer', 'date-fns', 'resend'],
   },
   images: {
     formats: ['image/avif', 'image/webp'],
@@ -30,8 +30,8 @@ const nextConfig = {
     return [
       // Cache des assets publics. Next/Vercel gere deja /_next/static avec des noms hashes.
       {
-        source: '/(.*)\\.(png|jpg|jpeg|gif|webp|avif|svg|ico|woff2|woff|ttf)',
-        headers: [{ key: 'Cache-Control', value: 'public, max-age=604800, stale-while-revalidate=86400' }],
+        source: '/(.*)\\.(png|jpg|jpeg|gif|webp|avif|svg|ico|woff2|woff|ttf|mp3|m4a|wav|mp4|ogg)',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=2592000, stale-while-revalidate=604800' }],
       },
       {
         source: '/:path*',

@@ -379,7 +379,7 @@ export default function ClippyPunchOut({ onWin, onLose, initialHP = 20 }: Props)
     <div style={{
       position: 'fixed', inset: 0, zIndex: 99990,
       background: '#060610',
-      backgroundImage: 'url(/arene-clippy-03.png)',
+      backgroundImage: 'url(/arene-clippy-03.webp)',
       backgroundSize: 'cover', backgroundPosition: 'center',
       display: 'flex', flexDirection: 'column', alignItems: 'center',
       fontFamily: '"Courier New", Courier, monospace',

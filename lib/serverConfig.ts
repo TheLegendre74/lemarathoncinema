@@ -40,7 +40,7 @@ const getSiteConfigRows = unstable_cache(
     return data ?? []
   },
   ['site-config'],
-  { revalidate: 60 }
+  { revalidate: 300 }
 )
 
 export const getServerConfig = cache(async (): Promise<ServerConfig> => {

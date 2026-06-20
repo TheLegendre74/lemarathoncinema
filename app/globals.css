@@ -435,7 +435,7 @@ html, body {
 @media (min-width: 769px) {
   .discord-fab {
     bottom: 1.5rem;
-    right: auto;
-    left: 4rem;
+    right: 1.5rem;
+    left: auto;
   }
 }

@@ -596,7 +596,7 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
 
         preload() {
           this.load.audio('ddr-music', '/audio/clippy/nightclub.m4a')
-          this.load.image('evil-clippy-disco', '/evil-clippy-disco.png')
+          this.load.image('evil-clippy-disco', '/evil-clippy-disco.webp')
         }
 
         // ── Timing ──────────────────────────────────────────────────────────
@@ -1373,7 +1373,7 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
 
         preload() {
           this.load.audio('fever-music', '/audio/clippy/nightclub.m4a')
-          this.load.image('evil-clippy-disco', '/evil-clippy-disco.png')
+          this.load.image('evil-clippy-disco', '/evil-clippy-disco.webp')
         }
 
         private getElapsed(): number {
@@ -2066,7 +2066,7 @@ export default function ClippyDanceBattle({ onWin, onLose, onMiss, initialHP, us
       {/* ── Clippy HTML mobile (DDR uniquement) ── */}
       {isMobileUI && (innerPhase === 'ddr' || innerPhase === 'fever') && (
         <img
-          src="/evil-clippy-disco.png"
+          src="/evil-clippy-disco.webp"
           alt="Evil Clippy Disco"
           style={{
             position: 'fixed',

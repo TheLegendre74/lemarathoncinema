@@ -1878,11 +1878,11 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
         <div style={{ position:'fixed', inset:0, zIndex:99980, background:'#000' }}>
           <img
             src={
-              effectivePhase >= 5 ? '/arene-clippy-05.png'
-              : effectivePhase === 4 ? '/arene-clippy-02.png'   // phase 4 = espace (sabre laser)
-              : effectivePhase === 3 ? '/arene-clippy-03.png'   // phase 3 = ring (boxe)
-              : effectivePhase === 2 ? '/arene-clippy-disco.png'  // phase 2 = discothèque
-              : '/arenes-clippy.png'
+              effectivePhase >= 5 ? '/arene-clippy-05.webp'
+              : effectivePhase === 4 ? '/arene-clippy-02.webp'   // phase 4 = espace (sabre laser)
+              : effectivePhase === 3 ? '/arene-clippy-03.webp'   // phase 3 = ring (boxe)
+              : effectivePhase === 2 ? '/arene-clippy-disco.webp'  // phase 2 = discothèque
+              : '/arenes-clippy.webp'
             }
             alt=""
             style={{ width:'100%', height:'100%', objectFit:'cover', opacity:0.88, display:'block' }}
@@ -2188,7 +2188,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
 
       {hellPhase !== 'idle' && hellPhase !== 'fade' && (
         <div style={{ position:'fixed', left:hellPos.x, top:hellPos.y, width:wCombat, zIndex:99995, pointerEvents:'none', animation:(hellPhase==='drag'||hellPhase==='scream')?'hell-drag-down 1.1s cubic-bezier(.4,0,.6,1) forwards':'none' }}>
-          <img src="/evil-clippy.png" alt="Clippy" style={{ width:wCombat, display:'block', objectFit:'contain', filter:'drop-shadow(0 0 24px rgba(255,60,60,.9))', animation:(hellPhase==='grab'||hellPhase==='dialog')?'hell-clippy-shake .3s ease infinite':'none' }} />
+          <img src="/evil-clippy.webp" alt="Clippy" style={{ width:wCombat, display:'block', objectFit:'contain', filter:'drop-shadow(0 0 24px rgba(255,60,60,.9))', animation:(hellPhase==='grab'||hellPhase==='dialog')?'hell-clippy-shake .3s ease infinite':'none' }} />
         </div>
       )}
 
@@ -2320,13 +2320,13 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
           /* Combat épée : Clippy avec bouclier et épée */
           <div style={{ position:'relative', width:wCombat }}>
             <img src="/bouclier.png" alt="" style={{ position:'absolute', left:-wShield*.7, bottom:10, width:wShield, height:wShield, objectFit:'contain', mixBlendMode:'multiply', transform:`rotate(-15deg) scale(${shieldFlash?1.2:1})`, transition:'transform .15s', filter:shieldFlash?'brightness(1.8) drop-shadow(0 0 12px #ffaa00)':'none' }} />
-            <img src={effectivePhase === 2 ? '/evil-clippy-disco.png' : '/evil-clippy.png'} alt="Clippy" style={{ width:wCombat, objectFit:'contain', display:'block', mixBlendMode:'multiply', filter:clippyHit?'brightness(3) saturate(0)':'drop-shadow(0 6px 20px rgba(100,80,180,.6))', transition:'filter .15s' }} />
+            <img src={effectivePhase === 2 ? '/evil-clippy-disco.webp' : '/evil-clippy.webp'} alt="Clippy" style={{ width:wCombat, objectFit:'contain', display:'block', mixBlendMode:'multiply', filter:clippyHit?'brightness(3) saturate(0)':'drop-shadow(0 6px 20px rgba(100,80,180,.6))', transition:'filter .15s' }} />
             <img src="/epee.png" alt="" style={{ position:'absolute', right:-wSword*.9, bottom:0, width:wSword, height:hSword, objectFit:'contain', transform:swordWindup?undefined:'rotate(-152deg)', filter:'drop-shadow(0 2px 6px rgba(0,0,0,.6))', animation:swordWindup?'sword-windup .7s ease forwards':'none' }} />
           </div>
         ) : phase === 'combat' && ddrIntroActive ? (
           /* Intro DDR : Clippy sans bouclier ni épée */
           <div style={{ position:'relative', width:wCombat }}>
-            <img src={effectivePhase === 2 ? '/evil-clippy-disco.png' : '/evil-clippy.png'} alt="Clippy" style={{ width:wCombat, objectFit:'contain', display:'block', mixBlendMode:'multiply', filter:'drop-shadow(0 6px 20px rgba(100,80,180,.6))' }} />
+            <img src={effectivePhase === 2 ? '/evil-clippy-disco.webp' : '/evil-clippy.webp'} alt="Clippy" style={{ width:wCombat, objectFit:'contain', display:'block', mixBlendMode:'multiply', filter:'drop-shadow(0 6px 20px rgba(100,80,180,.6))' }} />
           </div>
         ) : (
           <div style={{ position:'relative' }}>
