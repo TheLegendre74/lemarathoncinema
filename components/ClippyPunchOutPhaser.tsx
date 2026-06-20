@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface Props {
   onWin: () => void
@@ -25,10 +25,9 @@ export default function ClippyPunchOutPhaser({
   const containerRef = useRef<HTMLDivElement>(null)
   const gameRef = useRef<any>(null)
   const [showGyroPrompt, setShowGyroPrompt] = useState(false)
-  const [gyroGranted, setGyroGranted] = useState(false)
-  const startGameRef = useRef<() => void>()
+  const gyroGrantedRef = useRef(false)
 
-  const startGame = useCallback(() => {
+  function startGame() {
     if (!containerRef.current || gameRef.current) return
 
     Promise.all([
@@ -49,14 +48,13 @@ export default function ClippyPunchOutPhaser({
         banner: false,
       })
 
-      game.scene.start('Punch', { onWin, onLose, initialHP, initialPlayerHP, skipTutorial })
+      game.scene.start('Punch', {
+        onWin, onLose, initialHP, initialPlayerHP, skipTutorial,
+        gyroGranted: gyroGrantedRef.current,
+      })
       gameRef.current = game
     })
-  }, [onWin, onLose, initialHP, initialPlayerHP, skipTutorial])
-
-  useEffect(() => {
-    startGameRef.current = startGame
-  }, [startGame])
+  }
 
   useEffect(() => {
     if (isMobileDevice() && needsGyroPermission()) {
@@ -77,15 +75,15 @@ export default function ClippyPunchOutPhaser({
   const handleGyroRequest = async () => {
     try {
       const perm = await (DeviceOrientationEvent as any).requestPermission()
-      setGyroGranted(perm === 'granted')
+      gyroGrantedRef.current = perm === 'granted'
     } catch {}
     setShowGyroPrompt(false)
-    startGameRef.current?.()
+    startGame()
   }
 
   const handleSkipGyro = () => {
     setShowGyroPrompt(false)
-    startGameRef.current?.()
+    startGame()
   }
 
   if (showGyroPrompt) {

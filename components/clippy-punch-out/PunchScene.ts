@@ -27,6 +27,7 @@ export interface PunchSceneConfig {
   initialHP?: number
   initialPlayerHP?: number
   skipTutorial?: boolean
+  gyroGranted?: boolean
 }
 
 export class PunchScene extends Phaser.Scene {
@@ -285,10 +286,12 @@ export class PunchScene extends Phaser.Scene {
 
     if (!this.mobileSys.isMobile) this.game.canvas.style.cursor = 'none'
 
-    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (pointer.leftButtonDown()) this.mouseLeftClicked = true
-      if (pointer.rightButtonDown()) this.mouseRightClicked = true
-    })
+    if (!this.mobileSys.isMobile) {
+      this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+        if (pointer.leftButtonDown()) this.mouseLeftClicked = true
+        if (pointer.rightButtonDown()) this.mouseRightClicked = true
+      })
+    }
 
     try { this.volume = parseFloat(localStorage.getItem('clippy_volume') ?? '0.5') || 0.5 } catch {}
     this.applyVolume()
@@ -305,7 +308,11 @@ export class PunchScene extends Phaser.Scene {
     this.projectileSys = new ProjectileSystem()
     this.tutorialSys = new TutorialSystem()
     this.mobileSys = new MobileInputSystem()
-    this.mobileSys.init(W, H)
+    this.mobileSys.init(W, H, this.cfg.gyroGranted ?? false)
+    if (this.mobileSys.isMobile) {
+      this.tutorialSys.setMobile(true)
+      this.input.addPointer(2)
+    }
 
     if (this.mobileSys.isMobile) {
       this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {

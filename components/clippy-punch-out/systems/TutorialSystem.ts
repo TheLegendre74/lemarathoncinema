@@ -15,84 +15,104 @@ interface TutStep {
 
 const TUT_WIND_UP = 2000
 
-const STEPS: TutStep[] = [
-  {
-    id: 'intro',
-    title: 'CONTRÔLES',
-    instruction: 'Déplacez votre souris pour esquiver.\nRevenez au centre après chaque coup.',
-    hint: '',
-    missMsg: '',
-    clippyAttack: null,
-    expect: 'none',
-    autoAdvanceMs: 4000,
-  },
-  {
-    id: 'lean_right',
-    title: 'ÉTAPE 1 — DROITE',
-    instruction: 'Déplacez votre souris à DROITE de l\'écran.',
-    hint: 'Bougez la souris vers la droite',
-    missMsg: '',
-    clippyAttack: null,
-    expect: 'lean_right',
-  },
-  {
-    id: 'lean_left',
-    title: 'ÉTAPE 2 — GAUCHE',
-    instruction: 'Déplacez votre souris à GAUCHE de l\'écran.',
-    hint: 'Bougez la souris vers la gauche',
-    missMsg: '',
-    clippyAttack: null,
-    expect: 'lean_left',
-  },
-  {
-    id: 'lean_down',
-    title: 'ÉTAPE 3 — BAS',
-    instruction: 'Déplacez votre souris vers le BAS de l\'écran.',
-    hint: 'Bougez la souris vers le bas',
-    missMsg: '',
-    clippyAttack: null,
-    expect: 'lean_down',
-  },
-  {
-    id: 'dodge_attack',
-    title: 'ÉTAPE 4 — ESQUIVEZ !',
-    instruction: 'Clippy attaque à gauche.\nSouris à DROITE quand il clignote JAUNE !',
-    hint: 'Restez à droite pendant qu\'il frappe',
-    missMsg: 'Raté ! Souris à droite quand il clignote.',
-    clippyAttack: { type: 'hook', side: 'left' },
-    expect: 'dodge_attack',
-  },
-  {
-    id: 'attack',
-    title: 'ÉTAPE 5 — FRAPPEZ',
-    instruction: 'Clippy est étourdi ! Frappez-le !',
-    hint: 'Clic droit = Jab, Clic gauche = Direct lourd',
-    missMsg: 'Cliquez pour frapper !',
-    clippyAttack: null,
-    expect: 'jab',
-  },
-  {
-    id: 'dodge_punish',
-    title: 'ÉTAPE 6 — COMBO',
-    instruction: 'Esquivez puis frappez Clippy étourdi !',
-    hint: 'Souris à droite → attendez le coup → cliquez !',
-    missMsg: 'Esquivez d\'abord, puis frappez !',
-    clippyAttack: { type: 'hook', side: 'left' },
-    expect: 'dodge_punish',
-  },
-  {
-    id: 'crowd_info',
-    title: 'LE PUBLIC',
-    instruction: '3 esquives réussies → le public lance une ROSE.\nCliquez dessus pour récupérer de la stamina !\n3 erreurs → il jette des OBJETS à esquiver.\nLes objets clignotent ROUGE = esquivez !',
-    hint: '',
-    missMsg: '',
-    clippyAttack: null,
-    expect: 'none',
-    autoAdvanceMs: 6000,
-  },
-]
+function buildSteps(mobile: boolean): TutStep[] {
+  return [
+    {
+      id: 'intro',
+      title: 'CONTRÔLES',
+      instruction: mobile
+        ? 'Penchez votre téléphone pour esquiver.\nRevenez au centre après chaque coup.'
+        : 'Déplacez votre souris pour esquiver.\nRevenez au centre après chaque coup.',
+      hint: '',
+      missMsg: '',
+      clippyAttack: null,
+      expect: 'none',
+      autoAdvanceMs: 4000,
+    },
+    {
+      id: 'lean_right',
+      title: 'ÉTAPE 1 — DROITE',
+      instruction: mobile
+        ? 'Penchez votre téléphone vers la DROITE.'
+        : 'Déplacez votre souris à DROITE de l\'écran.',
+      hint: mobile ? 'Inclinez vers la droite' : 'Bougez la souris vers la droite',
+      missMsg: '',
+      clippyAttack: null,
+      expect: 'lean_right',
+    },
+    {
+      id: 'lean_left',
+      title: 'ÉTAPE 2 — GAUCHE',
+      instruction: mobile
+        ? 'Penchez votre téléphone vers la GAUCHE.'
+        : 'Déplacez votre souris à GAUCHE de l\'écran.',
+      hint: mobile ? 'Inclinez vers la gauche' : 'Bougez la souris vers la gauche',
+      missMsg: '',
+      clippyAttack: null,
+      expect: 'lean_left',
+    },
+    {
+      id: 'lean_down',
+      title: 'ÉTAPE 3 — BAS',
+      instruction: mobile
+        ? 'Penchez votre téléphone vers l\'AVANT (en bas).'
+        : 'Déplacez votre souris vers le BAS de l\'écran.',
+      hint: mobile ? 'Inclinez vers l\'avant' : 'Bougez la souris vers le bas',
+      missMsg: '',
+      clippyAttack: null,
+      expect: 'lean_down',
+    },
+    {
+      id: 'dodge_attack',
+      title: 'ÉTAPE 4 — ESQUIVEZ !',
+      instruction: mobile
+        ? 'Clippy attaque à gauche.\nPenchez à DROITE quand il clignote JAUNE !'
+        : 'Clippy attaque à gauche.\nSouris à DROITE quand il clignote JAUNE !',
+      hint: mobile ? 'Restez penché à droite pendant l\'attaque' : 'Restez à droite pendant qu\'il frappe',
+      missMsg: mobile ? 'Raté ! Penchez à droite quand il clignote.' : 'Raté ! Souris à droite quand il clignote.',
+      clippyAttack: { type: 'hook', side: 'left' },
+      expect: 'dodge_attack',
+    },
+    {
+      id: 'attack',
+      title: 'ÉTAPE 5 — FRAPPEZ',
+      instruction: 'Clippy est étourdi ! Frappez-le !',
+      hint: mobile
+        ? 'Touchez l\'écran pour frapper !'
+        : 'Clic droit = Jab, Clic gauche = Direct lourd',
+      missMsg: mobile ? 'Touchez l\'écran pour frapper !' : 'Cliquez pour frapper !',
+      clippyAttack: null,
+      expect: 'jab',
+    },
+    {
+      id: 'dodge_punish',
+      title: 'ÉTAPE 6 — COMBO',
+      instruction: 'Esquivez puis frappez Clippy étourdi !',
+      hint: mobile
+        ? 'Penchez à droite → attendez le coup → touchez !'
+        : 'Souris à droite → attendez le coup → cliquez !',
+      missMsg: 'Esquivez d\'abord, puis frappez !',
+      clippyAttack: { type: 'hook', side: 'left' },
+      expect: 'dodge_punish',
+    },
+    {
+      id: 'crowd_info',
+      title: 'LE PUBLIC',
+      instruction: mobile
+        ? '3 esquives réussies → le public lance une ROSE.\nTouchez-la pour récupérer de la stamina !\n3 erreurs → il jette des OBJETS à esquiver.\nLes objets clignotent ROUGE = esquivez !'
+        : '3 esquives réussies → le public lance une ROSE.\nCliquez dessus pour récupérer de la stamina !\n3 erreurs → il jette des OBJETS à esquiver.\nLes objets clignotent ROUGE = esquivez !',
+      hint: '',
+      missMsg: '',
+      clippyAttack: null,
+      expect: 'none',
+      autoAdvanceMs: 6000,
+    },
+  ]
+}
 
 export class TutorialSystem {
+  private steps: TutStep[] = buildSteps(false)
+  private isMobile = false
   private waitTimer = 0
   private showingResult = false
   private resultTimer = 0
@@ -101,11 +121,16 @@ export class TutorialSystem {
   private autoAdvanceTimer = 0
   private leanHoldTimer = 0
 
-  get totalSteps() { return STEPS.length }
+  setMobile(mobile: boolean) {
+    this.isMobile = mobile
+    this.steps = buildSteps(mobile)
+  }
+
+  get totalSteps() { return this.steps.length }
 
   getCurrentStep(ctx: GameContext): TutStep | null {
     if (!ctx.tutorial.active) return null
-    return STEPS[ctx.tutorial.step] ?? null
+    return this.steps[ctx.tutorial.step] ?? null
   }
 
   getTitle(ctx: GameContext): string {
@@ -118,7 +143,11 @@ export class TutorialSystem {
     }
     const step = this.getCurrentStep(ctx)
     if (!step) return ''
-    if (step.expect === 'dodge_punish' && this.dodgePunishPhase === 1) return 'Maintenant frappez-le !'
+    if (step.expect === 'dodge_punish' && this.dodgePunishPhase === 1) {
+      return this.isMobile
+        ? 'Maintenant touchez l\'écran !'
+        : 'Maintenant frappez-le !'
+    }
     return step.expect === 'none' ? step.instruction : step.hint
   }
 
@@ -135,7 +164,7 @@ export class TutorialSystem {
       if (this.autoAdvanceTimer >= (step.autoAdvanceMs ?? 3000)) {
         this.autoAdvanceTimer = 0
         ctx.tutorial.step++
-        if (ctx.tutorial.step >= STEPS.length) { ctx.tutorial.active = false }
+        if (ctx.tutorial.step >= this.steps.length) { ctx.tutorial.active = false }
         this.waitTimer = 0
       }
       return
@@ -149,7 +178,7 @@ export class TutorialSystem {
         if (this.stepSuccess) {
           ctx.tutorial.step++
           this.dodgePunishPhase = 0
-          if (ctx.tutorial.step >= STEPS.length) { ctx.tutorial.active = false; return }
+          if (ctx.tutorial.step >= this.steps.length) { ctx.tutorial.active = false; return }
         }
         this.waitTimer = 0
         this.leanHoldTimer = 0

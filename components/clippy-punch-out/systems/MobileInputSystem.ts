@@ -52,14 +52,18 @@ export class MobileInputSystem {
 
   private orientationHandler: ((e: DeviceOrientationEvent) => void) | null = null
 
-  init(W: number, H: number) {
+  init(W: number, H: number, gyroAlreadyGranted = false) {
     this.W = W
     this.H = H
     this.isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0
     if (!this.isMobile) return
 
     this.buttons = []
-    this.initGyroscope()
+    if (gyroAlreadyGranted) {
+      this.startGyro()
+    } else {
+      this.initGyroscope()
+    }
   }
 
   private initGyroscope() {
