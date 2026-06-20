@@ -285,23 +285,6 @@ export class PunchScene extends Phaser.Scene {
     this.virtualMouseX = W / 2
     this.virtualMouseY = H / 2
 
-    if (!this.mobileSys.isMobile) this.game.canvas.style.cursor = 'none'
-
-    if (!this.mobileSys.isMobile) {
-      this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-        if (pointer.leftButtonDown()) this.mouseLeftClicked = true
-        if (pointer.rightButtonDown()) this.mouseRightClicked = true
-      })
-    }
-
-    try { this.volume = parseFloat(localStorage.getItem('clippy_volume') ?? '0.5') || 0.5 } catch {}
-    this.applyVolume()
-    this.input.on('wheel', (_p: any, _gx: any, _gy: any, _gz: any, dy: number) => {
-      this.volume = Math.max(0, Math.min(1, this.volume - dy * 0.001))
-      this.applyVolume()
-      try { localStorage.setItem('clippy_volume', this.volume.toFixed(2)) } catch {}
-    })
-
     this.staminaSys = new StaminaSystem()
     this.clippyAI = new ClippyAI()
     this.dodgeSys = new DodgeCounterSystem()
@@ -316,6 +299,15 @@ export class PunchScene extends Phaser.Scene {
       this.input.addPointer(2)
     }
 
+    if (!this.mobileSys.isMobile) this.game.canvas.style.cursor = 'none'
+
+    if (!this.mobileSys.isMobile) {
+      this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+        if (pointer.leftButtonDown()) this.mouseLeftClicked = true
+        if (pointer.rightButtonDown()) this.mouseRightClicked = true
+      })
+    }
+
     if (this.mobileSys.isMobile) {
       this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
         this.mobileSys.handlePointerDown(p.x, p.y, p.pointerId)
@@ -327,6 +319,14 @@ export class PunchScene extends Phaser.Scene {
         this.mobileSys.handlePointerUp(p.x, p.y, p.pointerId)
       })
     }
+
+    try { this.volume = parseFloat(localStorage.getItem('clippy_volume') ?? '0.5') || 0.5 } catch {}
+    this.applyVolume()
+    this.input.on('wheel', (_p: any, _gx: any, _gy: any, _gz: any, dy: number) => {
+      this.volume = Math.max(0, Math.min(1, this.volume - dy * 0.001))
+      this.applyVolume()
+      try { localStorage.setItem('clippy_volume', this.volume.toFixed(2)) } catch {}
+    })
 
     this.effectsR = new EffectsRenderer(this, this.gFlash, this.gSpots, W, H)
     this.gloveR = new GloveRenderer(this, W, H, this.CX, this.CY)
