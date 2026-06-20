@@ -50,8 +50,8 @@ export const CFG = {
       zoneThreshold: 0.15,
       graceMs: 150,
       baseDrainPerSec: 10,
-      drainRampPerSec: 0.8,
-      maxDrainMultiplier: 3.5,
+      drainRampPerSec: 0.3,
+      maxDrainMultiplier: 2.0,
     },
 
     starPunch: {
