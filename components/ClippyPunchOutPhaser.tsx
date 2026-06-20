@@ -24,8 +24,9 @@ export default function ClippyPunchOutPhaser({
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const gameRef = useRef<any>(null)
-  const [showGyroPrompt, setShowGyroPrompt] = useState(false)
+  const [showMobileChoice, setShowMobileChoice] = useState(false)
   const gyroGrantedRef = useRef(false)
+  const mobileModeRef = useRef<'gyro' | 'pointer'>('pointer')
 
   function startGame() {
     if (!containerRef.current || gameRef.current) return
@@ -51,14 +52,15 @@ export default function ClippyPunchOutPhaser({
       game.scene.start('Punch', {
         onWin, onLose, initialHP, initialPlayerHP, skipTutorial,
         gyroGranted: gyroGrantedRef.current,
+        mobileMode: mobileModeRef.current,
       })
       gameRef.current = game
     })
   }
 
   useEffect(() => {
-    if (isMobileDevice() && needsGyroPermission()) {
-      setShowGyroPrompt(true)
+    if (isMobileDevice()) {
+      setShowMobileChoice(true)
     } else {
       startGame()
     }
@@ -72,21 +74,25 @@ export default function ClippyPunchOutPhaser({
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleGyroRequest = async () => {
-    try {
-      const perm = await (DeviceOrientationEvent as any).requestPermission()
-      gyroGrantedRef.current = perm === 'granted'
-    } catch {}
-    setShowGyroPrompt(false)
+  const handleChooseGyro = async () => {
+    mobileModeRef.current = 'gyro'
+    if (needsGyroPermission()) {
+      try {
+        const perm = await (DeviceOrientationEvent as any).requestPermission()
+        gyroGrantedRef.current = perm === 'granted'
+      } catch {}
+    }
+    setShowMobileChoice(false)
     startGame()
   }
 
-  const handleSkipGyro = () => {
-    setShowGyroPrompt(false)
+  const handleChoosePointer = () => {
+    mobileModeRef.current = 'pointer'
+    setShowMobileChoice(false)
     startGame()
   }
 
-  if (showGyroPrompt) {
+  if (showMobileChoice) {
     return (
       <div style={{
         position: 'fixed', inset: 0, zIndex: 99990,
@@ -94,42 +100,53 @@ export default function ClippyPunchOutPhaser({
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
         fontFamily: '"Impact", "Arial Black", sans-serif',
-        color: '#fff', padding: 32, textAlign: 'center',
+        color: '#fff', padding: 24, textAlign: 'center',
       }}>
-        <div style={{ fontSize: 64, marginBottom: 20 }}>📎</div>
-        <div style={{ fontSize: 22, color: '#ffcc44', marginBottom: 12 }}>
-          CONTRÔLES GYROSCOPE
+        <div style={{ fontSize: 56, marginBottom: 14 }}>📎</div>
+        <div style={{ fontSize: 20, color: '#ffcc44', marginBottom: 24, letterSpacing: 1 }}>
+          CHOISISSEZ VOS CONTRÔLES
         </div>
-        <div style={{
-          fontSize: 14, color: '#aab', maxWidth: 340, lineHeight: 1.6, marginBottom: 28,
-          fontFamily: 'sans-serif',
-        }}>
-          Penchez votre téléphone pour esquiver les coups de Clippy.
-          Touchez l&apos;écran pour frapper.
-        </div>
+
         <button
-          onClick={handleGyroRequest}
+          onClick={handleChooseGyro}
           style={{
-            padding: '16px 40px', fontSize: 18,
-            background: '#22cc55', color: '#000', border: 'none',
-            borderRadius: 12, fontWeight: 'bold', cursor: 'pointer',
+            width: '85%', maxWidth: 340, padding: '18px 20px', marginBottom: 14,
+            background: 'linear-gradient(135deg, #1a5c2a, #22cc55)',
+            color: '#fff', border: 'none', borderRadius: 14,
+            fontWeight: 'bold', cursor: 'pointer',
             fontFamily: '"Impact", "Arial Black", sans-serif',
-            boxShadow: '0 4px 20px rgba(34,204,85,.4)',
-            marginBottom: 12,
+            boxShadow: '0 4px 20px rgba(34,204,85,.3)',
+            textAlign: 'left', display: 'flex', alignItems: 'center', gap: 14,
           }}
         >
-          ACTIVER LE GYROSCOPE
+          <span style={{ fontSize: 32 }}>📱</span>
+          <div>
+            <div style={{ fontSize: 18, letterSpacing: 1 }}>GYROSCOPE</div>
+            <div style={{ fontSize: 12, fontFamily: 'sans-serif', fontWeight: 'normal', opacity: 0.85, marginTop: 4 }}>
+              Penchez votre téléphone pour esquiver
+            </div>
+          </div>
         </button>
+
         <button
-          onClick={handleSkipGyro}
+          onClick={handleChoosePointer}
           style={{
-            padding: '10px 30px', fontSize: 14,
-            background: 'transparent', color: '#666', border: '1px solid #333',
-            borderRadius: 8, cursor: 'pointer',
-            fontFamily: 'sans-serif',
+            width: '85%', maxWidth: 340, padding: '18px 20px',
+            background: 'linear-gradient(135deg, #1a3a6c, #2288cc)',
+            color: '#fff', border: 'none', borderRadius: 14,
+            fontWeight: 'bold', cursor: 'pointer',
+            fontFamily: '"Impact", "Arial Black", sans-serif',
+            boxShadow: '0 4px 20px rgba(34,136,204,.3)',
+            textAlign: 'left', display: 'flex', alignItems: 'center', gap: 14,
           }}
         >
-          Jouer sans gyroscope
+          <span style={{ fontSize: 32 }}>👆</span>
+          <div>
+            <div style={{ fontSize: 18, letterSpacing: 1 }}>TACTILE</div>
+            <div style={{ fontSize: 12, fontFamily: 'sans-serif', fontWeight: 'normal', opacity: 0.85, marginTop: 4 }}>
+              Glissez votre doigt pour esquiver
+            </div>
+          </div>
         </button>
       </div>
     )

@@ -28,6 +28,7 @@ export interface PunchSceneConfig {
   initialPlayerHP?: number
   skipTutorial?: boolean
   gyroGranted?: boolean
+  mobileMode?: 'gyro' | 'pointer'
 }
 
 export class PunchScene extends Phaser.Scene {
@@ -308,9 +309,10 @@ export class PunchScene extends Phaser.Scene {
     this.projectileSys = new ProjectileSystem()
     this.tutorialSys = new TutorialSystem()
     this.mobileSys = new MobileInputSystem()
-    this.mobileSys.init(W, H, this.cfg.gyroGranted ?? false)
+    const mMode = this.cfg.mobileMode ?? 'pointer'
+    this.mobileSys.init(W, H, this.cfg.gyroGranted ?? false, mMode)
     if (this.mobileSys.isMobile) {
-      this.tutorialSys.setMobile(true)
+      this.tutorialSys.setMode(mMode === 'gyro' ? 'gyro' : 'pointer')
       this.input.addPointer(2)
     }
 
@@ -609,8 +611,8 @@ export class PunchScene extends Phaser.Scene {
 
     let leanDir: DodgeDirection | null = null
 
-    if (this.mobileSys.isMobile && this.mobileSys.gyroEnabled) {
-      leanDir = this.mobileSys.getGyroLeanDir()
+    if (this.mobileSys.isMobile) {
+      leanDir = this.mobileSys.getLeanDir()
 
       if (leanDir !== null) {
         this.leanGraceDir = leanDir
@@ -1230,24 +1232,38 @@ export class PunchScene extends Phaser.Scene {
   private drawMobileButtons() {
     if (!this.mobileSys.isMobile) return
 
-    this.mobileSys.drawGyroHUD(this.gKeys, this.W, this.H)
+    this.mobileSys.drawMobileHUD(this.gKeys, this.W, this.H)
 
-    if (this.mobileTexts.length === 0 && this.mobileSys.gyroEnabled) {
-      const tapH = Math.round(this.H * 0.08)
-      const tapY = Math.round(this.H - tapH - 6)
-      const cx = this.W / 2
-      const halfW = Math.round(this.W * 0.44)
-      const tL = this.add.text(
-        cx - halfW / 2 - 8, tapY + tapH / 2, 'JAB',
-        { fontFamily: FONT, fontSize: '18px', color: '#88aacc', fontStyle: 'bold',
-          stroke: '#000', strokeThickness: 2, align: 'center' },
-      ).setOrigin(0.5, 0.5).setDepth(10)
-      const tR = this.add.text(
-        cx + halfW / 2 + 8, tapY + tapH / 2, 'LOURD',
-        { fontFamily: FONT, fontSize: '18px', color: '#cc8866', fontStyle: 'bold',
-          stroke: '#000', strokeThickness: 2, align: 'center' },
-      ).setOrigin(0.5, 0.5).setDepth(10)
-      this.mobileTexts.push(tL, tR)
+    if (this.mobileTexts.length === 0) {
+      const mode = this.mobileSys.mobileMode
+      if (mode === 'gyro' && this.mobileSys.gyroEnabled) {
+        const tapH = Math.round(this.H * 0.08)
+        const tapY = Math.round(this.H - tapH - 6)
+        const cx = this.W / 2
+        const halfW = Math.round(this.W * 0.44)
+        const tL = this.add.text(
+          cx - halfW / 2 - 8, tapY + tapH / 2, 'JAB',
+          { fontFamily: FONT, fontSize: '18px', color: '#88aacc', fontStyle: 'bold',
+            stroke: '#000', strokeThickness: 2, align: 'center' },
+        ).setOrigin(0.5, 0.5).setDepth(10)
+        const tR = this.add.text(
+          cx + halfW / 2 + 8, tapY + tapH / 2, 'LOURD',
+          { fontFamily: FONT, fontSize: '18px', color: '#cc8866', fontStyle: 'bold',
+            stroke: '#000', strokeThickness: 2, align: 'center' },
+        ).setOrigin(0.5, 0.5).setDepth(10)
+        this.mobileTexts.push(tL, tR)
+      } else if (mode === 'pointer') {
+        const btns = this.mobileSys.getPointerButtons()
+        const colors: Record<string, string> = { jab: '#88ccff', guard: '#88ee88', heavy: '#ff8866' }
+        for (const btn of btns) {
+          const txt = this.add.text(
+            btn.x + btn.w / 2, btn.y + btn.h / 2, btn.label,
+            { fontFamily: FONT, fontSize: '20px', color: colors[btn.id] ?? '#fff', fontStyle: 'bold',
+              stroke: '#000', strokeThickness: 3, align: 'center' },
+          ).setOrigin(0.5, 0.5).setDepth(10)
+          this.mobileTexts.push(txt)
+        }
+      }
     }
   }
 

@@ -2,6 +2,8 @@ import { CFG } from '../config'
 import type { GameContext, AttackSide, DodgeDirection } from '../types'
 import { REQUIRED_DODGE } from '../types'
 
+export type TutorialMode = 'desktop' | 'gyro' | 'pointer'
+
 interface TutStep {
   id: string
   title: string
@@ -15,14 +17,20 @@ interface TutStep {
 
 const TUT_WIND_UP = 2000
 
-function buildSteps(mobile: boolean): TutStep[] {
+function t(mode: TutorialMode, desktop: string, gyro: string, pointer: string): string {
+  return mode === 'gyro' ? gyro : mode === 'pointer' ? pointer : desktop
+}
+
+function buildSteps(mode: TutorialMode): TutStep[] {
   return [
     {
       id: 'intro',
       title: 'CONTRÔLES',
-      instruction: mobile
-        ? 'Penchez votre téléphone pour esquiver.\nRevenez au centre après chaque coup.'
-        : 'Déplacez votre souris pour esquiver.\nRevenez au centre après chaque coup.',
+      instruction: t(mode,
+        'Déplacez votre souris pour esquiver.\nRevenez au centre après chaque coup.',
+        'Penchez votre téléphone pour esquiver.\nRevenez au centre après chaque coup.',
+        'Glissez votre doigt pour esquiver.\nBoutons en bas pour frapper.',
+      ),
       hint: '',
       missMsg: '',
       clippyAttack: null,
@@ -32,10 +40,16 @@ function buildSteps(mobile: boolean): TutStep[] {
     {
       id: 'lean_right',
       title: 'ÉTAPE 1 — DROITE',
-      instruction: mobile
-        ? 'Penchez votre téléphone vers la DROITE.'
-        : 'Déplacez votre souris à DROITE de l\'écran.',
-      hint: mobile ? 'Inclinez vers la droite' : 'Bougez la souris vers la droite',
+      instruction: t(mode,
+        'Déplacez votre souris à DROITE de l\'écran.',
+        'Penchez votre téléphone vers la DROITE.',
+        'Glissez votre doigt vers la DROITE.',
+      ),
+      hint: t(mode,
+        'Bougez la souris vers la droite',
+        'Inclinez vers la droite',
+        'Touchez et glissez vers la droite',
+      ),
       missMsg: '',
       clippyAttack: null,
       expect: 'lean_right',
@@ -43,10 +57,16 @@ function buildSteps(mobile: boolean): TutStep[] {
     {
       id: 'lean_left',
       title: 'ÉTAPE 2 — GAUCHE',
-      instruction: mobile
-        ? 'Penchez votre téléphone vers la GAUCHE.'
-        : 'Déplacez votre souris à GAUCHE de l\'écran.',
-      hint: mobile ? 'Inclinez vers la gauche' : 'Bougez la souris vers la gauche',
+      instruction: t(mode,
+        'Déplacez votre souris à GAUCHE de l\'écran.',
+        'Penchez votre téléphone vers la GAUCHE.',
+        'Glissez votre doigt vers la GAUCHE.',
+      ),
+      hint: t(mode,
+        'Bougez la souris vers la gauche',
+        'Inclinez vers la gauche',
+        'Touchez et glissez vers la gauche',
+      ),
       missMsg: '',
       clippyAttack: null,
       expect: 'lean_left',
@@ -54,10 +74,16 @@ function buildSteps(mobile: boolean): TutStep[] {
     {
       id: 'lean_down',
       title: 'ÉTAPE 3 — BAS',
-      instruction: mobile
-        ? 'Penchez votre téléphone vers l\'AVANT (en bas).'
-        : 'Déplacez votre souris vers le BAS de l\'écran.',
-      hint: mobile ? 'Inclinez vers l\'avant' : 'Bougez la souris vers le bas',
+      instruction: t(mode,
+        'Déplacez votre souris vers le BAS de l\'écran.',
+        'Penchez votre téléphone vers l\'AVANT (en bas).',
+        'Glissez votre doigt vers le BAS.',
+      ),
+      hint: t(mode,
+        'Bougez la souris vers le bas',
+        'Inclinez vers l\'avant',
+        'Touchez et glissez vers le bas',
+      ),
       missMsg: '',
       clippyAttack: null,
       expect: 'lean_down',
@@ -65,11 +91,21 @@ function buildSteps(mobile: boolean): TutStep[] {
     {
       id: 'dodge_attack',
       title: 'ÉTAPE 4 — ESQUIVEZ !',
-      instruction: mobile
-        ? 'Clippy attaque à gauche.\nPenchez à DROITE quand il clignote JAUNE !'
-        : 'Clippy attaque à gauche.\nSouris à DROITE quand il clignote JAUNE !',
-      hint: mobile ? 'Restez penché à droite pendant l\'attaque' : 'Restez à droite pendant qu\'il frappe',
-      missMsg: mobile ? 'Raté ! Penchez à droite quand il clignote.' : 'Raté ! Souris à droite quand il clignote.',
+      instruction: t(mode,
+        'Clippy attaque à gauche.\nSouris à DROITE quand il clignote JAUNE !',
+        'Clippy attaque à gauche.\nPenchez à DROITE quand il clignote JAUNE !',
+        'Clippy attaque à gauche.\nGlissez à DROITE quand il clignote JAUNE !',
+      ),
+      hint: t(mode,
+        'Restez à droite pendant qu\'il frappe',
+        'Restez penché à droite pendant l\'attaque',
+        'Gardez votre doigt à droite pendant l\'attaque',
+      ),
+      missMsg: t(mode,
+        'Raté ! Souris à droite quand il clignote.',
+        'Raté ! Penchez à droite quand il clignote.',
+        'Raté ! Glissez à droite quand il clignote.',
+      ),
       clippyAttack: { type: 'hook', side: 'left' },
       expect: 'dodge_attack',
     },
@@ -77,10 +113,16 @@ function buildSteps(mobile: boolean): TutStep[] {
       id: 'attack',
       title: 'ÉTAPE 5 — FRAPPEZ',
       instruction: 'Clippy est étourdi ! Frappez-le !',
-      hint: mobile
-        ? 'Touchez l\'écran pour frapper !'
-        : 'Clic droit = Jab, Clic gauche = Direct lourd',
-      missMsg: mobile ? 'Touchez l\'écran pour frapper !' : 'Cliquez pour frapper !',
+      hint: t(mode,
+        'Clic droit = Jab, Clic gauche = Direct lourd',
+        'Touchez l\'écran pour frapper !',
+        'Appuyez JAB ou LOURD en bas !',
+      ),
+      missMsg: t(mode,
+        'Cliquez pour frapper !',
+        'Touchez l\'écran pour frapper !',
+        'Appuyez sur un bouton en bas !',
+      ),
       clippyAttack: null,
       expect: 'jab',
     },
@@ -88,9 +130,11 @@ function buildSteps(mobile: boolean): TutStep[] {
       id: 'dodge_punish',
       title: 'ÉTAPE 6 — COMBO',
       instruction: 'Esquivez puis frappez Clippy étourdi !',
-      hint: mobile
-        ? 'Penchez à droite → attendez le coup → touchez !'
-        : 'Souris à droite → attendez le coup → cliquez !',
+      hint: t(mode,
+        'Souris à droite → attendez le coup → cliquez !',
+        'Penchez à droite → attendez le coup → touchez !',
+        'Glissez à droite → attendez le coup → bouton JAB !',
+      ),
       missMsg: 'Esquivez d\'abord, puis frappez !',
       clippyAttack: { type: 'hook', side: 'left' },
       expect: 'dodge_punish',
@@ -98,9 +142,11 @@ function buildSteps(mobile: boolean): TutStep[] {
     {
       id: 'crowd_info',
       title: 'LE PUBLIC',
-      instruction: mobile
-        ? '3 esquives réussies → le public lance une ROSE.\nTouchez-la pour récupérer de la stamina !\n3 erreurs → il jette des OBJETS à esquiver.\nLes objets clignotent ROUGE = esquivez !'
-        : '3 esquives réussies → le public lance une ROSE.\nCliquez dessus pour récupérer de la stamina !\n3 erreurs → il jette des OBJETS à esquiver.\nLes objets clignotent ROUGE = esquivez !',
+      instruction: t(mode,
+        '3 esquives réussies → le public lance une ROSE.\nCliquez dessus pour récupérer de la stamina !\n3 erreurs → il jette des OBJETS à esquiver.\nLes objets clignotent ROUGE = esquivez !',
+        '3 esquives réussies → le public lance une ROSE.\nTouchez-la pour récupérer de la stamina !\n3 erreurs → il jette des OBJETS à esquiver.\nLes objets clignotent ROUGE = esquivez !',
+        '3 esquives réussies → le public lance une ROSE.\nTouchez-la pour récupérer de la stamina !\n3 erreurs → il jette des OBJETS à esquiver.\nLes objets clignotent ROUGE = esquivez !',
+      ),
       hint: '',
       missMsg: '',
       clippyAttack: null,
@@ -111,8 +157,8 @@ function buildSteps(mobile: boolean): TutStep[] {
 }
 
 export class TutorialSystem {
-  private steps: TutStep[] = buildSteps(false)
-  private isMobile = false
+  private steps: TutStep[] = buildSteps('desktop')
+  private tutMode: TutorialMode = 'desktop'
   private waitTimer = 0
   private showingResult = false
   private resultTimer = 0
@@ -121,9 +167,9 @@ export class TutorialSystem {
   private autoAdvanceTimer = 0
   private leanHoldTimer = 0
 
-  setMobile(mobile: boolean) {
-    this.isMobile = mobile
-    this.steps = buildSteps(mobile)
+  setMode(mode: TutorialMode) {
+    this.tutMode = mode
+    this.steps = buildSteps(mode)
   }
 
   get totalSteps() { return this.steps.length }
@@ -144,8 +190,8 @@ export class TutorialSystem {
     const step = this.getCurrentStep(ctx)
     if (!step) return ''
     if (step.expect === 'dodge_punish' && this.dodgePunishPhase === 1) {
-      return this.isMobile
-        ? 'Maintenant touchez l\'écran !'
+      return this.tutMode !== 'desktop'
+        ? 'Maintenant touchez pour frapper !'
         : 'Maintenant frappez-le !'
     }
     return step.expect === 'none' ? step.instruction : step.hint

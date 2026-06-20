@@ -1,4 +1,7 @@
 import type { DodgeDirection } from '../types'
+import { CFG } from '../config'
+
+export type MobileMode = 'gyro' | 'pointer'
 
 export type MobileAction =
   | { type: 'dodge'; dir: DodgeDirection }
@@ -17,7 +20,7 @@ interface GyroState {
   calibrated: boolean
 }
 
-interface TouchButton {
+interface PtrButton {
   id: string
   x: number
   y: number
@@ -25,46 +28,60 @@ interface TouchButton {
   h: number
   label: string
   color: number
-  pressed: boolean
-  pointerId: number | null
 }
 
 export class MobileInputSystem {
   isMobile = false
+  private mode: MobileMode = 'pointer'
 
+  // Gyro state
   private gyro: GyroState = {
     enabled: false, gamma: 0, beta: 0,
     baseGamma: 0, baseBeta: 0, calibrated: false,
   }
-  private buttons: TouchButton[] = []
+  private gyroLeanDir: DodgeDirection | null = null
+  private gyroTiltThreshold = 15
+  private gyroDuckThreshold = 25
+  private gyroDeadzone = 6
+  private orientationHandler: ((e: DeviceOrientationEvent) => void) | null = null
+
+  // Pointer mode state
+  private leanPointerId: number | null = null
+  private pointerLeanDir: DodgeDirection | null = null
+  private ptrButtons: PtrButton[] = []
+  private buttonZoneY = 0
+
+  // Common
   private pendingActions: MobileAction[] = []
   private guardActive = false
+  private guardPointerId: number | null = null
   private activeTouches = new Set<number>()
   private W = 0
   private H = 0
 
-  private gyroLeanDir: DodgeDirection | null = null
-
-  // Gyro thresholds (degrees relative to calibrated center)
-  private gyroTiltThreshold = 15
-  private gyroDuckThreshold = 25
-  private gyroDeadzone = 6
-
-  private orientationHandler: ((e: DeviceOrientationEvent) => void) | null = null
-
-  init(W: number, H: number, gyroAlreadyGranted = false) {
+  init(W: number, H: number, gyroAlreadyGranted = false, mobileMode: MobileMode = 'pointer') {
     this.W = W
     this.H = H
     this.isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0
     if (!this.isMobile) return
 
-    this.buttons = []
-    if (gyroAlreadyGranted) {
-      this.startGyro()
+    this.mode = mobileMode
+
+    if (mobileMode === 'gyro') {
+      if (gyroAlreadyGranted) {
+        this.startGyro()
+      } else {
+        this.initGyroscope()
+      }
     } else {
-      this.initGyroscope()
+      this.setupPointerButtons()
     }
   }
+
+  get mobileMode(): MobileMode { return this.mode }
+  get gyroEnabled(): boolean { return this.gyro.enabled }
+
+  // ── Gyro setup ─────────────────────────────────────────────────────
 
   private initGyroscope() {
     if (typeof DeviceOrientationEvent !== 'undefined'
@@ -77,23 +94,6 @@ export class MobileInputSystem {
     } else if ('DeviceOrientationEvent' in window) {
       this.startGyro()
     }
-  }
-
-  requestGyroPermission() {
-    if (typeof DeviceOrientationEvent !== 'undefined'
-      && typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
-      return (DeviceOrientationEvent as any).requestPermission()
-        .then((perm: string) => {
-          if (perm === 'granted') {
-            this.startGyro()
-            return true
-          }
-          return false
-        })
-        .catch(() => false)
-    }
-    this.startGyro()
-    return Promise.resolve(true)
   }
 
   private startGyro() {
@@ -116,28 +116,74 @@ export class MobileInputSystem {
     this.gyro.baseBeta = this.gyro.beta
   }
 
+  // ── Pointer mode setup ─────────────────────────────────────────────
+
+  private setupPointerButtons() {
+    const btnH = Math.round(this.H * 0.11)
+    const btnY = this.H - btnH - 6
+    const gap = 6
+    const totalW = this.W - gap * 4
+    const btnW = Math.round(totalW / 3)
+
+    this.buttonZoneY = btnY - 10
+    this.ptrButtons = [
+      { id: 'jab', x: gap, y: btnY, w: btnW, h: btnH, label: 'JAB', color: 0x2288cc },
+      { id: 'guard', x: gap * 2 + btnW, y: btnY, w: btnW, h: btnH, label: 'GARDE', color: 0x44aa44 },
+      { id: 'heavy', x: gap * 3 + btnW * 2, y: btnY, w: btnW, h: btnH, label: 'LOURD', color: 0xcc4422 },
+    ]
+  }
+
+  // ── Unified lean direction ─────────────────────────────────────────
+
+  getLeanDir(): DodgeDirection | null {
+    if (this.mode === 'gyro') return this.gyroLeanDir
+    return this.pointerLeanDir
+  }
+
+  // ── Touch handling ─────────────────────────────────────────────────
+
   handlePointerDown(x: number, y: number, pointerId: number) {
     if (!this.isMobile) return
 
     this.activeTouches.add(pointerId)
 
-    if (this.activeTouches.size >= 2) {
-      if (!this.guardActive) {
-        this.guardActive = true
-        this.pendingActions.push({ type: 'guard_start' })
+    if (this.mode === 'gyro') {
+      if (this.activeTouches.size >= 2) {
+        if (!this.guardActive) {
+          this.guardActive = true
+          this.pendingActions.push({ type: 'guard_start' })
+        }
+        return
       }
-      return
-    }
-
-    if (x < this.W / 2) {
-      this.pendingActions.push({ type: 'jab' })
+      if (x < this.W / 2) {
+        this.pendingActions.push({ type: 'jab' })
+      } else {
+        this.pendingActions.push({ type: 'heavy' })
+      }
     } else {
-      this.pendingActions.push({ type: 'heavy' })
+      const btn = this.hitTestButton(x, y)
+      if (btn) {
+        if (btn.id === 'jab') this.pendingActions.push({ type: 'jab' })
+        else if (btn.id === 'heavy') this.pendingActions.push({ type: 'heavy' })
+        else if (btn.id === 'guard') {
+          this.guardPointerId = pointerId
+          if (!this.guardActive) {
+            this.guardActive = true
+            this.pendingActions.push({ type: 'guard_start' })
+          }
+        }
+        return
+      }
+      this.leanPointerId = pointerId
+      this.updatePointerLean(x, y)
     }
   }
 
-  handlePointerMove(_x: number, _y: number, _pointerId: number) {
+  handlePointerMove(x: number, y: number, pointerId: number) {
     if (!this.isMobile) return
+    if (this.mode === 'pointer' && pointerId === this.leanPointerId) {
+      this.updatePointerLean(x, y)
+    }
   }
 
   handlePointerUp(_x: number, _y: number, pointerId: number) {
@@ -145,16 +191,53 @@ export class MobileInputSystem {
 
     this.activeTouches.delete(pointerId)
 
-    if (this.guardActive && this.activeTouches.size < 2) {
-      this.guardActive = false
-      this.pendingActions.push({ type: 'guard_end' })
+    if (this.mode === 'gyro') {
+      if (this.guardActive && this.activeTouches.size < 2) {
+        this.guardActive = false
+        this.pendingActions.push({ type: 'guard_end' })
+      }
+    } else {
+      if (pointerId === this.leanPointerId) {
+        this.leanPointerId = null
+        this.pointerLeanDir = null
+      }
+      if (pointerId === this.guardPointerId) {
+        this.guardPointerId = null
+        this.guardActive = false
+        this.pendingActions.push({ type: 'guard_end' })
+      }
     }
   }
+
+  private hitTestButton(x: number, y: number): PtrButton | null {
+    for (const btn of this.ptrButtons) {
+      if (x >= btn.x && x <= btn.x + btn.w && y >= btn.y && y <= btn.y + btn.h) {
+        return btn
+      }
+    }
+    return null
+  }
+
+  private updatePointerLean(x: number, y: number) {
+    const th = CFG.player.lean.zoneThreshold
+    const relX = (x - this.W / 2) / (this.W / 2)
+    const relY = (y - this.H / 2) / (this.H / 2)
+
+    if (Math.abs(relX) > Math.abs(relY) && Math.abs(relX) > th) {
+      this.pointerLeanDir = relX < 0 ? 'left' : 'right'
+    } else if (relY > th) {
+      this.pointerLeanDir = 'down'
+    } else {
+      this.pointerLeanDir = null
+    }
+  }
+
+  // ── Update ─────────────────────────────────────────────────────────
 
   update(_dt: number) {
     if (!this.isMobile) return
 
-    if (this.gyro.enabled) {
+    if (this.mode === 'gyro' && this.gyro.enabled) {
       const relGamma = this.gyro.gamma - this.gyro.baseGamma
       const relBeta = this.gyro.beta - this.gyro.baseBeta
 
@@ -170,22 +253,7 @@ export class MobileInputSystem {
     }
   }
 
-  getGyroLeanDir(): DodgeDirection | null {
-    return this.gyroLeanDir
-  }
-
-  get gyroEnabled(): boolean {
-    return this.gyro.enabled
-  }
-
-  getGyroDebug(): { gamma: number; beta: number; relGamma: number; relBeta: number } {
-    return {
-      gamma: this.gyro.gamma,
-      beta: this.gyro.beta,
-      relGamma: this.gyro.gamma - this.gyro.baseGamma,
-      relBeta: this.gyro.beta - this.gyro.baseBeta,
-    }
-  }
+  // ── Actions ────────────────────────────────────────────────────────
 
   consumeActions(): MobileAction[] {
     const actions = [...this.pendingActions]
@@ -197,19 +265,22 @@ export class MobileInputSystem {
     return this.guardActive
   }
 
-  getButtons(): readonly TouchButton[] {
-    return this.buttons
+  // ── Drawing ────────────────────────────────────────────────────────
+
+  drawMobileHUD(g: Phaser.GameObjects.Graphics, W: number, H: number) {
+    if (!this.isMobile) return
+
+    if (this.mode === 'gyro') {
+      this.drawGyroHUD(g, W, H)
+    } else {
+      this.drawPointerButtons(g)
+    }
   }
 
-  drawButtons(_g: Phaser.GameObjects.Graphics) {
-    // No buttons in gyro mode
-  }
-
-  drawGyroHUD(g: Phaser.GameObjects.Graphics, W: number, H: number) {
-    if (!this.isMobile || !this.gyro.enabled) return
+  private drawGyroHUD(g: Phaser.GameObjects.Graphics, W: number, H: number) {
+    if (!this.gyro.enabled) return
 
     const relG = this.gyro.gamma - this.gyro.baseGamma
-    const relB = this.gyro.beta - this.gyro.baseBeta
 
     const indicatorY = Math.round(H * 0.88)
     const indicatorR = 18
@@ -248,6 +319,31 @@ export class MobileInputSystem {
     const halfW = Math.round(W * 0.44)
     g.fillRoundedRect(cx - halfW - 8, tapY, halfW, tapH, 8)
     g.fillRoundedRect(cx + 8, tapY, halfW, tapH, 8)
+  }
+
+  private drawPointerButtons(g: Phaser.GameObjects.Graphics) {
+    for (const btn of this.ptrButtons) {
+      const isGuardHeld = btn.id === 'guard' && this.guardActive
+      g.fillStyle(btn.color, isGuardHeld ? 0.55 : 0.35)
+      g.fillRoundedRect(btn.x, btn.y, btn.w, btn.h, 10)
+      g.lineStyle(isGuardHeld ? 3 : 2, btn.color, isGuardHeld ? 1 : 0.7)
+      g.strokeRoundedRect(btn.x, btn.y, btn.w, btn.h, 10)
+    }
+  }
+
+  getPointerButtons(): readonly PtrButton[] {
+    return this.ptrButtons
+  }
+
+  // ── Debug ──────────────────────────────────────────────────────────
+
+  getGyroDebug(): { gamma: number; beta: number; relGamma: number; relBeta: number } {
+    return {
+      gamma: this.gyro.gamma,
+      beta: this.gyro.beta,
+      relGamma: this.gyro.gamma - this.gyro.baseGamma,
+      relBeta: this.gyro.beta - this.gyro.baseBeta,
+    }
   }
 
   destroy() {
