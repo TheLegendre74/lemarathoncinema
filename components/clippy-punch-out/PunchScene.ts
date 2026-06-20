@@ -283,7 +283,7 @@ export class PunchScene extends Phaser.Scene {
     this.virtualMouseX = W / 2
     this.virtualMouseY = H / 2
 
-    this.game.canvas.style.cursor = 'none'
+    if (!this.mobileSys.isMobile) this.game.canvas.style.cursor = 'none'
 
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (pointer.leftButtonDown()) this.mouseLeftClicked = true
@@ -562,13 +562,19 @@ export class PunchScene extends Phaser.Scene {
     this.mouseRightClicked = false
     this.mouseLeftClicked = false
 
-    if ((jPr || kPr) && this.tryVolumeClick(this.virtualMouseX, this.virtualMouseY)) {
+    const touchX = Phaser.Math.Clamp(this.input.activePointer.x, 0, this.W)
+    const touchY = Phaser.Math.Clamp(this.input.activePointer.y, 0, this.H)
+
+    if ((jPr || kPr) && this.tryVolumeClick(
+      this.mobileSys.isMobile ? touchX : this.virtualMouseX,
+      this.mobileSys.isMobile ? touchY : this.virtualMouseY,
+    )) {
       jPr = false; kPr = false
     }
 
     if ((jPr || kPr) && ctx.roseSquare.active) {
-      const px = this.virtualMouseX
-      const py = this.virtualMouseY
+      const px = this.mobileSys.isMobile ? touchX : this.virtualMouseX
+      const py = this.mobileSys.isMobile ? touchY : this.virtualMouseY
       if (this.projectileSys.tryClickRose(ctx, px, py)) {
         this.staminaSys.restoreRose(ctx)
         this.snd('snd_rose_catch')
@@ -594,32 +600,49 @@ export class PunchScene extends Phaser.Scene {
     }
     if (this.mobileSys.isGuardHeld()) spaceDown = true
 
-    this.virtualMouseX = Phaser.Math.Clamp(this.input.activePointer.x, 0, this.W)
-    this.virtualMouseY = Phaser.Math.Clamp(this.input.activePointer.y, 0, this.H)
-    const mouseX = this.virtualMouseX
-    const mouseY = this.virtualMouseY
-    this.prevMouseX = mouseX
-    this.prevMouseY = mouseY
-    const th = CFG.player.lean.zoneThreshold
-    const relX = (mouseX - this.W / 2) / (this.W / 2)
-    const relY = (mouseY - this.H / 2) / (this.H / 2)
-
     let leanDir: DodgeDirection | null = null
-    if (Math.abs(relX) > Math.abs(relY) && Math.abs(relX) > th) {
-      leanDir = relX < 0 ? 'left' : 'right'
-    } else if (relY > th) {
-      leanDir = 'down'
-    }
 
-    if (leanDir !== null) {
-      this.leanGraceDir = leanDir
-      this.leanGraceTimer = 0
-    } else if (this.leanGraceDir !== null) {
-      this.leanGraceTimer += ctx.dt * 1000
-      if (this.leanGraceTimer < CFG.player.lean.graceMs) {
-        leanDir = this.leanGraceDir
-      } else {
-        this.leanGraceDir = null
+    if (this.mobileSys.isMobile && this.mobileSys.gyroEnabled) {
+      leanDir = this.mobileSys.getGyroLeanDir()
+
+      if (leanDir !== null) {
+        this.leanGraceDir = leanDir
+        this.leanGraceTimer = 0
+      } else if (this.leanGraceDir !== null) {
+        this.leanGraceTimer += ctx.dt * 1000
+        if (this.leanGraceTimer < CFG.player.lean.graceMs) {
+          leanDir = this.leanGraceDir
+        } else {
+          this.leanGraceDir = null
+        }
+      }
+    } else {
+      this.virtualMouseX = Phaser.Math.Clamp(this.input.activePointer.x, 0, this.W)
+      this.virtualMouseY = Phaser.Math.Clamp(this.input.activePointer.y, 0, this.H)
+      const mouseX = this.virtualMouseX
+      const mouseY = this.virtualMouseY
+      this.prevMouseX = mouseX
+      this.prevMouseY = mouseY
+      const th = CFG.player.lean.zoneThreshold
+      const relX = (mouseX - this.W / 2) / (this.W / 2)
+      const relY = (mouseY - this.H / 2) / (this.H / 2)
+
+      if (Math.abs(relX) > Math.abs(relY) && Math.abs(relX) > th) {
+        leanDir = relX < 0 ? 'left' : 'right'
+      } else if (relY > th) {
+        leanDir = 'down'
+      }
+
+      if (leanDir !== null) {
+        this.leanGraceDir = leanDir
+        this.leanGraceTimer = 0
+      } else if (this.leanGraceDir !== null) {
+        this.leanGraceTimer += ctx.dt * 1000
+        if (this.leanGraceTimer < CFG.player.lean.graceMs) {
+          leanDir = this.leanGraceDir
+        } else {
+          this.leanGraceDir = null
+        }
       }
     }
 
@@ -1199,24 +1222,25 @@ export class PunchScene extends Phaser.Scene {
 
   private drawMobileButtons() {
     if (!this.mobileSys.isMobile) return
-    this.mobileSys.drawButtons(this.gKeys)
 
-    const btns = this.mobileSys.getButtons()
-    if (this.mobileTexts.length === 0 && btns.length > 0) {
-      for (const btn of btns) {
-        const t = this.add.text(
-          btn.x + btn.w / 2, btn.y + btn.h / 2, btn.label,
-          { fontFamily: FONT, fontSize: '24px', color: '#ffffff', fontStyle: 'bold',
-            stroke: '#000', strokeThickness: 3, align: 'center' },
-        ).setOrigin(0.5, 0.5).setDepth(10)
-        this.mobileTexts.push(t)
-      }
-    }
+    this.mobileSys.drawGyroHUD(this.gKeys, this.W, this.H)
 
-    for (let i = 0; i < btns.length; i++) {
-      const btn = btns[i]
-      const t = this.mobileTexts[i]
-      if (t) t.setAlpha(btn.pressed ? 1 : 0.7)
+    if (this.mobileTexts.length === 0 && this.mobileSys.gyroEnabled) {
+      const tapH = Math.round(this.H * 0.08)
+      const tapY = Math.round(this.H - tapH - 6)
+      const cx = this.W / 2
+      const halfW = Math.round(this.W * 0.44)
+      const tL = this.add.text(
+        cx - halfW / 2 - 8, tapY + tapH / 2, 'JAB',
+        { fontFamily: FONT, fontSize: '18px', color: '#88aacc', fontStyle: 'bold',
+          stroke: '#000', strokeThickness: 2, align: 'center' },
+      ).setOrigin(0.5, 0.5).setDepth(10)
+      const tR = this.add.text(
+        cx + halfW / 2 + 8, tapY + tapH / 2, 'LOURD',
+        { fontFamily: FONT, fontSize: '18px', color: '#cc8866', fontStyle: 'bold',
+          stroke: '#000', strokeThickness: 2, align: 'center' },
+      ).setOrigin(0.5, 0.5).setDepth(10)
+      this.mobileTexts.push(tL, tR)
     }
   }
 
@@ -1315,6 +1339,7 @@ export class PunchScene extends Phaser.Scene {
   }
 
   private drawCustomCursor() {
+    if (this.mobileSys.isMobile) return
     const g = this.gHUD
     const mx = this.virtualMouseX
     const my = this.virtualMouseY
