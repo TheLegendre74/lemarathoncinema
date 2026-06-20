@@ -40,9 +40,9 @@ export class MobileInputSystem {
     baseGamma: 0, baseBeta: 0, calibrated: false,
   }
   private gyroLeanDir: DodgeDirection | null = null
-  private gyroTiltThreshold = 15
-  private gyroDuckThreshold = 25
-  private gyroDeadzone = 6
+  private gyroTiltThreshold = 18
+  private gyroDuckThreshold = 28
+  private gyroDeadzone = 12
   private orientationHandler: ((e: DeviceOrientationEvent) => void) | null = null
 
   // Pointer mode state
