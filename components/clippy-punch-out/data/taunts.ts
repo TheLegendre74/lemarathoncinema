@@ -134,6 +134,11 @@ const RAGE = [
   'JE VAIS T\'ÉCRASER COMME UN BUG !',
   'ERREUR FATALE... POUR TOI !',
   'Tu crois m\'avoir ? JE SUIS CLIPPY !',
+  'COMBO TIME — ESQUIVE OU CRÈVE !!!',
+  'GAUCHE DROITE GAUCHE DROITE — MANGE ÇA !',
+  'JE VAIS TE REFORMATER EN 4 COUPS !!!',
+  'T\'AS VOULU LA RAGE ? TU L\'AS !!!',
+  'CLIPPY.EXE — MODE BERSERK ACTIVÉ !!!',
 ]
 
 function pick(arr: string[]): string {

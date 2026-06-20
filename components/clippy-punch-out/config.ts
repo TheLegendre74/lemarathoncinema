@@ -132,6 +132,8 @@ export const CFG = {
     hookP1: 2200,
     jabP2: 1600,
     hookP2: 1800,
+    jabP3: 1200,
+    hookP3: 1400,
   },
 
   charge: {
@@ -145,17 +147,30 @@ export const CFG = {
     comboMaxP1: 5,
     comboMinP2: 3,
     comboMaxP2: 7,
+    comboMinP3: 4,
+    comboMaxP3: 8,
     delayBetweenAttacksP1: 700,
     delayBetweenAttacksP2: 500,
+    delayBetweenAttacksP3: 350,
     idleDelayMinP1: 1400,
     idleDelayMaxP1: 2200,
     idleDelayMinP2: 900,
     idleDelayMaxP2: 1600,
+    idleDelayMinP3: 600,
+    idleDelayMaxP3: 1100,
+  },
+
+  rageCombo: {
+    maxAttacks: 4,
+    delayBetweenMs: 1000,
+    chance: 0.35,
+    windUpMultiplier: 0.6,
   },
 
   distribution: {
     p1: { jab: 0.55, hook: 0.30, charge: 0.15 },
     p2: { jab: 0.30, hook: 0.35, charge: 0.35 },
+    p3: { jab: 0.25, hook: 0.40, charge: 0.35 },
   },
 
   crowd: {
@@ -181,6 +196,7 @@ export const CFG = {
 
   phases: {
     transitionThreshold: 0.50,
+    rageThreshold: 0.30,
   },
 
   combat: {

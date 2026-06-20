@@ -133,13 +133,19 @@ export class HUDRenderer {
     }
     g.lineStyle(2, 0x111122, 0.9).strokeRoundedRect(x, this.BAR_Y, this.BAR_W, this.BAR_H, 5)
 
-    if (ctx.combatPhase === 2 && !ctx.tutorial.active) {
+    if (ctx.combatPhase >= 2 && !ctx.tutorial.active) {
       const bw = Math.round(this.W * 0.12)
       const bh = 16
       const bx = this.W / 2 - bw / 2
       const by = this.BAR_Y + this.BAR_H + this.STAM_H + 8
-      g.fillStyle(0xff2222, 0.25).fillRoundedRect(bx, by, bw, bh, 4)
-      g.lineStyle(1, 0xff2222, 0.6).strokeRoundedRect(bx, by, bw, bh, 4)
+      if (ctx.combatPhase === 3) {
+        const pulse = 0.4 + Math.sin(ctx.totalTime * 0.015) * 0.35
+        g.fillStyle(0xff0000, pulse).fillRoundedRect(bx, by, bw, bh, 4)
+        g.lineStyle(2, 0xff0000, 0.9).strokeRoundedRect(bx, by, bw, bh, 4)
+      } else {
+        g.fillStyle(0xff2222, 0.25).fillRoundedRect(bx, by, bw, bh, 4)
+        g.lineStyle(1, 0xff2222, 0.6).strokeRoundedRect(bx, by, bw, bh, 4)
+      }
     }
   }
 
@@ -310,8 +316,8 @@ export class HUDRenderer {
 
   private getWindUpMs(type: string, ctx: GameContext): number {
     const p = ctx.combatPhase
-    if (type === 'jab') return p === 1 ? CFG.windUp.jabP1 : CFG.windUp.jabP2
-    if (type === 'hook') return p === 1 ? CFG.windUp.hookP1 : CFG.windUp.hookP2
+    if (type === 'jab') return p === 1 ? CFG.windUp.jabP1 : p === 2 ? CFG.windUp.jabP2 : CFG.windUp.jabP3
+    if (type === 'hook') return p === 1 ? CFG.windUp.hookP1 : p === 2 ? CFG.windUp.hookP2 : CFG.windUp.hookP3
     return 300
   }
 

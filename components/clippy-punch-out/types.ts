@@ -67,7 +67,7 @@ export interface ClippyPsyche {
 // ─── Game ────────────────────────────────────────────────────────────
 
 export type GamePhase = 'intro' | 'tutorial' | 'combat' | 'win' | 'lose'
-export type CombatPhase = 1 | 2
+export type CombatPhase = 1 | 2 | 3
 
 // ─── Projectiles ─────────────────────────────────────────────────────
 
@@ -160,6 +160,7 @@ export interface GameContext {
   effects: EffectState
   projectiles: Projectile[]
   phaseTransitioned: boolean
+  rageTransitioned: boolean
 
   tutorial: {
     active: boolean

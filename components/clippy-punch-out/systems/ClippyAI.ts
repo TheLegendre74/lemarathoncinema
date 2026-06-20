@@ -7,6 +7,8 @@ import { FeintSystem } from './FeintSystem'
 export class ClippyAI {
   private feintSys = new FeintSystem()
   private nextActionDelay = 0
+  private rageComboActive = false
+  private rageComboRemaining = 0
 
   update(ctx: GameContext, dt: number) {
     const cs = ctx.clippy.state
@@ -109,8 +111,23 @@ export class ClippyAI {
     }
 
     const phase = ctx.combatPhase
-    const min = phase === 1 ? CFG.series.comboMinP1 : CFG.series.comboMinP2
-    const max = phase === 1 ? CFG.series.comboMaxP1 : CFG.series.comboMaxP2
+
+    if (phase === 3 && Math.random() < CFG.rageCombo.chance) {
+      this.rageComboActive = true
+      this.rageComboRemaining = CFG.rageCombo.maxAttacks
+      ctx.series.total = CFG.rageCombo.maxAttacks
+      ctx.series.dodgedCount = 0
+      ctx.series.currentIndex = 0
+      ctx.series.active = true
+      this.launchNextInSeries(ctx)
+      return
+    }
+
+    this.rageComboActive = false
+    this.rageComboRemaining = 0
+
+    const min = phase === 1 ? CFG.series.comboMinP1 : phase === 2 ? CFG.series.comboMinP2 : CFG.series.comboMinP3
+    const max = phase === 1 ? CFG.series.comboMaxP1 : phase === 2 ? CFG.series.comboMaxP2 : CFG.series.comboMaxP3
     const total = min + Math.floor(Math.random() * (max - min + 1))
 
     ctx.series.total = total
@@ -187,12 +204,18 @@ export class ClippyAI {
 
   getWindUp(type: ClippyAttackType, ctx: GameContext): number {
     const phase = ctx.combatPhase
-    if (type === 'jab') return phase === 1 ? CFG.windUp.jabP1 : CFG.windUp.jabP2
-    if (type === 'hook') return phase === 1 ? CFG.windUp.hookP1 : CFG.windUp.hookP2
-    return 300
+    let base: number
+    if (type === 'jab') base = phase === 1 ? CFG.windUp.jabP1 : phase === 2 ? CFG.windUp.jabP2 : CFG.windUp.jabP3
+    else if (type === 'hook') base = phase === 1 ? CFG.windUp.hookP1 : phase === 2 ? CFG.windUp.hookP2 : CFG.windUp.hookP3
+    else base = 300
+
+    if (this.rageComboActive) base *= CFG.rageCombo.windUpMultiplier
+    return base
   }
 
   private getSeriesPauseDelay(ctx: GameContext): number {
+    if (this.rageComboActive) return CFG.rageCombo.delayBetweenMs
+    if (ctx.combatPhase === 3) return CFG.series.delayBetweenAttacksP3
     return ctx.combatPhase === 1
       ? CFG.series.delayBetweenAttacksP1
       : CFG.series.delayBetweenAttacksP2
@@ -218,10 +241,12 @@ export class ClippyAI {
     ctx.clippy.idleDuration = 0
     ctx.clippy.blinkFired = false
     ctx.series.active = false
+    this.rageComboActive = false
+    this.rageComboRemaining = 0
 
     const phase = ctx.combatPhase
-    const min = phase === 1 ? CFG.series.idleDelayMinP1 : CFG.series.idleDelayMinP2
-    const max = phase === 1 ? CFG.series.idleDelayMaxP1 : CFG.series.idleDelayMaxP2
+    const min = phase === 1 ? CFG.series.idleDelayMinP1 : phase === 2 ? CFG.series.idleDelayMinP2 : CFG.series.idleDelayMinP3
+    const max = phase === 1 ? CFG.series.idleDelayMaxP1 : phase === 2 ? CFG.series.idleDelayMaxP2 : CFG.series.idleDelayMaxP3
     this.nextActionDelay = min + Math.random() * (max - min)
 
     if (ctx.clippy.psyche.fatigue >= CFG.ai.fatigue.bigPausesThreshold) {
@@ -232,12 +257,17 @@ export class ClippyAI {
   // ── Attack picking ───────────────────────────────────────────────────
 
   private pickAttack(ctx: GameContext): ClippyAttack {
-    const dist = ctx.combatPhase === 1 ? CFG.distribution.p1 : CFG.distribution.p2
+    const dist = ctx.combatPhase === 1 ? CFG.distribution.p1 : ctx.combatPhase === 2 ? CFG.distribution.p2 : CFG.distribution.p3
     const r = Math.random()
     let type: ClippyAttackType
-    if (r < dist.jab) type = 'jab'
-    else if (r < dist.jab + dist.hook) type = 'hook'
-    else type = 'charge'
+
+    if (this.rageComboActive) {
+      type = r < 0.5 ? 'jab' : 'hook'
+    } else {
+      if (r < dist.jab) type = 'jab'
+      else if (r < dist.jab + dist.hook) type = 'hook'
+      else type = 'charge'
+    }
 
     const side = type === 'charge' ? 'body' as const : this.pickSide()
     return { type, side }
@@ -292,6 +322,8 @@ export class ClippyAI {
 
   endStun(ctx: GameContext) { this.goIdle(ctx) }
 
+  get isRageCombo() { return this.rageComboActive }
+
   // ── Psyche callbacks ─────────────────────────────────────────────────
 
   onPlayerHit(ctx: GameContext) {
@@ -316,6 +348,8 @@ export class ClippyAI {
 
   private updatePhase(ctx: GameContext) {
     const ratio = ctx.clippy.hp / CFG.clippy.maxHP
-    ctx.combatPhase = ratio > CFG.phases.transitionThreshold ? 1 : 2
+    if (ratio > CFG.phases.transitionThreshold) ctx.combatPhase = 1
+    else if (ratio > CFG.phases.rageThreshold) ctx.combatPhase = 2
+    else ctx.combatPhase = 3
   }
 }

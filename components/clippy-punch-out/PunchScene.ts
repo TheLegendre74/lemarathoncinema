@@ -119,8 +119,8 @@ export class PunchScene extends Phaser.Scene {
   // ── PRELOAD ──────────────────────────────────────────────────────────
 
   preload() {
-    this.load.image('arena', '/arene-clippy-03.png')
-    this.load.image('evilClipy', '/evil-clippy.png')
+    this.load.image('arena', '/arene-clippy-03.webp')
+    this.load.image('evilClipy', '/evil-clippy.webp')
     this.load.image('cGloveGuardL', '/clippy-gant-garde-l.png')
     this.load.image('cGloveGuardR', '/clippy-gant-garde-r.png')
     this.load.image('cGlovePunchL', '/clippy-gant-punch-l.png')
@@ -129,9 +129,9 @@ export class PunchScene extends Phaser.Scene {
     this.load.audio('snd_miss', '/clippy-hit.mp3')
     this.load.audio('snd_parry', '/clippy-parry.mp3')
     this.load.audio('snd_swoosh', '/clippy-swoosh.wav')
-    this.load.image(P_GLOVE_DEFAULT, '/gant-joueur.png')
-    this.load.image(P_GLOVE_LEFT, '/gant-joueur-gauche.png')
-    this.load.image(P_GLOVE_RIGHT, '/gant-joueur-droit.png')
+    this.load.image(P_GLOVE_DEFAULT, '/gant-joueur.webp')
+    this.load.image(P_GLOVE_LEFT, '/gant-joueur-gauche.webp')
+    this.load.image(P_GLOVE_RIGHT, '/gant-joueur-droit.webp')
 
     this.load.audio('snd_guard_block', '/sfx/Coup/guard-block.wav')
     this.load.audio('snd_counter', '/sfx/Coup/counter.wav')
@@ -156,10 +156,10 @@ export class PunchScene extends Phaser.Scene {
     this.load.audio('snd_rose_catch', '/sfx/rose catch.mp3')
     this.load.audio('snd_phase_transition', '/sfx/phase-transition .wav')
 
-    this.load.image('proj_canette', '/sprites/public/canette.png')
-    this.load.image('proj_clavier', '/sprites/public/clavier.png')
-    this.load.image('proj_popcorn', '/sprites/public/popcorn.png')
-    this.load.image('proj_rose', '/sprites/public/rose.png')
+    this.load.image('proj_canette', '/sprites/public/canette.webp')
+    this.load.image('proj_clavier', '/sprites/public/clavier.webp')
+    this.load.image('proj_popcorn', '/sprites/public/popcorn.webp')
+    this.load.image('proj_rose', '/sprites/public/rose.webp')
   }
 
   // ── CREATE ───────────────────────────────────────────────────────────
@@ -872,6 +872,16 @@ export class PunchScene extends Phaser.Scene {
       this.combatSys.events.push({ type: 'phase_transition' })
       this.effectsR.freezeFrame(ctx, 500)
     }
+    if (ctx.combatPhase === 3 && this.prevCombatPhase !== 3 && !ctx.rageTransitioned) {
+      ctx.rageTransitioned = true
+      this.snd('snd_phase_transition')
+      this.effectsR.shake(ctx, 20)
+      this.effectsR.flash(ctx, 0xff0000, 0.7)
+      this.effectsR.freezeFrame(ctx, 600)
+      this.hudR.setBubble(pickTaunt('rage', ctx.clippy.hp / CFG.clippy.maxHP))
+      this.hudR.setRound('RAGE MODE', '#ff0000')
+      this.hudR.flashNow('RAGE !', '#ff0000')
+    }
     this.prevCombatPhase = ctx.combatPhase
   }
 
@@ -1389,6 +1399,7 @@ export class PunchScene extends Phaser.Scene {
       effects: { shake: 0, flashColor: 0, flashAlpha: 0, freezeMs: 0, slowMo: 1, slowMoTimer: 0 },
       projectiles: [],
       phaseTransitioned: false,
+      rageTransitioned: false,
       tutorial: { active: !(this.cfg.skipTutorial ?? false), step: 0 },
       roseSquare: { active: false, x: 0, y: 0, timer: 0 },
     }
