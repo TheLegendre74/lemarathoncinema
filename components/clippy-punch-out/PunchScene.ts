@@ -660,9 +660,7 @@ export class PunchScene extends Phaser.Scene {
 
     if (leanDir !== null && ctx.player.stamina > 0 && !ctx.tutorial.active) {
       ctx.player.leanTime += ctx.dt
-      const mult = Math.min(1 + ctx.player.leanTime * 0.5, CFG.player.lean.maxDrainMultiplier)
-      const drainRate = CFG.player.lean.baseDrainPerSec * mult
-      ctx.player.stamina = Math.max(0, ctx.player.stamina - drainRate * ctx.dt)
+      ctx.player.stamina = Math.max(0, ctx.player.stamina - CFG.player.lean.baseDrainPerSec * ctx.dt)
       if (ctx.player.leanTime >= 1.5 && !this.staminaWarningShown) {
         this.staminaWarningShown = true
         this.effectsR.popup('/!\\ Stamina !', '#ffaa22')

@@ -4,13 +4,13 @@ export const CFG = {
     maxStamina: 120,
 
     stamina: {
-      regenPerSec: 10,
-      costDodge: 5,
+      regenPerSec: 6,
+      costDodge: 6,
       costDodgePerfect: 0,
-      costHitStun: 4,
-      costHitGuard: 10,
-      hitStunReward: 20,
-      exhaustedDurationMs: 1500,
+      costHitStun: 5,
+      costHitGuard: 12,
+      hitStunReward: 15,
+      exhaustedDurationMs: 2000,
     },
 
     jab: {
@@ -49,8 +49,7 @@ export const CFG = {
     lean: {
       zoneThreshold: 0.15,
       graceMs: 150,
-      baseDrainPerSec: 6,
-      maxDrainMultiplier: 2.5,
+      baseDrainPerSec: 10,
     },
 
     starPunch: {
