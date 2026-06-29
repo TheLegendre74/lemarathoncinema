@@ -1,167 +1,189 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
-import type { CardData, GenreType, BattleResult, BattleLogEntry } from '@/lib/battle/types';
-import TypeBadge from './TypeBadge';
-import { WEATHER_LABELS } from '@/lib/battle/weather';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import type { BattleEvent, BattleSnapshot, PlayerAction } from '@/lib/battle/types';
+import { BattleState } from '@/lib/battle/battle-state';
+import BattleScene from './BattleScene';
+import TextBox from './TextBox';
+import ActionMenu from './ActionMenu';
+import MoveSelector from './MoveSelector';
+import SwitchSelector from './SwitchSelector';
+
+type UIMode = 'init' | 'action_menu' | 'move_select' | 'move_select_climax' | 'switch_select' | 'animating' | 'ko_replace' | 'ended';
 
 interface Props {
-  result: BattleResult;
-  teamA: number[];
-  teamB: number[];
-  cards: Record<number, CardData>;
+  state: BattleState;
   onFinish: () => void;
 }
 
-export default function BattleUI({ result, teamA, teamB, cards, onFinish }: Props) {
-  const [logIndex, setLogIndex] = useState(0);
-  const [autoPlay, setAutoPlay] = useState(true);
-  const logRef = useRef<HTMLDivElement>(null);
+export default function BattleUI({ state, onFinish }: Props) {
+  const [uiMode, setUiMode] = useState<UIMode>('init');
+  const [eventQueue, setEventQueue] = useState<BattleEvent[]>(state.initEvents);
+  const [eventIndex, setEventIndex] = useState(0);
+  const [snapshot, setSnapshot] = useState<BattleSnapshot>(state.snapshot());
+  const [, forceUpdate] = useState(0);
 
-  const visibleLog = result.log.slice(0, logIndex + 1);
-  const current = result.log[logIndex];
-  const done = logIndex >= result.log.length - 1;
+  const currentEvent = eventQueue[eventIndex] ?? null;
+
+  const advanceEvent = useCallback(() => {
+    if (eventIndex < eventQueue.length - 1) {
+      const next = eventIndex + 1;
+      setEventIndex(next);
+      setSnapshot(eventQueue[next].snapshot);
+    } else {
+      setEventQueue([]);
+      setEventIndex(0);
+
+      if (state.phase === 'ended') {
+        setUiMode('ended');
+        setSnapshot(state.snapshot());
+      } else if (state.phase === 'ko_replace') {
+        setUiMode('ko_replace');
+        setSnapshot(state.snapshot());
+      } else {
+        setUiMode('action_menu');
+        setSnapshot(state.snapshot());
+      }
+    }
+  }, [eventIndex, eventQueue, state]);
 
   useEffect(() => {
-    if (!autoPlay || done) return;
-    const t = setTimeout(() => setLogIndex(i => Math.min(i + 1, result.log.length - 1)), 600);
-    return () => clearTimeout(t);
-  }, [logIndex, autoPlay, done, result.log.length]);
+    if (uiMode === 'init' && eventQueue.length > 0) {
+      setUiMode('animating');
+      setSnapshot(eventQueue[0].snapshot);
+    }
+  }, [uiMode, eventQueue]);
 
-  useEffect(() => {
-    logRef.current?.scrollTo({ top: logRef.current.scrollHeight, behavior: 'smooth' });
-  }, [logIndex]);
+  const submitAction = useCallback((action: PlayerAction) => {
+    const events = state.submitAction(action);
+    if (events.length > 0) {
+      setEventQueue(events);
+      setEventIndex(0);
+      setSnapshot(events[0].snapshot);
+      setUiMode('animating');
+    } else {
+      setSnapshot(state.snapshot());
+      if (state.phase === 'ended') setUiMode('ended');
+      else if (state.phase === 'ko_replace') setUiMode('ko_replace');
+      else setUiMode('action_menu');
+    }
+    forceUpdate(n => n + 1);
+  }, [state]);
 
-  const lastHP = visibleLog.findLast(e => e.hpA != null);
+  const submitReplacement = useCallback((idx: number) => {
+    const events = state.submitReplacement(idx);
+    if (events.length > 0) {
+      setEventQueue(events);
+      setEventIndex(0);
+      setSnapshot(events[0].snapshot);
+      setUiMode('animating');
+    } else {
+      setSnapshot(state.snapshot());
+      if (state.phase === 'ended') setUiMode('ended');
+      else setUiMode('action_menu');
+    }
+    forceUpdate(n => n + 1);
+  }, [state]);
 
-  const nameA = teamA[0] ? cards[teamA[0]]?.name ?? '?' : '?';
-  const nameB = teamB[0] ? cards[teamB[0]]?.name ?? '?' : '?';
+  const moves = state.getPlayerMoves();
+  const switches = state.getAvailableSwitches();
 
   return (
-    <div className="space-y-4">
-      {/* Météo active */}
-      {current?.weatherNow && (
-        <div className="text-center text-sm py-1 rounded-lg" style={{ background: 'var(--bg3)', color: 'var(--gold)' }}>
-          🌤️ {WEATHER_LABELS[current.weatherNow] ?? current.weatherNow}
+    <div className="space-y-3 max-w-2xl mx-auto">
+      {/* Scene */}
+      <BattleScene
+        activeA={snapshot.activeA}
+        activeB={snapshot.activeB}
+        weather={snapshot.weather}
+        tr={snapshot.tr}
+        teamAAlive={snapshot.teamA.filter(m => m.alive).length}
+        teamBAlive={snapshot.teamB.filter(m => m.alive).length}
+        teamATotal={snapshot.teamA.length}
+        teamBTotal={snapshot.teamB.length}
+      />
+
+      {/* TextBox (during animation) */}
+      {uiMode === 'animating' && currentEvent && (
+        <TextBox
+          key={`${eventIndex}-${currentEvent.message}`}
+          message={currentEvent.message}
+          onDone={advanceEvent}
+        />
+      )}
+
+      {/* Action Menu */}
+      {uiMode === 'action_menu' && snapshot.activeA && (
+        <div className="rounded-xl p-4" style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(232,196,106,0.1)' }}>
+          <ActionMenu
+            filmName={snapshot.activeA.name}
+            onAttack={() => setUiMode('move_select')}
+            onTeam={() => setUiMode('switch_select')}
+            onClimax={() => setUiMode('move_select_climax')}
+            onForfeit={() => submitAction({ type: 'forfeit' })}
+            canClimax={state.canClimax()}
+            climaxUsed={state.megaUsedA}
+          />
         </div>
       )}
 
-      {/* Barres de PV */}
-      <div className="grid grid-cols-2 gap-4">
-        {/* Side A (joueur) */}
-        <div className="rounded-xl p-3" style={{ background: 'var(--bg2)', border: '1px solid var(--border)' }}>
-          <div className="text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--green)' }}>Ton film</div>
-          <HPBar
-            hp={lastHP?.hpA ?? 0}
-            max={lastHP?.hpAmax ?? 1}
-            color="var(--green)"
+      {/* Move Selector */}
+      {(uiMode === 'move_select' || uiMode === 'move_select_climax') && (
+        <div className="rounded-xl p-4" style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(232,196,106,0.1)' }}>
+          <MoveSelector
+            moves={moves}
+            climaxActive={uiMode === 'move_select_climax'}
+            onSelect={idx => submitAction({
+              type: 'move',
+              moveIndex: idx,
+              climax: uiMode === 'move_select_climax',
+            })}
+            onBack={() => setUiMode('action_menu')}
           />
         </div>
-        {/* Side B (Clippy) */}
-        <div className="rounded-xl p-3" style={{ background: 'var(--bg2)', border: '1px solid var(--border)' }}>
-          <div className="text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--red)' }}>📎 Clippy</div>
-          <HPBar
-            hp={lastHP?.hpB ?? 0}
-            max={lastHP?.hpBmax ?? 1}
-            color="var(--red)"
+      )}
+
+      {/* Switch Selector */}
+      {uiMode === 'switch_select' && (
+        <div className="rounded-xl p-4" style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(232,196,106,0.1)' }}>
+          <SwitchSelector
+            options={switches}
+            onSelect={idx => submitAction({ type: 'switch', targetIndex: idx })}
+            onBack={() => setUiMode('action_menu')}
           />
         </div>
-      </div>
+      )}
 
-      {/* Log de combat */}
-      <div
-        ref={logRef}
-        className="rounded-xl p-4 space-y-1 overflow-y-auto"
-        style={{ background: 'var(--bg3)', maxHeight: '300px', border: '1px solid var(--border)' }}
-      >
-        {visibleLog.map((entry, i) => (
-          <LogLine key={i} entry={entry} />
-        ))}
-      </div>
+      {/* KO Replacement */}
+      {uiMode === 'ko_replace' && (
+        <div className="rounded-xl p-4" style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(239,68,68,0.2)' }}>
+          <SwitchSelector
+            options={state.getAvailableSwitches()}
+            onSelect={idx => submitReplacement(idx)}
+            forced
+          />
+        </div>
+      )}
 
-      {/* Contrôles */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => setAutoPlay(!autoPlay)}
-          className="px-4 py-2 rounded-lg text-sm font-bold"
-          style={{ background: 'var(--bg4)', color: 'var(--text2)' }}
-        >
-          {autoPlay ? '⏸ Pause' : '▶ Auto'}
-        </button>
-        {!autoPlay && !done && (
-          <button
-            onClick={() => setLogIndex(i => Math.min(i + 1, result.log.length - 1))}
-            className="px-4 py-2 rounded-lg text-sm font-bold"
-            style={{ background: 'var(--bg4)', color: 'var(--text)' }}
-          >
-            Suivant →
-          </button>
-        )}
-        {!autoPlay && (
-          <button
-            onClick={() => setLogIndex(result.log.length - 1)}
-            className="px-4 py-2 rounded-lg text-sm font-bold"
-            style={{ background: 'var(--bg4)', color: 'var(--text3)' }}
-          >
-            Fin ⏩
-          </button>
-        )}
-      </div>
-
-      {/* Résultat final */}
-      {done && (
-        <div className="text-center space-y-3 py-4">
-          <h2 className="font-display text-2xl" style={{ color: result.winner === 'A' ? 'var(--gold)' : 'var(--red)' }}>
-            {result.winner === 'A' ? '🏆 Victoire !' : result.winner === 'B' ? '💀 Défaite…' : '🤝 Égalité'}
+      {/* End Screen */}
+      {uiMode === 'ended' && (
+        <div className="text-center space-y-4 py-6 rounded-xl"
+          style={{ background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(232,196,106,0.2)' }}>
+          <h2 className="font-display text-3xl"
+            style={{ color: state.winner === 'A' ? 'var(--gold)' : '#ef4444' }}>
+            {state.winner === 'A' ? 'Victoire !' : state.winner === 'B' ? 'Défaite…' : 'Égalité'}
           </h2>
           <p className="text-sm" style={{ color: 'var(--text2)' }}>
-            {result.turns} tours — {result.aliveA} survivants vs {result.aliveB}
+            {state.turn} tours — {state.teamA.filter(m => m.alive()).length} survivants
+            vs {state.teamB.filter(m => m.alive()).length}
           </p>
           <button
             onClick={onFinish}
-            className="px-6 py-2 rounded-xl font-display"
+            className="px-8 py-3 rounded-xl font-display text-lg transition-all"
             style={{ background: 'var(--gold)', color: '#000' }}
           >
             Retour au menu
           </button>
         </div>
       )}
-    </div>
-  );
-}
-
-function HPBar({ hp, max, color }: { hp: number; max: number; color: string }) {
-  const pct = Math.max(0, Math.min(100, (hp / max) * 100));
-  return (
-    <div>
-      <div className="flex justify-between text-xs mb-1">
-        <span style={{ color: 'var(--text2)' }}>PV</span>
-        <span style={{ color }}>{Math.max(0, hp)}/{max}</span>
-      </div>
-      <div className="h-3 rounded-full" style={{ background: 'var(--bg4)' }}>
-        <div
-          className="h-full rounded-full transition-all duration-500"
-          style={{ width: `${pct}%`, background: pct > 50 ? color : pct > 20 ? 'var(--orange)' : 'var(--red)' }}
-        />
-      </div>
-    </div>
-  );
-}
-
-function LogLine({ entry }: { entry: BattleLogEntry }) {
-  let style: React.CSSProperties = { color: 'var(--text2)' };
-  if (entry.action === 'faint') style = { color: 'var(--red)', fontWeight: 'bold' };
-  else if (entry.action === 'switch') style = { color: 'var(--blue)' };
-  else if (entry.detail.includes('Super efficace')) style = { color: 'var(--gold)' };
-  else if (entry.detail.includes('Climax')) style = { color: 'var(--gold)', fontWeight: 'bold' };
-
-  if (entry.action === 'info' && entry.detail.startsWith('Tour ')) {
-    return <div className="text-[10px] mt-1 mb-0.5" style={{ color: 'var(--text3)' }}>— Tour {entry.turn} —</div>;
-  }
-
-  return (
-    <div className="text-xs" style={style}>
-      {entry.side === 'B' && <span>📎 </span>}
-      {entry.detail}
     </div>
   );
 }

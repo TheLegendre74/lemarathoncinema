@@ -129,7 +129,7 @@ export class Mon {
 
 // ── Helpers ──
 
-function updateMega(mon: Mon, field: Field): void {
+export function updateMega(mon: Mon, field: Field): void {
   if (!mon.megaed || !mon.mega) { mon.megaMult = 1.0; return; }
   const [aff, , strong, def] = mon.mega;
   if (aff === 'trickroom') {
@@ -139,14 +139,14 @@ function updateMega(mon: Mon, field: Field): void {
   }
 }
 
-function effSpeed(mon: Mon, field: Field): number {
+export function effSpeed(mon: Mon, field: Field): number {
   let sp = mon.stat('Ryt');
   const wmap = ABILITY_WEATHER[mon.ability];
   if (wmap && field.weather === wmap) sp *= 2;
   return sp;
 }
 
-function newSide(): Side {
+export function newSide(): Side {
   return {
     rocks: 0, spikes: 0, tspikes: 0, sticky: 0,
     reflect: 0, lightscreen: 0,
@@ -216,7 +216,7 @@ function damage(
 
 // ── Status ──
 
-function applyStatus(mon: Mon, st: string): boolean {
+export function applyStatus(mon: Mon, st: string): boolean {
   if (mon.status) return false;
   if (mon.pcat === 'status_immune') return false;
   if (st === 'confusion') {
@@ -237,7 +237,7 @@ function applyStatus(mon: Mon, st: string): boolean {
 
 // ── Entry ──
 
-function applyEntryPassive(mon: Mon, mySide: Side, foe: Mon | null, field: Field): void {
+export function applyEntryPassive(mon: Mon, mySide: Side, foe: Mon | null, field: Field): void {
   if (mon.entryDone) return;
   mon.entryDone = true;
   const cat = mon.pcat;
@@ -266,7 +266,7 @@ function applyEntryPassive(mon: Mon, mySide: Side, foe: Mon | null, field: Field
   }
 }
 
-function applyTurnPassive(mon: Mon): void {
+export function applyTurnPassive(mon: Mon): void {
   if (!mon.alive()) return;
   if (mon.pcat === 'per_turn_boost') {
     const boosts = (mon.pp as Record<string, unknown>).boosts as [string, number][] | undefined;
@@ -290,7 +290,7 @@ function applyTurnPassive(mon: Mon): void {
   }
 }
 
-function switchIn(mon: Mon, mySide: Side, foe: Mon | null, field: Field, log: BattleLogEntry[]): void {
+export function switchIn(mon: Mon, mySide: Side, foe: Mon | null, field: Field, log: BattleLogEntry[]): void {
   if (mySide.rocks) mon.hp -= Math.floor(mon.maxhp / 8);
   if (mySide.spikes) {
     const div = mySide.spikes === 1 ? 16 : mySide.spikes === 2 ? 12 : 8;
@@ -341,7 +341,7 @@ function damageExpect(att: Mon, dfn: Mon, mv: MoveEngine, field: Field, sideDef:
 
 const NOSCR: Side = { rocks: 0, spikes: 0, tspikes: 0, sticky: 0, reflect: 0, lightscreen: 0, monset: new Set(), monheal: false, underset: new Set() };
 
-function bestOff(att: Mon, dfn: Mon, field: Field, sideDef: Side): [MoveEngine | null, number, number] {
+export function bestOff(att: Mon, dfn: Mon, field: Field, sideDef: Side): [MoveEngine | null, number, number] {
   let bm: MoveEngine | null = null;
   let bacc = 0;
   let braw = 0;
@@ -368,7 +368,7 @@ function entryHaz(side: Side): number {
   return h;
 }
 
-function bestSwitch(team: Mon[], idx: number, dfn: Mon, field: Field, mySide: Side): [number | null, number] {
+export function bestSwitch(team: Mon[], idx: number, dfn: Mon, field: Field, mySide: Side): [number | null, number] {
   const haz = entryHaz(mySide);
   let best: number | null = null;
   let bs = -1e9;
@@ -473,7 +473,7 @@ export function chooseAI(
 
 // ── Run Move ──
 
-function runMove(
+export function runMove(
   att: Mon, dfn: Mon, mv: MoveEngine,
   mySide: Side, foeSide: Side, field: Field, log: BattleLogEntry[], turn: number, side: 'A' | 'B',
 ): void {
@@ -592,7 +592,7 @@ function runMove(
 
 // ── End Turn ──
 
-function endTurn(mons: [Mon, Mon], sides: [Side, Side], field: Field): void {
+export function endTurn(mons: [Mon, Mon], sides: [Side, Side], field: Field): void {
   const w = field.weather;
   for (let i = 0; i < 2; i++) {
     const m = mons[i];

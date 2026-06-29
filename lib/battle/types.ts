@@ -162,3 +162,36 @@ export interface TeamSelection {
   films: number[];
   climaxCarrier: number | null;
 }
+
+// ── Combat interactif (machine à états) ──
+
+export type BattlePhase = 'player_choice' | 'animating' | 'ko_replace' | 'ended';
+
+export interface MonSnapshot {
+  num: number;
+  name: string;
+  hp: number;
+  maxhp: number;
+  types: string[];
+  status: string | null;
+}
+
+export interface BattleSnapshot {
+  activeA: MonSnapshot | null;
+  activeB: MonSnapshot | null;
+  weather: WeatherType;
+  tr: number;
+  teamA: { num: number; name: string; hp: number; maxhp: number; alive: boolean; status: string | null }[];
+  teamB: { num: number; name: string; hp: number; maxhp: number; alive: boolean; status: string | null }[];
+}
+
+export interface BattleEvent {
+  message: string;
+  snapshot: BattleSnapshot;
+  isKO?: 'A' | 'B';
+}
+
+export type PlayerAction =
+  | { type: 'move'; moveIndex: number; climax?: boolean }
+  | { type: 'switch'; targetIndex: number }
+  | { type: 'forfeit' };

@@ -1,26 +1,26 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { loadCards, loadSaison, loadClippyTeams, getClimaxMap } from '@/lib/battle/data';
 import { getClippyTeam, buildClippyMon, buildPlayerMon } from '@/lib/battle/clippy';
-import { battle } from '@/lib/battle/engine';
+import { BattleState } from '@/lib/battle/battle-state';
 import type { MonTuple } from '@/lib/battle/engine';
 import BattleUI from '@/components/battle/BattleUI';
-import type { CardData, ClimaxData, ClippyTeams, Difficulty, BattleResult } from '@/lib/battle/types';
+import type { CardData, ClimaxData, ClippyTeams, Difficulty } from '@/lib/battle/types';
 
 export default function FightPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const difficulty = (searchParams.get('difficulty') ?? 'moyen') as Difficulty;
   const seed = parseInt(searchParams.get('seed') ?? '0');
-  const picked = (searchParams.get('picked') ?? '').split(',').map(Number);
-  const teamNums = (searchParams.get('team') ?? '').split(',').map(Number);
+  const picked = (searchParams.get('picked') ?? '').split(',').map(Number).filter(Boolean);
+  const teamNums = (searchParams.get('team') ?? '').split(',').map(Number).filter(Boolean);
   const climaxNum = searchParams.get('climax') ? parseInt(searchParams.get('climax')!) : null;
 
   const [cards, setCards] = useState<Record<number, CardData> | null>(null);
   const [saison, setSaison] = useState<ClimaxData[] | null>(null);
   const [clippyTeams, setClippyTeams] = useState<ClippyTeams | null>(null);
-  const [result, setResult] = useState<BattleResult | null>(null);
+  const [battleState, setBattleState] = useState<BattleState | null>(null);
 
   useEffect(() => {
     Promise.all([loadCards(), loadSaison(), loadClippyTeams()]).then(([c, s, t]) => {
@@ -29,47 +29,38 @@ export default function FightPage() {
   }, []);
 
   useEffect(() => {
-    if (!cards || !saison || !clippyTeams) return;
-    if (result) return;
+    if (!cards || !saison || !clippyTeams || battleState) return;
 
     const climaxMap = getClimaxMap(saison);
     const clippy = getClippyTeam(clippyTeams, difficulty, seed);
 
-    // Build player team (picked 4)
     const teamA: MonTuple[] = picked.map(num =>
       buildPlayerMon(num, cards, climaxMap, num === climaxNum)
     );
 
-    // Build Clippy team (pick best 4 from 6 for now — or all 6 if engine supports)
     const teamB: MonTuple[] = clippy.films.slice(0, picked.length).map(f =>
       buildClippyMon(f, cards, difficulty)
     );
 
-    const battleResult = battle(teamA, teamB, cards);
-    setResult(battleResult);
-  }, [cards, saison, clippyTeams, result, picked, climaxNum, difficulty, seed]);
+    const state = new BattleState(teamA, teamB, cards, difficulty);
+    setBattleState(state);
+  }, [cards, saison, clippyTeams]);
 
-  if (!result) {
+  if (!battleState) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div style={{ color: 'var(--text2)' }}>Simulation du combat…</div>
+        <div className="text-center space-y-2">
+          <div className="text-2xl animate-pulse">🎬</div>
+          <div style={{ color: 'var(--text2)' }}>Préparation du combat…</div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen p-6 max-w-3xl mx-auto">
-      <div className="text-center mb-4">
-        <h1 className="font-display text-2xl" style={{ color: 'var(--gold)' }}>
-          ⚔️ Combat !
-        </h1>
-      </div>
-
+    <div className="min-h-screen p-4">
       <BattleUI
-        result={result}
-        teamA={picked}
-        teamB={cards ? Object.keys(cards).map(Number).slice(0, picked.length) : []}
-        cards={cards!}
+        state={battleState}
         onFinish={() => router.push('/labo/battle')}
       />
     </div>

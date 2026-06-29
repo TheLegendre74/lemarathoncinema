@@ -94,6 +94,17 @@ export default function BattleLobbyPage() {
       >
         Construire mon équipe →
       </button>
+
+      {/* Lien simulateur */}
+      <div className="mt-4 text-center">
+        <button
+          onClick={() => router.push('/labo/battle/simulator')}
+          className="text-xs px-4 py-2 rounded-lg transition-all"
+          style={{ background: 'var(--bg3)', color: 'var(--text3)', border: '1px solid var(--border)' }}
+        >
+          Simulateur IA vs IA (équilibrage)
+        </button>
+      </div>
     </div>
   );
 }
