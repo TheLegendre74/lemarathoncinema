@@ -1317,8 +1317,9 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
         keyBuf.current = []
         return
       }
-      // "cinemon" → Cinémon battle (P4)
-      if (buf.slice(-7).join('').toLowerCase() === 'cinemon') {
+      // "cinemon" / "cinémon" → Cinémon battle (P4)
+      const cin7 = buf.slice(-7).join('').toLowerCase()
+      if (cin7 === 'cinemon' || cin7 === 'cinémon') {
         keyBuf.current = []
         window.location.href = '/labo/battle'
         return
