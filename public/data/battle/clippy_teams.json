@@ -1,0 +1,346 @@
+{
+  "HO": {
+    "meta": "Hyper-offense : frappe vite et fort, priorité.",
+    "veut": "agressif",
+    "films": [
+      {
+        "num": 88,
+        "name": "La La Land",
+        "types": [
+          "Romance",
+          "Comédie"
+        ],
+        "rarity": "ÉPIQUE"
+      },
+      {
+        "num": 266,
+        "name": "Inglourious Basterds",
+        "types": [
+          "Guerre",
+          "Drame"
+        ],
+        "rarity": "LÉGENDAIRE",
+        "climax": {
+          "affinite": "sand",
+          "stats": [
+            "Sce",
+            "Ryt"
+          ],
+          "fort": 1.2,
+          "defaut": 1.08,
+          "note": "forme forte sous climat, défaut sinon, -8% malus base"
+        }
+      },
+      {
+        "num": 358,
+        "name": "Kung Fu Panda",
+        "types": [
+          "Action",
+          "Comédie"
+        ],
+        "rarity": "ÉPIQUE"
+      },
+      {
+        "num": 40,
+        "name": "Full Metal Jacket",
+        "types": [
+          "Guerre"
+        ],
+        "rarity": "LÉGENDAIRE"
+      },
+      {
+        "num": 298,
+        "name": "The Exorcist",
+        "types": [
+          "Horreur",
+          "Drame"
+        ],
+        "rarity": "LÉGENDAIRE"
+      },
+      {
+        "num": 19,
+        "name": "Le Vilain",
+        "types": [
+          "Comédie",
+          "Horreur"
+        ],
+        "rarity": "DUPONTEL"
+      }
+    ]
+  },
+  "Stall": {
+    "meta": "Murs + soin + pièges : usure.",
+    "veut": "rain",
+    "films": [
+      {
+        "num": 343,
+        "name": "Le Géant de fer",
+        "types": [
+          "Animation",
+          "Science-Fiction"
+        ],
+        "rarity": "ÉPIQUE",
+        "climax": {
+          "affinite": "sun",
+          "stats": [
+            "Sce",
+            "Ryt"
+          ],
+          "fort": 1.2,
+          "defaut": 1.08,
+          "note": "forme forte sous climat, défaut sinon, -8% malus base"
+        }
+      },
+      {
+        "num": 248,
+        "name": "Le Dictateur",
+        "types": [
+          "Comédie",
+          "Drame"
+        ],
+        "rarity": "ÉPIQUE"
+      },
+      {
+        "num": 362,
+        "name": "Les Nouveaux Héros",
+        "types": [
+          "Animation",
+          "Action"
+        ],
+        "rarity": "ÉPIQUE"
+      },
+      {
+        "num": 417,
+        "name": "Harry Potter et les Reliques de la Mort - 2ème partie",
+        "types": [
+          "Fantastique",
+          "Aventure"
+        ],
+        "rarity": "LÉGENDAIRE"
+      },
+      {
+        "num": 99,
+        "name": "The Revenant",
+        "types": [
+          "Aventure",
+          "Drame"
+        ],
+        "rarity": "ÉPIQUE"
+      },
+      {
+        "num": 450,
+        "name": "Le Château dans le ciel",
+        "types": [
+          "Aventure",
+          "Fantastique"
+        ],
+        "rarity": "LÉGENDAIRE"
+      }
+    ]
+  },
+  "Distorsion": {
+    "meta": "Trick Room : inverse la vitesse.",
+    "veut": "trickroom",
+    "films": [
+      {
+        "num": 37,
+        "name": "Amadeus",
+        "types": [
+          "Drame"
+        ],
+        "rarity": "ÉPIQUE"
+      },
+      {
+        "num": 199,
+        "name": "Aftersun",
+        "types": [
+          "Drame"
+        ],
+        "rarity": "ÉPIQUE"
+      },
+      {
+        "num": 24,
+        "name": "Rashômon",
+        "types": [
+          "Drame",
+          "Crime"
+        ],
+        "rarity": "ÉPIQUE"
+      },
+      {
+        "num": 33,
+        "name": "Chinatown",
+        "types": [
+          "Crime",
+          "Drame"
+        ],
+        "rarity": "ÉPIQUE"
+      },
+      {
+        "num": 87,
+        "name": "Spotlight",
+        "types": [
+          "Drame"
+        ],
+        "rarity": "ÉPIQUE",
+        "climax": {
+          "affinite": "snow",
+          "stats": [
+            "Sce",
+            "Ryt"
+          ],
+          "fort": 1.2,
+          "defaut": 1.08,
+          "note": "forme forte sous climat, défaut sinon, -8% malus base"
+        }
+      },
+      {
+        "num": 159,
+        "name": "Le Mépris",
+        "types": [
+          "Drame"
+        ],
+        "rarity": "ÉPIQUE"
+      }
+    ]
+  },
+  "Balance": {
+    "meta": "Polyvalent bulky + un breaker.",
+    "veut": "flexible",
+    "films": [
+      {
+        "num": 147,
+        "name": "Sound of Metal",
+        "types": [
+          "Drame"
+        ],
+        "rarity": "ÉPIQUE",
+        "climax": {
+          "affinite": "snow",
+          "stats": [
+            "Sce",
+            "Ryt"
+          ],
+          "fort": 1.2,
+          "defaut": 1.08,
+          "note": "forme forte sous climat, défaut sinon, -8% malus base"
+        }
+      },
+      {
+        "num": 141,
+        "name": "Once Upon a Time in Hollywood",
+        "types": [
+          "Comédie",
+          "Drame"
+        ],
+        "rarity": "ÉPIQUE"
+      },
+      {
+        "num": 469,
+        "name": "Midnight Express",
+        "types": [
+          "Drame",
+          "Thriller"
+        ],
+        "rarity": "ÉPIQUE"
+      },
+      {
+        "num": 29,
+        "name": "2001 : L'Odyssée de l'espace",
+        "types": [
+          "Science-Fiction",
+          "Drame"
+        ],
+        "rarity": "LÉGENDAIRE"
+      },
+      {
+        "num": 78,
+        "name": "Into the Wild",
+        "types": [
+          "Aventure",
+          "Drame"
+        ],
+        "rarity": "ÉPIQUE"
+      },
+      {
+        "num": 175,
+        "name": "Green Book",
+        "types": [
+          "Drame",
+          "Comédie"
+        ],
+        "rarity": "ÉPIQUE"
+      }
+    ]
+  },
+  "Neige": {
+    "meta": "Contrôle climatique + Va-tout sweep.",
+    "veut": "snow",
+    "films": [
+      {
+        "num": 328,
+        "name": "V pour Vendetta",
+        "types": [
+          "Action",
+          "Science-Fiction"
+        ],
+        "rarity": "ÉPIQUE"
+      },
+      {
+        "num": 93,
+        "name": "Chainsaw Man – The Reze Arc",
+        "types": [
+          "Action",
+          "Romance"
+        ],
+        "rarity": "LÉGENDAIRE",
+        "climax": {
+          "affinite": "neutre",
+          "stats": [
+            "Spec",
+            "Ryt"
+          ],
+          "fort": 1.2,
+          "defaut": 1.08,
+          "note": "plat +10% sans malus"
+        }
+      },
+      {
+        "num": 185,
+        "name": "Rush",
+        "types": [
+          "Action",
+          "Drame"
+        ],
+        "rarity": "ÉPIQUE"
+      },
+      {
+        "num": 59,
+        "name": "Matrix",
+        "types": [
+          "Science-Fiction",
+          "Action"
+        ],
+        "rarity": "LÉGENDAIRE"
+      },
+      {
+        "num": 48,
+        "name": "Le Seigneur des anneaux : La Communauté de l'anneau",
+        "types": [
+          "Fantastique",
+          "Aventure"
+        ],
+        "rarity": "LÉGENDAIRE"
+      },
+      {
+        "num": 318,
+        "name": "Bienvenue à Zombieland",
+        "types": [
+          "Comédie",
+          "Horreur"
+        ],
+        "rarity": "ÉPIQUE"
+      }
+    ]
+  }
+}

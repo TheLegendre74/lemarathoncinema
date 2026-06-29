@@ -1,0 +1,902 @@
+[
+{
+"num": 410,
+"name": "Le Seigneur des anneaux : Le Retour du roi",
+"genre": "Fantastique/Aventure",
+"rarity": "LÉGENDAIRE",
+"role": "mur",
+"affinite": "snow",
+"climax": "Tec+Prof"
+},
+{
+"num": 11,
+"name": "Les Évadés",
+"genre": "Drame",
+"rarity": "LÉGENDAIRE",
+"role": "mur",
+"affinite": "snow",
+"climax": "Tec+Prof"
+},
+{
+"num": 409,
+"name": "Le Seigneur des anneaux : Les Deux Tours",
+"genre": "Fantastique/Aventure",
+"rarity": "LÉGENDAIRE",
+"role": "mur",
+"affinite": "snow",
+"climax": "Tec+Prof"
+},
+{
+"num": 306,
+"name": "Monty Python : Sacré Graal !",
+"genre": "Comédie/Aventure",
+"rarity": "LÉGENDAIRE",
+"role": "sweeper",
+"affinite": "sun",
+"climax": "Sce+Ryt"
+},
+{
+"num": 10,
+"name": "La Liste de Schindler",
+"genre": "Drame/Guerre",
+"rarity": "LÉGENDAIRE",
+"role": "mur",
+"affinite": "snow",
+"climax": "Tec+Prof"
+},
+{
+"num": 53,
+"name": "Toy Story",
+"genre": "Animation/Aventure",
+"rarity": "LÉGENDAIRE",
+"role": "mur",
+"affinite": "sun",
+"climax": "Tec+Prof"
+},
+{
+"num": 2,
+"name": "Le Parrain",
+"genre": "Crime/Drame",
+"rarity": "LÉGENDAIRE",
+"role": "mur",
+"affinite": "rain",
+"climax": "Tec+Prof"
+},
+{
+"num": 48,
+"name": "Le Seigneur des anneaux : La Communauté de l'anneau",
+"genre": "Fantastique/Aventure",
+"rarity": "LÉGENDAIRE",
+"role": "mur",
+"affinite": "snow",
+"climax": "Tec+Prof"
+},
+{
+"num": 56,
+"name": "Princesse Mononoké",
+"genre": "Animation/Fantastique",
+"rarity": "LÉGENDAIRE",
+"role": "mur",
+"affinite": "sun",
+"climax": "Tec+Prof"
+},
+{
+"num": 31,
+"name": "Le Parrain II",
+"genre": "Crime/Drame",
+"rarity": "LÉGENDAIRE",
+"role": "mur",
+"affinite": "rain",
+"climax": "Tec+Prof"
+},
+{
+"num": 59,
+"name": "Matrix",
+"genre": "Science-Fiction/Action",
+"rarity": "LÉGENDAIRE",
+"role": "sweeper",
+"affinite": "snow",
+"climax": "Spec+Ryt"
+},
+{
+"num": 9,
+"name": "Titanic",
+"genre": "Romance/Drame",
+"rarity": "LÉGENDAIRE",
+"role": "sweeper",
+"affinite": "sun",
+"climax": "Spec+Ryt"
+},
+{
+"num": 14,
+"name": "The Dark Knight",
+"genre": "Action/Crime",
+"rarity": "LÉGENDAIRE",
+"role": "mur",
+"affinite": "neutre",
+"climax": "Tec+Prof"
+},
+{
+"num": 49,
+"name": "Pulp Fiction",
+"genre": "Crime/Thriller",
+"rarity": "LÉGENDAIRE",
+"role": "sweeper",
+"affinite": "rain",
+"climax": "Sce+Ryt"
+},
+{
+"num": 372,
+"name": "American History X",
+"genre": "Drame/Crime",
+"rarity": "LÉGENDAIRE",
+"role": "mur",
+"affinite": "snow",
+"climax": "Tec+Prof"
+},
+{
+"num": 113,
+"name": "Le Roi Lion",
+"genre": "Animation/Drame",
+"rarity": "LÉGENDAIRE",
+"role": "mur",
+"affinite": "sun",
+"climax": "Tec+Prof"
+},
+{
+"num": 93,
+"name": "Chainsaw Man – The Reze Arc",
+"genre": "Action/Romance",
+"rarity": "LÉGENDAIRE",
+"role": "sweeper",
+"affinite": "neutre",
+"climax": "Spec+Ryt"
+},
+{
+"num": 12,
+"name": "Inception",
+"genre": "Science-Fiction/Action",
+"rarity": "LÉGENDAIRE",
+"role": "sweeper",
+"affinite": "snow",
+"climax": "Sce+Ryt"
+},
+{
+"num": 43,
+"name": "Goodfellas",
+"genre": "Crime/Drame",
+"rarity": "LÉGENDAIRE",
+"role": "mur",
+"affinite": "rain",
+"climax": "Tec+Prof"
+},
+{
+"num": 114,
+"name": "Le Voyage de Chihiro",
+"genre": "Animation/Fantastique",
+"rarity": "LÉGENDAIRE",
+"role": "mur",
+"affinite": "sun",
+"climax": "Tec+Prof"
+},
+{
+"num": 386,
+"name": "Le Bon, la Brute et le Truand",
+"genre": "Western",
+"rarity": "LÉGENDAIRE",
+"role": "mur",
+"affinite": "sand",
+"climax": "Tec+Prof"
+},
+{
+"num": 352,
+"name": "Spider-Man : Across the Spider-Verse",
+"genre": "Action/Science-Fiction",
+"rarity": "LÉGENDAIRE",
+"role": "sweeper",
+"affinite": "neutre",
+"climax": "Sce+Ryt"
+},
+{
+"num": 45,
+"name": "Le Silence des agneaux",
+"genre": "Thriller/Horreur",
+"rarity": "LÉGENDAIRE",
+"role": "mur",
+"affinite": "rain",
+"climax": "Tec+Prof"
+},
+{
+"num": 60,
+"name": "Fight Club",
+"genre": "Drame/Thriller",
+"rarity": "LÉGENDAIRE",
+"role": "sweeper",
+"affinite": "snow",
+"climax": "Sce+Ryt"
+},
+{
+"num": 116,
+"name": "Akira",
+"genre": "Animation/Science-Fiction",
+"rarity": "LÉGENDAIRE",
+"role": "sweeper",
+"affinite": "sun",
+"climax": "Spec+Ryt"
+},
+{
+"num": 296,
+"name": "Avengers : Infinity War",
+"genre": "Action/Science-Fiction",
+"rarity": "ÉPIQUE",
+"role": "polyvalent",
+"affinite": "neutre",
+"climax": "Spec+Tec"
+},
+{
+"num": 354,
+"name": "Toy Story 3",
+"genre": "Animation/Aventure",
+"rarity": "ÉPIQUE",
+"role": "mur",
+"affinite": "sun",
+"climax": "Tec+Prof"
+},
+{
+"num": 65,
+"name": "La Cité de Dieu",
+"genre": "Crime/Drame",
+"rarity": "ÉPIQUE",
+"role": "sweeper",
+"affinite": "rain",
+"climax": "Sce+Ryt"
+},
+{
+"num": 73,
+"name": "Le Prestige",
+"genre": "Drame/Science-Fiction",
+"rarity": "ÉPIQUE",
+"role": "sweeper",
+"affinite": "snow",
+"climax": "Sce+Ryt"
+},
+{
+"num": 89,
+"name": "1917",
+"genre": "Guerre",
+"rarity": "ÉPIQUE",
+"role": "sweeper",
+"affinite": "sand",
+"climax": "Spec+Ryt"
+},
+{
+"num": 75,
+"name": "Les Infiltrés",
+"genre": "Crime/Thriller",
+"rarity": "ÉPIQUE",
+"role": "sweeper",
+"affinite": "rain",
+"climax": "Sce+Ryt"
+},
+{
+"num": 82,
+"name": "Intouchables",
+"genre": "Comédie/Drame",
+"rarity": "ÉPIQUE",
+"role": "sweeper",
+"affinite": "sun",
+"climax": "Sce+Ryt"
+},
+{
+"num": 149,
+"name": "Dune: Deuxième Partie",
+"genre": "Science-Fiction/Aventure",
+"rarity": "ÉPIQUE",
+"role": "sweeper",
+"affinite": "snow",
+"climax": "Spec+Ryt"
+},
+{
+"num": 328,
+"name": "V pour Vendetta",
+"genre": "Action/Science-Fiction",
+"rarity": "ÉPIQUE",
+"role": "polyvalent",
+"affinite": "neutre",
+"climax": "Sce+Prof"
+},
+{
+"num": 99,
+"name": "The Revenant",
+"genre": "Aventure/Drame",
+"rarity": "ÉPIQUE",
+"role": "polyvalent",
+"affinite": "sand",
+"climax": "Ryt+Tec"
+},
+{
+"num": 365,
+"name": "RoboCop",
+"genre": "Action/Science-Fiction",
+"rarity": "ÉPIQUE",
+"role": "sweeper",
+"affinite": "neutre",
+"climax": "Spec+Ryt"
+},
+{
+"num": 68,
+"name": "Oldboy",
+"genre": "Thriller/Action",
+"rarity": "ÉPIQUE",
+"role": "sweeper",
+"affinite": "rain",
+"climax": "Sce+Ryt"
+},
+{
+"num": 110,
+"name": "Wall-E",
+"genre": "Animation/Science-Fiction",
+"rarity": "ÉPIQUE",
+"role": "polyvalent",
+"affinite": "sun",
+"climax": "Prof+Tec"
+},
+{
+"num": 142,
+"name": "Le Pianiste",
+"genre": "Drame/Guerre",
+"rarity": "ÉPIQUE",
+"role": "bruiser",
+"affinite": "snow",
+"climax": "Sce+Prof"
+},
+{
+"num": 52,
+"name": "Braveheart",
+"genre": "Guerre/Drame",
+"rarity": "ÉPIQUE",
+"role": "sweeper",
+"affinite": "sand",
+"climax": "Spec+Ryt"
+},
+{
+"num": 373,
+"name": "Deadpool",
+"genre": "Action/Comédie",
+"rarity": "ÉPIQUE",
+"role": "sweeper",
+"affinite": "neutre",
+"climax": "Spec+Ryt"
+},
+{
+"num": 46,
+"name": "Reservoir Dogs",
+"genre": "Crime/Thriller",
+"rarity": "ÉPIQUE",
+"role": "sweeper",
+"affinite": "rain",
+"climax": "Sce+Ryt"
+},
+{
+"num": 81,
+"name": "Incendies",
+"genre": "Drame/Thriller",
+"rarity": "ÉPIQUE",
+"role": "sweeper",
+"affinite": "snow",
+"climax": "Sce+Ryt"
+},
+{
+"num": 112,
+"name": "Coco",
+"genre": "Animation/Aventure",
+"rarity": "ÉPIQUE",
+"role": "polyvalent",
+"affinite": "sun",
+"climax": "Prof+Sce"
+},
+{
+"num": 85,
+"name": "Tu ne tueras point",
+"genre": "Guerre/Drame",
+"rarity": "ÉPIQUE",
+"role": "bruiser",
+"affinite": "sand",
+"climax": "Sce+Prof"
+},
+{
+"num": 129,
+"name": "Avengers: Endgame",
+"genre": "Action/Aventure",
+"rarity": "ÉPIQUE",
+"role": "sweeper",
+"affinite": "neutre",
+"climax": "Spec+Ryt"
+},
+{
+"num": 77,
+"name": "No Country for Old Men",
+"genre": "Thriller/Crime",
+"rarity": "ÉPIQUE",
+"role": "sweeper",
+"affinite": "rain",
+"climax": "Sce+Ryt"
+},
+{
+"num": 115,
+"name": "Your Name",
+"genre": "Romance/Fantastique",
+"rarity": "ÉPIQUE",
+"role": "polyvalent",
+"affinite": "sun",
+"climax": "Sce+Prof"
+},
+{
+"num": 413,
+"name": "Harry Potter et le Prisonnier d'Azkaban",
+"genre": "Fantastique/Aventure",
+"rarity": "ÉPIQUE",
+"role": "sweeper",
+"affinite": "snow",
+"climax": "Sce+Ryt"
+},
+{
+"num": 136,
+"name": "Dunkerque",
+"genre": "Guerre/Thriller",
+"rarity": "ÉPIQUE",
+"role": "polyvalent",
+"affinite": "sand",
+"climax": "Ryt+Spec"
+},
+{
+"num": 316,
+"name": "Un jour sans fin",
+"genre": "Comédie/Fantastique",
+"rarity": "ÉPIQUE",
+"role": "bruiser",
+"affinite": "sun",
+"climax": "Sce+Prof"
+},
+{
+"num": 51,
+"name": "Heat",
+"genre": "Crime/Thriller",
+"rarity": "ÉPIQUE",
+"role": "sweeper",
+"affinite": "rain",
+"climax": "Spec+Ryt"
+},
+{
+"num": 76,
+"name": "There Will Be Blood",
+"genre": "Drame",
+"rarity": "ÉPIQUE",
+"role": "bruiser",
+"affinite": "snow",
+"climax": "Sce+Prof"
+},
+{
+"num": 130,
+"name": "Spider-Man: No Way Home",
+"genre": "Action/Aventure",
+"rarity": "ÉPIQUE",
+"role": "polyvalent",
+"affinite": "neutre",
+"climax": "Ryt+Spec"
+},
+{
+"num": 140,
+"name": "The Hateful Eight",
+"genre": "Western/Crime",
+"rarity": "ÉPIQUE",
+"role": "bruiser",
+"affinite": "sand",
+"climax": "Sce+Prof"
+},
+{
+"num": 326,
+"name": "Le Conte de la princesse Kaguya",
+"genre": "Animation/Drame",
+"rarity": "ÉPIQUE",
+"role": "polyvalent",
+"affinite": "sun",
+"climax": "Prof+Sce"
+},
+{
+"num": 86,
+"name": "Gone Girl",
+"genre": "Thriller/Crime",
+"rarity": "ÉPIQUE",
+"role": "sweeper",
+"affinite": "rain",
+"climax": "Sce+Ryt"
+},
+{
+"num": 91,
+"name": "Dune",
+"genre": "Science-Fiction/Aventure",
+"rarity": "ÉPIQUE",
+"role": "bruiser",
+"affinite": "snow",
+"climax": "Spec+Prof"
+},
+{
+"num": 132,
+"name": "Pirates des Caraïbes",
+"genre": "Action/Aventure",
+"rarity": "ÉPIQUE",
+"role": "sweeper",
+"affinite": "neutre",
+"climax": "Spec+Ryt"
+},
+{
+"num": 78,
+"name": "Into the Wild",
+"genre": "Aventure/Drame",
+"rarity": "ÉPIQUE",
+"role": "bruiser",
+"affinite": "sand",
+"climax": "Sce+Prof"
+},
+{
+"num": 331,
+"name": "Silent Voice",
+"genre": "Animation/Drame",
+"rarity": "ÉPIQUE",
+"role": "polyvalent",
+"affinite": "sun",
+"climax": "Prof+Sce"
+},
+{
+"num": 139,
+"name": "Casino",
+"genre": "Crime/Drame",
+"rarity": "ÉPIQUE",
+"role": "bruiser",
+"affinite": "rain",
+"climax": "Sce+Prof"
+},
+{
+"num": 107,
+"name": "The Truman Show",
+"genre": "Drame/Comédie",
+"rarity": "ÉPIQUE",
+"role": "bruiser",
+"affinite": "snow",
+"climax": "Sce+Prof"
+},
+{
+"num": 184,
+"name": "Ford v Ferrari",
+"genre": "Action/Drame",
+"rarity": "ÉPIQUE",
+"role": "polyvalent",
+"affinite": "neutre",
+"climax": "Spec+Ryt"
+},
+{
+"num": 131,
+"name": "Harry Potter à l'école des sorciers",
+"genre": "Aventure/Fantastique",
+"rarity": "ÉPIQUE",
+"role": "polyvalent",
+"affinite": "sand",
+"climax": "Ryt+Tec"
+},
+{
+"num": 339,
+"name": "Look Back",
+"genre": "Animation/Drame",
+"rarity": "ÉPIQUE",
+"role": "polyvalent",
+"affinite": "sun",
+"climax": "Sce+Prof"
+},
+{
+"num": 83,
+"name": "Prisoners",
+"genre": "Thriller/Crime",
+"rarity": "ÉPIQUE",
+"role": "sweeper",
+"affinite": "rain",
+"climax": "Sce+Ryt"
+},
+{
+"num": 179,
+"name": "Le Labyrinthe de Pan",
+"genre": "Fantastique/Drame",
+"rarity": "ÉPIQUE",
+"role": "bruiser",
+"affinite": "snow",
+"climax": "Sce+Prof"
+},
+{
+"num": 185,
+"name": "Rush",
+"genre": "Action/Drame",
+"rarity": "ÉPIQUE",
+"role": "polyvalent",
+"affinite": "neutre",
+"climax": "Spec+Ryt"
+},
+{
+"num": 257,
+"name": "Retour vers le futur III",
+"genre": "Aventure/Science-Fiction",
+"rarity": "ÉPIQUE",
+"role": "polyvalent",
+"affinite": "sand",
+"climax": "Sce+Ryt"
+},
+{
+"num": 28,
+"name": "L'Enfance d'Ivan",
+"genre": "Drame/Guerre",
+"rarity": "RARE",
+"role": "bruiser",
+"affinite": "snow",
+"climax": "Sce+Prof"
+},
+{
+"num": 26,
+"name": "À bout de souffle",
+"genre": "Crime/Drame",
+"rarity": "RARE",
+"role": "bruiser",
+"affinite": "rain",
+"climax": "Sce+Prof"
+},
+{
+"num": 155,
+"name": "Gladiator II",
+"genre": "Action/Drame",
+"rarity": "RARE",
+"role": "polyvalent",
+"affinite": "neutre",
+"climax": "Spec+Tec"
+},
+{
+"num": 350,
+"name": "Taxi",
+"genre": "Comédie/Action",
+"rarity": "RARE",
+"role": "polyvalent",
+"affinite": "sun",
+"climax": "Ryt+Spec"
+},
+{
+"num": 454,
+"name": "Noé",
+"genre": "Aventure/Drame",
+"rarity": "RARE",
+"role": "bruiser",
+"affinite": "sand",
+"climax": "Spec+Prof"
+},
+{
+"num": 32,
+"name": "Solaris",
+"genre": "Science-Fiction/Drame",
+"rarity": "RARE",
+"role": "bruiser",
+"affinite": "snow",
+"climax": "Sce+Prof"
+},
+{
+"num": 122,
+"name": "The Lighthouse",
+"genre": "Horreur/Drame",
+"rarity": "RARE",
+"role": "bruiser",
+"affinite": "rain",
+"climax": "Sce+Prof"
+},
+{
+"num": 240,
+"name": "Pacific Rim : Uprising",
+"genre": "Action/Science-Fiction",
+"rarity": "RARE",
+"role": "bruiser",
+"affinite": "neutre",
+"climax": "Spec+Prof"
+},
+{
+"num": 424,
+"name": "Horton",
+"genre": "Animation/Comédie",
+"rarity": "RARE",
+"role": "polyvalent",
+"affinite": "sun",
+"climax": "Spec+Ryt"
+},
+{
+"num": 380,
+"name": "Le Chat Potté",
+"genre": "Aventure/Comédie",
+"rarity": "RARE",
+"role": "polyvalent",
+"affinite": "sand",
+"climax": "Ryt+Spec"
+},
+{
+"num": 27,
+"name": "Cléo de 5 à 7",
+"genre": "Drame",
+"rarity": "RARE",
+"role": "bruiser",
+"affinite": "snow",
+"climax": "Sce+Prof"
+},
+{
+"num": 153,
+"name": "Nosferatu",
+"genre": "Horreur",
+"rarity": "RARE",
+"role": "bruiser",
+"affinite": "rain",
+"climax": "Spec+Prof"
+},
+{
+"num": 384,
+"name": "Godzilla",
+"genre": "Action/Science-Fiction",
+"rarity": "RARE",
+"role": "bruiser",
+"affinite": "neutre",
+"climax": "Spec+Prof"
+},
+{
+"num": 456,
+"name": "Les Rois de la glisse",
+"genre": "Animation/Comédie",
+"rarity": "RARE",
+"role": "polyvalent",
+"affinite": "sun",
+"climax": "Ryt+Spec"
+},
+{
+"num": 366,
+"name": "Le BGG : Le Bon Gros Géant",
+"genre": "Aventure/Fantastique",
+"rarity": "RARE",
+"role": "polyvalent",
+"affinite": "sand",
+"climax": "Tec+Spec"
+},
+{
+"num": 302,
+"name": "Insomnia",
+"genre": "Thriller/Crime",
+"rarity": "RARE",
+"role": "bruiser",
+"affinite": "rain",
+"climax": "Sce+Prof"
+},
+{
+"num": 395,
+"name": "Hunger Games : La Révolte - Partie 1",
+"genre": "Science-Fiction/Drame",
+"rarity": "RARE",
+"role": "polyvalent",
+"affinite": "snow",
+"climax": "Sce+Ryt"
+},
+{
+"num": 425,
+"name": "Le Roi Arthur : La Légende d'Excalibur",
+"genre": "Action/Fantastique",
+"rarity": "RARE",
+"role": "polyvalent",
+"affinite": "neutre",
+"climax": "Ryt+Spec"
+},
+{
+"num": 477,
+"name": "The Drama",
+"genre": "Comédie/Romance",
+"rarity": "RARE",
+"role": "polyvalent",
+"affinite": "sun",
+"climax": "Tec+Ryt"
+},
+{
+"num": 310,
+"name": "Croc-Blanc",
+"genre": "Aventure/Drame",
+"rarity": "RARE",
+"role": "polyvalent",
+"affinite": "sand",
+"climax": "Spec+Tec"
+},
+{
+"num": 320,
+"name": "L'Armée des Morts",
+"genre": "Horreur/Action",
+"rarity": "RARE",
+"role": "polyvalent",
+"affinite": "rain",
+"climax": "Spec+Ryt"
+},
+{
+"num": 403,
+"name": "Lucy",
+"genre": "Science-Fiction/Action",
+"rarity": "RARE",
+"role": "polyvalent",
+"affinite": "snow",
+"climax": "Spec+Ryt"
+},
+{
+"num": 426,
+"name": "Fast and Furious",
+"genre": "Action/Crime",
+"rarity": "RARE",
+"role": "polyvalent",
+"affinite": "neutre",
+"climax": "Spec+Ryt"
+},
+{
+"num": 481,
+"name": "Monster House",
+"genre": "Animation/Horreur",
+"rarity": "RARE",
+"role": "polyvalent",
+"affinite": "sun",
+"climax": "Spec+Tec"
+},
+{
+"num": 369,
+"name": "Arthur et les Minimoys",
+"genre": "Aventure/Fantastique",
+"rarity": "RARE",
+"role": "polyvalent",
+"affinite": "sand",
+"climax": "Ryt+Spec"
+},
+{
+"num": 21,
+"name": "Au revoir là-haut",
+"genre": "Drame/Crime",
+"rarity": "DUPONTEL",
+"role": "mur",
+"affinite": "snow",
+"climax": "Tec+Prof"
+},
+{
+"num": 22,
+"name": "Adieu les cons",
+"genre": "Comédie/Drame",
+"rarity": "DUPONTEL",
+"role": "mur",
+"affinite": "sun",
+"climax": "Tec+Prof"
+},
+{
+"num": 16,
+"name": "Bernie",
+"genre": "Comédie/Drame",
+"rarity": "DUPONTEL",
+"role": "mur",
+"affinite": "sun",
+"climax": "Tec+Prof"
+},
+{
+"num": 20,
+"name": "9 mois ferme",
+"genre": "Comédie/Crime",
+"rarity": "DUPONTEL",
+"role": "sweeper",
+"affinite": "sun",
+"climax": "Sce+Ryt"
+},
+{
+"num": 17,
+"name": "Le Créateur",
+"genre": "Comédie/Drame",
+"rarity": "DUPONTEL",
+"role": "sweeper",
+"affinite": "sun",
+"climax": "Sce+Ryt"
+}
+]

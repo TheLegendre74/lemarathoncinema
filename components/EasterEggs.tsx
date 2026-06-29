@@ -1014,6 +1014,7 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
     }
     else if (t.endsWith('gomu gomu no tipiak!')) { setShowTipiak(true) }
     else if (t.endsWith('boîte de pandore') || t.endsWith('boite de pandore') || t.endsWith('pandore')) { void discoverEgg('clippy').catch(() => {}); setShowPandora(true) }
+    else if (t.endsWith('cinemon') || t.endsWith('cinémon')) { window.location.href = '/labo/battle' }
     else if (t.endsWith('codex') && !isGuest) { discoverEgg('conway'); window.location.href = '/labo/life' }
     else { triggered = false }
     if (triggered) { setMobileVal(''); setShowMobileInput(false) }
@@ -1314,6 +1315,12 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
         void discoverEgg('clippy').catch(() => {})   // fire-and-forget : ne pas laisser remonter à React
         setShowPandora(true)
         keyBuf.current = []
+        return
+      }
+      // "cinemon" → Cinémon battle (P4)
+      if (buf.slice(-7).join('').toLowerCase() === 'cinemon') {
+        keyBuf.current = []
+        window.location.href = '/labo/battle'
         return
       }
       // "codex" → Life God Game
