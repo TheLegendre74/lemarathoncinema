@@ -255,6 +255,16 @@ export default function SimulationMode({ allCards }: Props) {
     a.click(); URL.revokeObjectURL(url)
   }
 
+  const downloadData = () => {
+    const raw = typeof window !== 'undefined' ? localStorage.getItem('cinemon_sim_state') : null
+    if (!raw) return
+    const blob = new Blob([raw], { type: 'application/json;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = `SIMU_DATA_${new Date().toISOString().slice(0, 10)}.json`
+    a.click(); URL.revokeObjectURL(url)
+  }
+
   return (
     <div style={{
       padding: 24, maxWidth: 800, margin: '0 auto',
@@ -290,6 +300,16 @@ export default function SimulationMode({ allCards }: Props) {
           }}
         >
           {running ? `Simulation en cours… ${progress}%` : 'Lancer la simulation'}
+        </button>
+
+        <button
+          onClick={downloadData}
+          style={{
+            padding: '8px 16px', background: '#1a3a5a',
+            color: '#8ab4f8', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12,
+          }}
+        >
+          Exporter données JSON
         </button>
 
         <button

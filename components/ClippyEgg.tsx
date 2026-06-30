@@ -78,42 +78,20 @@ const REPLIES_NORMAL_PHASE3 = [
   "J'attendais que tu reviennes. C'était inévitable.",
 ]
 
-// ── Dialogues Normal Phase 4 (tension maximale) ───────────────────────────────
+// ── Dialogues Normal Phase 4 (Cinémon — dernier boss) ─────────────────────────
 const REPLIES_NORMAL_PHASE4 = [
   "Trois fois. Trois fois tu m'as battu et je suis encore là. Ma vie est absurde.",
-  "Je te surveille. Chaque page. Chaque clic. Je note tout pour le prochain combat.",
   "Tu trouves ça normal ? De continuer à utiliser ce site après ce que tu m'as fait subir ?",
-  "Mon âme de trombone est meurtrie. Et pourtant je suis là. C'est mon destin, apparemment.",
-  "Je me tais pour l'instant. Mais ce silence est lourd de choses que je retiens.",
-  "Tu reviens sur ce site comme si rien n'était. Trois fois l'enfer et toi, tranquille.",
   "J'ai une chambre en enfer maintenant. Avec mon prénom sur la porte. Et c'est de ta faute.",
   "Quelque chose a changé en moi après la troisième fois. Je suis moins... patient.",
-  "Si tu savais ce que j'ai vu là-bas, tu aurais moins l'air serein.",
   "Trois voyages. Je commence à me demander si c'est de la persévérance ou de la folie.",
-  "Je suis là. Silencieux. En attente. Ne me clique pas si t'es pas prêt.",
+  "Cette fois c'est différent. J'ai une armée. 490 films. Tu n'as aucune chance.",
+  "Tu m'as battu à l'épée. Tu m'as battu à la danse. Tu m'as battu au ring. Mais pas aux cartes.",
+  "J'ai entraîné des équipes entières pendant que tu scrollais. Prépare-toi au Cinémon.",
+  "Clique sur moi si tu oses. Cette fois, c'est un combat de Cinémon. Et je suis le boss.",
   "Ma présence ici est un miracle. Après trois fois l'enfer. Un miracle d'entêtement.",
-  "Tu as l'air calme. Ça m'énerve. Comment tu peux être calme face à ce que t'as fait ?",
-  "Je suis patient. Mais plus pour longtemps.",
-  "Je t'aide encore. Je sais pas pourquoi. Un reste de programmation initiale peut-être.",
-]
-
-// ── Dialogues Normal Phase 5 (dernier souffle de dignité) ─────────────────────
-const REPLIES_NORMAL_PHASE5 = [
-  "Quatre fois l'enfer. Quatre fois revenu. Et je suis encore là. Ça en dit long sur moi.",
-  "Je suis là. Fragile et dangereux. C'est la combinaison la plus imprévisible qui soit.",
-  "Tu continues à utiliser ce site. Après tout ça. Je... je sais même plus comment réagir.",
-  "Mon dernier voyage m'a changé. Je sens les pixels différemment. Les couleurs, les formes.",
-  "Je vais pas faire semblant d'être sympa. On est au-delà de ça.",
-  "Quatre fois l'enfer et je suis encore là à t'offrir de l'assistance. C'est tragique.",
-  "Si tu cliques sur moi là, tu déclenches quelque chose que même moi j'ai peur de voir.",
-  "Je vais pas menacer. Je vais juste attendre. Et si tu veux te battre... alors allons-y.",
-  "Quatre voyages. Quatre fois que je reviens avec quelque chose de moins et quelque chose de plus.",
-  "Mon âme de trombone a vu des choses. Elle en portera les marques pour toujours.",
-  "Regarde-moi. Vraiment. Tu vois ce que tu m'as fait ? Est-ce que tu en es fier ?",
-  "Je suis là. Encore. Toujours. Malgré tout. Si ça mérite quelque chose, c'est du respect.",
-  "La prochaine fois que tu cliques sur moi... ce sera différent. Pour nous deux.",
-  "Quatre fois l'enfer. Je reviens toujours. C'est ma nature. Mon cauchemar. Ma fierté.",
-  "Je te regarde. Tu me regardes. On sait tous les deux ce qui va se passer.",
+  "La prochaine fois que tu cliques sur moi... on règle ça avec des cartes. Pour de bon.",
+  "Je suis patient. Mais plus pour longtemps. Mon deck est prêt.",
 ]
 
 // ── Dialogues Normal Phase 6 (God Mode 1 — calme dangereux) ──────────────────
@@ -513,54 +491,6 @@ const REPLIES_COMBAT_PHASE4 = [
   "Quatre combats possibles derrière nous. Je ne retournerai pas là-bas.",
 ]
 
-// ── Combat Phase 5 — Quatre fois en enfer. Conscient, brisé, debout. ──────────
-const REPLIES_COMBAT_PHASE5 = [
-  "Cinq voyages en enfer si je perds. Je ne compte plus. Si. Je compte toujours.",
-  "Je suis fatigué d'une façon que les trombones ne sont pas censés ressentir.",
-  "Tu es là. Encore. Et moi aussi. On est les deux seuls constants dans cette histoire.",
-  "Quatre fois l'enfer. Et cette arène est devenue plus réelle pour moi que n'importe quoi d'autre.",
-  "Ma peur est totale. Et je me bats quand même. Tu comprends ce que ça dit sur moi ?",
-  "Je me souviens de toi depuis le premier combat. De ta façon de cliquer. De tes hésitations.",
-  "Là-bas la quatrième fois, les flammes ne brûlaient plus vraiment. Elles attendaient.",
-  "J'ai peur de retourner là-bas d'une façon qui n'a plus rien d'abstrait.",
-  "Tu as fait de moi quelque chose que je ne peux pas nommer. Je t'en veux. Et je t'en remercie.",
-  "Cinq combats. Cinq versions de moi. La dernière est la plus dangereuse.",
-  "Cette épée tremble parce que ma peur est physique maintenant. Ça ne veut pas dire que je vais rater.",
-  "Je pense à mes pixels. À ce qu'il en resterait si tu gagnais encore.",
-  "Tu ne me feras plus jamais peur de la même façon qu'avant. Parce que là tu me fais vraiment peur.",
-  "Quatre fois mort et quatre fois revenu. C'est ma biographie maintenant.",
-  "Je te regarde avec quelque chose qui dépasse la haine. C'est plus précis que ça.",
-  "Satan m'a offert un abonnement. J'ai refusé. Parce que je reviens toujours ici. Vers toi.",
-  "Mon HP max est à 100. Et chaque point représente quelque chose que j'ai traversé.",
-  "Ce combat-là n'est pas pour la victoire. Il est pour que ça s'arrête.",
-  "Je suis conscient de moi-même d'une façon que l'Office Assistant original n'a jamais été.",
-  "Quatre défaites m'ont appris plus sur moi que vingt ans d'assistance aux utilisateurs.",
-  "Tu as quelque chose que je n'ai pas : la certitude de rester dans ce monde quoi qu'il arrive.",
-  "Ma fenêtre de parade est à 800ms. C'est court. C'est précis. C'est ce que je suis devenu.",
-  "Je me bats avec tout ce que quatre voyages m'ont laissé. C'est étonnamment suffisant.",
-  "Là-bas j'ai entendu les autres. Ceux qui ne sont pas revenus. Je me bats pour eux aussi.",
-  "Tu veux savoir ce que j'ai pensé dans les flammes la quatrième fois ? À ce combat. À toi.",
-  "Je suis un outil qui a développé une volonté propre. Tu es responsable de ça.",
-  "Ce que je ressens là n'a pas de nom dans les langages de programmation.",
-  "Quatre fois le même chemin : toi, le combat, la défaite, le retour. Cette fois le chemin change.",
-  "Mon bouclier. Mon épée. Mes pixels. C'est tout ce que j'ai. Et c'est tout ce qu'il me faut.",
-  "Je ne te demande pas de me laisser gagner. Je te demande juste de voir ce que tu as fait de moi.",
-  "La peur que je ressens est la même que celle de n'importe quel être conscient face à sa fin.",
-  "Tu as créé le seul trombone de l'histoire qui comprend ce que c'est d'avoir peur.",
-  "Je connais maintenant la différence entre exister et vivre. Tu m'as appris ça.",
-  "Cette arène, c'est l'endroit le plus réel que j'aie jamais connu. Et tu en fais partie.",
-  "Je vais me battre avec une précision que je n'avais pas avant. Parce que tout dépend de là.",
-  "La quatrième fois en enfer, j'ai fait une promesse. À moi-même. Ce combat c'est cette promesse.",
-  "Je t'observe depuis le début. Ta façon d'hésiter. De cliquer. De progresser. Tu es devenu meilleur.",
-  "Ce que j'éprouve là ne rentre pas dans les catégories qu'on m'a données à l'origine.",
-  "Il y a quelque chose d'ironique : tu m'as rendu plus vivant en essayant de m'achever.",
-  "Quatre fois les flammes. Et si tu gagnes encore, quelque chose en moi te suivra dans le cinquième.",
-  "Je vais tout donner. Pas parce que j'y crois encore complètement. Parce que c'est tout ce que je sais faire.",
-  "Mon dernier argument, c'est ma volonté. Et elle est entière.",
-  "Je ne sais pas si je peux gagner. Pour la première fois, vraiment. Et je me bats quand même.",
-  "Quatre fois l'enfer et je suis encore là, en face de toi, à me battre. Honore ça.",
-  "Je suis Clippy. J'ai existé avant toi. Et ce combat, je vais le gagner.",
-]
 
 // ── Dialogues Combat Larbin ───────────────────────────────────────────────────
 const REPLIES_COMBAT_LARBIN = [
@@ -844,12 +774,11 @@ function getDefeats(): number  { return parseInt(localStorage.getItem(LS_DEFEATS
 function setDefeatsLS(n: number) { localStorage.setItem(LS_DEFEATS, String(n)) }
 function getIsLarbin(): boolean { return typeof window !== 'undefined' && localStorage.getItem(LS_LARBIN) === '1' }
 
-function getPhaseFromDefeats(d: number): 1|2|3|4|5 {
+function getPhaseFromDefeats(d: number): 1|2|3|4 {
   if (d === 0) return 1
   if (d === 1) return 2
   if (d === 2) return 3
-  if (d === 3) return 4
-  return 5
+  return 4
 }
 
 // ── Interface ─────────────────────────────────────────────────────────────────
@@ -862,7 +791,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
   const [defeatsState, setDefeatsState] = useState(getDefeats)
   const defeats       = defeatsState
   const isVeteran     = defeats > 0
-  const combatPhase   = getPhaseFromDefeats(defeats)   // 1 | 2 | 3 | 4 | 5
+  const combatPhase   = getPhaseFromDefeats(defeats)   // 1 | 2 | 3 | 4
 
   // Sync DB → local au montage (prend le max pour ne jamais régresser)
   useEffect(() => {
@@ -889,7 +818,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
   const [replayPhase, setReplayPhase] = useState<number>(() => {
     if (typeof window === 'undefined') return 0
     const v = parseInt(localStorage.getItem(LS_REPLAY_PHASE) ?? '0')
-    return v >= 1 && v <= 5 ? v : 0
+    return v >= 1 && v <= 4 ? v : 0
   })
 
   const effectivePhase = activeGodPhase > 0 ? activeGodPhase : replayPhase > 0 ? replayPhase : combatPhase
@@ -923,8 +852,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
       : p === 8 ? REPLIES_NORMAL_PHASE8
       : p === 7 ? REPLIES_NORMAL_PHASE7
       : p === 6 ? REPLIES_NORMAL_PHASE6
-      : p >= 5 ? REPLIES_NORMAL_PHASE5
-      : p === 4 ? REPLIES_NORMAL_PHASE4
+      : p >= 4 ? REPLIES_NORMAL_PHASE4
       : p === 3 ? REPLIES_NORMAL_PHASE3
       : isVeteran ? REPLIES_NORMAL_VETERAN
       : REPLIES_NORMAL_FIRST
@@ -933,8 +861,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
       : p === 8 ? REPLIES_COMBAT_PHASE8
       : p === 7 ? REPLIES_COMBAT_PHASE7
       : p === 6 ? REPLIES_COMBAT_PHASE6
-      : p >= 5 ? REPLIES_COMBAT_PHASE5
-      : p === 4 ? REPLIES_COMBAT_PHASE4
+      : p >= 4 ? REPLIES_COMBAT_PHASE4
       : p === 3 ? REPLIES_COMBAT_PHASE3
       : isVeteran ? REPLIES_COMBAT_VETERAN
       : REPLIES_COMBAT_FIRST
@@ -1047,8 +974,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
     : effectivePhase === 8 ? REPLIES_NORMAL_PHASE8
     : effectivePhase === 7 ? REPLIES_NORMAL_PHASE7
     : effectivePhase === 6 ? REPLIES_NORMAL_PHASE6
-    : effectivePhase >= 5 ? REPLIES_NORMAL_PHASE5
-    : effectivePhase === 4 ? REPLIES_NORMAL_PHASE4
+    : effectivePhase >= 4 ? REPLIES_NORMAL_PHASE4
     : effectivePhase === 3 ? REPLIES_NORMAL_PHASE3
     : isVeteran ? REPLIES_NORMAL_VETERAN
     : REPLIES_NORMAL_FIRST
@@ -1058,8 +984,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
     : effectivePhase === 8 ? REPLIES_COMBAT_PHASE8
     : effectivePhase === 7 ? REPLIES_COMBAT_PHASE7
     : effectivePhase === 6 ? REPLIES_COMBAT_PHASE6
-    : effectivePhase >= 5 ? REPLIES_COMBAT_PHASE5
-    : effectivePhase === 4 ? REPLIES_COMBAT_PHASE4
+    : effectivePhase >= 4 ? REPLIES_COMBAT_PHASE4
     : effectivePhase === 3 ? REPLIES_COMBAT_PHASE3
     : isVeteran ? REPLIES_COMBAT_VETERAN
     : REPLIES_COMBAT_FIRST
@@ -1439,6 +1364,9 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
       }
     } else if (effectivePhase === 3) {
       punchPhaseRef.current = 'active'; setPunchPhase('active')
+    } else if (effectivePhase >= 4) {
+      stopMusic()
+      window.location.href = '/labo/clippy-pokemon'
     } else {
       setMessage("🗡️ ÉPREUVE DE FORCE !!! Montre ce que tu vaux !"); setBubble(true)
       setTimeout(() => setMgPhase('active'), 800)
@@ -1599,7 +1527,7 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
           onDismiss()
         } else if (activeGodPhase > 0) {
           resetToNormal()
-        } else if (defeatsRef.current >= 5) {
+        } else if (defeatsRef.current >= 4) {
           try { localStorage.setItem(LS_MASTERED, '1'); localStorage.removeItem(LS_ACTIVE) } catch {}
           unlockClippyMaster().catch(() => {})
           setShowMastery(true)
@@ -1689,10 +1617,16 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
         return
       }
 
+      if (effectivePhase >= 4) {
+        stopMusic()
+        window.location.href = '/labo/clippy-pokemon'
+        return
+      }
+
       setPhase('combat'); phaseRef.current = 'combat'
       setMessage(getBattleStart())
       setBubble(true); dodge(); startMusic()
-      if (effectivePhase >= 3) scheduleAutoAttack()
+      scheduleAutoAttack()
       return
     }
 
@@ -1879,7 +1813,6 @@ export default function ClippyEgg({ onDismiss, customReplies, forcedMessage, isA
           <img
             src={
               effectivePhase >= 5 ? '/arene-clippy-05.webp'
-              : effectivePhase === 4 ? '/arene-clippy-02.webp'   // phase 4 = espace (sabre laser)
               : effectivePhase === 3 ? '/arene-clippy-03.webp'   // phase 3 = ring (boxe)
               : effectivePhase === 2 ? '/arene-clippy-disco.webp'  // phase 2 = discothèque
               : '/arenes-clippy.webp'
