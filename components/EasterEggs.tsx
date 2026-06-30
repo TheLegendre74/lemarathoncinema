@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { discoverEgg } from '@/lib/actions'
 import dynamic from 'next/dynamic'
-// TODO TEMP — supprimer avant lancement prod
 const ClippyPunchOutPhaser = dynamic(() => import('./ClippyPunchOutPhaser'), { ssr: false })
 const FightClubGame  = dynamic(() => import('./FightClubGame'),                                   { ssr: false })
 const KillBillGame   = dynamic(() => import('./KillBillGame'),                                    { ssr: false })
@@ -954,7 +953,6 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
   const predSoundRef = useRef<HTMLAudioElement | null>(null)
   const [showTipiak,     setShowTipiak]     = useState(false)
   const [showPandora,    setShowPandora]    = useState(false)
-  // TODO TEMP — supprimer avant lancement prod
   const [showPunchTest,  setShowPunchTest]  = useState(false)
   const [adminFeverTestId, setAdminFeverTestId] = useState(0)
   const [clippyRemountId, setClippyRemountId] = useState(0)
@@ -1014,6 +1012,7 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
     }
     else if (t.endsWith('gomu gomu no tipiak!')) { setShowTipiak(true) }
     else if (t.endsWith('boîte de pandore') || t.endsWith('boite de pandore') || t.endsWith('pandore')) { void discoverEgg('clippy').catch(() => {}); setShowPandora(true) }
+    else if (t.endsWith('punchout')) { setShowPunchTest(true) }
     else if (t.endsWith('cinemon') || t.endsWith('cinémon')) { window.location.href = '/labo/battle' }
     else if (t.endsWith('codex') && !isGuest) { discoverEgg('conway'); window.location.href = '/labo/life' }
     else { triggered = false }
@@ -1302,8 +1301,8 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
         keyBuf.current = []
         return
       }
-      // TODO TEMP — "clippy p3" → test Punch-Out direct
-      if (buf.slice(-9).join('').toLowerCase() === 'clippy p3') {
+      // "punchout" → Clippy Punch-Out (phase 3)
+      if (buf.slice(-8).join('').toLowerCase() === 'punchout') {
         setShowPunchTest(true)
         keyBuf.current = []
         return
@@ -1378,7 +1377,6 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
       {showSouthPark  && <SouthParkBus_  onDone={() => setShowSouthPark(false)} />}
       {showRandy      && <RandyMarsh_    onDone={() => setShowRandy(false)}     quote={ee.randyQuote} />}
       {showKillBill   && <KillBillGame    onDone={() => setShowKillBill(false)}  endText={ee.killBillEnd} />}
-      {/* TODO TEMP — supprimer avant lancement prod */}
       {showPunchTest  && <ClippyPunchOutPhaser onWin={() => setShowPunchTest(false)} onLose={() => setShowPunchTest(false)} initialHP={20} />}
       {showAVP        && <AVPEgg          onDone={() => { predSoundRef.current?.pause(); predSoundRef.current = null; setShowAVP(false) }} predSound={predSoundRef} />}
       {showTipiak     && <TipiakOverlay  onDone={() => setShowTipiak(false)} />}

@@ -1,57 +1,55 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { loadAllWatchedFilms, loadTeam } from './clippy-pokemon/teamLoader'
-import { BALANCE } from './clippy-pokemon/config/balance.config'
-import type { FilmCombatant } from './clippy-pokemon/types'
+import type { CardData, FilmCombatant } from './clippy-pokemon/types'
+import type { TeamMember } from './clippy-pokemon/TeamSelectUI'
+import type { Difficulty } from './clippy-pokemon/clippyBoss'
 import TeamSelectUI from './clippy-pokemon/TeamSelectUI'
+import TeamPreview from './clippy-pokemon/TeamPreview'
+import DifficultySelect from './clippy-pokemon/DifficultySelect'
+import { loadCards, getCardsSync, loadSaison1, buildCombatant, applyClimaxToTeam } from './clippy-pokemon/cardsData'
+import type { Saison1Entry } from './clippy-pokemon/cardsData'
+import { loadClippyTeams, getClippyTeam } from './clippy-pokemon/clippyBoss'
 
 interface Props {
   onVictory?: () => void
   onDefeat?: () => void
 }
 
+type Phase = 'loading' | 'difficulty' | 'team_select' | 'team_preview' | 'battle'
+
 export default function ClippyPokemonBattle({ onVictory, onDefeat }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const gameRef = useRef<any>(null)
-  const [loading, setLoading] = useState(true)
+  const [phase, setPhase] = useState<Phase>('loading')
   const [error, setError] = useState<string | null>(null)
-  const [selectData, setSelectData] = useState<FilmCombatant[] | null>(null)
-  const [team, setTeam] = useState<FilmCombatant[] | null>(null)
-  const [isDemo, setIsDemo] = useState(false)
+  const [allCards, setAllCards] = useState<CardData[]>([])
+  const [clippyTeamData, setClippyTeamData] = useState<{ team: FilmCombatant[]; archetype: string; meta: string } | null>(null)
+  const [teamMembers, setTeamMembers] = useState<TeamMember[] | null>(null)
+  const [clippyTeamsRaw, setClippyTeamsRaw] = useState<any>(null)
+  const [saison1Data, setSaison1Data] = useState<Map<number, Saison1Entry> | null>(null)
+  const [rotationIdx, setRotationIdx] = useState(0)
 
+  // Load cards.json + clippy_teams.json + saison1.json
   useEffect(() => {
     let mounted = true
-    async function load() {
-      try {
-        const supabase = createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-
-        if (!user) {
-          const { buildDemoTeam } = await import('./clippy-pokemon/battleEngine')
-          if (mounted) { setTeam(buildDemoTeam()); setIsDemo(true); setLoading(false) }
-          return
-        }
-
-        if (BALANCE.MODE_EQUIPE === 'choix') {
-          const res = await loadAllWatchedFilms(supabase, user.id)
-          if (!mounted) return
-          if (res.isDemo) { setTeam(res.allFilms); setIsDemo(true); setLoading(false) }
-          else { setSelectData(res.allFilms); setLoading(false) }
-        } else {
-          const res = await loadTeam(supabase, user.id)
-          if (mounted) { setTeam(res.team); setIsDemo(res.isDemo); setLoading(false) }
-        }
-      } catch (e: any) {
+    Promise.all([loadCards(), loadClippyTeams(), loadSaison1()])
+      .then(([db, ct, s1]) => {
+        if (!mounted) return
+        setAllCards(Object.values(db))
+        setClippyTeamsRaw(ct)
+        setSaison1Data(s1)
+        setRotationIdx(Math.floor(Math.random() * 100))
+        setPhase('difficulty')
+      })
+      .catch(e => {
         if (mounted) setError(e.message ?? 'Erreur de chargement')
-      }
-    }
-    load()
+      })
     return () => { mounted = false }
   }, [])
 
+  // Boot Phaser when team is confirmed
   useEffect(() => {
-    if (!team || !containerRef.current) return
+    if (!teamMembers || !clippyTeamData || !containerRef.current) return
     let mounted = true
 
     async function boot() {
@@ -73,8 +71,11 @@ export default function ClippyPokemonBattle({ onVictory, onDefeat }: Props) {
           banner: false,
         })
 
-        game.scene.start('PokemonBattle', {
-          team, isDemo,
+        game.scene.start('CinemonBattle', {
+          teamMembers,
+          clippyTeam: clippyTeamData!.team,
+          archetype: clippyTeamData!.archetype,
+          saison1: saison1Data,
           onVictory: onVictory ?? (() => {}),
           onDefeat: onDefeat ?? (() => {}),
         })
@@ -92,30 +93,83 @@ export default function ClippyPokemonBattle({ onVictory, onDefeat }: Props) {
       gameRef.current?.destroy(true)
       gameRef.current = null
     }
-  }, [team]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [teamMembers, clippyTeamData]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleDifficultySelect = (difficulty: Difficulty) => {
+    if (!clippyTeamsRaw) return
+    const result = getClippyTeam(clippyTeamsRaw, difficulty, rotationIdx)
+    setClippyTeamData(result)
+    setPhase('team_select')
+  }
 
   if (error) {
     return (
-      <div style={{ position: 'fixed', inset: 0, zIndex: 99990, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0f1525', color: '#ff4444', fontFamily: 'monospace', fontSize: 18 }}>
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 99990,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: '#0f1525', color: '#ff4444', fontFamily: 'monospace', fontSize: 18,
+      }}>
         {error}
       </div>
     )
   }
 
-  if (selectData) {
+  if (phase === 'difficulty' && clippyTeamsRaw) {
+    // Preview Clippy's team for scouting
+    const previewTeam = getClippyTeam(clippyTeamsRaw, 'moyen', rotationIdx)
+    return (
+      <DifficultySelect
+        archetype={previewTeam.archetype}
+        meta={previewTeam.meta}
+        teamNames={previewTeam.team.map(m => m.name)}
+        onSelect={handleDifficultySelect}
+        onBack={() => {
+          setRotationIdx(prev => prev + 1)
+          setPhase('difficulty')
+        }}
+      />
+    )
+  }
+
+  if (phase === 'team_select') {
     return (
       <TeamSelectUI
-        allFilms={selectData}
-        onConfirm={(sel) => { setSelectData(null); setTeam(sel); setIsDemo(false) }}
+        allCards={allCards}
+        onConfirm={(members) => {
+          setTeamMembers(members)
+          setPhase('team_preview')
+        }}
+      />
+    )
+  }
+
+  if (phase === 'team_preview' && teamMembers && clippyTeamData) {
+    const fullPlayerTeam: FilmCombatant[] = teamMembers.map(m => buildCombatant(m.card, m.equippedNames))
+    if (saison1Data) applyClimaxToTeam(fullPlayerTeam, saison1Data)
+
+    return (
+      <TeamPreview
+        playerTeam={fullPlayerTeam}
+        clippyTeam={clippyTeamData.team}
+        archetype={clippyTeamData.archetype}
+        onConfirm={(pickedIndices) => {
+          const picked = pickedIndices.map(i => teamMembers[i])
+          setTeamMembers(picked)
+          setPhase('battle')
+        }}
       />
     )
   }
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 99990, background: '#0f1525' }}>
-      {loading && !team && (
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', fontFamily: 'monospace', fontSize: 18 }}>
-          Chargement…
+      {phase === 'loading' && (
+        <div style={{
+          position: 'absolute', inset: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: '#ffffff', fontFamily: 'monospace', fontSize: 18,
+        }}>
+          Chargement des 490 films…
         </div>
       )}
       <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
