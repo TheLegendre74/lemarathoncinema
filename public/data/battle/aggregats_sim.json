@@ -1,0 +1,253 @@
+{
+  "meta": {
+    "combats": 5000,
+    "avgTurns": 41.7078,
+    "climaxRate": 0.7084,
+    "weatherBuffRate": 0.823,
+    "earlyWinRate": 0,
+    "avgWR": 0.5
+  },
+  "genreWinrates": {
+    "Action": {
+      "winrate": 0.5112,
+      "wins": 6429,
+      "total": 12577
+    },
+    "Science-Fiction": {
+      "winrate": 0.5052,
+      "wins": 6374,
+      "total": 12616
+    },
+    "Crime": {
+      "winrate": 0.5444,
+      "wins": 3845,
+      "total": 7063
+    },
+    "Drame": {
+      "winrate": 0.5024,
+      "wins": 11136,
+      "total": 22167
+    },
+    "Thriller": {
+      "winrate": 0.5147,
+      "wins": 4759,
+      "total": 9246
+    },
+    "Aventure": {
+      "winrate": 0.5002,
+      "wins": 5209,
+      "total": 10414
+    },
+    "Horreur": {
+      "winrate": 0.4715,
+      "wins": 2515,
+      "total": 5334
+    },
+    "Animation": {
+      "winrate": 0.5084,
+      "wins": 3796,
+      "total": 7466
+    },
+    "Comédie": {
+      "winrate": 0.4814,
+      "wins": 6203,
+      "total": 12886
+    },
+    "Romance": {
+      "winrate": 0.4623,
+      "wins": 1681,
+      "total": 3636
+    },
+    "Fantastique": {
+      "winrate": 0.4862,
+      "wins": 2704,
+      "total": 5562
+    },
+    "Guerre": {
+      "winrate": 0.5329,
+      "wins": 1448,
+      "total": 2717
+    },
+    "Western": {
+      "winrate": 0.4825,
+      "wins": 399,
+      "total": 827
+    }
+  },
+  "rarityWinrates": {
+    "LÉGENDAIRE": {
+      "winrate": 0.5911,
+      "wins": 8869,
+      "total": 15004
+    },
+    "ÉPIQUE": {
+      "winrate": 0.4789,
+      "wins": 15494,
+      "total": 32354
+    },
+    "RARE": {
+      "winrate": 0.4394,
+      "wins": 5171,
+      "total": 11769
+    },
+    "DUPONTEL": {
+      "winrate": 0.5338,
+      "wins": 466,
+      "total": 873
+    }
+  },
+  "archetypeWinrates": {
+    "Neige": {
+      "winrate": 0.5374,
+      "wins": 2242,
+      "total": 4172
+    },
+    "Outsider": {
+      "winrate": 0.4073,
+      "wins": 1360,
+      "total": 3339
+    },
+    "Balance": {
+      "winrate": 0.5621,
+      "wins": 543,
+      "total": 966
+    },
+    "Stall": {
+      "winrate": 0.5669,
+      "wins": 343,
+      "total": 605
+    },
+    "HO": {
+      "winrate": 0.5763,
+      "wins": 461,
+      "total": 800
+    },
+    "Distorsion": {
+      "winrate": 0.4322,
+      "wins": 51,
+      "total": 118
+    }
+  },
+  "passiveWinrates": {
+    "lowhp_boost": {
+      "winrate": 0.5348,
+      "wins": 4409,
+      "total": 8244
+    },
+    "flavor": {
+      "winrate": 0.5111,
+      "wins": 4800,
+      "total": 9391
+    },
+    "endure_once": {
+      "winrate": 0.5701,
+      "wins": 533,
+      "total": 935
+    },
+    "start_boost": {
+      "winrate": 0.482,
+      "wins": 3903,
+      "total": 8098
+    },
+    "status_immune": {
+      "winrate": 0.4978,
+      "wins": 3187,
+      "total": 6402
+    },
+    "dodge_first": {
+      "winrate": 0.5256,
+      "wins": 708,
+      "total": 1347
+    },
+    "miss_chance": {
+      "winrate": 0.4527,
+      "wins": 2988,
+      "total": 6600
+    },
+    "evasion": {
+      "winrate": 0.4773,
+      "wins": 1642,
+      "total": 3440
+    },
+    "ally_fall_boost": {
+      "winrate": 0.5203,
+      "wins": 847,
+      "total": 1628
+    },
+    "per_turn_boost": {
+      "winrate": 0.5321,
+      "wins": 2427,
+      "total": 4561
+    },
+    "start_team_boost": {
+      "winrate": 0.4928,
+      "wins": 376,
+      "total": 763
+    },
+    "entry_drop": {
+      "winrate": 0.4811,
+      "wins": 2280,
+      "total": 4739
+    },
+    "regen_start": {
+      "winrate": 0.4529,
+      "wins": 394,
+      "total": 870
+    },
+    "damage_return": {
+      "winrate": 0.5275,
+      "wins": 115,
+      "total": 218
+    },
+    "trap": {
+      "winrate": 0.5046,
+      "wins": 55,
+      "total": 109
+    },
+    "true_hit": {
+      "winrate": 0.5073,
+      "wins": 486,
+      "total": 958
+    },
+    "antiboost": {
+      "winrate": 0.5559,
+      "wins": 169,
+      "total": 304
+    },
+    "always_first": {
+      "winrate": 0.4847,
+      "wins": 253,
+      "total": 522
+    },
+    "onhit_boost": {
+      "winrate": 0.4312,
+      "wins": 47,
+      "total": 109
+    },
+    "crit_immune": {
+      "winrate": 0.5505,
+      "wins": 60,
+      "total": 109
+    },
+    "multiscale_first": {
+      "winrate": 0.4985,
+      "wins": 163,
+      "total": 327
+    },
+    "status_block_first": {
+      "winrate": 0.463,
+      "wins": 50,
+      "total": 108
+    },
+    "reflect_chance": {
+      "winrate": 0.4771,
+      "wins": 52,
+      "total": 109
+    },
+    "no_lower": {
+      "winrate": 0.5138,
+      "wins": 56,
+      "total": 109
+    }
+  }
+}

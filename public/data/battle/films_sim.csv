@@ -1,0 +1,491 @@
+num,name,rarity,types,passive,passive_cat,appearances,wins,winrate,koGiven,koReceived,koRatio,hpRemAvg
+1,Citizen Kane,LÉGENDAIRE,Drame,Rosebud,flavor,195,113,0.5795,126,155,0.81,178.4
+2,Le Parrain,LÉGENDAIRE,Crime+Drame,Une offre qu'il ne pourra pas refuser,entry_drop,195,101,0.5179,120,152,0.79,151.3
+3,Apocalypse Now,LÉGENDAIRE,Guerre+Drame,J'adore l'odeur du napalm au petit matin,status_immune,195,122,0.6256,240,150,1.60,121.0
+4,Taxi Driver,ÉPIQUE,Thriller+Drame,Tu parles à moi ?,entry_drop,109,54,0.4954,64,65,0.98,166.9
+5,Blade Runner,ÉPIQUE,Science-Fiction+Thriller,Plus humain que l'humain,status_immune,110,55,0.5000,53,76,0.70,170.6
+6,Gladiator,LÉGENDAIRE,Action+Drame,N'êtes-vous pas divertis ?!,per_turn_boost,195,120,0.6154,170,153,1.11,162.7
+7,Parasite,LÉGENDAIRE,Thriller+Comédie,Jessica; fille unique,entry_drop,195,110,0.5641,156,142,1.10,99.1
+8,Forrest Gump,LÉGENDAIRE,Drame+Comédie,Cours; Forrest; cours !,dodge_first,195,114,0.5846,149,153,0.97,177.3
+9,Titanic,LÉGENDAIRE,Romance+Drame,Tu sauteras; je sauterai,flavor,195,116,0.5949,148,148,1.00,126.3
+10,La Liste de Schindler,LÉGENDAIRE,Drame+Guerre,La liste; c'est la vie,flavor,195,122,0.6256,215,152,1.41,127.8
+11,Les Évadés,LÉGENDAIRE,Drame,L'espoir est une bonne chose,endure_once,195,133,0.6821,336,144,2.33,157.0
+12,Inception,LÉGENDAIRE,Science-Fiction+Action,Le totem,miss_chance,195,114,0.5846,218,144,1.51,114.8
+13,Interstellar,LÉGENDAIRE,Science-Fiction+Drame,On trouve toujours un moyen,lowhp_boost,195,107,0.5487,177,161,1.10,156.4
+14,The Dark Knight,LÉGENDAIRE,Action+Crime,Le Chevalier Noir,lowhp_boost,195,142,0.7282,416,106,3.92,102.1
+15,Mad Max: Fury Road,LÉGENDAIRE,Action+Aventure,Quelle belle journée !,start_boost,195,120,0.6154,238,147,1.62,122.3
+16,Bernie,DUPONTEL,Comédie+Drame,J'm'en fous j'suis fou,status_immune,110,65,0.5909,108,67,1.61,187.4
+17,Le Créateur,DUPONTEL,Comédie+Drame,Le délire du créateur,miss_chance,109,59,0.5413,92,67,1.37,150.6
+18,Enfermés dehors,DUPONTEL,Comédie,Le quiproquo permanent,miss_chance,110,55,0.5000,105,77,1.36,189.0
+19,Le Vilain,DUPONTEL,Comédie+Horreur,Le masque qui trouble,miss_chance,109,56,0.5138,99,77,1.29,202.3
+20,9 mois ferme,DUPONTEL,Comédie+Crime,La grossesse imprévue,miss_chance,109,51,0.4679,95,65,1.46,187.6
+21,Au revoir là-haut,DUPONTEL,Drame+Crime,Les gueules cassées,lowhp_boost,109,58,0.5321,85,71,1.20,205.0
+22,Adieu les cons,DUPONTEL,Comédie+Drame,La quête désespérée,miss_chance,109,54,0.4954,78,69,1.13,175.9
+23,Second tour,DUPONTEL,Comédie+Drame,Le candidat fantôme,miss_chance,108,68,0.6296,73,61,1.20,176.7
+24,Rashômon,ÉPIQUE,Drame+Crime,La vérité qui résiste,lowhp_boost,109,48,0.4404,53,75,0.71,153.4
+25,Les 400 coups,ÉPIQUE,Drame,La course vers la mer,lowhp_boost,109,47,0.4312,34,75,0.45,204.8
+26,À bout de souffle,RARE,Crime+Drame,Le voyou nonchalant,entry_drop,109,54,0.4954,47,64,0.73,162.2
+27,Cléo de 5 à 7,RARE,Drame,L'attente du verdict,lowhp_boost,109,51,0.4679,74,68,1.09,167.9
+28,L'Enfance d'Ivan,RARE,Drame+Guerre,L'enfance volée,lowhp_boost,109,66,0.6055,57,65,0.88,183.9
+29,2001 : L'Odyssée de l'espace,LÉGENDAIRE,Science-Fiction+Drame,Désolé Dave; je crains de ne pouvoir faire ça,flavor,195,115,0.5897,97,166,0.58,212.0
+30,Orange mécanique,LÉGENDAIRE,Drame+Science-Fiction,Ludwig van,per_turn_boost,195,108,0.5538,160,153,1.05,117.7
+31,Le Parrain II,LÉGENDAIRE,Crime+Drame,Tes ennemis encore plus près,antiboost,195,114,0.5846,226,149,1.52,78.4
+32,Solaris,RARE,Science-Fiction+Drame,L'océan pensant,status_immune,109,57,0.5229,52,68,0.76,166.1
+33,Chinatown,ÉPIQUE,Crime+Drame,Oublie ça; Jake,entry_drop,109,48,0.4404,43,76,0.57,189.6
+34,Les Dents de la mer,LÉGENDAIRE,Thriller+Horreur,Il va vous falloir un plus gros bateau,lowhp_boost,194,137,0.7062,279,122,2.29,83.1
+35,Rocky,LÉGENDAIRE,Drame,Tenir la distance,flavor,195,123,0.6308,303,138,2.20,158.5
+36,E.T. l'extra-terrestre,LÉGENDAIRE,Science-Fiction+Drame,E.T. téléphone maison,per_turn_boost,194,113,0.5825,117,152,0.77,212.5
+37,Amadeus,ÉPIQUE,Drame,La rage de Salieri,lowhp_boost,109,50,0.4587,38,77,0.49,184.4
+38,Top Gun,RARE,Action+Romance,Le besoin de vitesse,start_boost,110,59,0.5364,27,59,0.46,152.9
+39,Platoon,ÉPIQUE,Guerre+Drame,Le baptême du feu,entry_drop,109,58,0.5321,48,69,0.70,172.3
+40,Full Metal Jacket,LÉGENDAIRE,Guerre,Voici mon fusil,status_immune,194,116,0.5979,298,127,2.35,95.6
+41,Piège de cristal,LÉGENDAIRE,Action+Thriller,Yippee-ki-yay,lowhp_boost,195,129,0.6615,288,142,2.03,124.7
+42,Le Cercle des poètes disparus,ÉPIQUE,Drame,Ô Capitaine; mon Capitaine,lowhp_boost,110,49,0.4455,42,78,0.54,187.0
+43,Goodfellas,LÉGENDAIRE,Crime+Drame,Je suis drôle comment ?,miss_chance,195,92,0.4718,173,151,1.15,118.6
+44,Pretty Woman,RARE,Romance+Comédie,Le conte de fées de Hollywood,regen_start,109,48,0.4404,45,75,0.60,168.8
+45,Le Silence des agneaux,LÉGENDAIRE,Thriller+Horreur,Un foie; des fèves et un bon Chianti,entry_drop,195,132,0.6769,269,141,1.91,110.7
+46,Reservoir Dogs,ÉPIQUE,Crime+Thriller,Mr. Pink se défile,evasion,109,56,0.5138,129,58,2.22,155.1
+47,Impitoyable,ÉPIQUE,Western,Le tueur repenti,entry_drop,109,40,0.3670,20,79,0.25,229.6
+48,Le Seigneur des anneaux : La Communauté de l'anneau,LÉGENDAIRE,Fantastique+Aventure,Vous ne passerez pas !,dodge_first,195,103,0.5282,162,148,1.09,109.2
+49,Pulp Fiction,LÉGENDAIRE,Crime+Thriller,Ézéchiel 25:17,start_boost,195,130,0.6667,283,139,2.04,119.3
+50,Seven,LÉGENDAIRE,Thriller+Crime,Qu'y a-t-il dans la boîte ?!,flavor,195,118,0.6051,278,126,2.21,133.7
+51,Heat,ÉPIQUE,Crime+Thriller,Le casse millimétré,evasion,109,57,0.5229,70,69,1.01,154.0
+52,Braveheart,ÉPIQUE,Guerre+Drame,La guérilla des Highlands,evasion,109,48,0.4404,70,77,0.91,176.5
+53,Toy Story,LÉGENDAIRE,Animation+Aventure,Vers l'infini et au-delà !,start_boost,195,114,0.5846,249,127,1.96,112.3
+54,Fargo,ÉPIQUE,Crime+Comédie,Le plan qui dérape,evasion,109,60,0.5505,66,71,0.93,165.6
+55,Trainspotting,LÉGENDAIRE,Drame+Comédie,Choisis la vie,start_boost,195,105,0.5385,145,143,1.01,87.0
+56,Princesse Mononoké,LÉGENDAIRE,Animation+Fantastique,Le bras maudit,true_hit,195,120,0.6154,218,163,1.34,137.9
+57,The Big Lebowski,ÉPIQUE,Comédie+Crime,Le Dude s'en accommode,miss_chance,109,54,0.4954,61,71,0.86,178.1
+58,Il faut sauver le soldat Ryan,LÉGENDAIRE,Guerre+Drame,Méritez-le,flavor,195,125,0.6410,175,136,1.29,99.3
+59,Matrix,LÉGENDAIRE,Science-Fiction+Action,Il n'y a pas de cuillère,dodge_first,196,126,0.6429,331,125,2.65,96.3
+60,Fight Club,LÉGENDAIRE,Drame+Thriller,Les règles du Fight Club » (rotation),per_turn_boost,195,135,0.6923,444,99,4.48,101.3
+61,American Beauty,ÉPIQUE,Drame,La beauté cachée,lowhp_boost,109,56,0.5138,65,70,0.93,157.8
+62,Memento,LÉGENDAIRE,Thriller+Crime,Mémoire de court terme,status_immune,195,120,0.6154,242,134,1.81,114.7
+63,Requiem for a Dream,ÉPIQUE,Drame,Le dernier sursaut,lowhp_boost,109,53,0.4862,67,71,0.94,161.3
+64,Amélie,ÉPIQUE,Comédie+Romance,La fabuleuse espièglerie,miss_chance,109,61,0.5596,86,76,1.13,199.0
+65,La Cité de Dieu,ÉPIQUE,Crime+Drame,La fuite dans les favelas,evasion,109,50,0.4587,81,68,1.19,140.9
+66,Catch Me If You Can,ÉPIQUE,Crime+Aventure,Attrape-moi si tu peux,evasion,109,60,0.5505,84,66,1.27,133.2
+67,Kill Bill,LÉGENDAIRE,Action+Crime,Bouge ton gros orteil,lowhp_boost,194,128,0.6598,348,118,2.95,94.0
+68,Oldboy,ÉPIQUE,Thriller+Action,Quinze ans d'attente,evasion,109,53,0.4862,71,63,1.13,148.1
+69,Eternal Sunshine of the Spotless Mind,ÉPIQUE,Romance+Science-Fiction,L'effacement des souvenirs,regen_start,109,58,0.5321,45,60,0.75,187.6
+70,Million Dollar Baby,ÉPIQUE,Drame,Le dernier round,lowhp_boost,109,53,0.4862,59,70,0.84,216.2
+71,Batman Begins,ÉPIQUE,Action+Crime,L'ombre de la chauve-souris,evasion,109,70,0.6422,112,63,1.78,149.8
+72,Brokeback Mountain,ÉPIQUE,Romance+Drame,La montagne secrète,regen_start,109,44,0.4037,19,83,0.23,184.3
+73,Le Prestige,ÉPIQUE,Drame+Science-Fiction,Le sacrifice du magicien,lowhp_boost,109,65,0.5963,105,62,1.69,160.2
+74,Casino Royale,ÉPIQUE,Action+Thriller,La course-poursuite de Madagascar,evasion,109,55,0.5046,44,64,0.69,173.4
+75,Les Infiltrés,ÉPIQUE,Crime+Thriller,La taupe insaisissable,evasion,109,47,0.4312,96,70,1.37,151.4
+76,There Will Be Blood,ÉPIQUE,Drame,Je bois ton milkshake,lowhp_boost,109,49,0.4495,73,74,0.99,181.8
+77,No Country for Old Men,ÉPIQUE,Thriller+Crime,Le tueur fantôme,evasion,109,64,0.5872,84,65,1.29,155.0
+78,Into the Wild,ÉPIQUE,Aventure+Drame,Vers la nature sauvage,evasion,109,60,0.5505,55,75,0.73,200.5
+79,Gran Torino,ÉPIQUE,Drame,Le dernier combat de Walt,lowhp_boost,109,48,0.4404,51,72,0.71,205.9
+80,Django Unchained,LÉGENDAIRE,Western+Crime,Le D est muet,start_boost,195,117,0.6000,239,127,1.88,100.5
+81,Incendies,ÉPIQUE,Drame+Thriller,1 + 1 = 1,endure_once,109,60,0.5505,104,70,1.49,108.4
+82,Intouchables,ÉPIQUE,Comédie+Drame,Pas d'bras; pas d'chocolat,status_immune,109,54,0.4954,45,71,0.63,213.4
+83,Prisoners,ÉPIQUE,Thriller+Crime,Espère le meilleur; prépare-toi au pire,crit_immune,109,60,0.5505,74,53,1.40,160.9
+84,Blade Runner 2049,ÉPIQUE,Science-Fiction+Thriller,Cellules interconnectées,per_turn_boost,109,54,0.4954,62,73,0.85,176.1
+85,Tu ne tueras point,ÉPIQUE,Guerre+Drame,Encore un; Seigneur,per_turn_boost,109,61,0.5596,75,68,1.10,197.1
+86,Gone Girl,ÉPIQUE,Thriller+Crime,Cool Girl,entry_drop,109,57,0.5229,82,63,1.30,145.2
+87,Spotlight,ÉPIQUE,Drame,Suivez l'histoire,true_hit,109,45,0.4128,53,81,0.65,195.6
+88,La La Land,ÉPIQUE,Romance+Comédie,Aux fous qui rêvent,status_immune,109,54,0.4954,45,80,0.56,214.8
+89,1917,ÉPIQUE,Guerre,Plan-séquence,always_first,109,55,0.5046,119,63,1.89,148.9
+90,The Father,ÉPIQUE,Drame,Où est ma montre ?,flavor,109,47,0.4312,38,79,0.48,191.7
+91,Dune,ÉPIQUE,Science-Fiction+Aventure,La peur tue l'esprit,status_immune,109,66,0.6055,81,59,1.37,165.4
+92,Oppenheimer,LÉGENDAIRE,Drame+Thriller,Je suis devenu la Mort,flavor,195,115,0.5897,179,141,1.27,98.9
+93,Chainsaw Man – The Reze Arc,LÉGENDAIRE,Action+Romance,Kobeni,flavor,195,104,0.5333,95,172,0.55,154.1
+94,The Thing,LÉGENDAIRE,Horreur+Science-Fiction,Qui va là ?,flavor,195,111,0.5692,112,152,0.74,133.0
+95,Zodiac,ÉPIQUE,Thriller+Crime,Ici le Zodiaque,status_immune,109,57,0.5229,90,69,1.30,164.6
+96,The Social Network,ÉPIQUE,Drame,Je suis le PDG; connard,start_boost,109,51,0.4679,56,80,0.70,158.0
+97,Whiplash,LÉGENDAIRE,Drame,Pas mon tempo,per_turn_boost,194,110,0.5670,131,156,0.84,133.1
+98,Black Swan,ÉPIQUE,Drame+Thriller,J'étais parfaite,lowhp_boost,109,61,0.5596,74,61,1.21,168.9
+99,The Revenant,ÉPIQUE,Aventure+Drame,Tant que je respire; je me bats,endure_once,109,62,0.5688,83,73,1.14,202.3
+100,Birdman,ÉPIQUE,Drame+Comédie,La voix de Birdman,start_boost,109,51,0.4679,29,75,0.39,188.0
+101,Her,ÉPIQUE,Romance+Science-Fiction,Elle en aime 641,flavor,109,48,0.4404,30,69,0.43,209.4
+102,Arrival,ÉPIQUE,Science-Fiction+Drame,Le temps n'est pas linéaire,flavor,110,54,0.4909,67,72,0.93,166.7
+103,Sicario,ÉPIQUE,Thriller+Crime,Le pays des loups,lowhp_boost,109,61,0.5596,83,65,1.28,142.2
+104,Enemy,RARE,Thriller+Horreur,Le double inquiétant,entry_drop,109,53,0.4862,45,61,0.74,155.3
+105,Nightcrawler,ÉPIQUE,Thriller+Crime,Je suis un négociateur,flavor,109,64,0.5872,95,64,1.48,147.7
+106,Donnie Darko,ÉPIQUE,Science-Fiction+Thriller,28 jours; 6 heures…,flavor,109,51,0.4679,55,68,0.81,171.1
+107,The Truman Show,ÉPIQUE,Drame+Comédie,Bonjour; et au cas où; bonsoir,start_boost,109,48,0.4404,70,71,0.99,180.1
+108,Shrek,ÉPIQUE,Animation+Comédie,Les ogres; c'est comme les oignons,multiscale_first,109,64,0.5872,109,57,1.91,137.5
+109,Ratatouille,ÉPIQUE,Animation+Comédie,Tire les cheveux,flavor,109,55,0.5046,71,70,1.01,182.1
+110,Wall-E,ÉPIQUE,Animation+Science-Fiction,EEEVE-uh,endure_once,109,58,0.5321,71,67,1.06,199.1
+111,Up,ÉPIQUE,Animation+Aventure,ÉCUREUIL !,miss_chance,109,61,0.5596,56,73,0.77,219.2
+112,Coco,ÉPIQUE,Animation+Aventure,Souviens-toi de moi,start_boost,109,60,0.5505,72,72,1.00,184.7
+113,Le Roi Lion,LÉGENDAIRE,Animation+Drame,Souviens-toi de qui tu es,lowhp_boost,196,108,0.5510,286,146,1.96,145.7
+114,Le Voyage de Chihiro,LÉGENDAIRE,Animation+Fantastique,Ne te retourne pas,status_immune,195,109,0.5590,181,149,1.21,156.8
+115,Your Name,ÉPIQUE,Romance+Fantastique,Kataware-doki,dodge_first,109,55,0.5046,72,69,1.04,191.1
+116,Akira,LÉGENDAIRE,Animation+Science-Fiction,TETSUOOO !,per_turn_boost,195,142,0.7282,478,95,5.03,98.2
+117,Ghost in the Shell,ÉPIQUE,Animation+Science-Fiction,Camouflage thermoptique,evasion,109,54,0.4954,56,72,0.78,203.9
+118,Perfect Blue,ÉPIQUE,Animation+Thriller,Qui est la vraie Mima ?,reflect_chance,109,52,0.4771,88,65,1.35,152.6
+119,The Grand Budapest Hotel,ÉPIQUE,Comédie+Aventure,la Société des Clés Croisées,flavor,109,61,0.5596,76,70,1.09,185.9
+120,Moonrise Kingdom,ÉPIQUE,Comédie+Romance,Je t'aime mais tu ne sais pas de quoi tu parles,status_immune,109,58,0.5321,55,64,0.86,176.4
+121,Fantastic Mr. Fox,ÉPIQUE,Animation+Comédie,On est tous des animaux sauvages,lowhp_boost,109,63,0.5780,103,54,1.91,158.6
+122,The Lighthouse,RARE,Horreur+Drame,La folie du phare,miss_chance,109,58,0.5321,71,59,1.20,163.8
+123,The Witch,RARE,Horreur,Veux-tu vivre délicieusement ?,miss_chance,109,50,0.4587,19,67,0.28,207.3
+124,Midsommar,RARE,Horreur+Drame,La fête païenne en plein jour,miss_chance,109,56,0.5138,62,64,0.97,190.6
+125,Get Out,ÉPIQUE,Horreur+Thriller,Va dans le Lieu Englouti,miss_chance,109,59,0.5413,82,69,1.19,157.0
+126,Us,RARE,Horreur+Thriller,Les Attachés,miss_chance,109,50,0.4587,59,65,0.91,177.3
+127,Nope,RARE,Horreur+Science-Fiction,Surtout; ne le regarde pas,miss_chance,109,53,0.4862,48,71,0.68,179.8
+128,The Batman,ÉPIQUE,Action+Crime,Je suis la Vengeance,lowhp_boost,110,61,0.5545,127,50,2.54,148.1
+129,Avengers: Endgame,ÉPIQUE,Action+Aventure,Avengers… Rassemblement !,flavor,109,54,0.4954,79,72,1.10,202.7
+130,Spider-Man: No Way Home,ÉPIQUE,Action+Aventure,Les trois Spider-Man,lowhp_boost,109,61,0.5596,114,65,1.75,164.2
+131,Harry Potter à l'école des sorciers,ÉPIQUE,Aventure+Fantastique,T'es un sorcier; Harry,start_boost,109,44,0.4037,39,72,0.54,173.3
+132,Pirates des Caraïbes,ÉPIQUE,Action+Aventure,Capitaine Jack Sparrow,flavor,109,45,0.4128,72,71,1.01,194.3
+133,Mission: Impossible,ÉPIQUE,Action+Thriller,Votre mission; si vous l'acceptez,true_hit,109,53,0.4862,60,71,0.85,140.8
+134,Skyfall,ÉPIQUE,Action+Thriller,Bond. James Bond,start_boost,109,51,0.4679,47,76,0.62,143.6
+135,Tenet,ÉPIQUE,Action+Science-Fiction,Ressens-le; ne cherche pas à comprendre,flavor,109,43,0.3945,39,72,0.54,197.7
+136,Dunkerque,ÉPIQUE,Guerre+Thriller,Rentrer chez soi,lowhp_boost,109,64,0.5872,124,76,1.63,157.6
+137,The Irishman,ÉPIQUE,Crime+Drame,Il paraît que tu repeins les maisons,true_hit,109,56,0.5138,58,73,0.79,196.1
+138,Killers of the Flower Moon,ÉPIQUE,Crime+Western,Le règne de la terreur,per_turn_boost,110,56,0.5091,55,76,0.72,164.5
+139,Casino,ÉPIQUE,Crime+Drame,Tout le monde surveille tout le monde,status_immune,109,42,0.3853,41,73,0.56,188.0
+140,The Hateful Eight,ÉPIQUE,Western+Crime,Désormais; c'est Daisy qui paie,ally_fall_boost,110,40,0.3636,40,80,0.50,184.9
+141,Once Upon a Time in Hollywood,ÉPIQUE,Comédie+Drame,Rick putain de Dalton,lowhp_boost,109,58,0.5321,55,68,0.81,208.2
+142,Le Pianiste,ÉPIQUE,Drame+Guerre,Tant que je joue; je survis,flavor,109,48,0.4404,58,84,0.69,196.6
+143,La vie est belle,LÉGENDAIRE,Comédie+Drame,C'est un jeu,flavor,195,103,0.5282,108,169,0.64,151.3
+144,Roma,ÉPIQUE,Drame,Je ne voulais pas qu'il naisse,status_immune,109,49,0.4495,36,78,0.46,201.0
+145,Marriage Story,ÉPIQUE,Drame,La liste de ce que j'aime chez lui,regen_start,109,39,0.3578,50,81,0.62,195.7
+146,Manchester by the Sea,ÉPIQUE,Drame,Je peux pas le surmonter,status_immune,109,45,0.4128,54,78,0.69,167.8
+147,Sound of Metal,ÉPIQUE,Drame,Le silence est le royaume de Dieu,status_immune,109,57,0.5229,45,70,0.64,209.7
+148,Everything Everywhere All at Once,ÉPIQUE,Science-Fiction+Aventure,Verse-saut,per_turn_boost,108,62,0.5741,49,71,0.69,181.4
+149,Dune: Deuxième Partie,ÉPIQUE,Science-Fiction+Aventure,Lisan al-Gaib !,start_team_boost,109,50,0.4587,65,69,0.94,181.7
+150,Furiosa,ÉPIQUE,Action+Aventure,Je veux récupérer ce qu'on m'a pris,lowhp_boost,109,57,0.5229,92,67,1.37,153.9
+151,Civil War,ÉPIQUE,Guerre+Thriller,On photographie pour que d'autres se posent la question,true_hit,109,53,0.4862,90,74,1.22,119.0
+152,The Substance,ÉPIQUE,Horreur+Science-Fiction,Tu ne fais qu'Une,lowhp_boost,108,47,0.4352,39,66,0.59,199.9
+153,Nosferatu,RARE,Horreur,L'ombre de Nosferatu,miss_chance,109,35,0.3211,37,80,0.46,174.9
+154,Mickey 17,RARE,Science-Fiction+Comédie,Le consommable,status_immune,109,52,0.4771,59,71,0.83,166.9
+155,Gladiator II,RARE,Action+Drame,L'héritier de l'arène,start_boost,109,55,0.5046,72,63,1.14,152.1
+156,Joker: Folie à Deux,RARE,Drame+Crime,La folie à deux,lowhp_boost,109,50,0.4587,39,75,0.52,155.6
+157,Deadpool & Wolverine,ÉPIQUE,Action+Comédie,Facteur guérisseur,flavor,108,65,0.6019,84,65,1.29,195.4
+158,Vice Versa 2,ÉPIQUE,Animation+Comédie,Anxiété aux commandes,lowhp_boost,109,61,0.5596,91,72,1.26,163.6
+159,Le Mépris,ÉPIQUE,Drame,Et mes fesses; tu les aimes ?,start_boost,108,53,0.4907,28,66,0.42,231.6
+160,Paris; Texas,ÉPIQUE,Drame,La chemise rouge,status_immune,109,57,0.5229,74,76,0.97,196.5
+161,Stalker,ÉPIQUE,Science-Fiction+Drame,La Zone décide,flavor,109,58,0.5321,56,61,0.92,159.6
+162,Andreï Roublev,ÉPIQUE,Drame,Le vœu de silence,status_immune,109,63,0.5780,60,71,0.85,204.8
+163,Mulholland Drive,ÉPIQUE,Thriller+Drame,No hay banda,flavor,108,58,0.5370,88,66,1.33,149.5
+164,Lost Highway,ÉPIQUE,Thriller+Horreur,On s'est déjà rencontrés,status_immune,109,56,0.5138,72,73,0.99,155.3
+165,The Elephant Man,ÉPIQUE,Drame,Je ne suis pas un animal,status_immune,109,61,0.5596,72,73,0.99,192.4
+166,The Tree of Life,RARE,Drame,L'arbre de vie,lowhp_boost,109,53,0.4862,87,63,1.38,156.1
+167,The Thin Red Line,ÉPIQUE,Guerre+Drame,D'où vient ce mal ?,status_immune,109,55,0.5046,36,67,0.54,171.5
+168,A Ghost Story,RARE,Drame+Fantastique,Le drap qui attend,lowhp_boost,109,50,0.4587,58,71,0.82,159.9
+169,First Reformed,ÉPIQUE,Drame,Dieu nous pardonnera-t-il ?,status_immune,109,43,0.3945,32,83,0.39,205.3
+170,Uncut Gems,ÉPIQUE,Thriller+Crime,C'est comme ça que je gagne,lowhp_boost,109,66,0.6055,122,66,1.85,160.1
+171,Good Time,ÉPIQUE,Thriller+Crime,Je dois sortir mon frère,lowhp_boost,108,47,0.4352,65,63,1.03,162.4
+172,The Florida Project,ÉPIQUE,Drame,On va voir l'arc-en-ciel,flavor,109,40,0.3670,42,80,0.53,209.1
+173,Moonlight,ÉPIQUE,Drame,Au clair de lune; les Noirs paraissent bleus,status_immune,109,49,0.4495,56,77,0.73,205.8
+174,12 Years a Slave,ÉPIQUE,Drame,Je ne veux pas survivre; je veux vivre,flavor,109,58,0.5321,45,65,0.69,224.9
+175,Green Book,ÉPIQUE,Drame+Comédie,Le monde est plein de gens seuls,per_turn_boost,109,54,0.4954,50,72,0.69,193.1
+176,The Shape of Water,ÉPIQUE,Romance+Fantastique,Si on ne fait rien; nous non plus on n'est rien,flavor,109,52,0.4771,59,76,0.78,205.6
+177,Children of Men,ÉPIQUE,Science-Fiction+Thriller,Le bébé,lowhp_boost,109,57,0.5229,87,79,1.10,165.0
+178,Gravity,ÉPIQUE,Science-Fiction+Thriller,Il faut apprendre à lâcher prise,endure_once,109,55,0.5046,56,75,0.75,158.1
+179,Le Labyrinthe de Pan,ÉPIQUE,Fantastique+Drame,La craie magique,flavor,109,51,0.4679,48,74,0.65,192.1
+180,Hell or High Water,ÉPIQUE,Crime+Western,Personne n'échappe à ses dettes,lowhp_boost,108,55,0.5093,61,65,0.94,161.5
+181,Wind River,ÉPIQUE,Thriller+Crime,On survit ou on abandonne,lowhp_boost,108,56,0.5185,71,76,0.93,159.2
+182,The Big Short,ÉPIQUE,Comédie+Drame,Wall Street adore les acronymes,flavor,109,56,0.5138,51,72,0.71,174.5
+183,Moneyball,ÉPIQUE,Drame,On achète des victoires; donc des points,true_hit,109,55,0.5046,34,70,0.49,194.7
+184,Ford v Ferrari,ÉPIQUE,Action+Drame,7000 tours,status_immune,108,57,0.5278,65,72,0.90,170.9
+185,Rush,ÉPIQUE,Action+Drame,Le bonheur est l'ennemi,lowhp_boost,109,57,0.5229,132,61,2.16,172.4
+186,The Imitation Game,ÉPIQUE,Drame+Thriller,Ceux qu'on n'imagine capables de rien,start_boost,109,53,0.4862,99,67,1.48,158.2
+187,Ex Machina,ÉPIQUE,Science-Fiction+Thriller,Tu m'aimes bien ?,flavor,108,50,0.4630,66,73,0.90,152.0
+188,Annihilation,RARE,Science-Fiction+Horreur,Le Chatoiement,status_immune,109,58,0.5321,65,71,0.92,147.0
+189,Looper,ÉPIQUE,Science-Fiction+Action,Fermer la boucle,flavor,109,55,0.5046,46,68,0.68,155.2
+190,Edge of Tomorrow,ÉPIQUE,Science-Fiction+Action,Recommence,flavor,109,48,0.4404,57,73,0.78,166.6
+191,Minority Report,ÉPIQUE,Science-Fiction+Thriller,Pré-crime,dodge_first,109,58,0.5321,93,66,1.41,135.9
+192,A.I. Intelligence artificielle,ÉPIQUE,Science-Fiction+Drame,Maman; je serai un vrai petit garçon,status_immune,109,53,0.4862,52,78,0.67,200.1
+193,Ready Player One,ÉPIQUE,Science-Fiction+Aventure,Rewind,flavor,109,50,0.4587,54,73,0.74,177.8
+194,The Fabelmans,ÉPIQUE,Drame,Les films sont des rêves qu'on n'oublie jamais,regen_start,108,58,0.5370,59,71,0.83,200.4
+195,West Side Story,ÉPIQUE,Romance+Drame,Tonight,start_boost,108,53,0.4907,44,72,0.61,195.7
+196,Babylon,ÉPIQUE,Drame+Comédie,Le cinéma est plus grand que la vie,flavor,109,46,0.4220,61,74,0.82,165.3
+197,The Northman,ÉPIQUE,Action+Aventure,Je te vengerai; Père,lowhp_boost,109,57,0.5229,92,66,1.39,150.3
+198,The Banshees of Inisherin,ÉPIQUE,Comédie+Drame,Je ne t'aime plus,entry_drop,108,53,0.4907,29,74,0.39,194.8
+199,Aftersun,ÉPIQUE,Drame,Quand j'avais onze ans,status_immune,109,51,0.4679,52,76,0.68,178.3
+200,Past Lives,ÉPIQUE,Romance+Drame,In-yun,multiscale_first,109,45,0.4128,27,80,0.34,211.1
+201,The Whale,ÉPIQUE,Drame,Les gens sont incapables de ne pas être bienveillants,per_turn_boost,109,61,0.5596,49,68,0.72,198.7
+202,Tár,ÉPIQUE,Drame,Tu dois servir le compositeur,start_boost,109,39,0.3578,53,80,0.66,188.3
+203,Decision to Leave,ÉPIQUE,Thriller+Romance,Je suis devenu fou de toi,miss_chance,108,47,0.4352,50,67,0.75,147.7
+204,Memories of Murder,ÉPIQUE,Thriller+Crime,Tu connais ce visage ?,entry_drop,109,58,0.5321,95,69,1.38,144.7
+205,Burning,ÉPIQUE,Thriller+Drame,Les serres qu'on brûle,miss_chance,109,61,0.5596,83,69,1.20,149.8
+206,Snowpiercer,ÉPIQUE,Science-Fiction+Action,Garde ta place,lowhp_boost,109,51,0.4679,71,69,1.03,149.0
+207,Jurassic Park,LÉGENDAIRE,Aventure+Science-Fiction,La vie trouve toujours un chemin,endure_once,195,115,0.5897,206,144,1.43,144.1
+208,Shutter Island,ÉPIQUE,Thriller+Drame,Vivre en monstre ou mourir en homme bien,flavor,109,61,0.5596,92,67,1.37,123.3
+209,Drive,ÉPIQUE,Crime+Action,Cinq minutes,entry_drop,109,50,0.4587,66,65,1.02,181.7
+210,La Chasse,ÉPIQUE,Drame,Regarde-moi dans les yeux,status_immune,109,40,0.3670,45,84,0.54,220.3
+211,Warrior,ÉPIQUE,Drame+Action,Je t'aime; Tommy,lowhp_boost,109,59,0.5413,99,64,1.55,180.2
+212,Joker,LÉGENDAIRE,Drame+Crime,Ma vie est une comédie,flavor,195,111,0.5692,138,148,0.93,106.4
+213,Logan,ÉPIQUE,Action+Drame,Le facteur guérisseur s'éteint,regen_start,109,58,0.5321,73,68,1.07,200.1
+214,Blue Velvet,ÉPIQUE,Thriller+Crime,Pabst Blue Ribbon !,lowhp_boost,109,48,0.4404,47,74,0.64,175.5
+215,L'Amour ouf,ÉPIQUE,Romance+Drame,L'amour ouf,start_boost,109,40,0.3670,21,78,0.27,207.4
+216,Pervert!,RARE,Comédie+Horreur,Le délire pervers,miss_chance,109,51,0.4679,36,68,0.53,153.8
+217,Junk Head,ÉPIQUE,Animation+Science-Fiction,Fait main; tout seul,flavor,109,45,0.4128,52,74,0.70,174.3
+218,Mad God,ÉPIQUE,Animation+Horreur,Trente ans de cauchemar,per_turn_boost,109,51,0.4679,72,78,0.92,168.0
+219,McWalter,RARE,Comédie+Action,Le gag de McWalter,miss_chance,109,48,0.4404,21,72,0.29,162.1
+220,Y a-t-il un flic pour sauver la reine ?,ÉPIQUE,Comédie,L'inspecteur Drebin,flavor,109,50,0.4587,47,68,0.69,178.1
+221,Y a-t-il un flic pour sauver le président ?,ÉPIQUE,Comédie,La poisse de Drebin,dodge_first,109,47,0.4312,38,69,0.55,148.1
+222,Y a-t-il un flic pour sauver Hollywood ?,RARE,Comédie,La maladresse de Frank Drebin,miss_chance,109,43,0.3945,28,72,0.39,165.7
+223,Y a-t-il un flic pour sauver le monde ?,RARE,Comédie,Le retour de l'inspecteur,miss_chance,109,49,0.4495,36,75,0.48,164.8
+224,Le Complexe du castor,RARE,Drame,La marionnette castor,lowhp_boost,109,44,0.4037,78,77,1.01,151.0
+225,teeth,RARE,Horreur+Comédie,Ça mord,damage_return,109,61,0.5596,66,60,1.10,159.5
+226,knock knock,RARE,Horreur+Thriller,Le piège de la tentation,miss_chance,109,55,0.5046,51,67,0.76,170.2
+227,Српски филм,RARE,Horreur,Le film maudit,miss_chance,109,48,0.4404,31,69,0.45,181.0
+228,The Human Centipede,RARE,Horreur,L'expérience monstrueuse,miss_chance,109,55,0.5046,15,65,0.23,191.3
+229,The Human Centipede II,RARE,Horreur,La séquence dérangée,miss_chance,109,39,0.3578,29,84,0.35,163.2
+230,The Human Centipede III,RARE,Horreur,L'horreur carcérale,miss_chance,110,39,0.3545,24,82,0.29,168.3
+231,Tusk,RARE,Horreur+Comédie,La métamorphose en morse,miss_chance,109,39,0.3578,26,79,0.33,164.6
+232,Le Bruit des glaçons,RARE,Comédie+Drame,Le cancer qui parle,miss_chance,109,43,0.3945,44,74,0.59,158.3
+233,Paprika,ÉPIQUE,Animation+Science-Fiction,Les rêves et internet; c'est pareil,miss_chance,109,51,0.4679,56,75,0.75,152.2
+234,Le Boulevard de la mort,ÉPIQUE,Action+Thriller,Voiture à l'épreuve de la mort,multiscale_first,109,54,0.4954,64,75,0.85,175.6
+235,saw,ÉPIQUE,Horreur+Thriller,Vis ou meurs; à toi de choisir,lowhp_boost,109,60,0.5505,61,63,0.97,180.5
+236,the lobster,ÉPIQUE,Comédie+Drame,Sinon; tu deviens un animal,flavor,109,48,0.4404,30,66,0.45,192.6
+237,(500) jours ensemble,ÉPIQUE,Romance+Comédie,Attentes / Réalité,flavor,109,51,0.4679,45,68,0.66,174.3
+238,Five,RARE,Comédie,Le pari des cinq,miss_chance,109,38,0.3486,35,81,0.43,159.6
+239,Le Château de ma mère,ÉPIQUE,Drame+Comédie,Les souvenirs d'enfance,regen_start,109,37,0.3394,28,77,0.36,176.3
+240,Pacific Rim : Uprising,RARE,Action+Science-Fiction,Le réveil des Jaegers,start_boost,109,63,0.5780,82,61,1.34,137.7
+241,Vice-versa,ÉPIQUE,Animation+Comédie,Les souvenirs-noyaux,lowhp_boost,109,62,0.5688,70,66,1.06,155.2
+242,Le Tombeau des lucioles,ÉPIQUE,Drame+Guerre,Les lucioles s'éteignent,per_turn_boost,109,44,0.4037,35,85,0.41,190.6
+243,La Ligne verte,LÉGENDAIRE,Drame+Fantastique,Le don de Coffey,per_turn_boost,194,110,0.5670,134,155,0.86,179.5
+244,John Wick,LÉGENDAIRE,Action+Crime,Baba Yaga,lowhp_boost,195,134,0.6872,423,111,3.81,85.7
+245,Le Tombeau des lucioles,LÉGENDAIRE,Animation+Drame,Les lucioles d'une nuit,flavor,195,120,0.6154,168,146,1.15,135.1
+246,Orphée,ÉPIQUE,Drame+Fantastique,Le miroir,flavor,109,57,0.5229,59,69,0.86,156.1
+247,Les Temps Modernes,ÉPIQUE,Comédie+Drame,Smile,regen_start,108,52,0.4815,54,67,0.81,213.5
+248,Le Dictateur,ÉPIQUE,Comédie+Drame,Vous n'êtes pas du bétail !,start_team_boost,109,48,0.4404,48,72,0.67,191.7
+249,Merlin l'enchanteur,ÉPIQUE,Animation+Aventure,Higitus Figitus,flavor,109,58,0.5321,44,71,0.62,192.1
+250,Ponyo sur la falaise,ÉPIQUE,Animation+Fantastique,Ponyo aime Sōsuke !,start_boost,109,51,0.4679,89,78,1.14,170.9
+251,Colorful,ÉPIQUE,Animation+Drame,Une seconde chance,flavor,109,46,0.4220,32,76,0.42,173.3
+252,La Planète des singes : Les Origines,ÉPIQUE,Action+Science-Fiction,Caesar est chez lui,ally_fall_boost,109,46,0.4220,35,72,0.49,181.3
+253,La Guerre des étoiles,LÉGENDAIRE,Science-Fiction+Aventure,Que la Force soit avec toi,evasion,195,114,0.5846,161,142,1.13,123.3
+254,Alien; le huitième passager,LÉGENDAIRE,Science-Fiction+Horreur,Dans l'espace; personne ne vous entend crier,per_turn_boost,195,94,0.4821,120,167,0.72,127.3
+255,Lord of War,ÉPIQUE,Drame+Crime,Le marchand de mort,flavor,109,55,0.5046,52,68,0.76,173.4
+256,8 Mile,ÉPIQUE,Drame,Tu n'as plus rien à dire,flavor,109,46,0.4220,48,81,0.59,169.7
+257,Retour vers le futur III,ÉPIQUE,Aventure+Science-Fiction,142 km/h,lowhp_boost,109,54,0.4954,51,72,0.71,178.8
+258,Retour vers le futur,LÉGENDAIRE,Aventure+Science-Fiction,Là où on va; on n'a pas besoin de routes,entry_drop,195,102,0.5231,114,156,0.73,145.6
+259,Retour vers le futur II,ÉPIQUE,Aventure+Science-Fiction,L'almanach des sports,antiboost,109,55,0.5046,52,69,0.75,159.6
+260,Diamants sur canapé,ÉPIQUE,Romance+Comédie,Moon River,entry_drop,109,44,0.4037,51,77,0.66,194.1
+261,Soleil vert,ÉPIQUE,Science-Fiction+Thriller,Le Soleil vert; c'est des gens !,entry_drop,109,37,0.3394,41,77,0.53,134.2
+262,Terminator,LÉGENDAIRE,Science-Fiction+Action,Je reviendrai,flavor,195,135,0.6923,306,121,2.53,118.0
+263,Rambo,ÉPIQUE,Action+Drame,Ils ont tiré les premiers,lowhp_boost,109,53,0.4862,77,70,1.10,180.0
+264,L'Expérience,ÉPIQUE,Thriller+Drame,L'habit fait le bourreau,onhit_boost,109,47,0.4312,99,61,1.62,145.1
+265,La Plage,ÉPIQUE,Aventure+Drame,Le paradis a un prix,lowhp_boost,109,47,0.4312,23,78,0.29,190.5
+266,Inglourious Basterds,LÉGENDAIRE,Guerre+Drame,That's a bingo!,flavor,194,117,0.6031,163,131,1.24,93.4
+267,Une nuit en enfer,ÉPIQUE,Horreur+Action,Le Titty Twister,lowhp_boost,109,55,0.5046,53,67,0.79,201.6
+268,Man on the Moon,ÉPIQUE,Comédie+Drame,Tony Clifton,flavor,109,48,0.4404,46,78,0.59,166.8
+269,Saw II,RARE,Horreur+Thriller,Le jeu de Jigsaw,miss_chance,109,43,0.3945,63,72,0.88,154.3
+270,Saw III,RARE,Horreur+Thriller,Veux-tu jouer ?,miss_chance,109,45,0.4128,45,67,0.67,155.8
+271,Saw IV,RARE,Horreur+Thriller,Le test mortel,miss_chance,109,45,0.4128,39,75,0.52,179.0
+272,Saw V,RARE,Horreur+Thriller,L'engrenage fatal,miss_chance,109,40,0.3670,41,74,0.55,184.0
+273,Saw VI,RARE,Horreur+Thriller,Le choix impossible,miss_chance,109,43,0.3945,47,76,0.62,153.1
+274,La Montagne sacrée,ÉPIQUE,Fantastique+Aventure,Zoom back; camera !,flavor,109,40,0.3670,31,81,0.38,185.7
+275,Iron Man,LÉGENDAIRE,Action+Science-Fiction,Je suis Iron Man,start_boost,195,105,0.5385,112,160,0.70,169.8
+276,Hulk,RARE,Science-Fiction+Drame,La rage verte,status_immune,110,45,0.4091,38,72,0.53,169.6
+277,L'Incroyable Hulk,RARE,Action+Science-Fiction,Plus il enrage; plus il frappe,start_boost,109,39,0.3578,68,76,0.89,174.9
+278,La Grande Aventure LEGO,ÉPIQUE,Animation+Aventure,Tout est génial,per_turn_boost,109,61,0.5596,66,61,1.08,175.7
+279,Bob l'éponge; le film,ÉPIQUE,Animation+Comédie,Goofy Goober !,miss_chance,109,45,0.4128,33,71,0.46,162.9
+280,Iron Man 2,ÉPIQUE,Action+Science-Fiction,Le nouveau réacteur,start_boost,109,41,0.3761,34,82,0.41,208.4
+281,Thor,ÉPIQUE,Action+Fantastique,Encore !,flavor,109,44,0.4037,72,74,0.97,187.7
+282,Captain America : First Avenger,ÉPIQUE,Action+Aventure,Je peux faire ça toute la journée,flavor,109,48,0.4404,32,78,0.41,194.6
+283,Avengers,LÉGENDAIRE,Action+Science-Fiction,Je suis toujours en colère,lowhp_boost,195,109,0.5590,111,176,0.63,209.1
+284,Iron Man 3,ÉPIQUE,Action+Science-Fiction,Les armures de secours,start_boost,109,39,0.3578,22,74,0.30,195.9
+285,Thor : Le Monde des ténèbres,RARE,Action+Fantastique,L'Éther des ténèbres,start_boost,109,54,0.4954,79,74,1.07,167.8
+286,Captain America : Le Soldat de l'hiver,ÉPIQUE,Action+Thriller,Sur ta gauche,entry_drop,109,46,0.4220,47,75,0.63,171.1
+287,Les Gardiens de la Galaxie,ÉPIQUE,Action+Science-Fiction,Nous s'appelle Groot,flavor,109,48,0.4404,53,72,0.74,222.7
+288,Avengers : L'Ère d'Ultron,ÉPIQUE,Action+Science-Fiction,L'ère de l'IA,start_boost,109,53,0.4862,27,66,0.41,199.9
+289,Ant-Man,ÉPIQUE,Action+Comédie,Petit mais costaud,evasion,109,46,0.4220,57,64,0.89,177.7
+290,Captain America : Civil War,ÉPIQUE,Action+Science-Fiction,C'est mon ami,ally_fall_boost,109,56,0.5138,72,61,1.18,173.6
+291,Doctor Strange,ÉPIQUE,Action+Fantastique,Dormammu; je viens négocier,endure_once,109,50,0.4587,83,67,1.24,160.7
+292,Les Gardiens de la Galaxie Vol. 2,ÉPIQUE,Science-Fiction+Comédie,Awesome Mix Vol. 2,start_boost,109,48,0.4404,25,73,0.34,206.7
+293,Spider-Man : Homecoming,ÉPIQUE,Action+Aventure,Allez; Spider-Man,lowhp_boost,109,46,0.4220,50,79,0.63,159.3
+294,Thor : Ragnarok,ÉPIQUE,Action+Comédie,Je suis le dieu du Tonnerre !,lowhp_boost,109,59,0.5413,116,65,1.78,148.0
+295,Black Panther,ÉPIQUE,Action+Aventure,Le costume de vibranium,damage_return,109,54,0.4954,40,76,0.53,200.9
+296,Avengers : Infinity War,ÉPIQUE,Action+Science-Fiction,Le claquement de doigts,flavor,108,53,0.4907,46,59,0.78,206.5
+297,Cars : Quatre roues,RARE,Animation+Aventure,Le rookie de la piste,start_boost,109,49,0.4495,54,67,0.81,139.6
+298,The Exorcist,LÉGENDAIRE,Horreur+Drame,Quel jour idéal pour un exorcisme,start_boost,195,100,0.5128,117,159,0.74,174.2
+299,Wallace & Gromit : Le Mystère du lapin-garou,ÉPIQUE,Animation+Comédie,Du fromage; Gromit !,per_turn_boost,108,49,0.4537,30,79,0.38,198.5
+300,The Mask,RARE,Comédie+Fantastique,Que quelqu'un m'arrête !,status_immune,109,44,0.4037,31,69,0.45,141.8
+301,Ma vie de courgette,ÉPIQUE,Animation+Drame,Le cerf-volant de maman,status_immune,109,49,0.4495,46,79,0.58,183.6
+302,Insomnia,RARE,Thriller+Crime,La lumière qui ne s'éteint jamais,entry_drop,109,48,0.4404,55,66,0.83,138.9
+303,Rambo II : La Mission,RARE,Action+Guerre,La mission en solitaire,start_boost,109,51,0.4679,57,68,0.84,156.6
+304,Ali G,RARE,Comédie,Le respect; mec,miss_chance,109,44,0.4037,16,80,0.20,148.9
+305,How High,RARE,Comédie,La fumée de génie,miss_chance,109,42,0.3853,20,76,0.26,131.1
+306,Monty Python : Sacré Graal !,LÉGENDAIRE,Comédie+Aventure,Ce n'est qu'une égratignure !,flavor,195,93,0.4769,142,128,1.11,118.4
+307,Atlantide; l'empire perdu,RARE,Animation+Aventure,Le cristal d'Atlantide,start_boost,109,41,0.3761,33,80,0.41,153.6
+308,Les Simpson; le film,ÉPIQUE,Animation+Comédie,Spider-Cochon,start_boost,109,53,0.4862,81,66,1.23,146.6
+309,The East,RARE,Thriller+Drame,Le collectif clandestin,entry_drop,109,40,0.3670,52,72,0.72,148.2
+310,Croc-Blanc,RARE,Aventure+Drame,L'instinct du loup,evasion,109,35,0.3211,59,87,0.68,152.2
+311,Hell and Back,RARE,Comédie+Fantastique,La pastille à la menthe,flavor,109,46,0.4220,28,67,0.42,113.5
+312,Légendes d'automne,ÉPIQUE,Drame+Romance,L'ours en lui,lowhp_boost,109,53,0.4862,52,75,0.69,190.9
+313,Donjons & Dragons : l'Honneur des voleurs,ÉPIQUE,Aventure+Fantastique,La forme sauvage de Doric,flavor,109,47,0.4312,41,73,0.56,182.4
+314,Jumper,RARE,Science-Fiction+Action,Le saut dans le vide,status_immune,109,49,0.4495,35,71,0.49,148.0
+315,Zootopie,ÉPIQUE,Animation+Crime,Flash; le plus rapide du guichet,start_boost,108,61,0.5648,102,59,1.73,171.6
+316,Un jour sans fin,ÉPIQUE,Comédie+Fantastique,Encore le 2 février,flavor,109,57,0.5229,102,58,1.76,156.6
+317,Idiocracy,RARE,Comédie+Science-Fiction,Le monde abruti,miss_chance,109,38,0.3486,28,78,0.36,136.7
+318,Bienvenue à Zombieland,ÉPIQUE,Comédie+Horreur,Règle n°1 : Cardio,start_boost,109,43,0.3945,26,72,0.36,210.9
+319,Retour à Zombieland,RARE,Comédie+Horreur,Les règles de survie,miss_chance,109,41,0.3761,24,76,0.32,177.9
+320,L'Armée des Morts,RARE,Horreur+Action,La horde affamée,miss_chance,109,42,0.3853,53,78,0.68,131.1
+321,Rox et Rouky,ÉPIQUE,Animation+Drame,Renard et chien de chasse,status_immune,109,55,0.5046,33,82,0.40,199.2
+322,The Karate Kid,RARE,Action+Drame,Accroche la veste,start_boost,109,47,0.4312,41,78,0.53,149.6
+323,Tokyo Godfathers,ÉPIQUE,Animation+Drame,La chance des laissés-pour-compte,evasion,109,44,0.4037,58,73,0.79,176.2
+324,Dans un recoin de ce monde,ÉPIQUE,Animation+Guerre,La vie continue malgré tout,per_turn_boost,109,48,0.4404,41,84,0.49,200.4
+325,Maquia : When the Promised Flower Blooms,ÉPIQUE,Animation+Fantastique,La tisserande d'éternité,entry_drop,109,54,0.4954,63,71,0.89,188.3
+326,Le Conte de la princesse Kaguya,ÉPIQUE,Animation+Drame,Le souvenir de la Terre,lowhp_boost,109,58,0.5321,126,72,1.75,167.1
+327,Kamikaze; le dernier assaut,ÉPIQUE,Drame+Guerre,Je veux rentrer vivant,flavor,109,43,0.3945,47,73,0.64,157.2
+328,V pour Vendetta,ÉPIQUE,Action+Science-Fiction,Derrière ce masque; une idée,flavor,109,53,0.4862,97,73,1.33,166.6
+329,Titeuf; le film,RARE,Animation+Comédie,Pô grave !,start_boost,109,43,0.3945,31,73,0.42,119.5
+330,Kiki la petite sorcière,ÉPIQUE,Animation+Aventure,Trouver sa propre magie,lowhp_boost,109,58,0.5321,64,71,0.90,182.0
+331,Silent Voice,ÉPIQUE,Animation+Drame,Les croix sur les visages,lowhp_boost,109,41,0.3761,83,75,1.11,166.9
+332,Je veux manger ton pancréas,ÉPIQUE,Animation+Drame,Vivre; c'est entrer en lien avec les autres,start_boost,109,42,0.3853,64,78,0.82,158.2
+333,Un bonheur n'arrive jamais seul,RARE,Comédie+Romance,Le bonheur imprévu,miss_chance,109,41,0.3761,62,81,0.77,126.0
+334,La Rafle,ÉPIQUE,Drame+Guerre,Pour ne pas oublier,flavor,109,50,0.4587,39,76,0.51,205.2
+335,Le Garçon au pyjama rayé,ÉPIQUE,Drame+Guerre,L'amitié à travers le grillage,flavor,109,48,0.4404,42,71,0.59,187.2
+336,La Vague,ÉPIQUE,Drame+Thriller,La Vague grandit,per_turn_boost,109,55,0.5046,70,62,1.13,164.1
+337,Millennium Actress,ÉPIQUE,Animation+Drame,La poursuite d'une vie entière,always_first,109,53,0.4862,61,71,0.86,149.3
+338,Amer béton,ÉPIQUE,Animation+Action,Noir et Blanc,start_boost,109,48,0.4404,69,78,0.88,164.4
+339,Look Back,ÉPIQUE,Animation+Drame,Continuer à dessiner,lowhp_boost,108,56,0.5185,106,64,1.66,163.3
+340,Gatsby le Magnifique,ÉPIQUE,Drame+Romance,La lumière verte,per_turn_boost,109,48,0.4404,34,61,0.56,177.2
+341,Arrietty; le petit monde des chapardeurs,ÉPIQUE,Animation+Aventure,L'art de l'emprunt,entry_drop,109,46,0.4220,48,80,0.60,163.0
+342,L'Effet papillon,ÉPIQUE,Science-Fiction+Thriller,Réécrire le passé,flavor,109,49,0.4495,57,67,0.85,122.0
+343,Le Géant de fer,ÉPIQUE,Animation+Science-Fiction,Je ne suis pas une arme,start_boost,109,57,0.5229,96,72,1.33,196.2
+344,Redline,ÉPIQUE,Animation+Action,Le bouton Redline,lowhp_boost,109,50,0.4587,104,64,1.63,163.8
+345,Berserk; l'âge d'or – Partie 1 : L'Œuf du roi conquérant,ÉPIQUE,Animation+Guerre,Le rêve d'un royaume,start_team_boost,109,54,0.4954,63,69,0.91,169.9
+346,Berserk; l'âge d'or – Partie 2 : La Bataille de Doldrey,ÉPIQUE,Animation+Action,Le tueur de cent hommes,per_turn_boost,109,59,0.5413,85,65,1.31,171.1
+347,Berserk; l'âge d'or – Partie 3 : L'Avent,ÉPIQUE,Animation+Horreur,La Marque du Sacrifice,per_turn_boost,109,55,0.5046,82,69,1.19,160.4
+348,Scary Movie,RARE,Comédie+Horreur,La parodie qui déboussole,miss_chance,109,39,0.3578,19,77,0.25,150.5
+349,Yamakasi,RARE,Action+Aventure,Les samouraïs du béton,start_boost,110,48,0.4364,46,76,0.61,163.6
+350,Taxi,RARE,Comédie+Action,Le 406 qui se transforme,entry_drop,109,43,0.3945,53,74,0.72,155.2
+351,Spider-Man : New Generation,LÉGENDAIRE,Action+Science-Fiction,Un saut dans le vide,start_boost,195,104,0.5333,131,149,0.88,122.4
+352,Spider-Man : Across the Spider-Verse,LÉGENDAIRE,Action+Science-Fiction,Je vais faire à ma façon,status_immune,195,110,0.5641,202,142,1.42,86.6
+353,Toy Story 2,ÉPIQUE,Animation+Aventure,Le Gang de Woody,start_team_boost,109,55,0.5046,67,70,0.96,182.9
+354,Toy Story 3,ÉPIQUE,Animation+Aventure,On reste ensemble jusqu'au bout,flavor,108,56,0.5185,84,64,1.31,214.2
+355,Shrek 2,ÉPIQUE,Comédie+Aventure,Les grands yeux du Chat Potté,entry_drop,109,48,0.4404,54,75,0.72,182.5
+356,Shrek le troisième,RARE,Comédie+Aventure,Le crapaud royal,miss_chance,109,47,0.4312,28,71,0.39,153.7
+357,Shrek 4 : Il était une fin,RARE,Comédie+Aventure,Le pacte de Tracassin,miss_chance,109,51,0.4679,29,69,0.42,153.0
+358,Kung Fu Panda,ÉPIQUE,Action+Comédie,Le secret; c'est qu'il n'y a pas de secret,lowhp_boost,109,58,0.5321,68,69,0.99,172.1
+359,Kung Fu Panda 2,ÉPIQUE,Action+Comédie,La paix intérieure,flavor,109,45,0.4128,50,75,0.67,169.5
+360,Kung Fu Panda 3,RARE,Action+Comédie,Le maître du Chi,start_boost,109,47,0.4312,49,76,0.64,148.1
+361,Don Quichotte,RARE,Drame+Aventure,Les moulins à vent,lowhp_boost,109,53,0.4862,38,65,0.58,161.5
+362,Les Nouveaux Héros,ÉPIQUE,Animation+Action,Votre assistant médical personnel,per_turn_boost,109,50,0.4587,85,80,1.06,214.6
+363,Double Dragon,RARE,Action+Fantastique,Le médaillon du dragon,start_boost,109,43,0.3945,23,73,0.32,130.8
+364,Astérix & Obélix : Mission Cléopâtre,ÉPIQUE,Comédie+Aventure,C'est pas faux,entry_drop,109,46,0.4220,53,77,0.69,217.7
+365,RoboCop,ÉPIQUE,Action+Science-Fiction,Mort ou vif; tu viens avec moi,trap,109,55,0.5046,83,64,1.30,158.6
+366,Le BGG : Le Bon Gros Géant,RARE,Aventure+Fantastique,Le souffle-rêves,evasion,109,33,0.3028,50,85,0.59,152.5
+367,Les Aventures de Tintin : Le Secret de la Licorne,ÉPIQUE,Aventure+Action,Mille millions de mille sabords !,start_boost,109,54,0.4954,68,63,1.08,207.2
+368,Captain Fantastic,ÉPIQUE,Drame+Aventure,Pouvoir au peuple; à bas le système !,start_team_boost,109,54,0.4954,39,68,0.57,173.0
+369,Arthur et les Minimoys,RARE,Aventure+Fantastique,Plus petit que petit,evasion,108,38,0.3519,43,76,0.57,148.0
+370,Virgin Suicides,ÉPIQUE,Drame+Romance,Le mystère des sœurs Lisbon,evasion,109,50,0.4587,18,71,0.25,170.4
+371,La Haine,LÉGENDAIRE,Drame+Crime,Jusqu'ici tout va bien,flavor,195,124,0.6359,245,135,1.81,125.4
+372,American History X,LÉGENDAIRE,Drame+Crime,La haine est un fardeau,lowhp_boost,195,117,0.6000,225,153,1.47,147.2
+373,Deadpool,ÉPIQUE,Action+Comédie,Maximum Effort,per_turn_boost,109,58,0.5321,126,75,1.68,154.5
+374,Paul,RARE,Comédie+Science-Fiction,L'extraterrestre fêtard,miss_chance,109,49,0.4495,55,72,0.76,152.3
+375,Le Dernier Pub avant la fin du monde,RARE,Comédie+Science-Fiction,La tournée des pubs,miss_chance,109,51,0.4679,62,63,0.98,156.7
+376,Shaun of the Dead,ÉPIQUE,Comédie+Horreur,On va au Winchester,start_boost,109,51,0.4679,89,68,1.31,186.5
+377,Hot Fuzz,ÉPIQUE,Action+Comédie,Le supercop,entry_drop,108,54,0.5000,74,67,1.10,176.6
+378,Evil Dead,ÉPIQUE,Horreur+Fantastique,Le Livre des Morts,per_turn_boost,109,45,0.4128,33,77,0.43,206.2
+379,Split,ÉPIQUE,Thriller+Horreur,La Horde,per_turn_boost,109,41,0.3761,40,74,0.54,196.0
+380,Le Chat Potté,RARE,Aventure+Comédie,Les bottes griffues,evasion,109,38,0.3486,42,69,0.61,127.3
+381,Le Chat Potté 2 : la dernière quête,LÉGENDAIRE,Aventure+Comédie,La Mort aux trousses,lowhp_boost,194,117,0.6031,359,132,2.72,112.1
+382,King Kong,ÉPIQUE,Aventure+Action,C'est la Belle qui tua la Bête,start_boost,109,50,0.4587,79,78,1.01,200.6
+383,King Kong,LÉGENDAIRE,Aventure+Fantastique,C'est la belle qui tua la bête,flavor,195,98,0.5026,96,160,0.60,85.1
+384,Godzilla,RARE,Action+Science-Fiction,Le réveil du roi des monstres,start_boost,109,55,0.5046,69,62,1.11,143.5
+385,Le Hobbit : Un voyage inattendu,ÉPIQUE,Aventure+Fantastique,Mon trésor,dodge_first,108,44,0.4074,19,75,0.25,234.5
+386,Le Bon; la Brute et le Truand,LÉGENDAIRE,Western,Le monde se divise en deux catégories,entry_drop,195,91,0.4667,136,163,0.83,102.9
+387,Deadpool 2,ÉPIQUE,Action+Comédie,La chance; c'est un super-pouvoir,evasion,109,50,0.4587,29,86,0.34,220.1
+388,20 000 Lieues sous les mers,ÉPIQUE,Aventure+Science-Fiction,Mobilis in Mobili,start_boost,109,50,0.4587,41,74,0.55,180.0
+389,Lommbock,RARE,Comédie,La fumée increvable,miss_chance,109,36,0.3303,22,85,0.26,137.0
+390,Les Trois Frères,ÉPIQUE,Comédie+Crime,On hérite d'un million !,start_boost,109,58,0.5321,63,70,0.90,206.8
+391,The Game,ÉPIQUE,Thriller+Drame,Est-ce que ça fait partie du jeu ?,entry_drop,109,53,0.4862,74,66,1.12,154.3
+392,Abyss,ÉPIQUE,Science-Fiction+Aventure,Tu ne t'es jamais dégonflée,flavor,109,50,0.4587,32,74,0.43,181.5
+393,Hunger Games : L'Embrasement,ÉPIQUE,Science-Fiction+Aventure,Le geai moqueur,flavor,109,40,0.3670,51,75,0.68,138.6
+394,Hunger Games,ÉPIQUE,Science-Fiction+Aventure,La fille du feu,start_boost,109,41,0.3761,42,78,0.54,190.3
+395,Hunger Games : La Révolte - Partie 1,RARE,Science-Fiction+Drame,L'étincelle de la révolte,status_immune,109,46,0.4220,51,70,0.73,162.5
+396,Le Loup de Wall Street,LÉGENDAIRE,Comédie+Crime,Le show continue,per_turn_boost,194,112,0.5773,258,129,2.00,97.0
+397,Total Recall,ÉPIQUE,Science-Fiction+Action,Mémoires programmées,entry_drop,109,58,0.5321,88,67,1.31,159.2
+398,Incassable,ÉPIQUE,Thriller+Drame,Incassable,status_immune,109,55,0.5046,76,68,1.12,193.6
+399,Le Village,RARE,Thriller+Drame,Ceux dont on ne parle pas,entry_drop,109,50,0.4587,49,76,0.64,154.8
+400,Glass,RARE,Thriller+Science-Fiction,La fragilité du verre,entry_drop,109,54,0.4954,45,63,0.71,151.4
+401,Léon,LÉGENDAIRE,Action+Thriller,Le nettoyeur,always_first,195,108,0.5538,152,173,0.88,136.2
+402,Hitman,RARE,Action+Thriller,Le code-barres,evasion,109,43,0.3945,45,73,0.62,139.6
+403,Lucy,RARE,Science-Fiction+Action,Le cerveau à 100%,status_immune,109,43,0.3945,46,76,0.61,142.3
+404,Le Cinquième Élément,LÉGENDAIRE,Science-Fiction+Action,Big badaboom,lowhp_boost,195,142,0.7282,391,118,3.31,88.3
+405,Le Prénom,ÉPIQUE,Comédie+Drame,Tu vas appeler ton fils Adolphe ?!,entry_drop,109,45,0.4128,39,75,0.52,190.6
+406,Le Parfum : Histoire d'un meurtrier,ÉPIQUE,Thriller+Drame,L'homme sans odeur,evasion,109,52,0.4771,98,69,1.42,185.2
+407,Le Hobbit : La Bataille des cinq armées,ÉPIQUE,Aventure+Fantastique,Le mal du dragon,flavor,109,51,0.4679,62,63,0.98,170.1
+408,Le Hobbit : La Désolation de Smaug,ÉPIQUE,Aventure+Fantastique,Voleur dans l'ombre,dodge_first,108,54,0.5000,56,65,0.86,177.8
+409,Le Seigneur des anneaux : Les Deux Tours,LÉGENDAIRE,Fantastique+Aventure,Il y a du bon en ce monde,ally_fall_boost,195,125,0.6410,291,141,2.06,98.6
+410,Le Seigneur des anneaux : Le Retour du roi,LÉGENDAIRE,Fantastique+Aventure,Pour Frodon,entry_drop,194,107,0.5515,149,160,0.93,174.5
+411,Harry Potter et la Chambre des secrets,ÉPIQUE,Fantastique+Aventure,Dobby est un elfe libre !,status_block_first,108,50,0.4630,57,63,0.90,186.0
+412,Harry Potter et la Coupe de feu,ÉPIQUE,Fantastique+Aventure,Vigilance constante !,entry_drop,109,46,0.4220,33,71,0.46,180.4
+413,Harry Potter et le Prisonnier d'Azkaban,ÉPIQUE,Fantastique+Aventure,Expecto Patronum,dodge_first,109,57,0.5229,54,69,0.78,172.1
+414,Harry Potter et le Prince de sang-mêlé,ÉPIQUE,Fantastique+Aventure,Felix Felicis,evasion,109,50,0.4587,27,75,0.36,197.6
+415,Harry Potter et l'Ordre du Phénix,ÉPIQUE,Fantastique+Aventure,L'Armée de Dumbledore,start_team_boost,109,57,0.5229,62,72,0.86,166.8
+416,Harry Potter et les Reliques de la Mort - 1ère partie,ÉPIQUE,Fantastique+Aventure,Le médaillon Horcruxe,per_turn_boost,109,46,0.4220,41,82,0.50,181.4
+417,Harry Potter et les Reliques de la Mort - 2ème partie,LÉGENDAIRE,Fantastique+Aventure,À jamais,ally_fall_boost,194,102,0.5258,101,170,0.59,168.9
+418,Cinquante Nuances de Grey,RARE,Drame+Romance,Le contrat,lowhp_boost,109,42,0.3853,33,75,0.44,151.1
+419,TAMALA 2010 a punk cat in space,RARE,Animation+Science-Fiction,Le chat punk de l'espace,start_boost,109,48,0.4404,51,68,0.75,165.6
+420,Matrix Resurrections,RARE,Science-Fiction+Action,Le réveil de Neo,status_immune,108,48,0.4444,41,70,0.59,167.4
+421,Matrix Reloaded,ÉPIQUE,Science-Fiction+Action,L'Élu,status_immune,109,51,0.4679,50,74,0.68,194.4
+422,La Guerre des mondes,RARE,Science-Fiction+Thriller,Les tripodes,status_immune,108,44,0.4074,59,81,0.73,135.5
+423,Blanche-Neige et les Sept Nains,ÉPIQUE,Animation+Fantastique,Le baiser du véritable amour,flavor,109,47,0.4312,69,75,0.92,204.3
+424,Horton,RARE,Animation+Comédie,Un Who est un Who,start_boost,109,47,0.4312,86,70,1.23,113.9
+425,Le Roi Arthur : La Légende d'Excalibur,RARE,Action+Fantastique,L'épée dans la pierre,evasion,109,52,0.4771,54,67,0.81,141.7
+426,Fast and Furious,RARE,Action+Crime,Un quart de mile à la fois,start_boost,109,56,0.5138,92,64,1.44,152.4
+427,Alien vs. Predator,RARE,Science-Fiction+Action,Le chasseur ou la proie,status_immune,109,51,0.4679,56,66,0.85,149.1
+428,Predator,ÉPIQUE,Action+Science-Fiction,Si ça saigne; on peut le tuer,true_hit,109,59,0.5413,112,54,2.07,154.9
+429,Housewife Alien vs Gay Zombie,RARE,Comédie+Horreur,Le navet assumé,miss_chance,109,48,0.4404,25,75,0.33,119.4
+430,Le Dernier Samouraï,ÉPIQUE,Action+Drame,Bushido,no_lower,109,56,0.5138,76,72,1.06,163.7
+431,Massacre à la tronçonneuse,ÉPIQUE,Horreur+Thriller,Leatherface,always_first,109,37,0.3394,36,81,0.44,184.0
+432,Keanu,RARE,Comédie+Crime,Le chaton gangster,miss_chance,108,44,0.4074,54,71,0.76,152.5
+433,Las Vegas Parano,ÉPIQUE,Comédie+Drame,Prends le billet; fais le voyage,status_immune,109,55,0.5046,73,62,1.18,178.7
+434,Metropolis,LÉGENDAIRE,Science-Fiction+Drame,Le médiateur entre le cerveau et les mains doit être le cœur,ally_fall_boost,194,109,0.5619,116,160,0.72,172.0
+435,Les délices de Tokyo,ÉPIQUE,Drame,Écouter les haricots,per_turn_boost,109,54,0.4954,27,83,0.33,195.4
+436,Pacific Rim,RARE,Action+Science-Fiction,Annuler l'apocalypse,start_boost,109,46,0.4220,65,76,0.86,151.9
+437,Les mondes futurs,RARE,Science-Fiction+Drame,La cité de demain,status_immune,109,51,0.4679,67,67,1.00,172.1
+438,Un mariage interplanétaire,RARE,Science-Fiction+Romance,Les noces de Mars,status_immune,109,46,0.4220,35,77,0.45,195.1
+439,A Trip to Mars,RARE,Science-Fiction+Aventure,Le voyage vers Mars,status_immune,109,43,0.3945,42,71,0.59,167.7
+440,Paris qui dort,ÉPIQUE,Science-Fiction+Comédie,Le Rayon invisible,miss_chance,109,53,0.4862,54,68,0.79,153.8
+441,Aelita,ÉPIQUE,Science-Fiction+Drame,La Reine de Mars,start_boost,109,52,0.4771,44,65,0.68,167.8
+442,Himmelskibet,RARE,Science-Fiction+Aventure,Le vaisseau du ciel,status_immune,109,49,0.4495,61,74,0.82,174.1
+443,Pokémon; le film : Mewtwo contre-attaque,ÉPIQUE,Animation+Science-Fiction,Suis-je le seul de mon espèce ?,entry_drop,109,50,0.4587,43,69,0.62,206.4
+444,Spider-Man,ÉPIQUE,Action+Aventure,Un grand pouvoir implique de grandes responsabilités,start_boost,109,50,0.4587,46,76,0.61,240.4
+445,Le Petit Vampire,RARE,Aventure+Fantastique,Le vampire farceur,evasion,109,46,0.4220,38,72,0.53,152.9
+446,Avatar,LÉGENDAIRE,Science-Fiction+Aventure,Je te vois,ally_fall_boost,195,127,0.6513,280,130,2.15,114.0
+447,Avatar : De feu et de cendres,ÉPIQUE,Science-Fiction+Action,Le Peuple des Cendres,status_immune,109,49,0.4495,46,73,0.63,163.4
+448,Projet dernière chance,ÉPIQUE,Science-Fiction+Aventure,Pas de gène du courage,per_turn_boost,109,47,0.4312,61,78,0.78,191.5
+449,Une bataille après l'autre,LÉGENDAIRE,Action+Crime,Reste prêt pour ne pas avoir à te préparer,entry_drop,195,102,0.5231,132,155,0.85,74.1
+450,Le Château dans le ciel,LÉGENDAIRE,Aventure+Fantastique,La pierre de sustentation,evasion,194,110,0.5670,132,146,0.90,139.2
+451,Conjuring : Les Dossiers Warren,ÉPIQUE,Horreur+Thriller,Les démonologues Warren,dodge_first,109,50,0.4587,44,68,0.65,201.4
+452,N'oublie jamais,ÉPIQUE,Romance+Drame,Si tu es un oiseau; je suis un oiseau,ally_fall_boost,109,41,0.3761,52,86,0.60,216.4
+453,Le Temps d'un automne,ÉPIQUE,Romance+Drame,L'amour; c'est comme le vent,per_turn_boost,109,40,0.3670,30,85,0.35,190.0
+454,Noé,RARE,Aventure+Drame,L'Arche du déluge,evasion,109,52,0.4771,59,69,0.86,145.1
+455,Gang de Requins,RARE,Animation+Comédie,Le petit poisson qui monte,start_boost,109,52,0.4771,64,69,0.93,114.5
+456,Les Rois de la glisse,RARE,Animation+Comédie,La vague parfaite,start_boost,109,57,0.5229,70,62,1.13,149.3
+457,American Pie,ÉPIQUE,Comédie,Le pacte du bal de promo,start_boost,109,53,0.4862,74,69,1.07,183.9
+458,Le Majordome,ÉPIQUE,Drame,Servir sans être vu,entry_drop,108,40,0.3704,34,79,0.43,180.6
+459,Un p'tit truc en plus,ÉPIQUE,Comédie+Drame,Un p'tit truc en plus,start_team_boost,109,58,0.5321,66,59,1.12,182.6
+460,Slumdog Millionaire,LÉGENDAIRE,Drame+Romance,D — c'était écrit,ally_fall_boost,195,94,0.4821,100,164,0.61,154.2
+461,Eh mec ! Elle est où ma caisse ?,RARE,Comédie+Science-Fiction,Où est ma caisse ?,miss_chance,109,56,0.5138,70,67,1.04,142.6
+462,Harvie Krumpet,ÉPIQUE,Animation+Drame,Carpe diem; cueille le jour,lowhp_boost,109,56,0.5138,70,79,0.89,189.1
+463,Le Vieux qui ne voulait pas fêter son anniversaire,ÉPIQUE,Comédie+Aventure,Les choses sont ce qu'elles sont,status_immune,109,52,0.4771,48,66,0.73,179.9
+464,Pompéi,RARE,Action+Drame,L'ombre du Vésuve,start_boost,109,57,0.5229,51,64,0.80,137.4
+465,2012,RARE,Action+Science-Fiction,La fin du monde annoncée,start_boost,109,46,0.4220,64,72,0.89,156.7
+466,Le Jour d'après,RARE,Science-Fiction+Thriller,Le gel soudain,status_immune,109,52,0.4771,61,66,0.92,148.0
+467,Les Valseuses,ÉPIQUE,Comédie+Drame,Marginaux jusqu'au bout,status_immune,109,58,0.5321,68,61,1.11,185.7
+468,Danny the Dog,ÉPIQUE,Action+Drame,Quand le collier tombe,lowhp_boost,109,41,0.3761,61,77,0.79,198.6
+469,Midnight Express,ÉPIQUE,Drame+Thriller,Prendre l'Express de minuit,entry_drop,108,55,0.5093,86,60,1.43,174.7
+470,Le Dîner de cons,ÉPIQUE,Comédie,Un boomerang de catastrophes,per_turn_boost,109,53,0.4862,71,66,1.08,180.4
+471,Moulin Rouge !,ÉPIQUE,Romance+Drame,Quoi qu'il advienne,ally_fall_boost,109,51,0.4679,64,66,0.97,178.8
+472,Roméo + Juliette,ÉPIQUE,Romance+Drame,Les amants maudits des étoiles,start_boost,109,44,0.4037,38,79,0.48,191.3
+473,Gummo,ÉPIQUE,Drame,Après la tornade,status_immune,110,38,0.3455,30,86,0.35,200.9
+474,Le Diable s'habille en Prada,ÉPIQUE,Comédie+Drame,Un million de filles tueraient pour ce poste,start_boost,109,58,0.5321,49,60,0.82,184.7
+475,L'Âme Idéale,ÉPIQUE,Romance+Fantastique,Le médium,true_hit,109,45,0.4128,28,74,0.38,173.2
+476,La Beuze,RARE,Comédie,La fumée qui embrouille,miss_chance,108,51,0.4722,55,74,0.74,138.0
+477,The Drama,RARE,Comédie+Romance,Le drame romantique,miss_chance,109,49,0.4495,55,76,0.72,133.7
+478,Nimona,ÉPIQUE,Animation+Aventure,Je suis Nimona,entry_drop,109,53,0.4862,70,72,0.97,216.1
+479,Les Mitchell contre les machines,ÉPIQUE,Animation+Comédie,La famille la plus bancale,ally_fall_boost,109,56,0.5138,94,63,1.49,163.1
+480,Coraline,ÉPIQUE,Animation+Fantastique,La porte dérobée,evasion,109,55,0.5046,79,71,1.11,164.9
+481,Monster House,RARE,Animation+Horreur,La maison qui dévore,start_boost,109,49,0.4495,74,73,1.01,123.2
+482,Le Robot sauvage,LÉGENDAIRE,Animation+Aventure,Je ne suis pas programmée pour ça,per_turn_boost,195,131,0.6718,326,124,2.63,90.3
+483,Les Vedettes,RARE,Comédie,Les bras cassés du jeu,miss_chance,108,48,0.4444,54,69,0.78,135.5
+484,Bruce tout-puissant,RARE,Comédie+Fantastique,Les pouvoirs divins,miss_chance,109,65,0.5963,78,62,1.26,140.1
+485,Dikkenek,ÉPIQUE,Comédie,Dikkenek,start_boost,109,54,0.4954,56,61,0.92,174.7
+486,Kick-Ass,ÉPIQUE,Action+Comédie,Sans pouvoir; aucune responsabilité,start_boost,109,62,0.5688,100,57,1.75,184.3
+487,Kick-Ass 2,RARE,Action+Comédie,Le justicier amateur,start_boost,108,51,0.4722,71,63,1.13,152.8
+488,99 Francs,ÉPIQUE,Comédie+Drame,Je dépense donc je suis,start_boost,109,49,0.4495,52,66,0.79,168.1
+489,La Forêt d'émeraude,ÉPIQUE,Aventure+Drame,Le monde est en train d'être mangé,status_immune,109,59,0.5413,47,67,0.70,177.6
+490,Porco Rosso,LÉGENDAIRE,Aventure+Comédie,Mieux vaut être un cochon qu'un fasciste,status_immune,195,124,0.6359,316,124,2.55,96.1

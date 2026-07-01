@@ -188,8 +188,10 @@ export function bestOffense(
   let best: MoveEngine | null = null
   let bestAcc = 0, bestRaw = 0
 
-  for (const mv of att.moves) {
+  for (let i = 0; i < att.moves.length; i++) {
+    const mv = att.moves[i]
     if (mv.cat !== 'phys' && mv.cat !== 'spe') continue
+    if (att.ppLeft[i] <= 0) continue
     const { dmg } = damageExpect(att, dfn, mv, field, sideDef)
     const dacc = dmg * (mv.acc ?? 100) / 100
     if (dacc > bestAcc) { best = mv; bestAcc = dacc; bestRaw = dmg }
@@ -613,7 +615,7 @@ export function chooseAI(
   // 2) revenge-kill à la priorité
   for (let i = 0; i < att.moves.length; i++) {
     const m = att.moves[i]
-    if (m.cat === 'phys' || m.cat === 'spe') {
+    if ((m.cat === 'phys' || m.cat === 'spe') && att.ppLeft[i] > 0) {
       if ((m.pri ?? 0) > 0) {
         const { dmg } = damageExpect(att, dfn, m, field, foeSide)
         if (dmg >= dfn.hp) return { type: 'move', move: m, moveIndex: i }
@@ -687,9 +689,14 @@ export function chooseAI(
     }
   }
 
-  // 9) default: best offensive
+  // 9) default: best offensive (PP already checked by bestOffense)
   if (bo.move) return { type: 'move', move: bo.move, moveIndex: moveIndex(att, bo.move) }
   if (statusMoves.length) return { type: 'move', move: statusMoves[0].mv, moveIndex: statusMoves[0].mi }
+
+  // Fallback: any move with PP
+  for (let i = 0; i < att.moves.length; i++) {
+    if (att.ppLeft[i] > 0) return { type: 'move', move: att.moves[i], moveIndex: i }
+  }
 
   // Struggle
   return { type: 'move', move: STRUGGLE, moveIndex: -1 }

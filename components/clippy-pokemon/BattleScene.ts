@@ -1,17 +1,75 @@
 import Phaser from 'phaser'
-import type { FilmCombatant, MoveEngine, TurnDecision, BattleEvent, GenreType, SideState, FieldState } from './types'
+import type { FilmCombatant, MoveEngine, TurnDecision, BattleEvent, GenreType, SideState, FieldState, StatId } from './types'
+import { STAT_LABELS } from './types'
 import type { TeamMember } from './TeamSelectUI'
 import { buildCombatant, getCard, applyClimaxToTeam } from './cardsData'
 import type { Saison1Entry } from './cardsData'
 import {
   resolveTurn, chooseAI, newSide, newField, switchIn, STRUGGLE, updateClimaxMult,
 } from './battleEngine'
-import { TYPE_COLORS, TYPE_LABELS, getTypeMult, getEffectivenessText } from './config/types.config'
+import { TYPE_COLORS, TYPE_COLORS_CSS, TYPE_LABELS, getTypeMult, getEffectivenessText } from './config/types.config'
 import { BALANCE } from './config/balance.config'
 
 const W = 960, H = 540
 
 function rnd<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)] }
+
+function statusName(s: string): string {
+  const m: Record<string, string> = {
+    poison: 'Poison', poison_bad: 'Poison grave', burn: 'Brûlure',
+    para: 'Paralysie', sleep: 'Sommeil', confusion: 'Confusion',
+  }
+  return m[s] ?? s
+}
+
+function moveExtras(mv: MoveEngine): string {
+  const p: string[] = []
+  if (mv.pri && mv.pri !== 0) p.push(`Priorité ${mv.pri > 0 ? '+' : ''}${mv.pri}`)
+  if (mv.recoil) p.push(`Contrecoup ${Math.round(mv.recoil * 100)}%`)
+  if (mv.self_hp) p.push(`Coût PV ${Math.round(mv.self_hp * 100)}%`)
+  if (mv.self_drop) {
+    for (const [stat, n] of mv.self_drop) {
+      p.push(`${STAT_LABELS[stat as StatId] ?? stat} ${n > 0 ? '+' : ''}${n} (self)`)
+    }
+  }
+  if (mv.sec) p.push(`${Math.round(mv.sec[1] * 100)}% ${statusName(mv.sec[0])}`)
+  if (mv.pivot) p.push('Switch après attaque')
+  if (mv.flinch_speed) p.push('Baisse Rythme adverse')
+  if (mv.percent) p.push(`${Math.round(mv.percent * 100)}% PV max`)
+  if (mv.eff) {
+    const e = mv.eff
+    if (e === 'taunt') p.push('Empêche statut (3 tours)')
+    else if (e === 'protect') p.push('Bloque toute attaque ce tour')
+    else if (e === 'recover') p.push('Récup ~33% PV (diminue)')
+    else if (e === 'reflect') p.push('Dégâts phys -50% (3 tours)')
+    else if (e === 'lightscreen') p.push('Dégâts spé -50% (3 tours)')
+    else if (e === 'auroraveil') p.push('Dégâts phys/spé -50% (3 tours)')
+    else if (e === 'trickroom') p.push('Inverse vitesse (5 tours)')
+    else if (e === 'defog') p.push('Retire tous les pièges')
+    else if (e === 'vatout') p.push('Attaque +6, -50% PV')
+    else if (e.startsWith('weather:')) {
+      const w = e.split(':')[1]
+      const wn: Record<string, string> = { sun: 'Soleil', rain: 'Pluie', sand: 'Sable', snow: 'Neige' }
+      p.push(`Météo: ${wn[w] ?? w} (5 tours)`)
+    }
+    else if (e.startsWith('hazard:')) {
+      const h = e.split(':')[1]
+      const hn: Record<string, string> = { rocks: 'Rochers', spikes: 'Pièges', tspikes: 'Pièges poison', sticky: 'Toile' }
+      p.push(`Pose ${hn[h] ?? h}`)
+    }
+    else if (e.startsWith('boost:')) {
+      const [, stat, n] = e.split(':')
+      p.push(`${STAT_LABELS[stat as StatId] ?? stat} +${n}`)
+    }
+    else if (e.startsWith('drop:')) {
+      const [, stat, n] = e.split(':')
+      p.push(`${STAT_LABELS[stat as StatId] ?? stat} adverse ${n}`)
+    }
+    else if (e.startsWith('allboost:')) p.push(`Toutes stats +${e.split(':')[1]}`)
+    else if (e.startsWith('status:')) p.push(statusName(e.split(':')[1]))
+  }
+  return p.join('  ·  ')
+}
 
 export class BattleScene extends Phaser.Scene {
   private playerTeam!: FilmCombatant[]
@@ -43,8 +101,13 @@ export class BattleScene extends Phaser.Scene {
   private moveMenu!: Phaser.GameObjects.Container
   private switchMenu!: Phaser.GameObjects.Container
 
-  private moveBtns: { bg: Phaser.GameObjects.Rectangle; name: Phaser.GameObjects.Text; info: Phaser.GameObjects.Text; eff: Phaser.GameObjects.Text }[] = []
-  private moveDesc!: Phaser.GameObjects.Text
+  private moveBtns: { bg: Phaser.GameObjects.Rectangle; name: Phaser.GameObjects.Text; typeTxt: Phaser.GameObjects.Text; info: Phaser.GameObjects.Text; eff: Phaser.GameObjects.Text }[] = []
+  private moveDetailBg!: Phaser.GameObjects.Graphics
+  private moveDetailName!: Phaser.GameObjects.Text
+  private moveDetailMeta!: Phaser.GameObjects.Text
+  private moveDetailStats!: Phaser.GameObjects.Text
+  private moveDetailDesc!: Phaser.GameObjects.Text
+  private moveDetailExtra!: Phaser.GameObjects.Text
   private switchSlots: { bg: Phaser.GameObjects.Rectangle; name: Phaser.GameObjects.Text; hp: Phaser.GameObjects.Text }[] = []
 
   private twStr = ''
@@ -260,40 +323,49 @@ export class BattleScene extends Phaser.Scene {
   private buildMoveMenu() {
     this.moveMenu = this.add.container(0, 0)
     this.moveBtns = []
-    const bw = 270, bh = 52, gap = 6
+    const bw = 275, bh = 58, gap = 4
     for (let i = 0; i < 4; i++) {
       const c = i % 2, r = Math.floor(i / 2)
-      const bx = 15 + c * (bw + gap), by = 410 + r * (bh + gap)
+      const bx = 12 + c * (bw + gap), by = 398 + r * (bh + gap)
       const bg = this.add.rectangle(bx + bw / 2, by + bh / 2, bw, bh, 0x333333)
         .setStrokeStyle(2, 0xffffff, 0.3).setInteractive({ useHandCursor: true })
-      const name = this.add.text(bx + 8, by + 6, '', { fontFamily: 'monospace', fontSize: '13px', color: '#fff', fontStyle: 'bold' })
-      const info = this.add.text(bx + 8, by + 24, '', { fontFamily: 'monospace', fontSize: '10px', color: '#aaa' })
-      const eff = this.add.text(bx + bw - 8, by + 6, '', { fontFamily: 'monospace', fontSize: '10px', color: '#4CAF50' }).setOrigin(1, 0)
+      const name = this.add.text(bx + 10, by + 5, '', { fontFamily: 'monospace', fontSize: '13px', color: '#fff', fontStyle: 'bold' })
+      const typeTxt = this.add.text(bx + 10, by + 23, '', { fontFamily: 'monospace', fontSize: '10px', color: '#aaa' })
+      const info = this.add.text(bx + 10, by + 39, '', { fontFamily: 'monospace', fontSize: '10px', color: '#888' })
+      const eff = this.add.text(bx + bw - 8, by + 5, '', { fontFamily: 'monospace', fontSize: '10px', color: '#4CAF50' }).setOrigin(1, 0)
       const mi = i
       bg.on('pointerover', () => {
         bg.setStrokeStyle(2, 0xffffff, 1)
-        const mon = this.playerMon
-        if (mi < mon.movesDisplay.length) {
-          const d = mon.movesDisplay[mi]
-          this.moveDesc.setText(d.effet || d.full || '')
-        }
+        this.showMoveDetail(mi)
       })
-      bg.on('pointerout', () => { bg.setStrokeStyle(2, 0xffffff, 0.3); this.moveDesc.setText('') })
+      bg.on('pointerout', () => {
+        bg.setStrokeStyle(2, 0xffffff, 0.3)
+        this.hideMoveDetail()
+      })
       bg.on('pointerdown', () => this.moveClick(i))
-      this.moveBtns.push({ bg, name, info, eff })
-      this.moveMenu.add([bg, name, info, eff])
+      this.moveBtns.push({ bg, name, typeTxt, info, eff })
+      this.moveMenu.add([bg, name, typeTxt, info, eff])
     }
-    // Description tooltip
-    this.moveDesc = this.add.text(15, 522, '', {
-      fontFamily: 'monospace', fontSize: '11px', color: '#ccc',
-      wordWrap: { width: 540 },
+
+    // Detail panel (right side)
+    this.moveDetailBg = this.add.graphics()
+    this.moveDetailName = this.add.text(595, 406, '', { fontFamily: 'monospace', fontSize: '15px', color: '#fff', fontStyle: 'bold' })
+    this.moveDetailMeta = this.add.text(595, 426, '', { fontFamily: 'monospace', fontSize: '12px', color: '#aaa' })
+    this.moveDetailStats = this.add.text(595, 444, '', { fontFamily: 'monospace', fontSize: '11px', color: '#ccc' })
+    this.moveDetailDesc = this.add.text(595, 466, '', {
+      fontFamily: 'monospace', fontSize: '11px', color: '#bbb',
+      wordWrap: { width: 340 }, lineSpacing: 2,
     })
-    this.moveMenu.add(this.moveDesc)
+    this.moveDetailExtra = this.add.text(595, 510, '', {
+      fontFamily: 'monospace', fontSize: '10px', color: '#FFD700',
+      wordWrap: { width: 340 }, lineSpacing: 1,
+    })
+    this.moveMenu.add([this.moveDetailBg, this.moveDetailName, this.moveDetailMeta, this.moveDetailStats, this.moveDetailDesc, this.moveDetailExtra])
 
     // Back button
-    const bb = this.add.rectangle(860, 490, 80, 30, 0x444444)
+    const bb = this.add.rectangle(912, 525, 68, 24, 0x444444)
       .setStrokeStyle(1, 0xffffff, 0.3).setInteractive({ useHandCursor: true })
-    const bt = this.add.text(860, 490, 'Retour', { fontFamily: 'monospace', fontSize: '12px', color: '#fff' }).setOrigin(0.5)
+    const bt = this.add.text(912, 525, 'Retour', { fontFamily: 'monospace', fontSize: '11px', color: '#fff' }).setOrigin(0.5)
     bb.on('pointerdown', () => { this.moveMenu.setVisible(false); this.mainMenu.setVisible(true) })
     this.moveMenu.add([bb, bt])
   }
@@ -341,37 +413,105 @@ export class BattleScene extends Phaser.Scene {
     for (let i = 0; i < 4; i++) {
       const btn = this.moveBtns[i]
       if (i >= m.moves.length) {
-        btn.bg.setVisible(false); btn.name.setVisible(false); btn.info.setVisible(false); btn.eff.setVisible(false)
+        btn.bg.setVisible(false); btn.name.setVisible(false); btn.typeTxt.setVisible(false)
+        btn.info.setVisible(false); btn.eff.setVisible(false)
         continue
       }
-      btn.bg.setVisible(true); btn.name.setVisible(true); btn.info.setVisible(true); btn.eff.setVisible(true)
+      btn.bg.setVisible(true); btn.name.setVisible(true); btn.typeTxt.setVisible(true)
+      btn.info.setVisible(true); btn.eff.setVisible(true)
 
       const mv = m.moves[i]
       const disp = m.movesDisplay[i]
       const pp = m.ppLeft[i]
       const maxPP = mv.pp >= 99 ? 15 : mv.pp
       const catIcon = mv.cat === 'phys' ? '⚔' : mv.cat === 'spe' ? '✦' : '✨'
+      const catLabel = mv.cat === 'phys' ? 'Physique' : mv.cat === 'spe' ? 'Spéciale' : 'Statut'
+      const typeLabel = mv.type !== '—' ? (TYPE_LABELS[mv.type as GenreType] ?? mv.type) : 'Neutre'
       const typeColor = mv.type !== '—' ? TYPE_COLORS[mv.type as GenreType] ?? 0x888888 : 0x888888
+      const typeCss = mv.type !== '—' ? (TYPE_COLORS_CSS[mv.type as GenreType] ?? '#888') : '#888'
 
       btn.bg.setFillStyle(pp > 0 ? typeColor : 0x333333, pp > 0 ? 0.3 : 0.15)
       btn.name.setText(`${catIcon} ${disp.name}`)
       btn.name.setAlpha(pp > 0 ? 1 : 0.4)
 
-      const pow = mv.pow ? `Pui:${mv.pow}` : ''
-      const acc = `Pré:${mv.acc ?? 100}`
-      btn.info.setText(`${pow} ${acc}  PP:${pp}/${maxPP}`)
+      btn.typeTxt.setText(`${typeLabel}  ·  ${catLabel}`)
+      btn.typeTxt.setColor(pp > 0 ? typeCss : '#555')
 
-      // Effectiveness vs current enemy
+      const pow = mv.pow ? `Pui:${mv.pow}` : ''
+      const acc = mv.cat !== 'status' ? `Pré:${mv.acc ?? 100}%` : ''
+      btn.info.setText(`${[pow, acc, `PP:${pp}/${maxPP}`].filter(Boolean).join('  ')}`)
+
       if (mv.cat !== 'status' && mv.type !== '—') {
         const mult = getTypeMult(mv.type, this.clippyMon.types)
         const effTxt = getEffectivenessText(mult)
         btn.eff.setText(effTxt)
         btn.eff.setColor(mult > 1.1 ? '#4CAF50' : mult < 0.9 ? '#ff6644' : mult === 0 ? '#ff0000' : '#888')
       } else {
-        btn.eff.setText('')
+        btn.eff.setText(mv.cat === 'status' ? '◈' : '')
+        btn.eff.setColor('#888')
       }
     }
+    this.hideMoveDetail()
     this.moveMenu.setVisible(true)
+  }
+
+  private showMoveDetail(idx: number) {
+    const mon = this.playerMon
+    if (idx >= mon.moves.length) return
+
+    const mv = mon.moves[idx]
+    const disp = mon.movesDisplay[idx]
+    const pp = mon.ppLeft[idx]
+    const maxPP = mv.pp >= 99 ? 15 : mv.pp
+
+    this.moveDetailBg.clear()
+    this.moveDetailBg.fillStyle(0x111828, 0.95)
+    this.moveDetailBg.fillRoundedRect(578, 396, 370, 140, 8)
+    this.moveDetailBg.lineStyle(1, 0x445566, 0.6)
+    this.moveDetailBg.strokeRoundedRect(578, 396, 370, 140, 8)
+    this.moveDetailBg.lineStyle(1, 0x334455, 0.4)
+    this.moveDetailBg.lineBetween(595, 460, 935, 460)
+
+    this.moveDetailName.setText(disp.name).setColor('#fff')
+
+    const typeLabel = mv.type !== '—' ? (TYPE_LABELS[mv.type as GenreType] ?? mv.type) : 'Neutre'
+    const catLabel = mv.cat === 'phys' ? 'Physique' : mv.cat === 'spe' ? 'Spéciale' : 'Statut'
+    const typeCss = mv.type !== '—' ? (TYPE_COLORS_CSS[mv.type as GenreType] ?? '#aaa') : '#aaa'
+    this.moveDetailMeta.setText(`${typeLabel}  ·  ${catLabel}`)
+    this.moveDetailMeta.setColor(typeCss)
+
+    const pow = mv.pow ? `Puissance: ${mv.pow}` : ''
+    const acc = mv.cat !== 'status' ? `Précision: ${mv.acc ?? 100}%` : ''
+    const ppTxt = `PP: ${pp}/${maxPP}`
+    this.moveDetailStats.setText([pow, acc, ppTxt].filter(Boolean).join('  ·  '))
+
+    if (mv.cat !== 'status' && mv.type !== '—') {
+      const mult = getTypeMult(mv.type, this.clippyMon.types)
+      const effTxt = getEffectivenessText(mult)
+      if (effTxt) {
+        this.moveDetailStats.setText(this.moveDetailStats.text + `  ·  ${effTxt}`)
+      }
+    }
+
+    let desc = disp.full || disp.effet || ''
+    if (desc.length > 160) desc = desc.substring(0, 157) + '…'
+    this.moveDetailDesc.setText(desc)
+
+    this.moveDetailExtra.setText(moveExtras(mv))
+  }
+
+  private hideMoveDetail() {
+    this.moveDetailBg.clear()
+    this.moveDetailBg.fillStyle(0x111828, 0.4)
+    this.moveDetailBg.fillRoundedRect(578, 396, 370, 140, 8)
+    this.moveDetailBg.lineStyle(1, 0x334455, 0.3)
+    this.moveDetailBg.strokeRoundedRect(578, 396, 370, 140, 8)
+
+    this.moveDetailName.setText('Survolez une attaque').setColor('#555')
+    this.moveDetailMeta.setText('')
+    this.moveDetailStats.setText('')
+    this.moveDetailDesc.setText('')
+    this.moveDetailExtra.setText('')
   }
 
   private showSwitchMenu() {

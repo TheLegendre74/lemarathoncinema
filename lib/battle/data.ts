@@ -8,7 +8,7 @@ let clippyCache: ClippyTeams | null = null;
 
 export async function loadCards(): Promise<Record<number, CardData>> {
   if (cardsCache) return cardsCache;
-  const res = await fetch('/data/battle/cards.json');
+  const res = await fetch('/data/cards.json');
   const raw: Record<string, CardData> = await res.json();
   cardsCache = {};
   for (const [k, v] of Object.entries(raw)) {
