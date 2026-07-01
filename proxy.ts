@@ -47,10 +47,6 @@ export async function proxy(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user && pathname === '/' && guestCookie !== '1') {
-    return NextResponse.redirect(new URL('/auth', request.url))
-  }
-
   if (user && isAuthPage) {
     return NextResponse.redirect(new URL('/', request.url))
   }
