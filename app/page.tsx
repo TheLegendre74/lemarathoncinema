@@ -1,5 +1,3 @@
-import { redirect } from 'next/navigation'
-import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { getUserCached } from '@/lib/auth'
 import { withCache } from '@/lib/redis'
@@ -44,12 +42,7 @@ export default async function HomePage() {
     return data ?? []
   })
 
-  const cookieStore = await cookies()
-  const isGuest = cookieStore.get('guest_mode')?.value === '1'
-
-  if (!user && !isGuest) redirect('/auth')
-
-  if (!user && isGuest) {
+  if (!user) {
     return (
       <div>
         <Countdown marathonStart={cfg.MARATHON_START.toISOString()} />
