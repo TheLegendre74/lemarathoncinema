@@ -16,7 +16,7 @@ export default async function DuelsPage() {
   const [profile, duels, totalUsers] = await Promise.all([
     user
       ? withCache(`user:${user.id}:profile`, 60, async () => {
-          const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+          const { data } = await supabase.from('profiles').select('id, pseudo, exp, is_admin, avatar_url, active_badge, saison').eq('id', user.id).single()
           return data
         })
       : Promise.resolve(null),
@@ -30,7 +30,7 @@ export default async function DuelsPage() {
       return data ?? []
     }),
     withCache('profiles:count', 300, async () => {
-      const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true })
+      const { count } = await supabase.from('profiles').select('id', { count: 'exact', head: true })
       return count ?? 1
     }),
   ])
@@ -88,7 +88,7 @@ export default async function DuelsPage() {
 
   return (
     <DuelsClient
-      profile={profile}
+      profile={profile as any}
       duels={duels ?? []}
       myVotes={votes}
       allVotes={allVotes ?? []}

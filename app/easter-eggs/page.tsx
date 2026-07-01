@@ -1,16 +1,17 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import EasterEggsPageClient from './EasterEggsPageClient'
+import { getUserCached } from '@/lib/auth'
 
 export const revalidate = 120
 
 export default async function EasterEggsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getUserCached()
 
   let discoveredMap: Record<string, string> = {}
   let achievements: Record<string, boolean> = { watcher: false, critic: false, duelist: false, curator: false }
 
   if (user) {
+    const supabase = await createClient()
     const { data: discovered } = await supabase
       .from('discovered_eggs')
       .select('egg_id, found_at')
@@ -41,7 +42,7 @@ export default async function EasterEggsPage() {
   const adminClient = createAdminClient()
   const [{ data: allEggs }, { count: totalUsers }] = await Promise.all([
     adminClient.from('discovered_eggs').select('egg_id, user_id'),
-    adminClient.from('profiles').select('*', { count: 'exact', head: true }),
+    adminClient.from('profiles').select('id', { count: 'exact', head: true }),
   ])
 
   const eggStats: Record<string, number> = {}

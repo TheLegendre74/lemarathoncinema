@@ -18,6 +18,7 @@ export async function proxy(request: NextRequest) {
   const isAuthPage = pathname === '/auth'
   const isAuthFlow = pathname.startsWith('/auth/')
   const guestCookie = request.cookies.get('guest_mode')?.value
+  // Invités n'ont pas de session Supabase à rafraîchir — skip intentionnel
   if (guestCookie === '1' && !isAuthPage) {
     return NextResponse.next()
   }

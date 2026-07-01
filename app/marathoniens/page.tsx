@@ -3,13 +3,14 @@ import { getBadge, levelFromExp, getActiveBadge, CONFIG } from '@/lib/config'
 import { withCache } from '@/lib/redis'
 import Image from 'next/image'
 import Link from 'next/link'
+import { getUserCached } from '@/lib/auth'
 
 export const revalidate = 120
 
 export default async function MarathoniensPage() {
   const supabase = await createClient()
   const adminClient = createAdminClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getUserCached()
 
   // Lancer les requêtes indépendantes en parallèle
   const [{ data: profiles }, totalFilmsResult, { data: firstPage }] = await Promise.all([

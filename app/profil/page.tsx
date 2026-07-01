@@ -9,17 +9,19 @@ import BioEditor from '@/components/BioEditor'
 import PseudoEditor from '@/components/PseudoEditor'
 import MessagesSection from '@/components/MessagesSection'
 import { getMyConversations, getConversationMessages } from '@/lib/actions'
+import { getUserCached } from '@/lib/auth'
 
 export const revalidate = 30
 
 export default async function ProfilPage({ searchParams }: { searchParams: Promise<{ with?: string }> }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getUserCached()
   if (!user) redirect('/auth')
+
+  const supabase = await createClient()
   const { with: withUserId } = await searchParams
 
   const [{ data: profile }, { data: watched }, { data: votes }, { data: eggs }, { data: tama }, conversations, threadMessages, { data: blockedData }] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', user.id).single(),
+    (supabase as any).from('profiles').select('id, pseudo, exp, avatar_url, active_badge, bio, is_admin, saison, pre_marathon_window_until').eq('id', user.id).single(),
     supabase.from('watched').select('*, films(id, titre, annee, genre, realisateur, poster)').eq('user_id', user.id).order('watched_at', { ascending: false }),
     supabase.from('votes').select('duel_id, voted_at').eq('user_id', user.id),
     supabase.from('discovered_eggs').select('egg_id').eq('user_id', user.id),

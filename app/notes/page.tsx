@@ -2,16 +2,17 @@ import { createClient } from '@/lib/supabase/server'
 import Image from 'next/image'
 import Link from 'next/link'
 import type { Film } from '@/lib/supabase/types'
+import { getUserCached } from '@/lib/auth'
 
 export const revalidate = 120
 
 export default async function NotesPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const { tab } = await searchParams
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getUserCached()
 
   const [{ data: films }, { data: allRatings }, { data: allNegRatings }, { data: eggs }] = await Promise.all([
-    supabase.from('films').select('*').eq('saison', 1).order('titre'),
+    supabase.from('films').select('id, titre, annee, realisateur, genre, poster, saison').eq('saison', 1).order('titre'),
     supabase.from('ratings').select('film_id, score'),
     (supabase as any).from('negative_ratings').select('film_id, score'),
     user ? supabase.from('discovered_eggs').select('egg_id').eq('user_id', user.id) : Promise.resolve({ data: [] }),
@@ -19,7 +20,7 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
   const hasRageuxEgg = (eggs ?? []).some((e: any) => e.egg_id === 'rageux')
   const showPires = hasRageuxEgg && tab === 'pires'
 
-  const filmMap = Object.fromEntries((films ?? []).map((f: Film) => [f.id, f]))
+  const filmMap = Object.fromEntries((films ?? []).map((f: any) => [f.id, f]))
 
   const ratingMap: Record<number, number[]> = {}
   allRatings?.forEach((r: { film_id: number; score: number }) => {

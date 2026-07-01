@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { signInDirect } from '@/lib/actions'
 import { CONFIG } from '@/lib/config'
@@ -123,7 +124,7 @@ export default function AuthPageClient({ marathonStart, saisonLabel, saisonNumer
         onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.05)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(88,101,242,.6)' }}
         onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 2px 10px rgba(88,101,242,.4)' }}
       >
-        <img src="/discord.png" alt="" width={18} height={18} style={{ objectFit: 'contain' }} />
+        <Image src="/discord.png" alt="" width={18} height={18} style={{ objectFit: 'contain' }} />
         Rejoindre le Discord
       </a>
 

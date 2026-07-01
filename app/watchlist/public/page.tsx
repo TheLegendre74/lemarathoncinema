@@ -1,13 +1,12 @@
 import { getPublicWatchlists, getUserReactionsForWatchlists, getUserFavoriteWatchlistIds } from '@/lib/actions'
-import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import PublicWatchlistsClient from './PublicWatchlistsClient'
+import { getUserCached } from '@/lib/auth'
 
 export const revalidate = 120
 
 export default async function PublicWatchlistsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getUserCached()
   const watchlists = await getPublicWatchlists()
 
   const ids = watchlists.map((w: any) => w.id)

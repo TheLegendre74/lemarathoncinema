@@ -2,14 +2,16 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { initOrGetTamagotchi } from '@/lib/actions'
 import TamagotchiClient from './TamagotchiClient'
+import { getUserCached } from '@/lib/auth'
 
-export const revalidate = 10
+export const revalidate = 30
 
 export default async function TamagotchiPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getUserCached()
 
   if (!user) redirect('/auth')
+
+  const supabase = await createClient()
 
   // Vérifier que le joueur a l'egg tamagotchi
   const { data: egg } = await supabase
@@ -21,8 +23,11 @@ export default async function TamagotchiPage() {
 
   if (!egg) redirect('/easter-eggs')
 
-  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
-  const { data: pet, evolved, evolvedTo, isNew, cycleRestarted, neglectPenalty } = await initOrGetTamagotchi()
+  const [{ data: profile }, petResult] = await Promise.all([
+    supabase.from('profiles').select('is_admin').eq('id', user.id).single(),
+    initOrGetTamagotchi(),
+  ])
+  const { data: pet, evolved, evolvedTo, isNew, cycleRestarted, neglectPenalty } = petResult
 
   return (
     <TamagotchiClient

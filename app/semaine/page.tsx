@@ -26,7 +26,7 @@ export default async function SemainePage() {
   const [{ data: weekFilm }, { data: weekFilmHistory }, { count: totalUsers }] = await Promise.all([
     supabase.from('week_films').select('*, films(*)').eq('active', true).order('created_at', { ascending: false }).limit(1).single(),
     supabase.from('week_films').select('id, film_id, session_time, active, created_at, films(id, titre, annee, poster, realisateur, genre, sousgenre)').eq('active', false).order('created_at', { ascending: false }).limit(50),
-    supabase.from('profiles').select('*', { count: 'exact', head: true }),
+    supabase.from('profiles').select('id', { count: 'exact', head: true }),
   ])
 
   const film = (weekFilm as any)?.films ?? null
@@ -36,7 +36,7 @@ export default async function SemainePage() {
   const latestArchivedId = ((weekFilmHistory as any[]) ?? [])[0]?.id ?? null
 
   const [profileResult, isWatchedResult, watchedRowsResult, myWatchedRowsResult, bonusClaimResult] = await Promise.all([
-    user ? supabase.from('profiles').select('*').eq('id', user.id).single() : Promise.resolve({ data: null }),
+    user ? supabase.from('profiles').select('id, pseudo, exp, is_admin, avatar_url, active_badge, saison').eq('id', user.id).single() : Promise.resolve({ data: null }),
     (film && user) ? supabase.from('watched').select('film_id').eq('user_id', user.id).eq('film_id', film.id).single() : Promise.resolve({ data: null }),
     visibleFilmIds.length ? supabase.from('watched').select('film_id').in('film_id', visibleFilmIds) : Promise.resolve({ data: [] }),
     (user && visibleFilmIds.length) ? supabase.from('watched').select('film_id').eq('user_id', user.id).in('film_id', visibleFilmIds) : Promise.resolve({ data: [] }),
@@ -57,7 +57,7 @@ export default async function SemainePage() {
 
   return (
     <SemaineClient
-      profile={profile}
+      profile={profile as any}
       weekFilm={weekFilm as any}
       film={film}
       isWatched={!!isWatched}

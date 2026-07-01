@@ -47,7 +47,7 @@ export default async function ClassementPage() {
       return data ?? []
     }),
     withCache('archives:all', 600, async () => {
-      const { data } = await (supabase as any).from('season_archives').select('*').order('saison', { ascending: false }).order('rank_global')
+      const { data } = await (supabase as any).from('season_archives').select('id, saison, pseudo, exp, rank_global, rank_marathon, avatar_url').order('saison', { ascending: false }).order('rank_global')
       return data ?? []
     }),
     withCache('profiles:badges', 120, async () => {

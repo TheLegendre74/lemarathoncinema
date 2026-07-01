@@ -35,7 +35,7 @@ export default async function RattrapagePage() {
 
   const { data: films } = await (supabase as any)
     .from('recommendation_films')
-    .select('*')
+    .select('id, titre, annee, realisateur, poster, niveau, position, description, film_id')
     .order('niveau')
     .order('position')
 

@@ -29,7 +29,7 @@ export default async function FilmsPage() {
       return data ?? []
     }),
     withCache('profiles:count', 300, async () => {
-      const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true })
+      const { count } = await supabase.from('profiles').select('id', { count: 'exact', head: true })
       return count ?? 0
     }),
     supabase.from('week_films').select('id, film_id, created_at').eq('active', true).order('created_at', { ascending: false }).limit(1).single().then(({ data }) => data ?? null),
@@ -64,7 +64,7 @@ export default async function FilmsPage() {
     const [{ data: w }, { data: r }, { data: p }, { data: nr }, { data: eggs }, wl, { data: bonusClaim }] = await Promise.all([
       supabase.from('watched').select('film_id, pre').eq('user_id', user.id),
       supabase.from('ratings').select('film_id, score').eq('user_id', user.id),
-      supabase.from('profiles').select('*').eq('id', user.id).single(),
+      supabase.from('profiles').select('id, pseudo, exp, is_admin, avatar_url, active_badge, saison, pre_marathon_window_until').eq('id', user.id).single(),
       (supabase as any).from('negative_ratings').select('film_id, score').eq('user_id', user.id),
       supabase.from('discovered_eggs').select('egg_id').eq('user_id', user.id),
       getUserWatchlists(),
@@ -147,7 +147,7 @@ export default async function FilmsPage() {
   return (
     <FilmsClient
       films={(films as any[]) ?? []}
-      profile={profile}
+      profile={profile as any}
       watchedIds={[...watchedIds]}
       watchedPreMap={watchedPreMap}
       myRatings={myRatings}

@@ -1,19 +1,20 @@
 import { createClient } from '@/lib/supabase/server'
 import ForumPageClient from './ForumPageClient'
+import { getUserCached } from '@/lib/auth'
 
 export const revalidate = 30
 
 export default async function ForumPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getUserCached()
 
   const profile = user
-    ? (await supabase.from('profiles').select('*').eq('id', user.id).single()).data
+    ? (await supabase.from('profiles').select('id, pseudo, is_admin').eq('id', user.id).single()).data
     : null
 
   const { data: topics } = await (supabase as any)
     .from('forum_topics')
-    .select('*')
+    .select('id, title, pinned, is_social, created_at, author_id')
     .order('pinned', { ascending: false })
     .order('created_at', { ascending: false })
 
@@ -46,7 +47,7 @@ export default async function ForumPage() {
 
   return (
     <ForumPageClient
-      profile={profile}
+      profile={profile as any}
       otherTopics={otherTopics}
       lastPostMap={lastPostMap}
       countMap={countMap}

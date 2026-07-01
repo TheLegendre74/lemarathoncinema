@@ -1,7 +1,7 @@
 import { getServerConfig } from '@/lib/serverConfig'
 import AuthPageClient from './AuthPageClient'
 
-export const revalidate = 0
+export const revalidate = 300
 
 export default async function AuthPage() {
   const cfg = await getServerConfig()
