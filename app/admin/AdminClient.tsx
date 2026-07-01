@@ -6,6 +6,7 @@ import { adminCreateDuel, adminCloseDuel, adminApproveDuel, adminDeleteDuel, adm
 import type { PreMarathonFilmStat } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
 import { CONFIG } from '@/lib/config'
+import Image from 'next/image'
 import type { Film, Profile } from '@/lib/supabase/types'
 import type { ServerConfig } from '@/lib/serverConfig'
 import { DEFAULT_RULES, type RuleCard } from '@/lib/rules'
@@ -1694,7 +1695,7 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
                 {/* Miniature affiche */}
                 <div style={{ width: 28, height: 40, flexShrink: 0, borderRadius: 3, overflow: 'hidden', background: 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.9rem' }}>
                   {f.poster
-                    ? <img src={f.poster} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ? <Image src={f.poster} alt="" width={28} height={40} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     : '🎬'}
                 </div>
                 <span style={{ flex: 1, fontSize: '.82rem' }}>{f.titre} <span style={{ color: 'var(--text3)', fontSize: '.7rem' }}>({f.annee})</span></span>

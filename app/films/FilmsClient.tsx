@@ -817,7 +817,7 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
           {selectedTmdb && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', background: 'rgba(52,211,153,.08)', border: '1px solid rgba(52,211,153,.3)', borderRadius: 'var(--r)', padding: '.7rem .9rem', marginBottom: '1rem' }}>
               {selectedTmdb.poster
-                ? <img src={selectedTmdb.poster} alt="" style={{ width: 28, height: 42, objectFit: 'cover', borderRadius: 3, flexShrink: 0 }} />
+                ? <Image src={selectedTmdb.poster} alt="" width={28} height={42} style={{ objectFit: 'cover', borderRadius: 3, flexShrink: 0 }} />
                 : <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>🎬</span>
               }
               <div style={{ minWidth: 0, flex: 1 }}>
@@ -883,7 +883,7 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
                         onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                       >
                         {s.poster
-                          ? <img src={s.poster} alt="" style={{ width: 32, height: 48, objectFit: 'cover', borderRadius: 3, flexShrink: 0 }} />
+                          ? <Image src={s.poster} alt="" width={32} height={48} style={{ objectFit: 'cover', borderRadius: 3, flexShrink: 0 }} />
                           : <div style={{ width: 32, height: 48, background: 'var(--bg3)', borderRadius: 3, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.7rem' }}>🎬</div>
                         }
                         <div style={{ minWidth: 0 }}>

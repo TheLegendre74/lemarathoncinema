@@ -27,7 +27,7 @@ export default async function AdminPage() {
     { data: users },
     { data: duels },
     { data: weekFilm },
-    { data: allWatched },
+    { data: filmStats },
     { data: flaggedFilms },
     { data: pendingFilms18 },
     { data: pendingApprovalFilms },
@@ -41,8 +41,7 @@ export default async function AdminPage() {
     supabase.from('profiles').select('*, watched:watched(film_id), votes:votes(duel_id)').order('exp', { ascending: false }),
     supabase.from('duels').select('*, film1:films!duels_film1_id_fkey(titre), film2:films!duels_film2_id_fkey(titre), votes(film_choice)').order('created_at', { ascending: false }).limit(10),
     adminDb.from('week_films').select('*, films(titre)').eq('active', true).order('created_at', { ascending: false }).limit(1).single(),
-    // TODO: remplacer par un RPC COUNT GROUP BY cote Postgres
-    adminDb.from('watched').select('film_id'),
+    (adminDb as any).rpc('get_film_stats').then((r: any) => ({ data: r.data ?? [] })),
     adminDb.from('films').select('id, titre, annee, poster, flagged_18_pending, flagged_18plus, created_at').eq('flagged_18_pending', true).order('titre'),
     adminDb.from('films').select('id, titre, annee, poster, flagged_18plus, created_at').eq('flagged_18plus', true).order('created_at', { ascending: false }),
     (adminDb as any).from('films').select('*, profiles!films_added_by_fkey(pseudo)').eq('pending_admin_approval', true).order('created_at', { ascending: false }),
@@ -61,7 +60,7 @@ export default async function AdminPage() {
 
   const totalUsers = users?.length ?? 1
   const watchCountMap: Record<number, number> = {}
-  allWatched?.forEach((w: { film_id: number }) => { watchCountMap[w.film_id] = (watchCountMap[w.film_id] ?? 0) + 1 })
+  ;(filmStats as any[] ?? []).forEach((s: any) => { if (s.watch_count > 0) watchCountMap[s.film_id] = Number(s.watch_count) })
 
   const configMap: Record<string, string> = {}
   siteConfigs?.forEach(({ key, value }: { key: string; value: string }) => { configMap[key] = value })
