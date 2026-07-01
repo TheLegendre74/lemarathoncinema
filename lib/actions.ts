@@ -1066,6 +1066,7 @@ export async function updateFilm(filmId: number, updates: {
   const { error } = await supabase.from('films').update(clean).eq('id', filmId)
   if (error) return { error: error.message }
 
+  await deleteCacheKeys(['films:list'])
   revalidatePath('/films')
   revalidatePath('/admin')
   return { success: true }
@@ -1156,6 +1157,7 @@ export async function addFilm(formData: FormData) {
   const { data: inserted } = await supabase.from('films').select('id').ilike('titre', titre).eq('annee', annee).single()
   const filmId = inserted?.id ?? null
 
+  await deleteCacheKeys(['films:list'])
   revalidatePath('/films')
   revalidatePath('/admin')
   return { success: true, saison, flagged18, flagged16, isPending, filmId }
@@ -1408,6 +1410,7 @@ export async function adminDeleteFilm(filmId: number) {
   if (!profile?.is_admin) return { error: 'Non autorisé.' }
 
   await supabase.from('films').delete().eq('id', filmId)
+  await deleteCacheKeys(['films:list'])
   revalidatePath('/films')
   revalidatePath('/admin')
   return { success: true }
@@ -1492,6 +1495,7 @@ export async function adminSet18Flag(filmId: number, is18: boolean) {
   const { error } = await adminClient.from('films').update({ flagged_18plus: is18 }).eq('id', filmId)
   if (error) return { error: error.message }
   await adminClient.from('films').update({ flagged_18_pending: false } as any).eq('id', filmId)
+  await deleteCacheKeys(['films:list'])
   revalidatePath('/films')
   revalidatePath('/admin')
   return { success: true }
@@ -1597,6 +1601,7 @@ export async function adminBatchFlaggedDecisions(decisions: Record<string, 'appr
   if (toMark18.length)  await adminClient.from('films').update({ flagged_18plus: true,  flagged_18_pending: false } as any).in('id', toMark18)
   if (toUnflag.length)  await adminClient.from('films').update({ flagged_18plus: false, flagged_18_pending: false } as any).in('id', toUnflag)
 
+  await deleteCacheKeys(['films:list'])
   revalidatePath('/films')
   revalidatePath('/admin')
   return { approved: toMark18.length, rejected: toUnflag.length }
@@ -1613,6 +1618,7 @@ export async function adminApproveFilmRequest(filmId: number) {
 
   const { error } = await adminClient.from('films').update({ pending_admin_approval: false } as any).eq('id', filmId)
   if (error) return { error: error.message }
+  await deleteCacheKeys(['films:list'])
   revalidatePath('/films')
   revalidatePath('/admin')
   return { success: true }
@@ -1629,6 +1635,7 @@ export async function adminRejectFilmRequest(filmId: number) {
 
   const { error } = await adminClient.from('films').delete().eq('id', filmId)
   if (error) return { error: error.message }
+  await deleteCacheKeys(['films:list'])
   revalidatePath('/films')
   revalidatePath('/admin')
   return { success: true }
@@ -1649,6 +1656,7 @@ export async function adminApproveAllPending() {
   const ids = pending.map((f: { id: number }) => f.id)
   await adminClient.from('films').update({ flagged_18plus: true, flagged_18_pending: false, flagged_16plus: false }).in('id', ids)
 
+  await deleteCacheKeys(['films:list'])
   revalidatePath('/films')
   revalidatePath('/admin')
   return { success: true, count: ids.length }
