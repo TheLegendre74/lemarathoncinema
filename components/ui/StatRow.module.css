@@ -1,0 +1,26 @@
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: var(--sp-2) 0;
+  border-bottom: 1px solid var(--line);
+}
+.label {
+  font-family: var(--f-ui);
+  font-size: var(--fs-1);
+  font-weight: 700;
+  text-transform: var(--ui-case);
+  letter-spacing: var(--ui-track);
+  color: var(--ink3);
+}
+.value {
+  font-family: var(--f-data);
+  font-size: var(--fs-4);
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.accent { color: var(--accent-fg); }
+.ok     { color: var(--ok); }
+.bad    { color: var(--bad-fg); }
+.info   { color: var(--info); }

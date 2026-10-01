@@ -1,0 +1,36 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.label {
+  font-family: var(--f-ui);
+  font-size: var(--fs-1);
+  font-weight: 700;
+  text-transform: var(--ui-case);
+  letter-spacing: var(--ui-track);
+  color: var(--ink3);
+}
+.units {
+  display: flex;
+  gap: var(--sp-3);
+}
+.unit {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+.num {
+  font-family: var(--f-data);
+  font-size: var(--fs-7);
+  font-weight: 700;
+  color: var(--accent-fg);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.unitLabel {
+  font-family: var(--f-data);
+  font-size: var(--fs-1);
+  color: var(--ink3);
+}

@@ -24,6 +24,7 @@ export type ServerConfig = typeof CONFIG & {
   limite_jour: number
   limite_jour_max: number
   eggs_disabled: string[]
+  videoclub_mode: 'cache' | 'bientot'
 }
 
 function safeDate(str: string | undefined, fallback: Date): Date {
@@ -88,6 +89,7 @@ export const getServerConfig = cache(async (): Promise<ServerConfig> => {
     limite_jour:         4,
     limite_jour_max:     8,
     eggs_disabled:       [],
+    videoclub_mode:      'bientot',
   }
 
   const data = await getSiteConfigRows()
@@ -137,6 +139,7 @@ export const getServerConfig = cache(async (): Promise<ServerConfig> => {
     limite_jour:       clampInt(db.limite_jour, 1, 50, 4),
     limite_jour_max:   clampInt(db.limite_jour_max, 1, 50, 8),
     eggs_disabled:     (() => { try { const p = JSON.parse(db.eggs_disabled ?? '[]'); return Array.isArray(p) ? p.filter((x: unknown) => typeof x === 'string') : [] } catch { return [] } })(),
+    videoclub_mode:    db.videoclub_mode === 'cache' ? 'cache' : 'bientot',
   }
 })
 
