@@ -1,0 +1,18 @@
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-family: var(--f-data);
+  font-size: var(--fs-1);
+  font-weight: 700;
+  padding: 2px var(--sp-2);
+  border-radius: var(--radius);
+  border: 1px solid;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.accent { color: var(--accent-fg); border-color: color-mix(in srgb, var(--accent-fg) 40%, transparent); background: color-mix(in srgb, var(--accent-fg) 8%, transparent); }
+.ok     { color: var(--ok);        border-color: color-mix(in srgb, var(--ok) 40%, transparent);        background: color-mix(in srgb, var(--ok) 8%, transparent); }
+.warn   { color: var(--warn);      border-color: color-mix(in srgb, var(--warn) 40%, transparent);      background: color-mix(in srgb, var(--warn) 8%, transparent); }
+.bad    { color: var(--bad-fg);    border-color: color-mix(in srgb, var(--bad-fg) 40%, transparent);    background: color-mix(in srgb, var(--bad-fg) 8%, transparent); }
+.info   { color: var(--info);      border-color: color-mix(in srgb, var(--info) 40%, transparent);      background: color-mix(in srgb, var(--info) 8%, transparent); }

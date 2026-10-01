@@ -1,0 +1,42 @@
+.field {
+  margin-bottom: var(--sp-4);
+}
+.label {
+  display: block;
+  font-family: var(--f-ui);
+  font-size: var(--fs-1);
+  font-weight: 700;
+  text-transform: var(--ui-case);
+  letter-spacing: var(--ui-track);
+  color: var(--ink2);
+  margin-bottom: var(--sp-1);
+}
+.control {
+  width: 100%;
+  background: var(--s2);
+  border: 1px solid var(--line2);
+  border-radius: var(--radius);
+  padding: var(--sp-2) var(--sp-3);
+  color: var(--ink);
+  font-family: var(--f-body);
+  font-size: var(--fs-4);
+  transition: border-color var(--dur) var(--ease);
+  resize: vertical;
+}
+.control:focus {
+  outline: none;
+  border-color: var(--accent-fg);
+}
+.errorControl {
+  border-color: var(--bad);
+}
+.help {
+  font-size: var(--fs-1);
+  color: var(--ink3);
+  margin-top: var(--sp-1);
+}
+.error {
+  font-size: var(--fs-1);
+  color: var(--bad-fg);
+  margin-top: var(--sp-1);
+}

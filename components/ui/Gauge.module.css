@@ -1,0 +1,35 @@
+.wrap { width: 100%; }
+.head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--sp-1);
+}
+.label {
+  font-family: var(--f-ui);
+  font-size: var(--fs-1);
+  font-weight: 700;
+  text-transform: var(--ui-case);
+  letter-spacing: var(--ui-track);
+  color: var(--ink3);
+}
+.nums {
+  font-family: var(--f-data);
+  font-size: var(--fs-1);
+  color: var(--ink2);
+  font-variant-numeric: tabular-nums;
+}
+.track {
+  height: 6px;
+  background: var(--s3);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s var(--ease);
+}
+.accent { background: var(--accent); }
+.ok     { background: var(--ok); }
+.warn   { background: var(--warn); }
+.bad    { background: var(--bad); }

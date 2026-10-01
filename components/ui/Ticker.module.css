@@ -1,0 +1,22 @@
+.ticker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-1);
+}
+.value {
+  font-family: var(--f-display);
+  font-weight: var(--disp-weight);
+  font-size: var(--fs-9);
+  color: var(--accent-fg);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.label {
+  font-family: var(--f-ui);
+  font-size: var(--fs-1);
+  font-weight: 700;
+  text-transform: var(--ui-case);
+  letter-spacing: var(--ui-track);
+  color: var(--ink3);
+}

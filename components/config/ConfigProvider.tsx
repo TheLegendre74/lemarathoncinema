@@ -20,6 +20,7 @@ export type PublicConfig = {
   limite_jour_max: number
   duel_egalite: 'note' | 'hasard'
   eggsDisabled: string[]
+  videoclubMode: 'cache' | 'bientot'
 }
 
 const ConfigContext = createContext<PublicConfig | null>(null)

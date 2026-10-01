@@ -2,38 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-
-:root {
-  --bg:   #08080e;
-  --bg2:  #0f0f1a;
-  --bg3:  #171726;
-  --bg4:  #1e1e30;
-
-  --border:  rgba(255,255,255,0.06);
-  --border2: rgba(255,255,255,0.11);
-  --border3: rgba(255,255,255,0.18);
-
-  --text:  #eeeef8;
-  --text2: #8888aa;
-  --text3: #4a4a66;
-
-  --gold:    #e8c46a;
-  --gold2:   #c4993a;
-  --gold3:   rgba(232,196,106,0.12);
-  --green:   #4fd98a;
-  --green2:  rgba(79,217,138,0.12);
-  --red:     #e85a5a;
-  --red2:    rgba(232,90,90,0.15);
-  --blue:    #5a9ae8;
-  --blue2:   rgba(90,154,232,0.12);
-  --purple:  #a05ae8;
-  --orange:  #f0a060;
-
-  --r:   10px;
-  --rl:  16px;
-  --rxl: 22px;
-}
-
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
@@ -123,6 +91,31 @@ html, body {
 
 /* ── MAIN ── */
 .main { margin-left: 230px; flex: 1; min-width: 0; padding: 2rem 2.5rem; }
+
+/* ── SITE LAYOUT (Phase 2) ── */
+.site-main {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: calc(56px + env(safe-area-inset-top) + var(--sp-6)) 40px var(--sp-6);
+  min-height: 100dvh;
+}
+.site-footer {
+  margin-top: var(--sp-8);
+  padding-top: var(--sp-5);
+  border-top: 1px solid var(--line);
+  display: flex;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+  font-size: var(--fs-1);
+  color: var(--ink-ghost);
+}
+.site-footer a {
+  color: var(--ink-ghost);
+  text-decoration: none;
+}
+.site-footer a:hover {
+  color: var(--ink3);
+}
 
 /* ── BUTTONS ── */
 .btn {
@@ -354,10 +347,16 @@ html, body {
   .bottom-nav  { display: flex; }
   body         { overflow-x: hidden; }
 
-  /* Contenu principal */
+  /* Contenu principal (legacy sidebar layout) */
   .main {
     margin-left: 0;
     padding: 1rem 1rem calc(6.5rem + env(safe-area-inset-bottom));
+    overflow-x: hidden;
+  }
+
+  /* Phase 2 layout */
+  .site-main {
+    padding: calc(52px + env(safe-area-inset-top) + var(--sp-4)) 16px calc(var(--bas-libre) + var(--sp-4));
     overflow-x: hidden;
   }
 
@@ -437,5 +436,35 @@ html, body {
     bottom: 1.5rem;
     right: 1.5rem;
     left: auto;
+  }
+}
+
+/* ── SITE BASE (§8.2) ── */
+.site-base {
+  font-family: var(--f-body);
+  font-size: var(--fs-4);
+  color: var(--ink);
+}
+
+/* ── EGG LEGACY (§8.2) ── */
+.egg-legacy {
+  font-family: var(--font-body);
+  font-size: 15px;
+  color: var(--text);
+}
+
+/* ── FOCUS VISIBLE (§8.7) ── */
+:focus-visible {
+  outline: 2px solid var(--accent-fg);
+  outline-offset: 2px;
+}
+
+/* ── REDUCED MOTION (§8.7) ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

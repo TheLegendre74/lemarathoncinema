@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Playfair_Display, Syne } from 'next/font/google'
+import { Playfair_Display, Syne, Inter, Newsreader, JetBrains_Mono } from 'next/font/google'
 
 const playfairDisplay = Playfair_Display({
   subsets: ['latin'],
@@ -7,6 +7,7 @@ const playfairDisplay = Playfair_Display({
   style: ['normal', 'italic'],
   variable: '--font-display',
   display: 'swap',
+  preload: false,
 })
 
 const syne = Syne({
@@ -14,14 +15,38 @@ const syne = Syne({
   weight: ['400', '500', '600'],
   variable: '--font-body',
   display: 'swap',
+  preload: false,
+})
+
+const inter = Inter({
+  subsets: ['latin'],
+  weight: ['700', '900'],
+  variable: '--ff-inter',
+  display: 'swap',
+})
+
+const newsreader = Newsreader({
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  style: ['normal', 'italic'],
+  variable: '--ff-newsreader',
+  display: 'swap',
+})
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  variable: '--ff-jetbrains',
+  display: 'swap',
 })
 
 export const viewport: Viewport = {
   viewportFit: 'cover',
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
 }
+import './styles/tokens.css'
+import './styles/legacy.css'
 import './globals.css'
 import './weekly-theme.css'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
@@ -134,10 +159,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     limite_jour_max: cfg.limite_jour_max,
     duel_egalite: cfg.duel_egalite,
     eggsDisabled: cfg.eggs_disabled,
+    videoclubMode: cfg.videoclub_mode,
   }
 
   return (
-    <html lang="fr" className={`${playfairDisplay.variable} ${syne.variable}`}>
+    <html lang="fr" data-theme="neutre" className={`${playfairDisplay.variable} ${syne.variable} ${inter.variable} ${newsreader.variable} ${jetbrainsMono.variable}`}>
       <body>
         <ConfigProvider config={publicConfig}>
           <ToastProvider>
