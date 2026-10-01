@@ -102,13 +102,17 @@ export type Database = {
           film_id: number
           pre: boolean
           watched_at: string
+          exp_awarded: number
         }
         Insert: {
           user_id: string
           film_id: number
           pre?: boolean
+          exp_awarded?: number
         }
-        Update: Record<string, never>
+        Update: {
+          exp_awarded?: number
+        }
         Relationships: []
       }
       ratings: {
@@ -156,18 +160,21 @@ export type Database = {
           pending: boolean
           created_at: string
           closed_at: string | null
+          closes_at: string | null
         }
         Insert: {
           film1_id: number
           film2_id: number
           week_num: number
           pending?: boolean
+          closes_at?: string | null
         }
         Update: {
           winner_id?: number | null
           closed?: boolean
           pending?: boolean
           closed_at?: string | null
+          closes_at?: string | null
         }
         Relationships: []
       }

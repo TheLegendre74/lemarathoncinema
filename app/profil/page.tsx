@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { getBadge, getActiveBadge, getAllBadges, levelFromExp, SPECIAL_BADGES, getSpecialBadge, CONFIG } from '@/lib/config'
+import { getBadge, getActiveBadge, getAllBadges, levelFromExp, SPECIAL_BADGES, getSpecialBadge } from '@/lib/config'
+import { getServerConfig } from '@/lib/serverConfig'
 import ExpBar from '@/components/ExpBar'
 import Image from 'next/image'
 import AvatarUpload from './AvatarUpload'
@@ -18,6 +19,7 @@ export default async function ProfilPage({ searchParams }: { searchParams: Promi
   if (!user) redirect('/auth')
 
   const supabase = await createClient()
+  const cfg = await getServerConfig()
   const { with: withUserId } = await searchParams
 
   const [{ data: profile }, { data: watched }, { data: votes }, { data: eggs }, { data: tama }, conversations, threadMessages, { data: blockedData }] = await Promise.all([
@@ -53,7 +55,10 @@ export default async function ProfilPage({ searchParams }: { searchParams: Promi
   const level = levelFromExp(profile.exp)
   const badges = getAllBadges(profile.exp)
   const badge = getActiveBadge(profile.exp, (profile as any).active_badge)
-  const discoveredEggIds = (eggs ?? []).map((e: any) => e.egg_id as string)
+  const rawEggIds = (eggs ?? []).map((e: any) => e.egg_id as string)
+  const discoveredEggIds = rawEggIds.includes('rythme-dans-la-peau')
+    ? [...rawEggIds, 'fever-night']
+    : rawEggIds
 
   // Titres Tamagotchi débloqués selon le niveau
   const tamaXp = tama?.xp ?? 0
@@ -87,7 +92,7 @@ export default async function ProfilPage({ searchParams }: { searchParams: Promi
             <div style={{ marginTop: '.6rem', display: 'flex', gap: '.5rem', flexWrap: 'wrap' }}>
               <span className="chip">Niveau {level}</span>
               <span className="chip">#{rank} au classement</span>
-              <span className="chip">{CONFIG.SAISON_LABEL}</span>
+              <span className="chip">{cfg.SAISON_LABEL}</span>
               {badge && <span className={`badge-pill ${badge.cls}`}>{badge.icon} {badge.label}</span>}
             </div>
           </div>
@@ -222,7 +227,7 @@ export default async function ProfilPage({ searchParams }: { searchParams: Promi
                         <div style={{ fontSize: '.7rem', color: 'var(--text3)' }}>{film.annee} · {film.genre}</div>
                       </div>
                       <div style={{ fontSize: '.68rem', color: 'var(--text3)', flexShrink: 0 }}>{new Date(w.watched_at).toLocaleDateString('fr-FR')}</div>
-                      <span style={{ fontSize: '.7rem', color: 'var(--gold)', fontWeight: 500, flexShrink: 0 }}>+{CONFIG.EXP_FILM} EXP</span>
+                      <span style={{ fontSize: '.7rem', color: 'var(--gold)', fontWeight: 500, flexShrink: 0 }}>+{cfg.EXP_FILM} EXP</span>
                     </div>
                   )
                 })}

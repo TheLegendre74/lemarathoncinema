@@ -3,6 +3,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import type { Film } from '@/lib/supabase/types'
 import { getUserCached } from '@/lib/auth'
+import { getServerConfig } from '@/lib/serverConfig'
 
 export const revalidate = 120
 
@@ -10,9 +11,10 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
   const { tab } = await searchParams
   const supabase = await createClient()
   const user = await getUserCached()
+  const cfg = await getServerConfig()
 
   const [{ data: films }, { data: allRatings }, { data: allNegRatings }, { data: eggs }] = await Promise.all([
-    supabase.from('films').select('id, titre, annee, realisateur, genre, poster, saison').eq('saison', 1).order('titre'),
+    supabase.from('films').select('id, titre, annee, realisateur, genre, poster, saison').lte('saison', cfg.SAISON_NUMERO).order('titre'),
     supabase.from('ratings').select('film_id, score'),
     (supabase as any).from('negative_ratings').select('film_id, score'),
     user ? supabase.from('discovered_eggs').select('egg_id').eq('user_id', user.id) : Promise.resolve({ data: [] }),

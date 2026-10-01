@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CONFIG } from '@/lib/config'
+import { useConfig } from '@/components/config/ConfigProvider'
 
 export default function Countdown({ marathonStart }: { marathonStart?: string }) {
+  const config = useConfig()
   const [now, setNow] = useState(new Date())
 
   useEffect(() => {
@@ -11,7 +12,7 @@ export default function Countdown({ marathonStart }: { marathonStart?: string })
     return () => clearInterval(i)
   }, [])
 
-  const start = marathonStart ? new Date(marathonStart) : CONFIG.MARATHON_START
+  const start = marathonStart ? new Date(marathonStart) : new Date(config.MARATHON_START)
   const live = now >= start
 
   if (live) return (
@@ -20,7 +21,7 @@ export default function Countdown({ marathonStart }: { marathonStart?: string })
         <div className="dot-live" />
         <div>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: 'var(--green)' }}>
-            🎬 Marathon en cours — {CONFIG.SAISON_LABEL}
+            🎬 Marathon en cours — {config.SAISON_LABEL}
           </div>
           <div style={{ fontSize: '.78rem', color: 'var(--text2)', marginTop: '.2rem' }}>
             Démarré le {start.toLocaleDateString('fr-FR', {

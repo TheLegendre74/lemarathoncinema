@@ -33,6 +33,8 @@ import { getServerConfig } from '@/lib/serverConfig'
 import { getUnreadMessageCountForUser } from '@/lib/messages'
 import { getUserCached } from '@/lib/auth'
 import DiscordFab from '@/components/DiscordFab'
+import { ConfigProvider } from '@/components/config/ConfigProvider'
+import type { PublicConfig } from '@/components/config/ConfigProvider'
 import { withCache } from '@/lib/redis'
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -114,23 +116,45 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     clippyReplies:    cfg.CLIPPY_REPLIES,
   }
 
+  const publicConfig: PublicConfig = {
+    SAISON_NUMERO: cfg.SAISON_NUMERO,
+    SAISON_LABEL: cfg.SAISON_LABEL,
+    MARATHON_START: cfg.MARATHON_START.toISOString(),
+    SEANCE_JOUR: cfg.SEANCE_JOUR,
+    SEANCE_HEURE: cfg.SEANCE_HEURE,
+    FDLS_JOUR: cfg.FDLS_JOUR,
+    FDLS_HEURE: cfg.FDLS_HEURE,
+    EXP_FILM: cfg.EXP_FILM,
+    EXP_FDLS: cfg.EXP_FDLS,
+    EXP_DUEL_WIN: cfg.EXP_DUEL_WIN,
+    EXP_VOTE: cfg.EXP_VOTE,
+    EXP_FDLS_BONUS: cfg.EXP_FDLS_BONUS,
+    SEUIL_MAJORITY: cfg.SEUIL_MAJORITY,
+    limite_jour: cfg.limite_jour,
+    limite_jour_max: cfg.limite_jour_max,
+    duel_egalite: cfg.duel_egalite,
+    eggsDisabled: cfg.eggs_disabled,
+  }
+
   return (
     <html lang="fr" className={`${playfairDisplay.variable} ${syne.variable}`}>
       <body>
-        <ToastProvider>
-          <WeeklyThemeProvider />
-          <EasterEggsLoader config={eeConfig} isGuest={!user} watchedCount={watchedCount} hasClippyEgg={hasClippyEgg} isAdmin={!!(profile as any)?.is_admin} userId={user?.id} />
-          <ClientShell
-            profile={profile}
-            hasRageuxEgg={hasRageuxEgg}
-            hasTamagotchiEgg={hasTamagotchiEgg}
-            unreadMessages={unreadMessages}
-            userId={user?.id}
-          >
-            {children}
-          </ClientShell>
-          <DiscordFab />
-        </ToastProvider>
+        <ConfigProvider config={publicConfig}>
+          <ToastProvider>
+            <WeeklyThemeProvider />
+            <EasterEggsLoader config={eeConfig} isGuest={!user} watchedCount={watchedCount} hasClippyEgg={hasClippyEgg} isAdmin={!!(profile as any)?.is_admin} userId={user?.id} />
+            <ClientShell
+              profile={profile}
+              hasRageuxEgg={hasRageuxEgg}
+              hasTamagotchiEgg={hasTamagotchiEgg}
+              unreadMessages={unreadMessages}
+              userId={user?.id}
+            >
+              {children}
+            </ClientShell>
+            <DiscordFab />
+          </ToastProvider>
+        </ConfigProvider>
       </body>
     </html>
   )

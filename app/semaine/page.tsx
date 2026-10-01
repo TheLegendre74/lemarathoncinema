@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getUserCached } from '@/lib/auth'
+import { closeDueDuels } from '@/lib/duels'
 import SemaineClient from './SemaineClient'
 
 export const revalidate = 30
@@ -18,6 +19,7 @@ async function fetchWatchProviders(tmdbId: number) {
 }
 
 export default async function SemainePage() {
+  await closeDueDuels({ duringRender: true })
   const [user, supabase] = await Promise.all([
     getUserCached(),
     createClient(),

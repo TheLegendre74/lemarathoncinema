@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { addPost, deletePost, editPost } from '@/lib/actions'
 import { useToast } from './ToastProvider'
 import { getActiveBadge } from '@/lib/config'
+import { useConfig } from '@/components/config/ConfigProvider'
 import type { Post, Profile } from '@/lib/supabase/types'
 
 interface ForumProps {
@@ -32,7 +33,7 @@ function RageuxOverlay({ onClose }: { onClose: () => void }) {
           Tu es un rageux, Harry.
         </div>
         <div style={{ fontSize: 'clamp(.8rem,2vw,1rem)', color: 'rgba(255,255,255,.5)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '2rem' }}>
-          Easter egg #11 débloqué
+          Easter egg #16 débloqué
         </div>
         <div style={{ display: 'inline-block', background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.4)', borderRadius: 99, padding: '.4rem 1.2rem', fontSize: '.8rem', color: '#ef4444' }}>
           Badge "Le Rageux" disponible sur ton profil
@@ -433,6 +434,7 @@ function ShiningEffect({ onClose }: { onClose: () => void }) {
 
 // ─── MAIN FORUM COMPONENT ────────────────────────────────────────────────────
 export default function Forum({ topic, profile, initialPosts = [], filmTitle }: ForumProps) {
+  const siteConfig = useConfig()
   const supabase = useMemo(() => createClient(), [])
   const [posts, setPosts] = useState(initialPosts)
   const [text, setText] = useState('')
@@ -478,11 +480,11 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
     // The Shining (any forum)
     if (low.includes('redrum')) { setShowShining(true); return }
     // Rageux (any forum) — merde / nul / nulle / nules / nulles
-    if (/\b(merde|nul|nulle|nules|nulles)\b/.test(low)) {
+    if (!siteConfig.eggsDisabled.includes('rageux') && /\b(merde|nul|nulle|nules|nulles)\b/.test(low)) {
       setShowRageux(true)
     }
     // Alien Tamagotchi
-    if (low.includes('alien')) { setShowTamagotchi(true) }
+    if (!siteConfig.eggsDisabled.includes('tamagotchi') && low.includes('alien')) { setShowTamagotchi(true) }
   }
 
   // Initial fetch on mount (initialPosts is always [] when called from a client component)

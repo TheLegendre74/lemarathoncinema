@@ -1,9 +1,11 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, updateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server'
-import { isMarathonLive, CONFIG } from '@/lib/config'
+import { getServerConfig, isMarathonLiveFromConfig } from '@/lib/serverConfig'
+import { parisDayRange } from '@/lib/time/paris'
+import { closeDueDuels, nextDuelDeadline, pickWinner } from '@/lib/duels'
 import { getUnreadMessageCount as getUnreadMessageCountFromMessages } from '@/lib/messages'
 import { deleteCacheKeys } from '@/lib/redis'
 
@@ -373,8 +375,9 @@ export async function signUp(formData: FormData) {
 
   if (existing) return { error: 'Ce pseudo est déjà pris.' }
 
-  const marathonLive = isMarathonLive()
-  const saison = marathonLive ? CONFIG.SAISON_NUMERO + 1 : CONFIG.SAISON_NUMERO
+  const cfg = await getServerConfig()
+  const marathonLive = isMarathonLiveFromConfig(cfg)
+  const saison = marathonLive ? cfg.SAISON_NUMERO + 1 : cfg.SAISON_NUMERO
 
   const { error } = await supabase.auth.signUp({
     email,
@@ -428,18 +431,14 @@ export async function signOut() {
 // ── WATCHED ─────────────────────────────────────────────────
 
 // Explicit pre/marathon mark (used by the two separate buttons)
-const MARATHON_SOFT_LIMIT = 4   // 4 films max/jour avant demande admin
-const MARATHON_HARD_LIMIT = 8   // 8 films max/jour après approbation admin
-
 export async function getMarathonDailyStatus() {
   const supabase = await createClient()
+  const cfg = await getServerConfig()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { count: 0, blocked: false, pendingRequest: false, approvedToday: false }
 
-  // Date du jour en heure de Paris (CEST = UTC+2 pendant le marathon)
-  const todayParis = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })
-  const dayStart = new Date(todayParis + 'T00:00:00+02:00').toISOString()
-  const dayEnd   = new Date(todayParis + 'T23:59:59.999+02:00').toISOString()
+  const { start, end } = parisDayRange()
+  const todayParis = start.toISOString().slice(0, 10)
 
   const [
     { count: watchedToday },
@@ -451,8 +450,8 @@ export async function getMarathonDailyStatus() {
       .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id)
       .eq('pre', false)
-      .gte('watched_at', dayStart)
-      .lte('watched_at', dayEnd),
+      .gte('watched_at', start.toISOString())
+      .lt('watched_at', end.toISOString()),
     supabase.from('profiles').select('marathon_blocked_until').eq('id', user.id).single(),
     (supabase as any)
       .from('marathon_watch_requests')
@@ -472,7 +471,7 @@ export async function getMarathonDailyStatus() {
     blocked,
     pendingRequest,
     approvedToday,
-    limit: approvedToday ? MARATHON_HARD_LIMIT : MARATHON_SOFT_LIMIT,
+    limit: approvedToday ? cfg.limite_jour_max : cfg.limite_jour,
   }
 }
 
@@ -499,9 +498,9 @@ export async function submitMarathonWatchRequest(message: string) {
     day: todayParis,
   })
 
-  // Block user for 24h
+  const admin = createAdminClient()
   const blockedUntil = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-  await supabase.from('profiles')
+  await admin.from('profiles')
     .update({ marathon_blocked_until: blockedUntil } as any)
     .eq('id', user.id)
 
@@ -543,8 +542,8 @@ export async function adminReviewMarathonRequest(requestId: string, action: 'app
     .eq('id', requestId)
 
   if (action === 'approve') {
-    // Débloquer l'utilisateur
-    await supabase.from('profiles')
+    const admin = createAdminClient()
+    await admin.from('profiles')
       .update({ marathon_blocked_until: null } as any)
       .eq('id', req.user_id)
   }
@@ -555,23 +554,20 @@ export async function adminReviewMarathonRequest(requestId: string, action: 'app
 
 export async function markWatched(filmId: number, pre: boolean) {
   const supabase = await createClient()
+  const cfg = await getServerConfig()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non connecté' }
 
-  // Bloquer les films de saison future
   const { data: filmCheck } = await supabase.from('films').select('saison').eq('id', filmId).single()
-  if (filmCheck && filmCheck.saison > CONFIG.SAISON_NUMERO) {
+  if (filmCheck && filmCheck.saison > cfg.SAISON_NUMERO) {
     return { error: 'Ce film sera disponible lors de la saison suivante.' }
   }
 
-  // Block marathon mark if marathon not live
-  if (!pre && !isMarathonLive()) return { error: 'Le marathon n\'a pas encore commencé.' }
+  if (!pre && !isMarathonLiveFromConfig(cfg)) return { error: 'Le marathon n\'a pas encore commencé.' }
 
-  // Vérification limite quotidienne marathon
   if (!pre) {
     const status = await getMarathonDailyStatus()
     if (status.blocked) return { error: 'BLOCKED', blockedUntil: status.blocked }
-    // Ne bloquer que si on AJOUTE (pas si on enlève)
     const { data: existing } = await supabase.from('watched').select('pre').eq('user_id', user.id).eq('film_id', filmId).single()
     const isAdding = !existing
     if (isAdding && status.count >= status.limit!) {
@@ -580,63 +576,63 @@ export async function markWatched(filmId: number, pre: boolean) {
     }
   }
 
+  const admin = createAdminClient()
   const { data: existing } = await supabase
     .from('watched')
-    .select('film_id, pre')
+    .select('film_id, pre, exp_awarded')
     .eq('user_id', user.id)
     .eq('film_id', filmId)
     .single()
 
-  // Toggle off: if already watched with SAME pre value, remove
   if (existing && existing.pre === pre) {
-    await supabase.from('watched').delete().eq('user_id', user.id).eq('film_id', filmId)
-    if (!pre) {
-      await supabase.rpc('decrement_exp', { user_id: user.id, amount: CONFIG.EXP_FILM })
+    const { data: deleted } = await admin.from('watched').delete().eq('user_id', user.id).eq('film_id', filmId).select('exp_awarded').single()
+    const expToRemove = deleted?.exp_awarded ?? 0
+    if (expToRemove > 0) {
+      await admin.rpc('decrement_exp', { user_id: user.id, amount: expToRemove })
     }
     await deleteCacheKeys([`user:${user.id}:watched_count`, `user:${user.id}:profile`])
     revalidatePath('/films')
     return { action: 'removed' }
   }
 
-  // Switch from pre→marathon or marathon→pre: delete existing first
   if (existing) {
-    await supabase.from('watched').delete().eq('user_id', user.id).eq('film_id', filmId)
-    // If switching from marathon to pre: remove marathon EXP
-    if (existing.pre === false) {
-      await supabase.rpc('decrement_exp', { user_id: user.id, amount: CONFIG.EXP_FILM })
+    const { data: deleted } = await admin.from('watched').delete().eq('user_id', user.id).eq('film_id', filmId).select('exp_awarded').single()
+    const expToRemove = deleted?.exp_awarded ?? 0
+    if (expToRemove > 0) {
+      await admin.rpc('decrement_exp', { user_id: user.id, amount: expToRemove })
     }
   }
 
-  // Insert new record
-  await supabase.from('watched').insert({ user_id: user.id, film_id: filmId, pre })
-  if (!pre) {
-    await supabase.rpc('increment_exp', { user_id: user.id, amount: CONFIG.EXP_FILM })
+  const exp = !pre ? cfg.EXP_FILM : 0
+  const { data: inserted } = await admin.from('watched').insert({ user_id: user.id, film_id: filmId, pre, exp_awarded: exp }).select('film_id').single()
+  if (!inserted) return { error: 'Erreur lors de l\'enregistrement.' }
+  if (exp > 0) {
+    await admin.rpc('increment_exp', { user_id: user.id, amount: exp })
   }
   await deleteCacheKeys([`user:${user.id}:watched_count`, `user:${user.id}:profile`])
   revalidatePath('/films')
-  return { action: 'added', pre }
+  return { action: 'added', pre, exp }
 }
 
 export async function toggleWatched(filmId: number, filmTitre: string) {
   const supabase = await createClient()
+  const cfg = await getServerConfig()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non connecté' }
 
-  // Bloquer les films de saison future
   const { data: filmCheck } = await supabase.from('films').select('saison').eq('id', filmId).single()
-  if (filmCheck && filmCheck.saison > CONFIG.SAISON_NUMERO) {
+  if (filmCheck && filmCheck.saison > cfg.SAISON_NUMERO) {
     return { error: 'Ce film sera disponible lors de la saison suivante.' }
   }
 
   const { data: existing } = await supabase
     .from('watched')
-    .select('film_id, pre')
+    .select('film_id, pre, exp_awarded')
     .eq('user_id', user.id)
     .eq('film_id', filmId)
     .single()
 
-  // Vérification limite quotidienne lors d'un ajout marathon
-  if (!existing && isMarathonLive()) {
+  if (!existing && isMarathonLiveFromConfig(cfg)) {
     const status = await getMarathonDailyStatus()
     if (status.blocked) return { error: 'BLOCKED' }
     if (status.count >= status.limit!) {
@@ -645,36 +641,42 @@ export async function toggleWatched(filmId: number, filmTitre: string) {
     }
   }
 
+  const admin = createAdminClient()
+
   if (existing) {
-    // Remove
-    await supabase.from('watched').delete().eq('user_id', user.id).eq('film_id', filmId)
-    // Remove EXP if was marathon watch
-    if (!existing.pre) {
-      await supabase.rpc('decrement_exp', { user_id: user.id, amount: CONFIG.EXP_FILM })
+    const { data: deleted } = await admin.from('watched').delete().eq('user_id', user.id).eq('film_id', filmId).select('exp_awarded').single()
+    const expToRemove = deleted?.exp_awarded ?? 0
+    if (expToRemove > 0) {
+      await admin.rpc('decrement_exp', { user_id: user.id, amount: expToRemove })
     }
     await deleteCacheKeys([`user:${user.id}:watched_count`, `user:${user.id}:profile`])
     revalidatePath('/films')
     return { action: 'removed' }
   } else {
-    const pre = !isMarathonLive()
-    await supabase.from('watched').insert({ user_id: user.id, film_id: filmId, pre })
+    const pre = !isMarathonLiveFromConfig(cfg)
+    let exp = 0
     if (!pre) {
       const { data: wf } = await supabase.from('week_films').select('film_id').eq('active', true).eq('film_id', filmId).single()
-      const exp = wf ? CONFIG.EXP_FDLS : CONFIG.EXP_FILM
-      await supabase.rpc('increment_exp', { user_id: user.id, amount: exp })
+      exp = wf ? cfg.EXP_FDLS : cfg.EXP_FILM
+    }
+    const { data: inserted } = await admin.from('watched').insert({ user_id: user.id, film_id: filmId, pre, exp_awarded: exp }).select('film_id').single()
+    if (!inserted) return { error: 'Erreur lors de l\'enregistrement.' }
+    if (exp > 0) {
+      await admin.rpc('increment_exp', { user_id: user.id, amount: exp })
     }
     await deleteCacheKeys([`user:${user.id}:watched_count`, `user:${user.id}:profile`])
     revalidatePath('/films')
-    return { action: 'added', pre }
+    return { action: 'added', pre, exp }
   }
 }
 
 // Marquer le film de la semaine actif, ou la derniere archive pendant la fenetre autorisee.
 export async function markWeekFilmWatched(weekFilmId: number) {
   const supabase = await createClient()
+  const cfg = await getServerConfig()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non connecte' }
-  if (!isMarathonLive()) return { error: 'Le marathon n\'a pas encore commence.' }
+  if (!isMarathonLiveFromConfig(cfg)) return { error: 'Le marathon n\'a pas encore commence.' }
 
   const { data: weekFilm, error: weekFilmError } = await supabase
     .from('week_films')
@@ -702,7 +704,7 @@ export async function markWeekFilmWatched(weekFilmId: number) {
   }
 
   const { data: filmCheck } = await supabase.from('films').select('saison').eq('id', weekFilm.film_id).single()
-  if (filmCheck && filmCheck.saison > CONFIG.SAISON_NUMERO) {
+  if (filmCheck && filmCheck.saison > cfg.SAISON_NUMERO) {
     return { error: 'Ce film sera disponible lors de la saison suivante.' }
   }
 
@@ -715,23 +717,27 @@ export async function markWeekFilmWatched(weekFilmId: number) {
 
   if (existing) return { success: true, alreadyWatched: true, filmId: weekFilm.film_id }
 
-  await supabase.from('watched').insert({ user_id: user.id, film_id: weekFilm.film_id, pre: false })
-  await supabase.rpc('increment_exp', { user_id: user.id, amount: CONFIG.EXP_FDLS })
+  const admin = createAdminClient()
+  const exp = cfg.EXP_FDLS
+  const { data: inserted } = await admin.from('watched').insert({ user_id: user.id, film_id: weekFilm.film_id, pre: false, exp_awarded: exp }).select('film_id').single()
+  if (!inserted) return { error: 'Erreur lors de l\'enregistrement.' }
+  await admin.rpc('increment_exp', { user_id: user.id, amount: exp })
   await deleteCacheKeys([`user:${user.id}:watched_count`, `user:${user.id}:profile`])
   revalidatePath('/semaine')
   revalidatePath('/films')
   revalidatePath('/profil')
   revalidatePath('/classement')
-  return { success: true, filmId: weekFilm.film_id }
+  return { success: true, filmId: weekFilm.film_id, exp }
 }
 
 // Réclamer le bonus 48h du film de la semaine (+15 EXP)
 // Le bonus est claimable sur le dernier film archivé, pendant 48h après l'annonce du nouveau.
 export async function claimWeekFilmBonus(weekFilmId: number) {
   const supabase = await createClient()
+  const cfg = await getServerConfig()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non connecté' }
-  if (!isMarathonLive()) return { error: 'Le marathon n\'a pas encore commencé.' }
+  if (!isMarathonLiveFromConfig(cfg)) return { error: 'Le marathon n\'a pas encore commencé.' }
 
   const { data: weekFilm } = await supabase
     .from('week_films')
@@ -771,8 +777,9 @@ export async function claimWeekFilmBonus(weekFilmId: number) {
     .single()
   if (existing) return { error: 'Bonus déjà réclamé.' }
 
-  await (supabase as any).from('week_film_bonus_claims').insert({ user_id: user.id, week_film_id: weekFilmId })
-  await supabase.rpc('increment_exp', { user_id: user.id, amount: CONFIG.EXP_FDLS_BONUS })
+  const admin = createAdminClient()
+  await (admin as any).from('week_film_bonus_claims').insert({ user_id: user.id, week_film_id: weekFilmId })
+  await admin.rpc('increment_exp', { user_id: user.id, amount: cfg.EXP_FDLS_BONUS })
   await deleteCacheKeys([`user:${user.id}:profile`])
   revalidatePath('/films')
   revalidatePath('/semaine')
@@ -784,14 +791,17 @@ export async function claimWeekFilmBonus(weekFilmId: number) {
 // Marquer un film vainqueur de duel comme vu pendant la séance du duel
 export async function markWatchedDuelWinner(filmId: number) {
   const supabase = await createClient()
+  const cfg = await getServerConfig()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non connecté' }
-  if (!isMarathonLive()) return { error: 'Le marathon n\'a pas encore commencé.' }
+  if (!isMarathonLiveFromConfig(cfg)) return { error: 'Le marathon n\'a pas encore commencé.' }
 
   const { data: filmCheck } = await supabase.from('films').select('saison').eq('id', filmId).single()
-  if (filmCheck && filmCheck.saison > CONFIG.SAISON_NUMERO) {
+  if (filmCheck && filmCheck.saison > cfg.SAISON_NUMERO) {
     return { error: 'Ce film sera disponible lors de la saison suivante.' }
   }
+
+  await closeDueDuels({ duringRender: false })
 
   const { data: duel } = await supabase
     .from('duels').select('id, winner_id, closed_at').eq('winner_id', filmId).eq('closed', true).order('closed_at', { ascending: false }).limit(1).single()
@@ -802,12 +812,10 @@ export async function markWatchedDuelWinner(filmId: number) {
   }
 
   const { data: existing } = await supabase
-    .from('watched').select('pre').eq('user_id', user.id).eq('film_id', filmId).single()
+    .from('watched').select('pre, exp_awarded').eq('user_id', user.id).eq('film_id', filmId).single()
 
-  // Déjà enregistré comme vu pendant le marathon — pas de double bonus
   if (existing && !existing.pre) return { error: 'ALREADY_MARATHON' }
 
-  // Vérification limite quotidienne uniquement si nouveau (pas déjà en pre)
   if (!existing) {
     const status = await getMarathonDailyStatus()
     if (status.blocked) return { error: 'BLOCKED', blockedUntil: status.blocked }
@@ -817,16 +825,19 @@ export async function markWatchedDuelWinner(filmId: number) {
     }
   }
 
-  // Supprimer l'entrée pré-marathon si elle existe
+  const admin = createAdminClient()
+
   if (existing) {
-    await supabase.from('watched').delete().eq('user_id', user.id).eq('film_id', filmId)
+    await admin.from('watched').delete().eq('user_id', user.id).eq('film_id', filmId)
   }
 
-  await supabase.from('watched').insert({ user_id: user.id, film_id: filmId, pre: false })
-  await supabase.rpc('increment_exp', { user_id: user.id, amount: CONFIG.EXP_DUEL_WIN })
+  const exp = cfg.EXP_DUEL_WIN
+  const { data: inserted } = await admin.from('watched').insert({ user_id: user.id, film_id: filmId, pre: false, exp_awarded: exp }).select('film_id').single()
+  if (!inserted) return { error: 'Erreur lors de l\'enregistrement.' }
+  await admin.rpc('increment_exp', { user_id: user.id, amount: exp })
   await deleteCacheKeys([`user:${user.id}:watched_count`, `user:${user.id}:profile`])
   revalidatePath('/films')
-  return { action: 'added' }
+  return { action: 'added', exp }
 }
 
 // ── RATINGS ─────────────────────────────────────────────────
@@ -864,11 +875,15 @@ export async function upsertNegativeRating(filmId: number, score: number) {
 
 export async function voteDuel(duelId: number, filmChoice: number) {
   const supabase = await createClient()
+  const cfg = await getServerConfig()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non connecté' }
 
-  const { data: duel } = await supabase.from('duels').select('film1_id, film2_id, closed').eq('id', duelId).single()
+  await closeDueDuels({ duringRender: false })
+
+  const { data: duel } = await supabase.from('duels').select('film1_id, film2_id, closed, closes_at').eq('id', duelId).single()
   if (!duel || duel.closed) return { error: 'Ce duel est clôturé.' }
+  if (duel.closes_at && new Date(duel.closes_at) <= new Date()) return { error: 'Ce duel est clôturé.' }
   if (filmChoice !== duel.film1_id && filmChoice !== duel.film2_id) return { error: 'Choix invalide.' }
 
   const { data: existing } = await supabase
@@ -881,12 +896,11 @@ export async function voteDuel(duelId: number, filmChoice: number) {
   const adminClient = createAdminClient()
   if (existing) {
     if (existing.film_choice === filmChoice) return { success: true, changed: false }
-    // Changer le vote : supprimer l'ancien et insérer le nouveau
     await adminClient.from('votes').delete().eq('user_id', user.id).eq('duel_id', duelId)
     await adminClient.from('votes').insert({ user_id: user.id, duel_id: duelId, film_choice: filmChoice })
   } else {
     await adminClient.from('votes').insert({ user_id: user.id, duel_id: duelId, film_choice: filmChoice })
-    await supabase.rpc('increment_exp', { user_id: user.id, amount: CONFIG.EXP_VOTE })
+    await adminClient.rpc('increment_exp', { user_id: user.id, amount: cfg.EXP_VOTE })
   }
 
   revalidatePath('/duels')
@@ -941,11 +955,13 @@ export async function adminSetConfig(configs: Record<string, string>) {
   const ALLOWED_CONFIG_KEYS = new Set([
     'marathon_start','saison_numero','saison_label','seance_jour','seance_heure',
     'fdls_jour','fdls_heure','seuil_majority','exp_film','exp_fdls','exp_duel_win','exp_vote',
+    'exp_fdls_bonus',
     'accueil_sous_titre','matrix_line1','matrix_line2','matrix_line3','joker_phrase',
     'tars_line1','tars_line2','marvin_line1','marvin_line2','hal_line1','hal_line2',
     'nolan_quote','bond_line','noctam_line1','noctam_line2','kenny_text1','kenny_text2',
     'randy_quote','fightclub_gameover','killbill_end','MARATHON_RULES','TIPIAK_LINKS',
     'CLIPPY_REPLIES',
+    'duel_egalite','limite_jour','limite_jour_max','eggs_disabled',
   ])
 
   const adminClient = createAdminClient()
@@ -956,6 +972,7 @@ export async function adminSetConfig(configs: Record<string, string>) {
   const { error } = await adminClient.from('site_config').upsert(entries, { onConflict: 'key' })
   if (error) return { error: error.message }
 
+  updateTag('site-config')
   revalidatePath('/', 'layout')
   revalidatePath('/admin')
   return { success: true }
@@ -1136,7 +1153,8 @@ export async function addFilm(formData: FormData) {
     }
   }
 
-  const saison = isMarathonLive() ? CONFIG.SAISON_NUMERO + 1 : CONFIG.SAISON_NUMERO
+  const cfg = await getServerConfig()
+  const saison = isMarathonLiveFromConfig(cfg) ? cfg.SAISON_NUMERO + 1 : cfg.SAISON_NUMERO
 
   const { error } = await supabase.from('films').insert({
     titre, annee, realisateur, genre,
@@ -1165,6 +1183,28 @@ export async function addFilm(formData: FormData) {
 
 // ── POSTS (forum) ────────────────────────────────────────────
 
+async function detectForumEggs(userId: string, content: string) {
+  const cfg = await getServerConfig()
+  const disabled = cfg.eggs_disabled
+  const admin = createAdminClient()
+  let found = false
+  if (!disabled.includes('rageux') && /\b(merde|nul|nulle|nules|nulles)\b/i.test(content)) {
+    await admin.from('discovered_eggs').upsert(
+      { user_id: userId, egg_id: 'rageux' },
+      { onConflict: 'user_id,egg_id', ignoreDuplicates: true }
+    )
+    found = true
+  }
+  if (!disabled.includes('tamagotchi') && /alien/i.test(content)) {
+    await admin.from('discovered_eggs').upsert(
+      { user_id: userId, egg_id: 'tamagotchi' },
+      { onConflict: 'user_id,egg_id', ignoreDuplicates: true }
+    )
+    found = true
+  }
+  if (found) await deleteCacheKeys([`user:${userId}:eggs`])
+}
+
 export async function addPost(topic: string, content: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -1176,20 +1216,7 @@ export async function addPost(topic: string, content: string) {
   const { data, error } = await supabase.from('posts').insert({ topic: safeTopic, user_id: user.id, content: content.trim().slice(0, 2000) }).select().single()
   if (error) return { error: error.message }
 
-  // Easter eggs forum\n  // rageux : insultes
-  if (/\b(merde|nul|nulle|nules|nulles)\b/i.test(content)) {
-    await supabase.from('discovered_eggs').upsert(
-      { user_id: user.id, egg_id: 'rageux' },
-      { onConflict: 'user_id,egg_id', ignoreDuplicates: true }
-    )
-  }
-  // alien : débloque le tamagotchi facehugger
-  if (/alien/i.test(content)) {
-    await supabase.from('discovered_eggs').upsert(
-      { user_id: user.id, egg_id: 'tamagotchi' },
-      { onConflict: 'user_id,egg_id', ignoreDuplicates: true }
-    )
-  }
+  await detectForumEggs(user.id, content)
 
   revalidatePath('/films')
   revalidatePath('/duels')
@@ -1252,7 +1279,8 @@ export async function adminCreateDuel(film1Id: number, film2Id: number, weekNum:
   const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
   if (!profile?.is_admin) return { error: 'Non autorisé.' }
 
-  const { error } = await supabase.from('duels').insert({ film1_id: film1Id, film2_id: film2Id, week_num: weekNum, pending })
+  const closes_at = pending ? undefined : nextDuelDeadline(new Date()).toISOString()
+  const { error } = await supabase.from('duels').insert({ film1_id: film1Id, film2_id: film2Id, week_num: weekNum, pending, closes_at })
   if (error) return { error: error.message }
   revalidatePath('/duels')
   revalidatePath('/admin')
@@ -1286,7 +1314,8 @@ export async function adminApproveDuel(duelId: number) {
   const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
   if (!profile?.is_admin) return { error: 'Non autorisé.' }
 
-  const { error } = await supabase.from('duels').update({ pending: false }).eq('id', duelId)
+  const closes_at = nextDuelDeadline(new Date()).toISOString()
+  const { error } = await supabase.from('duels').update({ pending: false, closes_at }).eq('id', duelId)
   if (error) return { error: error.message }
   revalidatePath('/duels')
   revalidatePath('/admin')
@@ -1312,26 +1341,25 @@ export async function adminDeleteDuel(duelId: number) {
 
 export async function adminCloseDuel(duelId: number) {
   const supabase = await createClient()
+  const cfg = await getServerConfig()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non connecté' }
 
   const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
   if (!profile?.is_admin) return { error: 'Non autorisé.' }
 
-  // Count votes
   const { data: votes } = await supabase
     .from('votes')
     .select('film_choice')
     .eq('duel_id', duelId)
 
-  const { data: duel } = await supabase.from('duels').select('film1_id, film2_id').eq('id', duelId).single()
+  const { data: duel } = await supabase.from('duels').select('id, film1_id, film2_id').eq('id', duelId).single()
   if (!duel || !votes) return { error: 'Duel introuvable.' }
 
-  const v1 = votes.filter((v: { film_choice: number }) => v.film_choice === duel.film1_id).length
-  const v2 = votes.filter((v: { film_choice: number }) => v.film_choice === duel.film2_id).length
-  const winnerId = v1 >= v2 ? duel.film1_id : duel.film2_id
+  const winnerId = await pickWinner(duel, votes, cfg.duel_egalite)
 
-  await supabase.from('duels').update({ winner_id: winnerId, closed: true, closed_at: new Date().toISOString() }).eq('id', duelId)
+  const admin = createAdminClient()
+  await admin.from('duels').update({ winner_id: winnerId, closed: true, closed_at: new Date().toISOString() }).eq('id', duelId)
   revalidatePath('/duels')
   revalidatePath('/admin')
   return { success: true, winnerId }
@@ -1346,10 +1374,11 @@ export async function adminSetWeekFilm(filmId: number, sessionTime?: string) {
   if (!profile?.is_admin) return { error: 'Non autorisé.' }
 
   const adminDb = createAdminClient()
+  const cfg = await getServerConfig()
 
   const { data: newWeekFilm, error: insertError } = await adminDb
     .from('week_films')
-    .insert({ film_id: filmId, active: true, session_time: sessionTime ?? `${CONFIG.FDLS_JOUR} à ${CONFIG.FDLS_HEURE}` })
+    .insert({ film_id: filmId, active: true, session_time: sessionTime ?? `${cfg.FDLS_JOUR} à ${cfg.FDLS_HEURE}` })
     .select('id')
     .single()
   if (insertError) return { error: insertError.message }
@@ -1424,10 +1453,10 @@ export async function adminSetAdmin(userId: string, makeAdmin: boolean) {
   const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
   if (!profile?.is_admin) return { error: 'Non autorisé.' }
 
-  // Empêche de se retirer soi-même les droits admin
   if (userId === user.id && !makeAdmin) return { error: 'Impossible de se retirer ses propres droits admin.' }
 
-  await supabase.from('profiles').update({ is_admin: makeAdmin }).eq('id', userId)
+  const admin = createAdminClient()
+  await admin.from('profiles').update({ is_admin: makeAdmin }).eq('id', userId)
   revalidatePath('/admin')
   return { success: true }
 }
@@ -1454,7 +1483,12 @@ export async function adminGrantExp(userId: string, amount: number) {
   const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
   if (!profile?.is_admin) return { error: 'Non autorisé.' }
 
-  await supabase.rpc('increment_exp', { user_id: userId, amount })
+  if (!Number.isInteger(amount) || amount === 0 || amount < -1000 || amount > 1000) {
+    return { error: 'Montant invalide (entier entre -1000 et 1000, non nul).' }
+  }
+
+  const admin = createAdminClient()
+  await admin.rpc('increment_exp', { user_id: userId, amount })
   await deleteCacheKeys([`user:${userId}:profile`])
   revalidatePath('/admin')
   revalidatePath('/classement')
@@ -1985,6 +2019,9 @@ export async function adminDiagnostic() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non connecté' }
 
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Non autorisé.' }
+
   const adminClient = createAdminClient()
 
   // Test 1: count avec adminClient
@@ -2000,7 +2037,7 @@ export async function adminDiagnostic() {
     adminCount: { data: d1, error: e1?.message ?? null },
     adminSelect: { data: d2, error: e2?.message ?? null },
     userSelect: { data: d3, error: e3?.message ?? null },
-    tmdbKey: tmdbKey ? `présente (${tmdbKey.slice(0, 8)}...)` : 'MANQUANTE',
+    tmdbKey: tmdbKey ? 'présente' : 'MANQUANTE',
     serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'présente' : 'MANQUANTE',
   }
 }
@@ -2194,14 +2231,26 @@ export async function getFilmWatchProviders(tmdbId: number | null): Promise<{
 
 // ── EASTER EGGS ───────────────────────────────────────────────
 
+const KNOWN_EGGS = new Set([
+  'matrix', 'joker', 'marvin', 'hal', 'nolan', 'bond', 'fightclub',
+  'kenny', 'southpark', 'randy', 'killbill', 'predator', 'tamagotchi',
+  'tars', 'noctambule', 'rageux', 'inception', 'godfather', 'shark',
+  'clippy', 'conway', 'alien',
+  'agent-of-chaos', 'legende-vivante', 'rythme-dans-la-peau', 'fever-night',
+  'tama_explorateur', 'tama_chasseur', 'tama_legende', 'tama_maitre',
+])
+
 export async function discoverEgg(eggId: string) {
+  if (!KNOWN_EGGS.has(eggId)) return
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
-  await supabase.from('discovered_eggs').upsert(
+  const admin = createAdminClient()
+  const { error } = await admin.from('discovered_eggs').upsert(
     { user_id: user.id, egg_id: eggId },
     { onConflict: 'user_id,egg_id', ignoreDuplicates: true }
   )
+  if (error) return
   await deleteCacheKeys([`user:${user.id}:eggs`])
 }
 
@@ -2209,12 +2258,12 @@ export async function unlockAgentOfChaos() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non connecté' }
-  // 1. Enregistre la découverte (débloque le badge dans le profil)
-  await supabase.from('discovered_eggs').upsert(
+  const admin = createAdminClient()
+  const { error } = await admin.from('discovered_eggs').upsert(
     { user_id: user.id, egg_id: 'agent-of-chaos' },
     { onConflict: 'user_id,egg_id', ignoreDuplicates: true }
   )
-  // 2. Auto-équipe le badge uniquement si l'utilisateur n'a pas déjà un badge spécial actif
+  if (error) return { error: error.message }
   const { data: profile } = await supabase.from('profiles').select('active_badge').eq('id', user.id).single()
   const currentBadge = (profile as any)?.active_badge
   const specialIds = ['rageux', 'agent-of-chaos', 'tama_explorateur', 'tama_chasseur', 'tama_legende', 'tama_maitre']
@@ -2251,10 +2300,12 @@ export async function unlockClippyMaster() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non connecté' }
-  await supabase.from('discovered_eggs').upsert(
+  const admin = createAdminClient()
+  const { error } = await admin.from('discovered_eggs').upsert(
     { user_id: user.id, egg_id: 'legende-vivante' },
     { onConflict: 'user_id,egg_id', ignoreDuplicates: true }
   )
+  if (error) return { error: error.message }
   const { data: profile } = await supabase.from('profiles').select('active_badge').eq('id', user.id).single()
   const currentBadge = (profile as any)?.active_badge
   const priorityIds = ['legende-vivante']
@@ -2273,10 +2324,12 @@ export async function unlockFeverNight() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non connecté' }
-  await supabase.from('discovered_eggs').upsert(
+  const admin = createAdminClient()
+  const { error } = await admin.from('discovered_eggs').upsert(
     { user_id: user.id, egg_id: 'rythme-dans-la-peau' },
     { onConflict: 'user_id,egg_id', ignoreDuplicates: true }
   )
+  if (error) return { error: error.message }
   await supabase.from('profiles').update({ active_badge: 'fever-night' } as any).eq('id', user.id)
   await deleteCacheKeys([`user:${user.id}:eggs`, `user:${user.id}:profile`])
   revalidatePath('/profil')
@@ -2321,6 +2374,9 @@ export async function addForumPost(topicId: string, content: string) {
     .single()
 
   if (error) return { error: 'Erreur lors de l\'envoi' }
+
+  await detectForumEggs(user.id, sanitized)
+
   revalidatePath(`/forum/${topicId}`)
   return { data }
 }
@@ -3760,10 +3816,11 @@ export async function getUserReactionsForWatchlists(watchlistIds: string[]) {
 
 export async function submitSeasonJoinRequest(message: string) {
   const supabase = await createClient()
+  const cfg = await getServerConfig()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non connecté' }
 
-  if (!isMarathonLive()) return { error: 'Le marathon n\'a pas encore commencé.' }
+  if (!isMarathonLiveFromConfig(cfg)) return { error: 'Le marathon n\'a pas encore commencé.' }
 
   const safe = message.trim().slice(0, 500)
 
@@ -3772,7 +3829,7 @@ export async function submitSeasonJoinRequest(message: string) {
     .from('season_join_requests')
     .select('id, status')
     .eq('user_id', user.id)
-    .eq('saison', CONFIG.SAISON_NUMERO)
+    .eq('saison', cfg.SAISON_NUMERO)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -3782,7 +3839,6 @@ export async function submitSeasonJoinRequest(message: string) {
   }
 
   if (existing && existing.status === 'rejected') {
-    // Réactivation d'une demande rejetée
     await (supabase as any)
       .from('season_join_requests')
       .update({ message: safe || null, status: 'pending', reviewed_by: null, reviewed_at: null })
@@ -3790,7 +3846,7 @@ export async function submitSeasonJoinRequest(message: string) {
   } else {
     await (supabase as any)
       .from('season_join_requests')
-      .insert({ user_id: user.id, message: safe || null, saison: CONFIG.SAISON_NUMERO })
+      .insert({ user_id: user.id, message: safe || null, saison: cfg.SAISON_NUMERO })
   }
 
   revalidatePath('/admin')
@@ -3799,6 +3855,7 @@ export async function submitSeasonJoinRequest(message: string) {
 
 export async function getMySeasonJoinStatus() {
   const supabase = await createClient()
+  const cfg = await getServerConfig()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
@@ -3806,7 +3863,7 @@ export async function getMySeasonJoinStatus() {
     .from('season_join_requests')
     .select('id, status, message, created_at')
     .eq('user_id', user.id)
-    .eq('saison', CONFIG.SAISON_NUMERO)
+    .eq('saison', cfg.SAISON_NUMERO)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -3816,6 +3873,7 @@ export async function getMySeasonJoinStatus() {
 
 export async function adminGetAllSeasonJoinRequests() {
   const supabase = await createClient()
+  const cfg = await getServerConfig()
   const { data: { user } } = await supabase.auth.getUser()
   const { data: me } = await supabase.from('profiles').select('is_admin').eq('id', user?.id ?? '').single()
   if (!me?.is_admin) return []
@@ -3823,7 +3881,7 @@ export async function adminGetAllSeasonJoinRequests() {
   const { data } = await (supabase as any)
     .from('season_join_requests')
     .select('id, user_id, message, status, saison, created_at, reviewed_at')
-    .eq('saison', CONFIG.SAISON_NUMERO)
+    .eq('saison', cfg.SAISON_NUMERO)
     .order('created_at', { ascending: false })
 
   return data ?? []
@@ -3831,6 +3889,7 @@ export async function adminGetAllSeasonJoinRequests() {
 
 export async function adminGetSeasonJoinRequests() {
   const supabase = await createClient()
+  const cfg = await getServerConfig()
   const { data: { user } } = await supabase.auth.getUser()
   const { data: me } = await supabase.from('profiles').select('is_admin').eq('id', user?.id ?? '').single()
   if (!me?.is_admin) return []
@@ -3839,7 +3898,7 @@ export async function adminGetSeasonJoinRequests() {
     .from('season_join_requests')
     .select('id, user_id, message, status, saison, created_at, profiles!user_id(pseudo, avatar_url)')
     .eq('status', 'pending')
-    .eq('saison', CONFIG.SAISON_NUMERO)
+    .eq('saison', cfg.SAISON_NUMERO)
     .order('created_at', { ascending: false })
 
   return data ?? []
@@ -3850,6 +3909,7 @@ export async function adminReviewSeasonJoinRequest(
   decision: 'approve_current' | 'approve_next' | 'reject'
 ) {
   const supabase = await createClient()
+  const cfg = await getServerConfig()
   const { data: { user } } = await supabase.auth.getUser()
   const { data: me } = await supabase.from('profiles').select('is_admin').eq('id', user?.id ?? '').single()
   if (!me?.is_admin) return { error: 'Non autorisé' }
@@ -3876,7 +3936,7 @@ export async function adminReviewSeasonJoinRequest(
     const adminDb = createAdminClient()
     await adminDb
       .from('profiles')
-      .update({ pre_marathon_window_until: windowUntil, saison: CONFIG.SAISON_NUMERO } as any)
+      .update({ pre_marathon_window_until: windowUntil, saison: cfg.SAISON_NUMERO } as any)
       .eq('id', req.user_id)
   }
 
@@ -3886,6 +3946,7 @@ export async function adminReviewSeasonJoinRequest(
 
 export async function adminDirectAdmitToMarathon(userId: string) {
   const supabase = await createClient()
+  const cfg = await getServerConfig()
   const { data: { user } } = await supabase.auth.getUser()
   const { data: me } = await supabase.from('profiles').select('is_admin').eq('id', user?.id ?? '').single()
   if (!me?.is_admin) return { error: 'Non autorisé' }
@@ -3893,18 +3954,16 @@ export async function adminDirectAdmitToMarathon(userId: string) {
   const windowUntil = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
   const adminDb = createAdminClient()
 
-  // Intégrer dans la saison actuelle + ouvrir la fenêtre 24h
   await adminDb
     .from('profiles')
-    .update({ saison: CONFIG.SAISON_NUMERO, pre_marathon_window_until: windowUntil } as any)
+    .update({ saison: cfg.SAISON_NUMERO, pre_marathon_window_until: windowUntil } as any)
     .eq('id', userId)
 
-  // Créer ou mettre à jour la demande d'inscription
   const { data: existing } = await (supabase as any)
     .from('season_join_requests')
     .select('id')
     .eq('user_id', userId)
-    .eq('saison', CONFIG.SAISON_NUMERO)
+    .eq('saison', cfg.SAISON_NUMERO)
     .maybeSingle()
 
   if (existing) {
@@ -3915,7 +3974,7 @@ export async function adminDirectAdmitToMarathon(userId: string) {
   } else {
     await (supabase as any)
       .from('season_join_requests')
-      .insert({ user_id: userId, saison: CONFIG.SAISON_NUMERO, status: 'approved_current', reviewed_by: user!.id, reviewed_at: new Date().toISOString() })
+      .insert({ user_id: userId, saison: cfg.SAISON_NUMERO, status: 'approved_current', reviewed_by: user!.id, reviewed_at: new Date().toISOString() })
   }
 
   revalidatePath('/admin')
