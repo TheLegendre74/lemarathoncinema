@@ -6,7 +6,7 @@ import Image from 'next/image'
 import Forum from '@/components/Forum'
 import { voteDuel, markWatched, markWatchedDuelWinner, upsertRating } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
-import { CONFIG } from '@/lib/config'
+import { useConfig } from '@/components/config/ConfigProvider'
 import { useRouter } from 'next/navigation'
 import type { Profile } from '@/lib/supabase/types'
 import { createClient } from '@/lib/supabase/client'
@@ -39,6 +39,7 @@ function FilmPreview({ film, watchPct, avg, profile, isWatched, watchedPre, myRa
   isDuelWinner?: boolean; isMarathonLive?: boolean
   onClose: () => void; onRefresh: () => void
 }) {
+  const config = useConfig()
   const [overview, setOverview] = useState<string | null>(null)
   const [hov, setHov] = useState(0)
   const [localRating, setLocalRating] = useState(myRating ?? 0)
@@ -91,7 +92,7 @@ function FilmPreview({ film, watchPct, avg, profile, isWatched, watchedPre, myRa
       addToast(res.error === 'ALREADY_MARATHON' ? 'Déjà marqué vu pendant le marathon' : res.error === 'EXPIRED' ? 'Délai de 48h dépassé' : (res as any).error, '⚠️')
     } else {
       setLocalWatched({ watched: true, pre: false })
-      addToast(`+${CONFIG.EXP_DUEL_WIN} EXP — "${film.titre}" vu pendant le duel ! 🏆`, '🏆')
+      addToast(`+${(res as any).exp ?? config.EXP_DUEL_WIN} EXP — "${film.titre}" vu pendant le duel ! 🏆`, '🏆')
       onRefresh()
     }
   }
@@ -441,6 +442,7 @@ function DuelCard({
   myWatched: Record<number, boolean>; myRatings: Record<number, number>; onRefresh: () => void
   isMarathonLive?: boolean; duelWinnerSet?: Set<number>
 }) {
+  const config = useConfig()
   const [forumOpen, setForumOpen] = useState(false)
   const f1 = duel.film1, f2 = duel.film2, winner = duel.winner
   const tot = v1 + v2 || 1
@@ -592,12 +594,12 @@ function DuelCard({
         <div style={{ padding: '.2rem 1.5rem .8rem', fontSize: '.78rem', color: 'var(--text3)', textAlign: 'center' }}>
           {myVote
             ? 'Clique sur un autre film ou sur la barre pour changer ton vote'
-            : `Clique sur un film pour voter (+${CONFIG.EXP_VOTE} EXP) · Le vainqueur est diffusé ${CONFIG.SEANCE_JOUR} ${CONFIG.SEANCE_HEURE} (+${CONFIG.EXP_DUEL_WIN} EXP)`}
+            : `Clique sur un film pour voter (+${config.EXP_VOTE} EXP) · Le vainqueur est diffusé ${config.SEANCE_JOUR} ${config.SEANCE_HEURE} (+${config.EXP_DUEL_WIN} EXP)`}
         </div>
       )}
       {!profile && !duel.closed && (
         <div style={{ padding: '.2rem 1.5rem .8rem', fontSize: '.78rem', color: 'var(--text3)', textAlign: 'center' }}>
-          <a href="/auth" style={{ color: 'var(--gold)', textDecoration: 'none' }}>Connecte-toi</a> pour voter (+{CONFIG.EXP_VOTE} EXP)
+          <a href="/auth" style={{ color: 'var(--gold)', textDecoration: 'none' }}>Connecte-toi</a> pour voter (+{config.EXP_VOTE} EXP)
         </div>
       )}
 
@@ -686,6 +688,7 @@ function ArchiveCard({ duel, v1, v2, watchCountMap, ratingMap, totalUsers, profi
 
 // ── Composant principal ──────────────────────────────────────────────────────
 export default function DuelsClient({ profile, duels, myVotes, allVotes, watchCountMap, ratingMap, totalUsers, myWatched: initialMyWatched, myRatings: initialMyRatings, isMarathonLive, duelWinnerIds }: Props) {
+  const config = useConfig()
   const [localVotes, setLocalVotes] = useState<VoteRow[]>(allVotes)
   const [myVoteMap, setMyVoteMap] = useState<Record<number, number>>(
     Object.fromEntries(myVotes.map(v => [v.duel_id, v.film_choice]))
@@ -756,7 +759,7 @@ export default function DuelsClient({ profile, duels, myVotes, allVotes, watchCo
       })
       addToast(result.error, '⚠️')
     } else if (result?.isNew) {
-      addToast(`+${CONFIG.EXP_VOTE} EXP — Vote enregistré !`, '⚔️')
+      addToast(`+${config.EXP_VOTE} EXP — Vote enregistré !`, '⚔️')
       router.refresh()
     } else {
       addToast('Vote modifié !', '⚔️')
@@ -777,7 +780,7 @@ export default function DuelsClient({ profile, duels, myVotes, allVotes, watchCo
       <div style={{ marginBottom: '2rem' }}>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', lineHeight: 1 }}>Duels</div>
         <div style={{ color: 'var(--text2)', fontSize: '.83rem', marginTop: '.35rem' }}>
-          Vote pour le prochain film collectif · Séance {CONFIG.SEANCE_JOUR} {CONFIG.SEANCE_HEURE}
+          Vote pour le prochain film collectif · Séance {config.SEANCE_JOUR} {config.SEANCE_HEURE}
         </div>
       </div>
 

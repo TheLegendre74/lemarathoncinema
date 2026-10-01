@@ -1,5 +1,6 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { getBadge, levelFromExp, getActiveBadge, CONFIG } from '@/lib/config'
+import { getBadge, levelFromExp, getActiveBadge } from '@/lib/config'
+import { getServerConfig } from '@/lib/serverConfig'
 import { withCache } from '@/lib/redis'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -10,13 +11,14 @@ export const revalidate = 120
 export default async function MarathoniensPage() {
   const supabase = await createClient()
   const adminClient = createAdminClient()
+  const cfg = await getServerConfig()
   const user = await getUserCached()
 
   // Lancer les requêtes indépendantes en parallèle
   const [{ data: profiles }, totalFilmsResult, { data: firstPage }] = await Promise.all([
     supabase.from('profiles').select('id, pseudo, exp, avatar_url, active_badge, bio').order('exp', { ascending: false }) as any,
     // totalFilms : films de la saison courante approuvés (barre de progression marathon)
-    adminClient.from('films').select('id', { count: 'exact', head: true }).eq('saison', CONFIG.SAISON_NUMERO).eq('pending_admin_approval', false),
+    adminClient.from('films').select('id', { count: 'exact', head: true }).lte('saison', cfg.SAISON_NUMERO).eq('pending_admin_approval', false),
     // 1re page watched (PostgREST plafonne à 1000 lignes par requête même avec .limit())
     adminClient.from('watched').select('user_id, pre').range(0, 999),
   ])
@@ -51,7 +53,7 @@ export default async function MarathoniensPage() {
       <div style={{ marginBottom: '2rem' }}>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', lineHeight: 1 }}>🎖️ Marathoniens</div>
         <div style={{ color: 'var(--text2)', fontSize: '.83rem', marginTop: '.35rem' }}>
-          {(profiles ?? []).length} joueurs · {CONFIG.SAISON_LABEL}
+          {(profiles ?? []).length} joueurs · {cfg.SAISON_LABEL}
         </div>
       </div>
 

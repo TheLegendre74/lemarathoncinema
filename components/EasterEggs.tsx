@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { discoverEgg } from '@/lib/actions'
+import { useConfig } from '@/components/config/ConfigProvider'
 import dynamic from 'next/dynamic'
 const ClippyPunchOutPhaser = dynamic(() => import('./ClippyPunchOutPhaser'), { ssr: false })
 const FightClubGame  = dynamic(() => import('./FightClubGame'),                                   { ssr: false })
@@ -913,6 +914,10 @@ function TamagotchiKeyOverlay({ onClose, isGuest }: { onClose: () => void; isGue
 }
 
 export default function EasterEggs({ config = {}, isGuest = false, watchedCount = 0, hasClippyEgg = false, isAdmin = false, userId }: { config?: EasterEggsConfig; isGuest?: boolean; watchedCount?: number; hasClippyEgg?: boolean; isAdmin?: boolean; userId?: string }) {
+  const siteConfig = useConfig()
+  const eggsOffRef = useRef(siteConfig.eggsDisabled)
+  eggsOffRef.current = siteConfig.eggsDisabled
+  const off = (id: string) => eggsOffRef.current.includes(id)
   const ee = {
     matrixLine1:     config.matrixLine1     ?? 'Wake up, Neo...',
     matrixLine2:     config.matrixLine2     ?? 'The Matrix has you.',
@@ -985,34 +990,34 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
   function checkMobileInput(text: string) {
     const t = text.toLowerCase().trimEnd()
     let triggered = true
-    if      (t.endsWith('konami') || t.endsWith('joker')) { setShowJoker(true); discoverEgg('joker') }
+    if      (!off('joker') && (t.endsWith('konami') || t.endsWith('joker'))) { setShowJoker(true); discoverEgg('joker') }
     else if (isAdmin && t.endsWith('fever night')) { setAdminFeverTestId((id) => id + 1); setShowClipy(true) }
-    else if (t.endsWith('red pill'))  { setShowMatrix(true); discoverEgg('matrix') }
-    else if (t.endsWith('42'))        { setShowMarvin(true); discoverEgg('marvin') }
-    else if (isHalTrigger(t))         { setShowHal(true); discoverEgg('hal') }
-    else if (t.endsWith('nolan'))     { setShowNolan(true); discoverEgg('nolan') }
-    else if (t.endsWith('bond'))      { setShowBond(true); discoverEgg('bond') }
-    else if (t.endsWith('n4'))        { discoverEgg('fightclub'); setShowFightClub(true) }
-    else if (t.endsWith('fight club')) {
+    else if (!off('matrix') && t.endsWith('red pill'))  { setShowMatrix(true); discoverEgg('matrix') }
+    else if (!off('marvin') && t.endsWith('42'))        { setShowMarvin(true); discoverEgg('marvin') }
+    else if (!off('hal') && isHalTrigger(t))            { setShowHal(true); discoverEgg('hal') }
+    else if (!off('nolan') && t.endsWith('nolan'))      { setShowNolan(true); discoverEgg('nolan') }
+    else if (!off('bond') && t.endsWith('bond'))        { setShowBond(true); discoverEgg('bond') }
+    else if (!off('fightclub') && t.endsWith('n4'))     { discoverEgg('fightclub'); setShowFightClub(true) }
+    else if (!off('fightclub') && t.endsWith('fight club')) {
       fightClubCount.current++
       if (fightClubCount.current <= 3) {
         setFightClubRule(fightClubCount.current as 1|2|3)
         if (fightClubCount.current === 1) discoverEgg('fightclub')
       } else { fightClubCount.current = 0; setFightClubRule(4) }
     }
-    else if (t.endsWith('kill kenny')) { setShowKenny(true) }
-    else if (t.endsWith('south park')) { setShowSouthPark(true) }
-    else if (t.endsWith('randy'))      { setShowRandy(true) }
-    else if (t.endsWith('kill bill'))  { setShowKillBill(true) }
-    else if (t.endsWith('alien'))      { discoverEgg('tamagotchi'); setShowTamagotchi(true) }
-    else if (t.endsWith('predator'))   {
+    else if (!off('kenny') && t.endsWith('kill kenny'))       { setShowKenny(true) }
+    else if (!off('southpark') && t.endsWith('south park'))   { setShowSouthPark(true) }
+    else if (!off('randy') && t.endsWith('randy'))            { setShowRandy(true) }
+    else if (!off('killbill') && t.endsWith('kill bill'))     { setShowKillBill(true) }
+    else if (!off('tamagotchi') && t.endsWith('alien'))       { discoverEgg('tamagotchi'); setShowTamagotchi(true) }
+    else if (!off('predator') && t.endsWith('predator'))      {
       const snd = new Audio('/sons/predator-sound.m4a')
       snd.volume = 0.85; snd.loop = true; snd.play().catch(() => {})
       predSoundRef.current = snd; discoverEgg('predator'); setShowAVP(true)
     }
-    else if (t.endsWith('gomu gomu no tipiak!')) { setShowTipiak(true) }
-    else if (t.endsWith('boîte de pandore') || t.endsWith('boite de pandore') || t.endsWith('pandore')) { void discoverEgg('clippy').catch(() => {}); setShowPandora(true) }
-    else if (t.endsWith('punchout')) { setShowPunchTest(true) }
+    else if (!off('tipiak') && t.endsWith('gomu gomu no tipiak!')) { setShowTipiak(true) }
+    else if (!off('pandora') && (t.endsWith('boîte de pandore') || t.endsWith('boite de pandore') || t.endsWith('pandore'))) { void discoverEgg('clippy').catch(() => {}); setShowPandora(true) }
+    else if (!off('punchout') && t.endsWith('punchout')) { setShowPunchTest(true) }
     else if (t.endsWith('cinemon') || t.endsWith('cinémon')) { window.location.href = '/labo/battle' }
     else if (t.endsWith('codex') && !isGuest) { discoverEgg('conway'); window.location.href = '/labo/life' }
     else { triggered = false }
@@ -1177,31 +1182,39 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
   // Keyboard easter eggs
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
+      const t = e.target as HTMLElement | null
+      if (t && (
+        (t.tagName === 'INPUT' && !['checkbox', 'radio', 'button', 'submit', 'reset'].includes((t as HTMLInputElement).type)) ||
+        t.tagName === 'TEXTAREA' ||
+        t.tagName === 'SELECT' ||
+        t.isContentEditable ||
+        t.getAttribute('role') === 'textbox'
+      )) return
       const buf = [...keyBuf.current.slice(-19), e.key]
       keyBuf.current = buf
 
       // Konami → Joker
-      if (buf.slice(-10).join('|') === KONAMI.join('|')) {
+      if (!off('joker') && buf.slice(-10).join('|') === KONAMI.join('|')) {
         setShowJoker(true)
         discoverEgg('joker')
         keyBuf.current = []
         return
       }
       // "red pill" → Matrix
-      if (buf.slice(-8).join('').toLowerCase() === 'red pill') {
+      if (!off('matrix') && buf.slice(-8).join('').toLowerCase() === 'red pill') {
         setShowMatrix(true)
         discoverEgg('matrix')
         keyBuf.current = []
         return
       }
       // "42" → Marvin (standalone: not sandwiched between digits)
-      if (buf.slice(-2).join('') === '42' && !/\d/.test(buf.at(-3) ?? '')) {
+      if (!off('marvin') && buf.slice(-2).join('') === '42' && !/\d/.test(buf.at(-3) ?? '')) {
         setShowMarvin(true)
         discoverEgg('marvin')
         return
       }
       // "hal" → HAL 9000
-      if (isHalTrigger(buf.join('').toLowerCase())) {
+      if (!off('hal') && isHalTrigger(buf.join('').toLowerCase())) {
         setShowHal(true)
         discoverEgg('hal')
         keyBuf.current = []
@@ -1215,14 +1228,14 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
         return
       }
       // "nolan" → Nolan quote
-      if (buf.slice(-5).join('').toLowerCase() === 'nolan') {
+      if (!off('nolan') && buf.slice(-5).join('').toLowerCase() === 'nolan') {
         setShowNolan(true)
         discoverEgg('nolan')
         keyBuf.current = []
         return
       }
       // "bond" → Bond intro
-      if (buf.slice(-4).join('').toLowerCase() === 'bond') {
+      if (!off('bond') && buf.slice(-4).join('').toLowerCase() === 'bond') {
         setShowBond(true)
         discoverEgg('bond')
         keyBuf.current = []
@@ -1232,7 +1245,7 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
       // Filtre les touches multi-char (Shift, Control...) pour AZERTY où 4 = Shift+touche
       const cleanBuf = buf.filter((k): k is string => typeof k === 'string' && k.length === 1)
       const cleanStr = cleanBuf.slice(-4).join('').toLowerCase()
-      if (cleanStr.endsWith('n4') || cleanStr.endsWith('n°4')) {
+      if (!off('fightclub') && (cleanStr.endsWith('n4') || cleanStr.endsWith('n°4'))) {
         keyBuf.current = []
         fightClubCount.current = 0
         discoverEgg('fightclub')
@@ -1240,7 +1253,7 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
         return
       }
       // "fight club" → règles 1-3 puis jeu direct à la 4e
-      if (buf.slice(-10).join('').toLowerCase() === 'fight club') {
+      if (!off('fightclub') && buf.slice(-10).join('').toLowerCase() === 'fight club') {
         fightClubCount.current = fightClubCount.current + 1
         keyBuf.current = []
         if (fightClubCount.current <= 3) {
@@ -1252,39 +1265,39 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
         }
         return
       }
-      // "kill kenny" → Kenny death scene (10 chars avec espace)
-      if (buf.slice(-10).join('').toLowerCase() === 'kill kenny') {
+      // "kill kenny" → Kenny death scene
+      if (!off('kenny') && buf.slice(-10).join('').toLowerCase() === 'kill kenny') {
         setShowKenny(true)
         keyBuf.current = []
         return
       }
-      // "south park" → Bus stop scene (10 chars avec espace)
-      if (buf.slice(-10).join('').toLowerCase() === 'south park') {
+      // "south park" → Bus stop scene
+      if (!off('southpark') && buf.slice(-10).join('').toLowerCase() === 'south park') {
         setShowSouthPark(true)
         keyBuf.current = []
         return
       }
       // "randy" → Randy Marsh
-      if (buf.slice(-5).join('').toLowerCase() === 'randy') {
+      if (!off('randy') && buf.slice(-5).join('').toLowerCase() === 'randy') {
         setShowRandy(true)
         keyBuf.current = []
         return
       }
-      // "kill bill" → Kill Bill katana game (9 chars avec espace)
-      if (buf.slice(-9).join('').toLowerCase() === 'kill bill') {
+      // "kill bill" → Kill Bill katana game
+      if (!off('killbill') && buf.slice(-9).join('').toLowerCase() === 'kill bill') {
         setShowKillBill(true)
         keyBuf.current = []
         return
       }
       // "alien" → tamagotchi facehugger
-      if (buf.slice(-5).join('').toLowerCase() === 'alien') {
+      if (!off('tamagotchi') && buf.slice(-5).join('').toLowerCase() === 'alien') {
         discoverEgg('tamagotchi')
         setShowTamagotchi(true)
         keyBuf.current = []
         return
       }
-      // "predator" → Alien vs Predator (alien 4 pattes, predator tire)
-      if (buf.slice(-8).join('').toLowerCase() === 'predator') {
+      // "predator" → Alien vs Predator
+      if (!off('predator') && buf.slice(-8).join('').toLowerCase() === 'predator') {
         // Audio lancé directement dans le handler de touche (contexte user gesture)
         const snd = new Audio('/sons/predator-sound.m4a')
         snd.volume = 0.85; snd.loop = true
@@ -1295,14 +1308,14 @@ export default function EasterEggs({ config = {}, isGuest = false, watchedCount 
         keyBuf.current = []
         return
       }
-      // "gomu gomu no tipiak!" → secret — streaming alternatif (liens gérés par admin)
-      if (buf.slice(-20).join('').toLowerCase() === 'gomu gomu no tipiak!') {
+      // "gomu gomu no tipiak!" → secret
+      if (!off('tipiak') && buf.slice(-20).join('').toLowerCase() === 'gomu gomu no tipiak!') {
         setShowTipiak(true)
         keyBuf.current = []
         return
       }
-      // "punchout" → Clippy Punch-Out (phase 3)
-      if (buf.slice(-8).join('').toLowerCase() === 'punchout') {
+      // "punchout" → Clippy Punch-Out
+      if (!off('punchout') && buf.slice(-8).join('').toLowerCase() === 'punchout') {
         setShowPunchTest(true)
         keyBuf.current = []
         return

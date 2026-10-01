@@ -2,11 +2,13 @@ import { createClient } from '@/lib/supabase/server'
 import { getUserCached } from '@/lib/auth'
 import { withCache } from '@/lib/redis'
 import { getServerConfig, isMarathonLiveFromConfig } from '@/lib/serverConfig'
+import { closeDueDuels } from '@/lib/duels'
 import DuelsClient from './DuelsClient'
 
 export const revalidate = 30
 
 export default async function DuelsPage() {
+  await closeDueDuels({ duringRender: true })
   const [user, supabase, cfg] = await Promise.all([
     getUserCached(),
     createClient(),

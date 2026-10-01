@@ -7,9 +7,10 @@ import Poster from '@/components/Poster'
 import MarathonNotifyToggle from '@/components/MarathonNotifyToggle'
 import WelcomeBanner from '@/components/WelcomeBanner'
 import JoinMarathonBanner from '@/components/JoinMarathonBanner'
-import { getBadge, levelFromExp, CONFIG } from '@/lib/config'
+import { getBadge, levelFromExp } from '@/lib/config'
 import { getServerConfig } from '@/lib/serverConfig'
 import { getMySeasonJoinStatus } from '@/lib/actions'
+import { closeDueDuels } from '@/lib/duels'
 import type { ServerConfig } from '@/lib/serverConfig'
 import Link from 'next/link'
 
@@ -23,7 +24,7 @@ function withTimeout<T>(promise: PromiseLike<T>, ms = 3000): Promise<T | null> {
 }
 
 export default async function HomePage() {
-  // auth dédupliqué (partagé avec layout, zéro roundtrip supplémentaire)
+  await closeDueDuels({ duringRender: true })
   const [user, cfg, supabase] = await Promise.all([
     getUserCached(),
     getServerConfig(),
@@ -77,8 +78,8 @@ export default async function HomePage() {
     supabase.from('watched').select('film_id', { count: 'exact', head: true }).eq('user_id', userId),
     supabase.from('votes').select('duel_id', { count: 'exact', head: true }).eq('user_id', userId),
     supabase.from('week_films').select('id, active, films(id, titre, annee, poster)').eq('active', true).order('created_at', { ascending: false }).limit(1).single(),
-    supabase.from('duels').select('id, week_num, film1:films!duels_film1_id_fkey(id, titre, annee, poster), film2:films!duels_film2_id_fkey(id, titre, annee, poster)').eq('closed', false).order('created_at', { ascending: false }).limit(1).single(),
-    supabase.from('films').select('id', { count: 'exact', head: true }).eq('saison', 1),
+    supabase.from('duels').select('id, week_num, film1:films!duels_film1_id_fkey(id, titre, annee, poster), film2:films!duels_film2_id_fkey(id, titre, annee, poster)').eq('closed', false).eq('pending', false).order('created_at', { ascending: false }).limit(1).single(),
+    supabase.from('films').select('id', { count: 'exact', head: true }).eq('saison', cfg.SAISON_NUMERO),
     supabase.from('watched').select('film_id, watched_at, pre, films(titre)').eq('user_id', userId).order('watched_at', { ascending: false }).limit(5),
   ])
 
@@ -93,7 +94,7 @@ export default async function HomePage() {
   }
 
   // Statut de demande d'inscription en cours de saison
-  const isMidSeasonPlayer = live && (profile as any).saison > CONFIG.SAISON_NUMERO
+  const isMidSeasonPlayer = live && (profile as any).saison > cfg.SAISON_NUMERO
   const preMarathonWindowUntil = (profile as any).pre_marathon_window_until as string | null
 
   const [joinStatus, rankResult] = await Promise.all([
@@ -124,7 +125,7 @@ export default async function HomePage() {
           <div>
             <div style={{ fontSize: '.85rem', fontWeight: 500, color: 'var(--orange)' }}>Tu t'es inscrit après le début du marathon</div>
             <div style={{ fontSize: '.78rem', color: 'var(--text2)', marginTop: '.2rem', lineHeight: 1.6 }}>
-              Tes points seront comptabilisés à partir de la <strong>Saison {CONFIG.SAISON_NUMERO + 1}</strong>. Tu peux demander à rejoindre la Saison {CONFIG.SAISON_NUMERO} en cours ci-dessous.
+              Tes points seront comptabilisés à partir de la <strong>Saison {cfg.SAISON_NUMERO + 1}</strong>. Tu peux demander à rejoindre la Saison {cfg.SAISON_NUMERO} en cours ci-dessous.
             </div>
           </div>
         </div>
@@ -177,7 +178,7 @@ export default async function HomePage() {
       {/* Progress bar */}
       <div style={{ marginBottom: '1.5rem' }}>
         <div className="progress-label">
-          <span>Marathon {CONFIG.SAISON_LABEL}</span>
+          <span>Marathon {cfg.SAISON_LABEL}</span>
           <span>{watchedCount}/{totalS1}</span>
         </div>
         <div className="expbar" style={{ height: 10 }}>
@@ -199,7 +200,7 @@ export default async function HomePage() {
                   <div style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: 'var(--text)', lineHeight: 1.2 }}>{wf.titre}</div>
                   <div style={{ fontSize: '.72rem', color: 'var(--text3)', marginTop: '.2rem' }}>{wf.annee}</div>
                   <div style={{ marginTop: '.5rem', display: 'inline-flex', alignItems: 'center', gap: '.4rem', background: 'rgba(232,196,106,.1)', border: '1px solid rgba(232,196,106,.28)', color: 'var(--gold)', fontSize: '.68rem', padding: '.2rem .6rem', borderRadius: 99 }}>
-                    +{CONFIG.EXP_FDLS} EXP vendredi
+                    +{cfg.EXP_FDLS} EXP vendredi
                   </div>
                 </div>
               </div>
@@ -253,7 +254,7 @@ export default async function HomePage() {
                 <span style={{ fontSize: '1.1rem' }}>🎬</span>
                 <span style={{ flex: 1, fontSize: '.85rem' }}>{film?.titre}{w.pre ? ' (pré-marathon)' : ''}</span>
                 <span style={{ fontSize: '.68rem', color: 'var(--text3)' }}>{new Date(w.watched_at).toLocaleDateString('fr-FR')}</span>
-                {!w.pre && <span style={{ fontSize: '.72rem', color: 'var(--gold)', fontWeight: 500 }}>+{CONFIG.EXP_FILM} EXP</span>}
+                {!w.pre && <span style={{ fontSize: '.72rem', color: 'var(--gold)', fontWeight: 500 }}>+{cfg.EXP_FILM} EXP</span>}
               </div>
             )
           })}
@@ -312,7 +313,7 @@ function interpolate(text: string, cfg: ServerConfig): string {
 }
 
 // ─── RULES SECTION ────────────────────────────────────────────────────────────
-function RulesSection({ cfg }: { cfg?: ServerConfig }) {
+function RulesSection({ cfg }: { cfg: ServerConfig }) {
   // Parse DB rules or fall back to hardcoded defaults
   let cards: RuleCard[] = DEFAULT_RULES
   if (cfg?.MARATHON_RULES) {
@@ -322,7 +323,7 @@ function RulesSection({ cfg }: { cfg?: ServerConfig }) {
     } catch { /* keep defaults */ }
   }
 
-  const resolvedCfg = cfg ?? ({ ...CONFIG, ACCUEIL_SOUS_TITRE: '', MARATHON_RULES: null } as any)
+  const resolvedCfg = cfg
 
   const card = (children: React.ReactNode, key?: React.Key) => (
     <div key={key} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '1.1rem 1.3rem', marginBottom: '.7rem' }}>

@@ -2,6 +2,7 @@ import { cache } from 'react'
 import { unstable_cache } from 'next/cache'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { CONFIG } from './config'
+import { fromParis } from './time/paris'
 
 export type ServerConfig = typeof CONFIG & {
   ACCUEIL_SOUS_TITRE: string
@@ -19,12 +20,26 @@ export type ServerConfig = typeof CONFIG & {
   FIGHTCLUB_GAMEOVER: string
   KILLBILL_END: string
   CLIPPY_REPLIES: string[]
+  duel_egalite: 'note' | 'hasard'
+  limite_jour: number
+  limite_jour_max: number
+  eggs_disabled: string[]
 }
 
 function safeDate(str: string | undefined, fallback: Date): Date {
   if (!str) return fallback
   const d = new Date(str)
-  return isNaN(d.getTime()) ? fallback : d
+  if (!isNaN(d.getTime())) return d
+  const m = str.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/)
+  if (m) return fromParis(+m[1], +m[2], +m[3], +m[4], +m[5])
+  return fallback
+}
+
+function clampInt(raw: string | undefined, min: number, max: number, fallback: number): number {
+  if (!raw) return fallback
+  const n = parseInt(raw)
+  if (isNaN(n) || n < min || n > max) return fallback
+  return n
 }
 
 const getSiteConfigRows = unstable_cache(
@@ -36,11 +51,12 @@ const getSiteConfigRows = unstable_cache(
     const supabase = createSupabaseClient(url, anonKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
-    const { data } = await supabase.from('site_config').select('key, value')
+    const { data, error } = await supabase.from('site_config').select('key, value')
+    if (error) throw new Error(`site_config: ${error.message}`)
     return data ?? []
   },
   ['site-config'],
-  { revalidate: 300 }
+  { revalidate: 300, tags: ['site-config'] }
 )
 
 export const getServerConfig = cache(async (): Promise<ServerConfig> => {
@@ -51,7 +67,7 @@ export const getServerConfig = cache(async (): Promise<ServerConfig> => {
     MATRIX_LINE1:        'Wake up, Neo...',
     MATRIX_LINE2:        'The Matrix has you.',
     MATRIX_LINE3:        'Follow the white rabbit.',
-    JOKER_PHRASE:        'Why so serious? 🃏',
+    JOKER_PHRASE:        'Why so serious? \u{1F0CF}',
     TARS_LINE1:          "Niveau d'humour réglé à 75%.",
     TARS_LINE2:          "C'est honnête.",
     MARVIN_LINE1:        'Encore un humain qui cherche la réponse à la question fondamentale sur la vie...',
@@ -68,54 +84,59 @@ export const getServerConfig = cache(async (): Promise<ServerConfig> => {
     FIGHTCLUB_GAMEOVER:  'Tyler est toujours plus fort que toi...',
     KILLBILL_END:        "Pai mei t'a bien entraîné.",
     CLIPPY_REPLIES:      [],
+    duel_egalite:        'note',
+    limite_jour:         4,
+    limite_jour_max:     8,
+    eggs_disabled:       [],
   }
 
-  try {
-    const data = await getSiteConfigRows()
-    if (!data?.length) return defaults
+  const data = await getSiteConfigRows()
+  if (!data?.length) return defaults
 
-    const db: Record<string, string> = {}
-    data.forEach(({ key, value }) => { db[key] = value })
+  const db: Record<string, string> = {}
+  data.forEach(({ key, value }) => { db[key] = value })
 
-    return {
-      ...defaults,
-      MARATHON_START:    safeDate(db.marathon_start, defaults.MARATHON_START),
-      SAISON_NUMERO:     db.saison_numero     ? parseInt(db.saison_numero)  : defaults.SAISON_NUMERO,
-      SAISON_LABEL:      db.saison_label      ?? defaults.SAISON_LABEL,
-      SEANCE_JOUR:       db.seance_jour       ?? defaults.SEANCE_JOUR,
-      SEANCE_HEURE:      db.seance_heure      ?? defaults.SEANCE_HEURE,
-      FDLS_JOUR:         db.fdls_jour         ?? defaults.FDLS_JOUR,
-      FDLS_HEURE:        db.fdls_heure        ?? defaults.FDLS_HEURE,
-      SEUIL_MAJORITY:    db.seuil_majority    ? parseInt(db.seuil_majority) : defaults.SEUIL_MAJORITY,
-      EXP_FILM:          db.exp_film          ? parseInt(db.exp_film)       : defaults.EXP_FILM,
-      EXP_FDLS:          db.exp_fdls          ? parseInt(db.exp_fdls)       : defaults.EXP_FDLS,
-      EXP_DUEL_WIN:      db.exp_duel_win      ? parseInt(db.exp_duel_win)   : defaults.EXP_DUEL_WIN,
-      EXP_VOTE:          db.exp_vote          ? parseInt(db.exp_vote)       : defaults.EXP_VOTE,
-      ACCUEIL_SOUS_TITRE: db.accueil_sous_titre ?? defaults.ACCUEIL_SOUS_TITRE,
-      MATRIX_LINE1:      db.matrix_line1      ?? defaults.MATRIX_LINE1,
-      MATRIX_LINE2:      db.matrix_line2      ?? defaults.MATRIX_LINE2,
-      MATRIX_LINE3:      db.matrix_line3      ?? defaults.MATRIX_LINE3,
-      JOKER_PHRASE:      db.joker_phrase      ?? defaults.JOKER_PHRASE,
-      TARS_LINE1:        db.tars_line1        ?? defaults.TARS_LINE1,
-      TARS_LINE2:        db.tars_line2        ?? defaults.TARS_LINE2,
-      MARVIN_LINE1:      db.marvin_line1      ?? defaults.MARVIN_LINE1,
-      MARVIN_LINE2:      db.marvin_line2      ?? defaults.MARVIN_LINE2,
-      HAL_LINE1:         db.hal_line1         ?? defaults.HAL_LINE1,
-      HAL_LINE2:         db.hal_line2         ?? defaults.HAL_LINE2,
-      NOLAN_QUOTE:       db.nolan_quote       ?? defaults.NOLAN_QUOTE,
-      BOND_LINE:         db.bond_line         ?? defaults.BOND_LINE,
-      NOCTAM_LINE1:      db.noctam_line1      ?? defaults.NOCTAM_LINE1,
-      NOCTAM_LINE2:      db.noctam_line2      ?? defaults.NOCTAM_LINE2,
-      KENNY_TEXT1:       db.kenny_text1       ?? defaults.KENNY_TEXT1,
-      KENNY_TEXT2:       db.kenny_text2       ?? defaults.KENNY_TEXT2,
-      RANDY_QUOTE:       db.randy_quote       ?? defaults.RANDY_QUOTE,
-      FIGHTCLUB_GAMEOVER: db.fightclub_gameover ?? defaults.FIGHTCLUB_GAMEOVER,
-      KILLBILL_END:      db.killbill_end      ?? defaults.KILLBILL_END,
-      MARATHON_RULES:    db.MARATHON_RULES     ?? defaults.MARATHON_RULES,
-      CLIPPY_REPLIES:    (() => { try { const p = JSON.parse(db.CLIPPY_REPLIES ?? '[]'); return Array.isArray(p) ? p : [] } catch { return [] } })(),
-    }
-  } catch {
-    return defaults
+  return {
+    ...defaults,
+    MARATHON_START:    safeDate(db.marathon_start, defaults.MARATHON_START),
+    SAISON_NUMERO:     db.saison_numero     ? parseInt(db.saison_numero)  : defaults.SAISON_NUMERO,
+    SAISON_LABEL:      db.saison_label      ?? defaults.SAISON_LABEL,
+    SEANCE_JOUR:       db.seance_jour       ?? defaults.SEANCE_JOUR,
+    SEANCE_HEURE:      db.seance_heure      ?? defaults.SEANCE_HEURE,
+    FDLS_JOUR:         db.fdls_jour         ?? defaults.FDLS_JOUR,
+    FDLS_HEURE:        db.fdls_heure        ?? defaults.FDLS_HEURE,
+    SEUIL_MAJORITY:    db.seuil_majority    ? parseInt(db.seuil_majority) : defaults.SEUIL_MAJORITY,
+    EXP_FILM:          db.exp_film          ? parseInt(db.exp_film)       : defaults.EXP_FILM,
+    EXP_FDLS:          db.exp_fdls          ? parseInt(db.exp_fdls)       : defaults.EXP_FDLS,
+    EXP_DUEL_WIN:      db.exp_duel_win      ? parseInt(db.exp_duel_win)   : defaults.EXP_DUEL_WIN,
+    EXP_VOTE:          db.exp_vote          ? parseInt(db.exp_vote)       : defaults.EXP_VOTE,
+    ACCUEIL_SOUS_TITRE: db.accueil_sous_titre ?? defaults.ACCUEIL_SOUS_TITRE,
+    MATRIX_LINE1:      db.matrix_line1      ?? defaults.MATRIX_LINE1,
+    MATRIX_LINE2:      db.matrix_line2      ?? defaults.MATRIX_LINE2,
+    MATRIX_LINE3:      db.matrix_line3      ?? defaults.MATRIX_LINE3,
+    JOKER_PHRASE:      db.joker_phrase      ?? defaults.JOKER_PHRASE,
+    TARS_LINE1:        db.tars_line1        ?? defaults.TARS_LINE1,
+    TARS_LINE2:        db.tars_line2        ?? defaults.TARS_LINE2,
+    MARVIN_LINE1:      db.marvin_line1      ?? defaults.MARVIN_LINE1,
+    MARVIN_LINE2:      db.marvin_line2      ?? defaults.MARVIN_LINE2,
+    HAL_LINE1:         db.hal_line1         ?? defaults.HAL_LINE1,
+    HAL_LINE2:         db.hal_line2         ?? defaults.HAL_LINE2,
+    NOLAN_QUOTE:       db.nolan_quote       ?? defaults.NOLAN_QUOTE,
+    BOND_LINE:         db.bond_line         ?? defaults.BOND_LINE,
+    NOCTAM_LINE1:      db.noctam_line1      ?? defaults.NOCTAM_LINE1,
+    NOCTAM_LINE2:      db.noctam_line2      ?? defaults.NOCTAM_LINE2,
+    KENNY_TEXT1:       db.kenny_text1       ?? defaults.KENNY_TEXT1,
+    KENNY_TEXT2:       db.kenny_text2       ?? defaults.KENNY_TEXT2,
+    RANDY_QUOTE:       db.randy_quote       ?? defaults.RANDY_QUOTE,
+    FIGHTCLUB_GAMEOVER: db.fightclub_gameover ?? defaults.FIGHTCLUB_GAMEOVER,
+    KILLBILL_END:      db.killbill_end      ?? defaults.KILLBILL_END,
+    MARATHON_RULES:    db.MARATHON_RULES     ?? defaults.MARATHON_RULES,
+    CLIPPY_REPLIES:    (() => { try { const p = JSON.parse(db.CLIPPY_REPLIES ?? '[]'); return Array.isArray(p) ? p : [] } catch { return [] } })(),
+    EXP_FDLS_BONUS:    db.exp_fdls_bonus  ? clampInt(db.exp_fdls_bonus, 0, 1000, defaults.EXP_FDLS_BONUS) : defaults.EXP_FDLS_BONUS,
+    duel_egalite:      db.duel_egalite === 'hasard' ? 'hasard' : 'note',
+    limite_jour:       clampInt(db.limite_jour, 1, 50, 4),
+    limite_jour_max:   clampInt(db.limite_jour_max, 1, 50, 8),
+    eggs_disabled:     (() => { try { const p = JSON.parse(db.eggs_disabled ?? '[]'); return Array.isArray(p) ? p.filter((x: unknown) => typeof x === 'string') : [] } catch { return [] } })(),
   }
 })
 

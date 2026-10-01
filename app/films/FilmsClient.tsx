@@ -7,7 +7,7 @@ import Forum from '@/components/Forum'
 import { useToast } from '@/components/ToastProvider'
 import { toggleWatched, markWatched, markWatchedDuelWinner, upsertRating, upsertNegativeRating, addFilm, updateFilm, reportFilm, discoverEgg, getFilmWatchProviders, adminSetFilmCategory, setFilmRattrapage, submitMarathonWatchRequest, addFilmToWatchlist, removeFilmFromWatchlist, createWatchlist, adminCreateDuelFromFilms, claimWeekFilmBonus } from '@/lib/actions'
 import type { TMDBSuggestion } from '@/lib/tmdb'
-import { CONFIG } from '@/lib/config'
+import { useConfig } from '@/components/config/ConfigProvider'
 import { useRouter } from 'next/navigation'
 import JawsScrollOverlay from '@/components/JawsScrollOverlay'
 import type { Film, Profile } from '@/lib/supabase/types'
@@ -80,6 +80,7 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
   onWatchlistCreate: (name: string, filmId: number) => Promise<void>
   onClose: () => void; onRefresh: () => void
 }) {
+  const config = useConfig()
   const [tab, setTab] = useState<'info' | 'streaming' | 'forum'>('info')
   const [hov, setHov] = useState(0)
   const [negHov, setNegHov] = useState(0)
@@ -127,7 +128,7 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
   const justWatchUrl = (providers && providers !== 'loading' && providers.link)
     ? providers.link
     : `https://www.justwatch.com/fr/films?q=${encodeURIComponent(film.titre)}`
-  const expGain = isWeekFilm ? CONFIG.EXP_FDLS : CONFIG.EXP_FILM
+  const expGain = isWeekFilm ? config.EXP_FDLS : config.EXP_FILM
 
   // ── Easter eggs ─────────────────────────────────────────────
   const isInception       = film.titre.toLowerCase().includes('inception')
@@ -142,7 +143,7 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
     if (!isInception) return
     const n = inceptionClicks + 1
     setInceptionClicks(n)
-    if (n >= 5) {
+    if (n >= 5 && !config.eggsDisabled.includes('inception')) {
       setInceptionTilt(true)
       setInceptionClicks(0)
       discoverEgg('inception')
@@ -161,7 +162,7 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
 
   // Godfather: idle 30s → hand & theme
   useEffect(() => {
-    if (!isGodfather) return
+    if (!isGodfather || config.eggsDisabled.includes('godfather')) return
     idleTimerRef.current = setTimeout(() => {
       setGodfatherOverlay(true)
       playGodfatherTheme()
@@ -194,7 +195,7 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
     if (res?.error === 'BLOCKED') { setMarathonLimitState('blocked'); return }
     if (res?.error) { addToast(res.error, '⚠️'); return }
     if (res?.action === 'added') {
-      addToast(`+${CONFIG.EXP_FILM} EXP — "${film.titre}" vu pendant le marathon !`, '🎬')
+      addToast(`+${(res as any).exp ?? config.EXP_FILM} EXP — "${film.titre}" vu pendant le marathon !`, '🎬')
       if (!myRating) setRatePrompt(true)
     } else {
       addToast(`"${film.titre}" retiré`, '🎬')
@@ -296,10 +297,10 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
             <span style={{ fontSize: '.75rem', color: 'var(--text2)' }}>{film.realisateur}</span>
             <span className="tag">{film.genre}</span>
             {film.sousgenre && <span className="tag" style={{ opacity: .7 }}>{film.sousgenre}</span>}
-            {film.saison === 2 && <span className="tag" style={{ color: 'var(--red)', borderColor: 'rgba(232,90,90,.3)' }}>Saison 2</span>}
+            {film.saison !== config.SAISON_NUMERO && <span className="tag" style={{ color: 'var(--red)', borderColor: 'rgba(232,90,90,.3)' }}>Saison {film.saison}</span>}
             {avg && <span className="tag" style={{ color: 'var(--gold)', borderColor: 'rgba(232,196,106,.3)' }}>⭐ {avg}/10 ({ratingScores.length})</span>}
             <span className="tag">{watchPct}% vus</span>
-            {isWeekFilm && <span className="tag" style={{ color: 'var(--gold)', borderColor: 'rgba(232,196,106,.4)', fontWeight: 600 }}>⭐ Film de la semaine · +{CONFIG.EXP_FDLS} EXP</span>}
+            {isWeekFilm && <span className="tag" style={{ color: 'var(--gold)', borderColor: 'rgba(232,196,106,.4)', fontWeight: 600 }}>⭐ Film de la semaine · +{config.EXP_FDLS} EXP</span>}
           </div>
 
           {/* Synopsis — chargé à la demande */}
@@ -356,10 +357,10 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
 
               {/* Watched buttons */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem', marginBottom: '1rem' }}>
-                {film.saison === 2 ? (
+                {film.saison !== config.SAISON_NUMERO ? (
                   <div style={{ background: 'rgba(232,90,90,.06)', border: '1px solid rgba(232,90,90,.25)', borderRadius: 'var(--r)', padding: '.85rem 1rem', textAlign: 'center' }}>
-                    <div style={{ fontSize: '.88rem', fontWeight: 700, color: '#ff9999', marginBottom: '.3rem' }}>🔒 Disponible en Saison 2</div>
-                    <div style={{ fontSize: '.75rem', color: 'var(--text3)', lineHeight: 1.5 }}>Ce film a été ajouté pendant le marathon et sera disponible lors de la prochaine saison. Tu pourras le marquer vu à partir de la Saison 2 !</div>
+                    <div style={{ fontSize: '.88rem', fontWeight: 700, color: '#ff9999', marginBottom: '.3rem' }}>🔒 Disponible en Saison {film.saison}</div>
+                    <div style={{ fontSize: '.75rem', color: 'var(--text3)', lineHeight: 1.5 }}>Ce film a été ajouté pendant le marathon et sera disponible lors de la prochaine saison. Tu pourras le marquer vu à partir de la Saison {film.saison} !</div>
                   </div>
                 ) : <>
                 <button
@@ -417,7 +418,7 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
                   >
                     {isWatched && watchedPre === false
                       ? '✓ Vu pendant le marathon — Retirer'
-                      : `🏆 J'ai vu ce film pendant le marathon (+${CONFIG.EXP_FILM} EXP)`}
+                      : `🏆 J'ai vu ce film pendant le marathon (+${config.EXP_FILM} EXP)`}
                   </button>
                 )}
                 </>}
@@ -485,11 +486,11 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
             <div>
               <div className="progress-label"><span>Visionné par</span><span>{watchPct}% des joueurs</span></div>
               <div className="expbar" style={{ height: 6, marginBottom: '1rem' }}>
-                <div className="expbar-fill" style={{ width: `${watchPct}%`, height: 6, background: watchPct >= CONFIG.SEUIL_MAJORITY ? 'var(--text3)' : undefined }} />
+                <div className="expbar-fill" style={{ width: `${watchPct}%`, height: 6, background: watchPct >= config.SEUIL_MAJORITY ? 'var(--text3)' : undefined }} />
               </div>
-              {watchPct >= CONFIG.SEUIL_MAJORITY && (
+              {watchPct >= config.SEUIL_MAJORITY && (
                 <div style={{ fontSize: '.78rem', color: 'var(--text2)', background: 'rgba(255,255,255,.04)', borderRadius: 'var(--r)', padding: '.6rem .8rem', marginBottom: '.8rem' }}>
-                  ⚠️ Plus de {CONFIG.SEUIL_MAJORITY}% des joueurs ont vu ce film — il est grisé et exclu des duels.
+                  ⚠️ Plus de {config.SEUIL_MAJORITY}% des joueurs ont vu ce film — il est grisé et exclu des duels.
                 </div>
               )}
               {/* Signaler une erreur */}
@@ -1021,6 +1022,7 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
 
 // ─── MAIN FILMS CLIENT ───────────────────────────────────────────────────────
 export default function FilmsClient({ films, profile, watchedIds, watchedPreMap, myRatings, myNegativeRatings, watchCountMap, ratingMap, negativeRatingMap, totalUsers, weekFilmId, isMarathonLive, saisonNumero, age18confirmed, hasRageuxEgg, rattrapageMap: initialRattrapageMap, userWatchlists: initialWatchlists, preMarathonWindowUntil, duelWinnerIds, bonusFilmId, bonusWeekFilmDbId, bonusAvailable, weekFilmBonusClaimed }: Props) {
+  const config = useConfig()
   const router = useRouter()
   const { addToast } = useToast()
   const canMarkPre = true
@@ -1117,7 +1119,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
       const velocity = y - lastScrollY.current
       lastScrollY.current = y
       const nearBottom = window.innerHeight + y >= document.body.scrollHeight - 80
-      if (nearBottom && velocity > 25 && !sharkTriggered.current) {
+      if (nearBottom && velocity > 25 && !sharkTriggered.current && !config.eggsDisabled.includes('shark')) {
         sharkTriggered.current = true
         setSharkVisible(true)
         discoverEgg('shark')
@@ -1146,7 +1148,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
     return Math.round(((watchCountMap[filmId] ?? 0) / totalUsers) * 100)
   }
 
-  function isMajority(filmId: number) { return getWatchPct(filmId) >= CONFIG.SEUIL_MAJORITY }
+  function isMajority(filmId: number) { return getWatchPct(filmId) >= config.SEUIL_MAJORITY }
 
   async function handleSetCategory(film: Film, category: 'normal' | '18plus' | 'strange') {
     // Optimistic update immédiat
@@ -1186,7 +1188,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
     e.stopPropagation()
     if (!profile) return
     const targetFilm = films.find(f => f.id === filmId)
-    if (targetFilm?.saison === 2) return
+    if (targetFilm?.saison !== config.SAISON_NUMERO) return
     const wasWatched = watchedSet.has(filmId)
     if (wasWatched) setLocalWatchedIds(prev => prev.filter(id => id !== filmId))
     else setLocalWatchedIds(prev => [...prev, filmId])
@@ -1206,7 +1208,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
       addToast(res.error, '⚠️')
       return
     }
-    addToast(wasWatched ? `"${filmTitre}" retiré` : isMarathonLive ? `+${CONFIG.EXP_FILM} EXP — "${filmTitre}" vu !` : `"${filmTitre}" marqué vu`, '🎬')
+    addToast(wasWatched ? `"${filmTitre}" retiré` : isMarathonLive ? `+${(res as any)?.exp ?? config.EXP_FILM} EXP — "${filmTitre}" vu !` : `"${filmTitre}" marqué vu`, '🎬')
     router.refresh()
   }
 
@@ -1240,7 +1242,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
       return
     }
     setBonusClaimed(true)
-    addToast(`+${CONFIG.EXP_FDLS_BONUS} EXP — Bonus film de la semaine !`, '⭐')
+    addToast(`+${(res as any).exp ?? config.EXP_FDLS_BONUS} EXP — Bonus film de la semaine !`, '⭐')
     router.refresh()
   }
 
@@ -1281,7 +1283,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
       addToast(res.error === 'ALREADY_MARATHON' ? 'Déjà marqué vu pendant le marathon' : res.error, '⚠️')
       return
     }
-    addToast(`+${CONFIG.EXP_DUEL_WIN} EXP — "${filmTitre}" vu pendant le duel ! 🏆`, '🏆')
+    addToast(`+${(res as any)?.exp ?? config.EXP_DUEL_WIN} EXP — "${filmTitre}" vu pendant le duel ! 🏆`, '🏆')
     router.refresh()
   }
 
@@ -1311,17 +1313,17 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
       addToast(res.error, '⚠️')
       return
     }
-    addToast(`+${CONFIG.EXP_FILM} EXP — "${filmTitre}" vu pendant le marathon !`, '🎬')
+    addToast(`+${(res as any)?.exp ?? config.EXP_FILM} EXP — "${filmTitre}" vu pendant le marathon !`, '🎬')
     router.refresh()
   }
 
   function pickRandom() {
-    const unwatched = films.filter(f => f.saison === 1 && !watchedSet.has(f.id) && !isMajority(f.id))
+    const unwatched = films.filter(f => f.saison === config.SAISON_NUMERO && !watchedSet.has(f.id) && !isMajority(f.id))
     if (!unwatched.length) return
     setModal(unwatched[Math.floor(Math.random() * unwatched.length)])
   }
 
-  const s1Total     = films.filter(f => f.saison === 1).length
+  const s1Total     = films.filter(f => f.saison === config.SAISON_NUMERO).length
   const watchedCount = watchedIds.length
   const pct         = s1Total ? Math.round((watchedCount / s1Total) * 100) : 0
 
@@ -1340,7 +1342,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
         <div className="stat"><div className="stat-l">Films vus</div><div className="stat-v green">{watchedCount}</div></div>
         <div className="stat"><div className="stat-l">Progression S1</div><div className="stat-v gold">{pct}%</div></div>
         <div className="stat"><div className="stat-l">Total films</div><div className="stat-v">{films.length}</div></div>
-        <div className="stat"><div className="stat-l">Saison 2</div><div className="stat-v orange">{films.filter(f => f.saison === 2).length}</div></div>
+        <div className="stat"><div className="stat-l">Hors saison</div><div className="stat-v orange">{films.filter(f => f.saison !== config.SAISON_NUMERO).length}</div></div>
       </div>
 
       {/* Progress */}
@@ -1417,7 +1419,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
         {filtered.map(film => {
           const isWatched = watchedSet.has(film.id)
           const maj    = isMajority(film.id)
-          const s2     = film.saison === 2
+          const s2     = film.saison !== config.SAISON_NUMERO
           const rat    = avgRating(ratingMap[film.id])
           const isWeek = weekFilmId === film.id
           const isAdmin = !!profile?.is_admin
@@ -1462,7 +1464,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                       animation: 'pulse 2s ease-in-out infinite',
                     }}
                   >
-                    {bonusClaiming ? '...' : `+${CONFIG.EXP_FDLS_BONUS} EXP`}
+                    {bonusClaiming ? '...' : `+${config.EXP_FDLS_BONUS} EXP`}
                   </button>
                 )}
                 {film.id === bonusFilmId && bonusClaimed && (
@@ -1472,7 +1474,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                     color: 'var(--green)', fontSize: '.55rem', fontWeight: 700,
                     padding: '3px 7px', borderRadius: 99,
                   }}>
-                    ✓ +{CONFIG.EXP_FDLS_BONUS}
+                    ✓ +{config.EXP_FDLS_BONUS}
                   </div>
                 )}
 

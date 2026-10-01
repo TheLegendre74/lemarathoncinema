@@ -4,12 +4,14 @@ import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { signOut } from '@/lib/actions'
-import { levelFromExp, getActiveBadge, CONFIG } from '@/lib/config'
+import { levelFromExp, getActiveBadge } from '@/lib/config'
+import { useConfig } from '@/components/config/ConfigProvider'
 import type { Profile } from '@/lib/supabase/types'
 
 interface SidebarProps { profile: Profile | null; hasRageuxEgg?: boolean; hasTamagotchiEgg?: boolean; unreadMessages?: number }
 
 export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEgg = false, unreadMessages = 0 }: SidebarProps) {
+  const config = useConfig()
   const pathname     = usePathname()
   const searchParams = useSearchParams()
   const router       = useRouter()
@@ -132,7 +134,7 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
     <nav className="sidebar">
       <div className="sidebar-logo">
         <div className="sidebar-logo-text">Ciné<br/>Marathon</div>
-        <div className="sidebar-logo-sub">{CONFIG.SAISON_LABEL}</div>
+        <div className="sidebar-logo-sub">{config.SAISON_LABEL}</div>
       </div>
 
       <div style={{ padding: '.6rem 0' }}>

@@ -5,7 +5,7 @@ import Image from 'next/image'
 import Forum from '@/components/Forum'
 import { adminDeleteWeekFilmArchive, markWeekFilmWatched, claimWeekFilmBonus } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
-import { CONFIG } from '@/lib/config'
+import { useConfig } from '@/components/config/ConfigProvider'
 import { useRouter } from 'next/navigation'
 import type { Profile } from '@/lib/supabase/types'
 
@@ -39,6 +39,7 @@ interface Props {
 }
 
 export default function SemaineClient({ profile, weekFilm, film, isWatched, watchProviders, weekFilmHistory, watchedFilmIds, latestArchivedWeekFilmId, canMarkLatestArchive, watchCountMap, totalUsers, bonusClaimed: initialBonusClaimed, bonusAvailable }: Props) {
+  const config = useConfig()
   const [forumOpen, setForumOpen] = useState(false)
   const [selectedArchive, setSelectedArchive] = useState<any | null>(null)
   const [markingWeekFilmId, setMarkingWeekFilmId] = useState<number | null>(null)
@@ -54,7 +55,7 @@ export default function SemaineClient({ profile, weekFilm, film, isWatched, watc
     setBonusClaiming(false)
     if (res.error) { addToast(res.error, '⚠️'); return }
     setBonusClaimed(true)
-    addToast(`+${CONFIG.EXP_FDLS_BONUS} EXP — Bonus film de la semaine !`, '⭐')
+    addToast(`+${(res as any).exp ?? config.EXP_FDLS_BONUS} EXP — Bonus film de la semaine !`, '⭐')
     router.refresh()
   }
 
@@ -69,7 +70,7 @@ export default function SemaineClient({ profile, weekFilm, film, isWatched, watc
       addToast(result.error, '⚠️')
       return
     }
-    addToast(result.alreadyWatched ? 'Film déjà marqué comme vu' : `+${CONFIG.EXP_FDLS} EXP - Film de la semaine vu !`, '⭐')
+    addToast(result.alreadyWatched ? 'Film déjà marqué comme vu' : `+${(result as any).exp ?? config.EXP_FDLS} EXP - Film de la semaine vu !`, '⭐')
     router.refresh()
   }
 
@@ -92,13 +93,13 @@ export default function SemaineClient({ profile, weekFilm, film, isWatched, watc
     <div>
       <div style={{ marginBottom: '2rem' }}>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', lineHeight: 1 }}>Film de la Semaine</div>
-        <div style={{ color: 'var(--text2)', fontSize: '.83rem', marginTop: '.35rem' }}>Séance collective — chaque {CONFIG.FDLS_JOUR} à {CONFIG.FDLS_HEURE}</div>
+        <div style={{ color: 'var(--text2)', fontSize: '.83rem', marginTop: '.35rem' }}>Séance collective — chaque {config.FDLS_JOUR} à {config.FDLS_HEURE}</div>
       </div>
 
       {!film ? (
         <div className="empty">
           <div style={{ fontSize: '2.5rem', marginBottom: '.8rem' }}>📽️</div>
-          Pas encore annoncé pour cette semaine.<br />Reviens {CONFIG.FDLS_JOUR} !
+          Pas encore annoncé pour cette semaine.<br />Reviens {config.FDLS_JOUR} !
         </div>
       ) : (
         <>
@@ -119,7 +120,7 @@ export default function SemaineClient({ profile, weekFilm, film, isWatched, watc
                 <div style={{ fontSize: '.75rem', color: 'var(--text2)', marginBottom: '.8rem' }}>{film.annee} · {film.realisateur} · {film.genre}</div>
 
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '.4rem', background: 'rgba(232,196,106,.1)', border: '1px solid rgba(232,196,106,.28)', color: 'var(--gold)', fontSize: '.8rem', padding: '.3rem .85rem', borderRadius: 99, fontWeight: 500, marginBottom: '1rem' }}>
-                  +{CONFIG.EXP_FDLS} EXP si vu ce {CONFIG.FDLS_JOUR}
+                  +{config.EXP_FDLS} EXP si vu ce {config.FDLS_JOUR}
                 </div>
 
                 {weekFilm?.session_time && (
@@ -130,10 +131,10 @@ export default function SemaineClient({ profile, weekFilm, film, isWatched, watc
 
                 {profile ? (
                   !isWatched ? (
-                    <button className="btn btn-gold" disabled={markingWeekFilmId === weekFilm?.id} onClick={() => markSeen(weekFilm)}>{markingWeekFilmId === weekFilm?.id ? 'Enregistrement...' : `✓ Marquer comme vu (+${CONFIG.EXP_FDLS} EXP)`}</button>
+                    <button className="btn btn-gold" disabled={markingWeekFilmId === weekFilm?.id} onClick={() => markSeen(weekFilm)}>{markingWeekFilmId === weekFilm?.id ? 'Enregistrement...' : `✓ Marquer comme vu (+${config.EXP_FDLS} EXP)`}</button>
                   ) : (
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '.5rem', background: 'var(--green2)', border: '1px solid rgba(79,217,138,.3)', color: 'var(--green)', borderRadius: 99, padding: '.4rem 1rem', fontSize: '.82rem' }}>
-                      ✓ Vu — +{CONFIG.EXP_FDLS} EXP gagné
+                      ✓ Vu — +{config.EXP_FDLS} EXP gagné
                     </div>
                   )
                 ) : (
@@ -245,7 +246,7 @@ export default function SemaineClient({ profile, weekFilm, film, isWatched, watc
                           boxShadow: '0 1px 6px rgba(232,196,106,.6)',
                           animation: 'pulse 2s ease-in-out infinite',
                         }}>
-                          {bonusClaiming ? '...' : `+${CONFIG.EXP_FDLS_BONUS}`}
+                          {bonusClaiming ? '...' : `+${config.EXP_FDLS_BONUS}`}
                         </span>
                       </span>
                     )}
@@ -255,14 +256,14 @@ export default function SemaineClient({ profile, weekFilm, film, isWatched, watc
                         background: 'rgba(79,217,138,.25)', color: 'var(--green)',
                         fontSize: '.45rem', fontWeight: 700, padding: '1px 4px', borderRadius: 99, whiteSpace: 'nowrap',
                       }}>
-                        ✓ +{CONFIG.EXP_FDLS_BONUS}
+                        ✓ +{config.EXP_FDLS_BONUS}
                       </span>
                     )}
                   </div>
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ display: 'flex', gap: '.45rem', alignItems: 'center', marginBottom: '.2rem' }}>
                       {entry.active && <span style={{ color: 'var(--gold)', border: '1px solid rgba(232,196,106,.35)', borderRadius: 99, padding: '1px 6px', fontSize: '.58rem', textTransform: 'uppercase', letterSpacing: 1 }}>Actuel</span>}
-                      {showBonus && !bonusClaimed && <span style={{ color: 'var(--gold)', border: '1px solid rgba(232,196,106,.35)', borderRadius: 99, padding: '1px 6px', fontSize: '.58rem', fontWeight: 700, background: 'rgba(232,196,106,.1)' }}>+{CONFIG.EXP_FDLS_BONUS} EXP</span>}
+                      {showBonus && !bonusClaimed && <span style={{ color: 'var(--gold)', border: '1px solid rgba(232,196,106,.35)', borderRadius: 99, padding: '1px 6px', fontSize: '.58rem', fontWeight: 700, background: 'rgba(232,196,106,.1)' }}>+{config.EXP_FDLS_BONUS} EXP</span>}
                       {showBonus && bonusClaimed && <span style={{ color: 'var(--green)', border: '1px solid rgba(79,217,138,.35)', borderRadius: 99, padding: '1px 6px', fontSize: '.58rem', fontWeight: 700, background: 'rgba(79,217,138,.08)' }}>✓ Bonus</span>}
                       <span style={{ color: 'var(--text3)', fontSize: '.68rem' }}>
                         {new Date(entry.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
@@ -316,7 +317,7 @@ export default function SemaineClient({ profile, weekFilm, film, isWatched, watc
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '.5rem', background: 'var(--green2)', border: '1px solid rgba(79,217,138,.3)', color: 'var(--green)', borderRadius: 99, padding: '.4rem 1rem', fontSize: '.82rem' }}>✓ Vu</div>
                       ) : (
                         <button className="btn btn-gold" disabled={!canMarkArchive || markingWeekFilmId === selectedArchive.id} onClick={() => markSeen(selectedArchive)}>
-                          {markingWeekFilmId === selectedArchive.id ? 'Enregistrement...' : `Marquer comme vu (+${CONFIG.EXP_FDLS} EXP)`}
+                          {markingWeekFilmId === selectedArchive.id ? 'Enregistrement...' : `Marquer comme vu (+${config.EXP_FDLS} EXP)`}
                         </button>
                       )
                     ) : (

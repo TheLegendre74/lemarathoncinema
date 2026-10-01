@@ -2,10 +2,10 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { adminCreateDuel, adminCloseDuel, adminApproveDuel, adminDeleteDuel, adminSetWeekFilm, adminClearWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminBatchFlaggedDecisions, adminSet18Flag, adminApproveAllPending, adminSetFilmCategory, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, adminFetchFrenchPosters, adminScanAgeRestrictions, adminTestFilmCertification, adminDiagnostic, updateFilm, adminResolveReport, adminSetConfig, adminVerifyPosters, adminRepairBrokenPosters, adminSetAdmin, adminAddNews, adminDeleteNews, adminAddRecommendation, adminDeleteRecommendation, deleteForumTopic, adminEndSeason, adminApproveFilmRequest, adminRejectFilmRequest, adminFetchOverviews, adminReviewMarathonRequest, adminGetPreMarathonStats, adminReviewSeasonJoinRequest, adminDirectAdmitToMarathon } from '@/lib/actions'
+import { adminCreateDuel, adminCreateDuelFromFilms, adminCloseDuel, adminApproveDuel, adminDeleteDuel, adminSetWeekFilm, adminClearWeekFilm, adminDeleteFilm, adminDeleteUser, adminGrantExp, adminCleanDuels, adminApproveFlaggedFilm, adminBatchFlaggedDecisions, adminSet18Flag, adminApproveAllPending, adminSetFilmCategory, adminFetchFilmPoster, adminUploadFilmPoster, adminRefreshMissingPosters, adminForceRefreshAllPosters, adminFetchFrenchPosters, adminScanAgeRestrictions, adminTestFilmCertification, adminDiagnostic, updateFilm, adminResolveReport, adminSetConfig, adminVerifyPosters, adminRepairBrokenPosters, adminSetAdmin, adminAddNews, adminDeleteNews, adminAddRecommendation, adminDeleteRecommendation, deleteForumTopic, adminEndSeason, adminApproveFilmRequest, adminRejectFilmRequest, adminFetchOverviews, adminReviewMarathonRequest, adminGetPreMarathonStats, adminReviewSeasonJoinRequest, adminDirectAdmitToMarathon } from '@/lib/actions'
 import type { PreMarathonFilmStat } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
-import { CONFIG } from '@/lib/config'
+import { useConfig } from '@/components/config/ConfigProvider'
 import Image from 'next/image'
 import type { Film, Profile } from '@/lib/supabase/types'
 import type { ServerConfig } from '@/lib/serverConfig'
@@ -479,6 +479,7 @@ interface Props {
 }
 
 export default function AdminClient({ profile, films, users, duels, weekFilm, totalUsers, watchCountMap, flaggedFilms, pendingFilms18, pendingApprovalFilms, reports, siteConfig, serverConfig, news, recommendations, forumTopics, marathonRequests: initialMarathonRequests, seasonJoinRequests: initialSeasonJoinRequests, allSeasonJoinRequests }: Props) {
+  const config = useConfig()
   const { addToast } = useToast()
   const router = useRouter()
   const [posterLoading, setPosterLoading] = useState<Record<number, boolean>>({})
@@ -583,14 +584,13 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
   }
 
   async function createDuel() {
-    const eligible = films.filter(f => f.saison === 1 && getWatchPct(f.id) < CONFIG.SEUIL_MAJORITY)
+    const eligible = films.filter(f => f.saison === config.SAISON_NUMERO && getWatchPct(f.id) < config.SEUIL_MAJORITY)
     if (eligible.length < 2) { addToast('Pas assez de films éligibles', '⚠️'); return }
     const shuffled = [...eligible].sort(() => Math.random() - 0.5)
     const f1 = shuffled[0], f2 = shuffled[1]
-    const weekNum = duels.length + 1
-    const result = await adminCreateDuel(f1.id, f2.id, weekNum, true)
+    const result = await adminCreateDuelFromFilms(f1.id, f2.id)
     if (result.error) addToast(result.error, '⚠️')
-    else { addToast(`Duel S${weekNum} en attente : ${f1.titre} VS ${f2.titre}`, '⏳'); router.refresh() }
+    else { addToast(`Duel en attente : ${f1.titre} VS ${f2.titre}`, '⏳'); router.refresh() }
   }
 
   async function createManualDuel() {
@@ -599,10 +599,9 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
     const f1 = films.find(f => f.id === parseInt(manualFilm1))
     const f2 = films.find(f => f.id === parseInt(manualFilm2))
     if (!f1 || !f2) return
-    const weekNum = duels.length + 1
-    const result = await adminCreateDuel(f1.id, f2.id, weekNum)
+    const result = await adminCreateDuelFromFilms(f1.id, f2.id)
     if (result.error) addToast(result.error, '⚠️')
-    else { addToast(`Duel S${weekNum} créé : ${f1.titre} VS ${f2.titre}`, '⚔️'); setManualFilm1(''); setManualFilm2(''); router.refresh() }
+    else { addToast(`Duel créé : ${f1.titre} VS ${f2.titre}`, '⚔️'); setManualFilm1(''); setManualFilm2(''); router.refresh() }
   }
 
   async function closeDuel(duelId: number) {
@@ -627,7 +626,7 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
   async function saveWeekFilm(filmId: string) {
     if (!filmId) return
     setWeekFilmSaving(true)
-    const result = await adminSetWeekFilm(parseInt(filmId), `${CONFIG.FDLS_JOUR} soir à ${CONFIG.FDLS_HEURE}`)
+    const result = await adminSetWeekFilm(parseInt(filmId), `${config.FDLS_JOUR} soir à ${config.FDLS_HEURE}`)
     if (result.error) addToast(result.error, '⚠️')
     else { addToast('Film de la semaine défini !', '🎬'); setWeekFilmSelection(''); router.refresh() }
     setWeekFilmSaving(false)
@@ -875,7 +874,7 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
     <div style={{ overflowAnchor: 'none' }}>
       <div style={{ marginBottom: '2rem' }}>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', lineHeight: 1 }}>Administration</div>
-        <div style={{ color: 'var(--text2)', fontSize: '.83rem', marginTop: '.35rem' }}>Accès restreint · {CONFIG.SAISON_LABEL}</div>
+        <div style={{ color: 'var(--text2)', fontSize: '.83rem', marginTop: '.35rem' }}>Accès restreint · {config.SAISON_LABEL}</div>
       </div>
 
       {/* 18+ alert banner — seulement si des films attendent confirmation */}
@@ -1078,7 +1077,7 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
             style={{ flex: 1, minWidth: 140, background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.45rem .7rem', color: 'var(--text2)', fontSize: '.82rem' }}
           >
             <option value="">Film 1…</option>
-            {films.filter(f => f.saison === 1).map(f => (
+            {films.filter(f => f.saison === config.SAISON_NUMERO).map(f => (
               <option key={f.id} value={f.id}>{f.titre}</option>
             ))}
           </select>
@@ -1089,7 +1088,7 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
             style={{ flex: 1, minWidth: 140, background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.45rem .7rem', color: 'var(--text2)', fontSize: '.82rem' }}
           >
             <option value="">Film 2…</option>
-            {films.filter(f => f.saison === 1).map(f => (
+            {films.filter(f => f.saison === config.SAISON_NUMERO).map(f => (
               <option key={f.id} value={f.id}>{f.titre}</option>
             ))}
           </select>
@@ -1147,7 +1146,7 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
           }}
         >
           <option value="">{weekFilmSaving ? 'Mise à jour...' : 'Choisir le film de cette semaine…'}</option>
-          {films.filter(f => f.saison === 1).map(f => (
+          {films.filter(f => f.saison === config.SAISON_NUMERO).map(f => (
             <option key={f.id} value={f.id}>{f.titre} ({f.annee}) — {getWatchPct(f.id)}% vus</option>
           ))}
         </select>
@@ -1699,7 +1698,7 @@ export default function AdminClient({ profile, films, users, duels, weekFilm, to
                     : '🎬'}
                 </div>
                 <span style={{ flex: 1, fontSize: '.82rem' }}>{f.titre} <span style={{ color: 'var(--text3)', fontSize: '.7rem' }}>({f.annee})</span></span>
-                <span style={{ fontSize: '.68rem', color: f.saison === 2 ? 'var(--red)' : 'var(--text3)', border: '1px solid var(--border)', borderRadius: 99, padding: '1px 6px' }}>S{f.saison}</span>
+                <span style={{ fontSize: '.68rem', color: f.saison !== config.SAISON_NUMERO ? 'var(--red)' : 'var(--text3)', border: '1px solid var(--border)', borderRadius: 99, padding: '1px 6px' }}>S{f.saison}</span>
                 <span style={{ fontSize: '.72rem', color: 'var(--text2)' }}>{getWatchPct(f.id)}% vus</span>
                 {/* Bouton TMDB */}
                 <button

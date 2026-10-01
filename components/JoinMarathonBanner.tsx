@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { submitSeasonJoinRequest } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
+import { useConfig } from '@/components/config/ConfigProvider'
 
 type JoinStatus = {
   id: string
@@ -18,6 +19,7 @@ interface Props {
 
 export default function JoinMarathonBanner({ initialStatus, preMarathonWindowUntil }: Props) {
   const { addToast } = useToast()
+  const config = useConfig()
   const [status, setStatus] = useState<JoinStatus>(initialStatus)
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
@@ -45,7 +47,7 @@ export default function JoinMarathonBanner({ initialStatus, preMarathonWindowUnt
         <span style={{ fontSize: '1.6rem', lineHeight: 1, flexShrink: 0 }}>✅</span>
         <div>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: '.95rem', marginBottom: '.25rem', color: 'var(--green)' }}>
-            Inscription acceptée — Saison 2
+            Inscription acceptée — Saison {config.SAISON_NUMERO + 1}
           </div>
           <div style={{ fontSize: '.8rem', color: 'var(--text2)', lineHeight: 1.5 }}>
             Tu es inscrit pour la prochaine saison. Tu pourras participer pleinement dès son lancement.

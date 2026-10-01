@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { signInDirect } from '@/lib/actions'
-import { CONFIG } from '@/lib/config'
 
 function CountdownMini({ marathonStart }: { marathonStart: string }) {
   const [now, setNow] = useState<Date | null>(null)
@@ -82,7 +81,7 @@ export default function AuthPageClient({ marathonStart, saisonLabel, saisonNumer
       window.location.href = '/'
     } else {
       if (pseudo.length < 2) { setErr('Pseudo trop court (min 2 caractères).'); setLoading(false); return }
-      if (password.length < 4) { setErr('Mot de passe trop court (min 4 caractères).'); setLoading(false); return }
+      if (password.length < 8) { setErr('Mot de passe trop court (8 caractères minimum).'); setLoading(false); return }
 
       const { data: existing } = await supabase.from('profiles').select('id').ilike('pseudo', pseudo).single()
       if (existing) { setErr('Ce pseudo est déjà pris.'); setLoading(false); return }

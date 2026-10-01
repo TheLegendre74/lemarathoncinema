@@ -44,7 +44,7 @@ export default function ResetPage() {
   }, [supabase])
 
   async function handle() {
-    if (password.length < 4) { setErr('Mot de passe trop court (min 4 caractères).'); return }
+    if (password.length < 8) { setErr('Mot de passe trop court (8 caractères minimum).'); return }
     setLoading(true); setErr('')
     const { error } = await supabase.auth.updateUser({ password })
     if (error) { setErr(error.message); setLoading(false); return }
