@@ -26,20 +26,12 @@ export default async function AdminDashboard() {
   const admin = createAdminClient()
   const cfg = await getServerConfig()
 
-  const [
-    seasonWeeks,
-    cookieStore,
-    { count: pendingJoin },
-    { count: pendingFilms },
-    { count: flagged18 },
-    { count: reports },
-    { count: pendingDuels },
-    { data: weekFilm },
-    { data: activeDuel },
-    { data: recentLog },
-  ] = await Promise.all([
+  const [seasonWeeks, cookieStore] = await Promise.all([
     getSeasonWeeks(),
     cookies(),
+  ])
+
+  const settled = await Promise.allSettled([
     admin.from('season_join_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
     admin.from('films').select('id', { count: 'exact', head: true }).eq('pending_admin_approval', true),
     admin.from('films').select('id', { count: 'exact', head: true }).eq('flagged_18_pending', true),
@@ -49,6 +41,18 @@ export default async function AdminDashboard() {
     supabase.from('duels').select('id, closes_at, film1:films!duels_film1_id_fkey(titre), film2:films!duels_film2_id_fkey(titre)').eq('closed', false).eq('pending', false).order('created_at', { ascending: false }).limit(1).single(),
     admin.from('admin_log').select('action, detail, created_at').order('created_at', { ascending: false }).limit(10),
   ])
+
+  const cnt = (i: number) => settled[i].status === 'fulfilled' ? (settled[i].value?.count ?? 0) : 0
+  const dat = (i: number) => settled[i].status === 'fulfilled' ? settled[i].value?.data : null
+
+  const pendingJoin = cnt(0)
+  const pendingFilms = cnt(1)
+  const flagged18 = cnt(2)
+  const reports = cnt(3)
+  const pendingDuels = cnt(4)
+  const weekFilm = dat(5)
+  const activeDuel = dat(6)
+  const recentLog = dat(7)
 
   const previewRaw = cookieStore.get('cm_theme_apercu')?.value ?? null
   const previewCookie = (previewRaw && READY_THEMES.includes(previewRaw as ThemeKey)) ? previewRaw as ThemeKey : null
@@ -105,7 +109,7 @@ export default async function AdminDashboard() {
           </div>
           {activeDuel && (
             <div className={styles.row}>
-              <span>Duel : {(activeDuel as any)?.film1?.titre} vs {(activeDuel as any)?.film2?.titre}{activeDuel.closes_at ? ` — cloture le ${new Date(activeDuel.closes_at).toLocaleDateString('fr-FR')}` : ''}</span>
+              <span>Duel : {(activeDuel as any)?.film1?.titre} vs {(activeDuel as any)?.film2?.titre}{(activeDuel as any)?.closes_at ? ` — cloture le ${new Date((activeDuel as any).closes_at).toLocaleDateString('fr-FR')}` : ''}</span>
               <Link href="/admin/seances" className={styles.btn}>Voir</Link>
             </div>
           )}
