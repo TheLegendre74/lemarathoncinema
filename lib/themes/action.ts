@@ -87,5 +87,5 @@ export const actionTheme: ThemeDef = {
   weekCourt: (w: WeekInfo) => `${pad2(w.semaine)} / ${pad2(w.total)}`,
 
   eggs: ['theme-action-voiture', 'theme-action-nakatomi'],
-  radioTrack: null,
+  radioTracks: ['/audio/radio/action-1.mp3', '/audio/radio/action-2.mp3'],
 }

@@ -64,7 +64,7 @@ export interface ThemeDef {
   repliques: Partial<Record<string, string>>
   citations: string[]
   eggs: ThemeEggId[]
-  radioTrack: string | null
+  radioTracks: string[]
 }
 
 export interface ThemeConfig {

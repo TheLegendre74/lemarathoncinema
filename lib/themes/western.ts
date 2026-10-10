@@ -116,5 +116,5 @@ export const westernTheme: ThemeDef = {
   weekCourt: (w: WeekInfo) => `${pad2(w.semaine)} / ${pad2(w.total)}`,
 
   eggs: ['theme-western-mouche', 'theme-western-404', 'theme-western-duel'],
-  radioTrack: null,
+  radioTracks: ['/audio/radio/western-1.mp3', '/audio/radio/western-2.mp3'],
 }

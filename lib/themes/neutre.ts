@@ -100,5 +100,5 @@ export const neutreTheme: ThemeDef = {
   weekCourt: (w: WeekInfo) => `${pad2(w.semaine)} / ${pad2(w.total)}`,
 
   eggs: [],
-  radioTrack: null,
+  radioTracks: [],
 }

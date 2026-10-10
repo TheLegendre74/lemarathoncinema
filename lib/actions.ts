@@ -558,11 +558,6 @@ export async function markWatched(filmId: number, pre: boolean) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non connecté' }
 
-  const { data: filmCheck } = await supabase.from('films').select('saison').eq('id', filmId).single()
-  if (filmCheck && filmCheck.saison > cfg.SAISON_NUMERO) {
-    return { error: 'Ce film sera disponible lors de la saison suivante.' }
-  }
-
   if (!pre && !isMarathonLiveFromConfig(cfg)) return { error: 'Le marathon n\'a pas encore commencé.' }
 
   if (!pre) {
@@ -660,11 +655,6 @@ export async function toggleWatched(filmId: number, filmTitre: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non connecté' }
 
-  const { data: filmCheck } = await supabase.from('films').select('saison').eq('id', filmId).single()
-  if (filmCheck && filmCheck.saison > cfg.SAISON_NUMERO) {
-    return { error: 'Ce film sera disponible lors de la saison suivante.' }
-  }
-
   const { data: existing } = await supabase
     .from('watched')
     .select('film_id, pre, exp_awarded')
@@ -741,11 +731,6 @@ export async function markWeekFilmWatched(weekFilmId: number) {
     if (!canMarkLatestWeekArchiveNow()) {
       return { error: 'La derniere archive peut etre marquee vue seulement le vendredi soir ou le samedi.' }
     }
-  }
-
-  const { data: filmCheck } = await supabase.from('films').select('saison').eq('id', weekFilm.film_id).single()
-  if (filmCheck && filmCheck.saison > cfg.SAISON_NUMERO) {
-    return { error: 'Ce film sera disponible lors de la saison suivante.' }
   }
 
   const { data: existing } = await supabase
@@ -835,11 +820,6 @@ export async function markWatchedDuelWinner(filmId: number) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non connecté' }
   if (!isMarathonLiveFromConfig(cfg)) return { error: 'Le marathon n\'a pas encore commencé.' }
-
-  const { data: filmCheck } = await supabase.from('films').select('saison').eq('id', filmId).single()
-  if (filmCheck && filmCheck.saison > cfg.SAISON_NUMERO) {
-    return { error: 'Ce film sera disponible lors de la saison suivante.' }
-  }
 
   await closeDueDuels({ duringRender: false })
 

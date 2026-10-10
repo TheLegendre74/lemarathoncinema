@@ -122,5 +122,5 @@ export const horreurTheme: ThemeDef = {
   weekCourt: (w: WeekInfo) => `${pad2(w.semaine)} / ${pad2(w.total)}`,
 
   eggs: ['theme-horreur-ballon', 'theme-horreur-possession', 'theme-horreur-cercle', 'theme-horreur-apparition'],
-  radioTrack: null,
+  radioTracks: ['/audio/radio/horreur-1.mp3', '/audio/radio/horreur-2.mp3'],
 }

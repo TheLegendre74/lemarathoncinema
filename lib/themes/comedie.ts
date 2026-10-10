@@ -129,5 +129,5 @@ export const comedieTheme: ThemeDef = {
   weekCourt: (w: WeekInfo) => `${romain(w.semaine)} / ${romain(w.total)}`,
 
   eggs: ['theme-comedie-vert', 'theme-comedie-blanquette', 'theme-comedie-hyene'],
-  radioTrack: null,
+  radioTracks: ['/audio/radio/comedie-1.mp3', '/audio/radio/comedie-2.mp3'],
 }

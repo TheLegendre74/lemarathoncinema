@@ -14,6 +14,7 @@ import { initDestructionListener } from '@/lib/destruction'
 const TamagotchiWidget = dynamic(() => import('./TamagotchiWidget'), { ssr: false })
 const PreMarathonApprovedPopup = dynamic(() => import('./PreMarathonApprovedPopup'), { ssr: false })
 const ComedieRamp = dynamic(() => import('./theme/comedie/ComedieRamp'), { ssr: false })
+const ThemeRadio = dynamic(() => import('./theme/ThemeRadio'), { ssr: false })
 
 interface Props {
   profile: Profile | null
@@ -76,6 +77,7 @@ export default function ClientShell({ profile, hasRageuxEgg, hasTamagotchiEgg, u
           <a href="mailto:LeMarathonCinema@gmail.com">Contact</a>
         </footer>
       </main>
+      <ThemeRadio />
       {hasTamagotchiEgg && <Suspense fallback={null}><TamagotchiWidget /></Suspense>}
       {showJoinPopup && (
         <Suspense fallback={null}>

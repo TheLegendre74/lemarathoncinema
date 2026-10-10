@@ -304,7 +304,6 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
             <span style={{ fontSize: '.75rem', color: 'var(--ink2)' }}>{film.realisateur}</span>
             <span className="tag">{film.genre}</span>
             {film.sousgenre && <span className="tag" style={{ opacity: .7 }}>{film.sousgenre}</span>}
-            {film.saison !== config.SAISON_NUMERO && <span className="tag" style={{ color: 'var(--bad)', borderColor: 'rgba(232,90,90,.3)' }}>Saison {film.saison}</span>}
             {avg && <span className="tag" style={{ color: 'var(--accent-fg)', borderColor: 'rgba(232,196,106,.3)' }}>⭐ {avg}/10 ({ratingScores.length})</span>}
             <span className="tag">{watchPct}% vus</span>
             {isWeekFilm && <span className="tag" style={{ color: 'var(--accent-fg)', borderColor: 'rgba(232,196,106,.4)', fontWeight: 600 }}>⭐ Film de la semaine · +{config.EXP_FDLS} EXP</span>}
@@ -364,12 +363,7 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
 
               {/* Watched buttons */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem', marginBottom: '1rem' }}>
-                {film.saison !== config.SAISON_NUMERO ? (
-                  <div style={{ background: 'rgba(232,90,90,.06)', border: '1px solid rgba(232,90,90,.25)', borderRadius: 'var(--radius)', padding: '.85rem 1rem', textAlign: 'center' }}>
-                    <div style={{ fontSize: '.88rem', fontWeight: 700, color: '#ff9999', marginBottom: '.3rem' }}>🔒 Disponible en Saison {film.saison}</div>
-                    <div style={{ fontSize: '.75rem', color: 'var(--ink3)', lineHeight: 1.5 }}>Ce film a été ajouté pendant le marathon et sera disponible lors de la prochaine saison. Tu pourras le marquer vu à partir de la Saison {film.saison} !</div>
-                  </div>
-                ) : <>
+                {<>
                 <button
                   className={`btn ${isWatched && watchedPre === true ? 'btn-green' : 'btn-outline'} btn-full`}
                   onClick={handleMarkPre}
@@ -1207,7 +1201,6 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
     e.stopPropagation()
     if (!profile) return
     const targetFilm = films.find(f => f.id === filmId)
-    if (targetFilm?.saison !== config.SAISON_NUMERO) return
     const wasWatched = watchedSet.has(filmId)
     if (wasWatched) setLocalWatchedIds(prev => prev.filter(id => id !== filmId))
     else setLocalWatchedIds(prev => [...prev, filmId])
@@ -1337,12 +1330,12 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
   }
 
   function pickRandom() {
-    const unwatched = films.filter(f => f.saison === config.SAISON_NUMERO && !watchedSet.has(f.id) && !isMajority(f.id))
+    const unwatched = films.filter(f => !watchedSet.has(f.id) && !isMajority(f.id))
     if (!unwatched.length) return
     setModal(unwatched[Math.floor(Math.random() * unwatched.length)])
   }
 
-  const s1Total     = films.filter(f => f.saison === config.SAISON_NUMERO).length
+  const s1Total     = films.length
   const watchedCount = watchedIds.length
   const pct         = s1Total ? Math.round((watchedCount / s1Total) * 100) : 0
 
@@ -1351,7 +1344,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
       <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontFamily: 'var(--f-display)', fontSize: '2rem', lineHeight: 1 }}>Films</div>
-          <div style={{ color: 'var(--ink2)', fontSize: '.83rem', marginTop: '.35rem' }}>{s1Total} films S1 · {watchedCount} vus</div>
+          <div style={{ color: 'var(--ink2)', fontSize: '.83rem', marginTop: '.35rem' }}>{s1Total} films · {watchedCount} vus</div>
         </div>
         {profile && <button className="btn btn-outline" onClick={() => setAddModal(true)}>+ Ajouter un film</button>}
       </div>
@@ -1359,9 +1352,8 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '.8rem', marginBottom: '1.5rem' }}>
         <div className="stat"><div className="stat-l">Films vus</div><div className="stat-v green">{watchedCount}</div></div>
-        <div className="stat"><div className="stat-l">Progression S1</div><div className="stat-v gold">{pct}%</div></div>
+        <div className="stat"><div className="stat-l">Progression</div><div className="stat-v gold">{pct}%</div></div>
         <div className="stat"><div className="stat-l">Total films</div><div className="stat-v">{films.length}</div></div>
-        <div className="stat"><div className="stat-l">Hors saison</div><div className="stat-v orange">{films.filter(f => f.saison !== config.SAISON_NUMERO).length}</div></div>
       </div>
 
       {/* Progress */}
@@ -1438,7 +1430,6 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
         {filtered.map(film => {
           const isWatched = watchedSet.has(film.id)
           const maj    = isMajority(film.id)
-          const s2     = film.saison !== config.SAISON_NUMERO
           const rat    = ratingAvgMap[film.id] ? String(ratingAvgMap[film.id]) : null
           const isWeek = weekFilmId === film.id
           const isAdmin = !!profile?.is_admin
@@ -1455,7 +1446,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
 
           return (
             <div key={film.id}
-              className={`film-card ${isWatched ? 'watched' : ''} ${maj ? 'majority' : ''} ${s2 ? 's2' : ''} ${watchlistDropOpen === film.id || adminCategoryOpen === film.id || rattrapageOpen === film.id ? 'menu-open' : ''}`}
+              className={`film-card ${isWatched ? 'watched' : ''} ${maj ? 'majority' : ''} ${watchlistDropOpen === film.id || adminCategoryOpen === film.id || rattrapageOpen === film.id ? 'menu-open' : ''}`}
               onClick={() => { if (menuOpen) { setAdminCategoryOpen(null); return } if (rattrapageOpen === film.id) { setRattrapageOpen(null); return } setModal(film) }}
               style={cardGlow}
             >
@@ -1465,7 +1456,6 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                   <div style={{ fontSize: '.82rem', fontWeight: 600, color: 'var(--ink)', lineHeight: 1.2, marginBottom: '.15rem' }}>{film.titre}</div>
                   <div style={{ fontSize: '.68rem', color: 'var(--ink2)' }}>{film.annee} · {film.realisateur}</div>
                 </div>
-                {s2 && <div style={{ position: 'absolute', top: 7, left: 7, background: 'rgba(8,8,14,.82)', border: '1px solid rgba(232,90,90,.55)', color: '#ff9999', fontSize: '.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: 99, letterSpacing: '.3px', zIndex: 4 }}>🔒 Saison 2</div>}
                 {!isWatched && maj && <div style={{ position: 'absolute', top: 7, right: 7, background: 'rgba(255,255,255,.12)', color: '#aaa', fontSize: '.58rem', padding: '2px 7px', borderRadius: 99 }}>60%+</div>}
                 {isWeek && <div style={{ position: 'absolute', bottom: 7, left: 7, background: 'var(--accent-fg)', color: '#0a0a0f', fontSize: '.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: 99 }}>⭐ SEMAINE</div>}
 
@@ -1622,11 +1612,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                 </div>
                 {profile && (
                   <div style={{ marginTop: 'auto', paddingTop: '.35rem' }}>
-                  {s2 ? (
-                    <div style={{ width: '100%', background: 'rgba(232,90,90,.04)', border: '1px solid rgba(232,90,90,.18)', borderRadius: 6, padding: '.28rem .4rem', fontSize: '.68rem', color: 'rgba(255,120,120,.5)', textAlign: 'center', lineHeight: 1.3, cursor: 'default' }}>
-                      🔒 Dispo saison 2
-                    </div>
-                  ) : (() => {
+                  {(() => {
                     const effectivePre = film.id in localPreOverride ? localPreOverride[film.id] : watchedPreMap[film.id]
                     if (isWatched) {
                       // Film déjà vu
