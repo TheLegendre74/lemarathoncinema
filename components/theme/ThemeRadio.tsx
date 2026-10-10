@@ -17,31 +17,38 @@ export default function ThemeRadio() {
   const [started, setStarted] = useState(false)
   const [suppressed, setSuppressed] = useState(false)
 
+  const tracksRef = useRef(def.radioTracks)
+  tracksRef.current = def.radioTracks
+  const volumeRef = useRef(volume)
+  volumeRef.current = volume
+
   const tracks = def.radioTracks
   const routeMuted = MUTED_ROUTES.some(r => pathname?.startsWith(r))
 
   function killAudio() {
     const a = audioRef.current
     if (a) {
+      a.onended = null
       a.pause()
       a.src = ''
       audioRef.current = null
     }
   }
 
-  function doPlay(trackIdx: number, vol: number): HTMLAudioElement {
+  function playTrack(trackIdx: number) {
     killAudio()
-    const a = new Audio(tracks[trackIdx])
-    a.volume = vol / 100
+    const t = tracksRef.current
+    if (!t.length) return
+    const a = new Audio(t[trackIdx % t.length])
+    a.volume = volumeRef.current / 100
     a.loop = false
     audioRef.current = a
     a.onended = () => {
-      const next = (idxRef.current + 1) % tracks.length
+      const next = (idxRef.current + 1) % tracksRef.current.length
       idxRef.current = next
-      doPlay(next, vol)
+      playTrack(next)
     }
     a.play().catch(() => {})
-    return a
   }
 
   // Reset on theme change
@@ -52,29 +59,33 @@ export default function ThemeRadio() {
     setMuted(false)
   }, [key])
 
-  // Auto-start: try playing on first user gesture
+  // Auto-start on first user gesture
   useEffect(() => {
     if (!tracks.length || started) return
+
     const tryStart = () => {
-      if (started) return
-      const a = new Audio(tracks[0])
-      a.volume = volume / 100
+      const t = tracksRef.current
+      if (!t.length) return
+      killAudio()
+      const a = new Audio(t[0])
+      a.volume = volumeRef.current / 100
       a.loop = false
       audioRef.current = a
       idxRef.current = 0
       a.onended = () => {
-        const next = (idxRef.current + 1) % tracks.length
+        const next = (idxRef.current + 1) % tracksRef.current.length
         idxRef.current = next
-        doPlay(next, volume)
+        playTrack(next)
       }
       a.play().then(() => {
         setStarted(true)
-        cleanup()
+        remove()
       }).catch(() => {
         audioRef.current = null
       })
     }
-    const cleanup = () => {
+
+    const remove = () => {
       document.removeEventListener('click', tryStart, true)
       document.removeEventListener('touchstart', tryStart, true)
       document.removeEventListener('keydown', tryStart, true)
@@ -82,11 +93,10 @@ export default function ThemeRadio() {
     document.addEventListener('click', tryStart, true)
     document.addEventListener('touchstart', tryStart, true)
     document.addEventListener('keydown', tryStart, true)
-    return cleanup
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, tracks.length])
+    return remove
+  }, [key, tracks.length, started])
 
-  // Volume changes
+  // Volume sync — apply directly to the audio element
   useEffect(() => {
     const a = audioRef.current
     if (a) a.volume = muted ? 0 : volume / 100
@@ -115,16 +125,19 @@ export default function ThemeRadio() {
   useEffect(() => () => killAudio(), [])
 
   function handleToggle() {
+    const t = tracksRef.current
     if (!started) {
-      const a = new Audio(tracks[0])
-      a.volume = volume / 100
+      if (!t.length) return
+      killAudio()
+      const a = new Audio(t[0])
+      a.volume = volumeRef.current / 100
       a.loop = false
       audioRef.current = a
       idxRef.current = 0
       a.onended = () => {
-        const next = (idxRef.current + 1) % tracks.length
+        const next = (idxRef.current + 1) % tracksRef.current.length
         idxRef.current = next
-        doPlay(next, volume)
+        playTrack(next)
       }
       a.play().then(() => {
         setStarted(true)
@@ -139,7 +152,7 @@ export default function ThemeRadio() {
     if (next) {
       a.volume = 0
     } else {
-      a.volume = volume / 100
+      a.volume = volumeRef.current / 100
       if (a.paused && !routeMuted && !suppressed) {
         a.play().catch(() => {})
       }
