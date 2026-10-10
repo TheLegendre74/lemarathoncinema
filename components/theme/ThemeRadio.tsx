@@ -96,11 +96,12 @@ export default function ThemeRadio() {
     return remove
   }, [key, tracks.length, started])
 
-  // Volume sync — apply directly to the audio element
+  // Volume sync on unmute only (slider onChange handles direct volume)
   useEffect(() => {
+    if (muted) return
     const a = audioRef.current
-    if (a) a.volume = muted ? 0 : volume / 100
-  }, [volume, muted])
+    if (a) a.volume = volumeRef.current / 100
+  }, [muted])
 
   // Pause/resume on route or egg suppression
   useEffect(() => {
@@ -198,7 +199,8 @@ export default function ThemeRadio() {
           onChange={e => {
             const v = Number(e.target.value)
             setVolume(v)
-            if (muted && v > 0) setMuted(false)
+            const a = audioRef.current
+            if (a) a.volume = v / 100
           }}
           aria-label="Volume musique"
           style={{
