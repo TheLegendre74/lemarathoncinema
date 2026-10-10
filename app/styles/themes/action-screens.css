@@ -1,0 +1,162 @@
+/* ═══════════════════════════════════════════════════════════
+   Action theme — screen-specific overrides (§13.5)
+   Loaded from layout.tsx alongside action.css
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── A2 — L'arsenal (films) ── */
+[data-theme="action"] .film-stat-bar {
+  transform: skewX(var(--skew));
+  border-radius: 0;
+}
+[data-theme="action"] .film-stat-bar > * {
+  transform: skewX(calc(var(--skew) * -1));
+}
+[data-theme="action"] .filter-chip {
+  transform: skewX(var(--skew));
+  border-radius: 0;
+}
+[data-theme="action"] .filter-chip > * {
+  transform: skewX(calc(var(--skew) * -1));
+}
+
+/* ── A3 — Fiche film (modal) ── */
+[data-theme="action"] .film-modal-header {
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-family: var(--f-ui);
+  text-transform: uppercase;
+  letter-spacing: var(--ui-track);
+}
+
+/* ── A4 — Face-à-face (duels) ── */
+[data-theme="action"] .duel-bar {
+  transform: skewX(var(--skew));
+  border-radius: 0;
+}
+[data-theme="action"] .duel-bar-inner {
+  transform: skewX(calc(var(--skew) * -1));
+}
+[data-theme="action"] .duel-winner-glow {
+  box-shadow: 0 0 20px rgba(255, 107, 31, .3);
+}
+
+/* ── A5 — Tableau de chasse (classement) ── */
+[data-theme="action"] .leaderboard-row-self {
+  border-left: 3px solid var(--accent-fg);
+}
+
+/* ── A7 — Fréquences (forum) ── */
+[data-theme="action"] .forum-topic-freq {
+  font-family: var(--f-data);
+  color: var(--info);
+  font-size: 11px;
+}
+
+/* ── A10 — Barre catégories ── */
+[data-theme="action"] .nav-group-header,
+[data-theme="action"] .nav-item {
+  font-family: var(--f-ui);
+}
+
+/* ── A18 — Scan de chargement ── */
+[data-theme="action"] .loading-indicator {
+  position: relative;
+  font-family: var(--f-data);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+[data-theme="action"] .loading-indicator::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  height: 1px;
+  background: var(--accent-fg);
+  animation: scanLine 1.5s var(--ease) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="action"] .loading-indicator::after {
+    animation: none;
+    top: 50%;
+  }
+}
+
+/* ── 404 — Étage 13 ── */
+[data-theme="action"] .not-found-page {
+  position: relative;
+}
+
+/* ── Buttons — Skew + shake ── */
+[data-theme="action"] .btn-primary {
+  transform: skewX(var(--skew));
+  border-radius: 0;
+  transition: background var(--dur) var(--ease);
+}
+[data-theme="action"] .btn-primary > * {
+  transform: skewX(calc(var(--skew) * -1));
+  display: inline-block;
+}
+[data-theme="action"] .btn-primary:active {
+  animation: btnShake 120ms var(--ease);
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="action"] .btn-primary:active {
+    animation: none;
+  }
+}
+@keyframes btnShake {
+  0%, 100% { transform: translateX(0) skewX(var(--skew)); }
+  25% { transform: translateX(-2px) skewX(var(--skew)); }
+  75% { transform: translateX(2px) skewX(var(--skew)); }
+}
+
+/* ── Riveted panels ── */
+[data-theme="action"] .panel-riveted {
+  position: relative;
+  border-radius: 0;
+}
+[data-theme="action"] .panel-riveted::before,
+[data-theme="action"] .panel-riveted::after {
+  content: '';
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 40%, var(--ink3), var(--s3));
+  box-shadow: inset 0 1px 1px rgba(0,0,0,.5);
+}
+[data-theme="action"] .panel-riveted::before {
+  top: 6px;
+  left: 6px;
+}
+[data-theme="action"] .panel-riveted::after {
+  bottom: 6px;
+  right: 6px;
+}
+
+/* ── Mono data display ── */
+[data-theme="action"] .data-value {
+  font-family: var(--f-data);
+  letter-spacing: .04em;
+  font-variant-numeric: tabular-nums;
+}
+[data-theme="action"] .data-time {
+  font-family: var(--f-data);
+  color: var(--info);
+}
+
+/* ── Bottom nav — orange active with skewed line ── */
+@media (max-width: 768px) {
+  [data-theme="action"] .bottomBar .bottomActive {
+    color: var(--accent-fg);
+  }
+  [data-theme="action"] .bottomBar .bottomActive::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 20%;
+    right: 20%;
+    height: 2px;
+    background: var(--accent-fg);
+    transform: skewX(var(--skew));
+  }
+}

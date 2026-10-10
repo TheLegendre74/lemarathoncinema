@@ -7,6 +7,7 @@ import { adminDeleteWeekFilmArchive, markWeekFilmWatched, claimWeekFilmBonus } f
 import { useToast } from '@/components/ToastProvider'
 import { useConfig } from '@/components/config/ConfigProvider'
 import { useRouter } from 'next/navigation'
+import { emitDestruction } from '@/lib/destruction'
 import type { Profile } from '@/lib/supabase/types'
 
 interface WatchProvider {
@@ -83,6 +84,7 @@ export default function SemaineClient({ profile, weekFilm, film, isWatched, watc
       return
     }
     addToast('Archive supprimée', '✕')
+    emitDestruction()
     if (selectedArchive?.id === entry.id) setSelectedArchive(null)
     router.refresh()
   }
@@ -92,8 +94,8 @@ export default function SemaineClient({ profile, weekFilm, film, isWatched, watc
   return (
     <div>
       <div style={{ marginBottom: '2rem' }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', lineHeight: 1 }}>Film de la Semaine</div>
-        <div style={{ color: 'var(--text2)', fontSize: '.83rem', marginTop: '.35rem' }}>Séance collective — chaque {config.FDLS_JOUR} à {config.FDLS_HEURE}</div>
+        <div style={{ fontFamily: 'var(--f-display)', fontSize: '2rem', lineHeight: 1 }}>Film de la Semaine</div>
+        <div style={{ color: 'var(--ink2)', fontSize: '.83rem', marginTop: '.35rem' }}>Séance collective — chaque {config.FDLS_JOUR} à {config.FDLS_HEURE}</div>
       </div>
 
       {!film ? (
@@ -103,29 +105,29 @@ export default function SemaineClient({ profile, weekFilm, film, isWatched, watc
         </div>
       ) : (
         <>
-          <div style={{ background: 'linear-gradient(135deg, var(--bg2), var(--bg3))', border: '1px solid var(--border2)', borderRadius: 'var(--rxl)', overflow: 'hidden', marginBottom: '1.5rem', position: 'relative' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, transparent, var(--gold), transparent)' }} />
+          <div style={{ background: 'linear-gradient(135deg, var(--s1), var(--s2))', border: '1px solid var(--line2)', borderRadius: 'var(--radius)', overflow: 'hidden', marginBottom: '1.5rem', position: 'relative' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, transparent, var(--accent-fg), transparent)' }} />
             <div style={{ display: 'flex', gap: '1.5rem', padding: '1.5rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-              <div style={{ width: 130, height: 195, borderRadius: 'var(--r)', overflow: 'hidden', flexShrink: 0, background: 'var(--bg3)' }}>
+              <div style={{ width: 130, height: 195, borderRadius: 'var(--radius)', overflow: 'hidden', flexShrink: 0, background: 'var(--s2)' }}>
                 {film.poster
                   ? <Image src={film.poster} alt={film.titre} width={130} height={195} style={{ objectFit: 'cover', width: '100%', height: '100%' }} priority />
                   : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem' }}>🎬</div>
                 }
               </div>
               <div style={{ flex: 1, minWidth: 200 }}>
-                <div style={{ fontSize: '.6rem', letterSpacing: '3px', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: '.5rem' }}>
+                <div style={{ fontSize: '.6rem', letterSpacing: '3px', textTransform: 'uppercase', color: 'var(--accent-fg)', marginBottom: '.5rem' }}>
                   🎬 Film de la semaine{weekFilm?.created_at ? ` — ${new Date(weekFilm.created_at).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}` : ''}
                 </div>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', lineHeight: 1.1, marginBottom: '.4rem' }}>{film.titre}</div>
-                <div style={{ fontSize: '.75rem', color: 'var(--text2)', marginBottom: '.8rem' }}>{film.annee} · {film.realisateur} · {film.genre}</div>
+                <div style={{ fontFamily: 'var(--f-display)', fontSize: '1.6rem', lineHeight: 1.1, marginBottom: '.4rem' }}>{film.titre}</div>
+                <div style={{ fontSize: '.75rem', color: 'var(--ink2)', marginBottom: '.8rem' }}>{film.annee} · {film.realisateur} · {film.genre}</div>
 
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '.4rem', background: 'rgba(232,196,106,.1)', border: '1px solid rgba(232,196,106,.28)', color: 'var(--gold)', fontSize: '.8rem', padding: '.3rem .85rem', borderRadius: 99, fontWeight: 500, marginBottom: '1rem' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '.4rem', background: 'rgba(232,196,106,.1)', border: '1px solid rgba(232,196,106,.28)', color: 'var(--accent-fg)', fontSize: '.8rem', padding: '.3rem .85rem', borderRadius: 99, fontWeight: 500, marginBottom: '1rem' }}>
                   +{config.EXP_FDLS} EXP si vu ce {config.FDLS_JOUR}
                 </div>
 
                 {weekFilm?.session_time && (
-                  <div style={{ fontSize: '.83rem', color: 'var(--text2)', marginBottom: '1rem' }}>
-                    📅 Rendez-vous : <strong style={{ color: 'var(--text)' }}>{weekFilm.session_time}</strong>
+                  <div style={{ fontSize: '.83rem', color: 'var(--ink2)', marginBottom: '1rem' }}>
+                    📅 Rendez-vous : <strong style={{ color: 'var(--ink)' }}>{weekFilm.session_time}</strong>
                   </div>
                 )}
 
@@ -133,7 +135,7 @@ export default function SemaineClient({ profile, weekFilm, film, isWatched, watc
                   !isWatched ? (
                     <button className="btn btn-gold" disabled={markingWeekFilmId === weekFilm?.id} onClick={() => markSeen(weekFilm)}>{markingWeekFilmId === weekFilm?.id ? 'Enregistrement...' : `✓ Marquer comme vu (+${config.EXP_FDLS} EXP)`}</button>
                   ) : (
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '.5rem', background: 'var(--green2)', border: '1px solid rgba(79,217,138,.3)', color: 'var(--green)', borderRadius: 99, padding: '.4rem 1rem', fontSize: '.82rem' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '.5rem', background: 'rgba(79,217,138,0.12)', border: '1px solid rgba(79,217,138,.3)', color: 'var(--ok)', borderRadius: 99, padding: '.4rem 1rem', fontSize: '.82rem' }}>
                       ✓ Vu — +{config.EXP_FDLS} EXP gagné
                     </div>
                   )
@@ -149,9 +151,9 @@ export default function SemaineClient({ profile, weekFilm, film, isWatched, watc
                       {watchProviders.flatrate?.map((p) => (
                         <a key={p.provider_id} href={`https://www.justwatch.com/fr/films?q=${encodeURIComponent(film.titre)}`} target="_blank" rel="noopener noreferrer" className="streaming-platform">
                           <Image src={`https://image.tmdb.org/t/p/w92${p.logo_path}`} alt={p.provider_name} width={32} height={32} style={{ borderRadius: 6, objectFit: 'cover' }} />
-                          <span style={{ flex: 1, fontSize: '.88rem', fontWeight: 500, color: 'var(--text)' }}>{p.provider_name}</span>
+                          <span style={{ flex: 1, fontSize: '.88rem', fontWeight: 500, color: 'var(--ink)' }}>{p.provider_name}</span>
                           <span className="sp-type svod">Abonnement</span>
-                          <span style={{ fontSize: '.8rem', color: 'var(--text3)' }}>↗</span>
+                          <span style={{ fontSize: '.8rem', color: 'var(--ink3)' }}>↗</span>
                         </a>
                       ))}
                       {(() => {
@@ -160,9 +162,9 @@ export default function SemaineClient({ profile, weekFilm, film, isWatched, watc
                         return rentBuy.filter(p => { if (seen.has(p.provider_id)) return false; seen.add(p.provider_id); return true }).map((p) => (
                           <a key={p.provider_id} href={`https://www.justwatch.com/fr/films?q=${encodeURIComponent(film.titre)}`} target="_blank" rel="noopener noreferrer" className="streaming-platform">
                             <Image src={`https://image.tmdb.org/t/p/w92${p.logo_path}`} alt={p.provider_name} width={32} height={32} style={{ borderRadius: 6, objectFit: 'cover' }} />
-                            <span style={{ flex: 1, fontSize: '.88rem', fontWeight: 500, color: 'var(--text)' }}>{p.provider_name}</span>
+                            <span style={{ flex: 1, fontSize: '.88rem', fontWeight: 500, color: 'var(--ink)' }}>{p.provider_name}</span>
                             <span className="sp-type tvod">Location/Achat</span>
-                            <span style={{ fontSize: '.8rem', color: 'var(--text3)' }}>↗</span>
+                            <span style={{ fontSize: '.8rem', color: 'var(--ink3)' }}>↗</span>
                           </a>
                         ))
                       })()}
@@ -175,8 +177,8 @@ export default function SemaineClient({ profile, weekFilm, film, isWatched, watc
                     style={{ marginTop: '.4rem', opacity: .75 }}
                   >
                     <div className="sp-icon" style={{ background: '#1e2030', color: '#fff' }}>🔍</div>
-                    <span style={{ flex: 1, fontSize: '.85rem', color: 'var(--text2)' }}>Toutes les plateformes — JustWatch</span>
-                    <span style={{ fontSize: '.8rem', color: 'var(--text3)' }}>↗</span>
+                    <span style={{ flex: 1, fontSize: '.85rem', color: 'var(--ink2)' }}>Toutes les plateformes — JustWatch</span>
+                    <span style={{ fontSize: '.8rem', color: 'var(--ink3)' }}>↗</span>
                   </a>
                 </div>
               </div>
@@ -216,12 +218,13 @@ export default function SemaineClient({ profile, weekFilm, film, isWatched, watc
                       onClick={(event) => { event.stopPropagation(); deleteArchive(entry) }}
                       onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); deleteArchive(entry) } }}
                       title="Supprimer l'archive"
-                      style={{ position: 'absolute', top: 6, right: 6, border: '1px solid rgba(232,90,90,.35)', color: 'var(--red)', borderRadius: 99, width: 22, height: 22, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '.78rem', background: 'rgba(232,90,90,.08)' }}
+                      data-destructif=""
+                      style={{ position: 'absolute', top: 6, right: 6, border: '1px solid rgba(232,90,90,.35)', color: 'var(--bad)', borderRadius: 99, width: 22, height: 22, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '.78rem', background: 'rgba(232,90,90,.08)' }}
                     >
                       ×
                     </span>
                   )}
-                  <div style={{ width: 46, height: 69, borderRadius: 5, overflow: 'hidden', flexShrink: 0, background: 'var(--bg3)', position: 'relative' }}>
+                  <div style={{ width: 46, height: 69, borderRadius: 5, overflow: 'hidden', flexShrink: 0, background: 'var(--s2)', position: 'relative' }}>
                     {archivedFilm.poster ? (
                       <Image src={archivedFilm.poster} alt={archivedFilm.titre} width={46} height={69} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
                     ) : (
@@ -253,7 +256,7 @@ export default function SemaineClient({ profile, weekFilm, film, isWatched, watc
                     {showBonus && bonusClaimed && (
                       <span style={{
                         position: 'absolute', bottom: 2, left: '50%', transform: 'translateX(-50%)',
-                        background: 'rgba(79,217,138,.25)', color: 'var(--green)',
+                        background: 'rgba(79,217,138,.25)', color: 'var(--ok)',
                         fontSize: '.45rem', fontWeight: 700, padding: '1px 4px', borderRadius: 99, whiteSpace: 'nowrap',
                       }}>
                         ✓ +{config.EXP_FDLS_BONUS}
@@ -262,18 +265,18 @@ export default function SemaineClient({ profile, weekFilm, film, isWatched, watc
                   </div>
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ display: 'flex', gap: '.45rem', alignItems: 'center', marginBottom: '.2rem' }}>
-                      {entry.active && <span style={{ color: 'var(--gold)', border: '1px solid rgba(232,196,106,.35)', borderRadius: 99, padding: '1px 6px', fontSize: '.58rem', textTransform: 'uppercase', letterSpacing: 1 }}>Actuel</span>}
-                      {showBonus && !bonusClaimed && <span style={{ color: 'var(--gold)', border: '1px solid rgba(232,196,106,.35)', borderRadius: 99, padding: '1px 6px', fontSize: '.58rem', fontWeight: 700, background: 'rgba(232,196,106,.1)' }}>+{config.EXP_FDLS_BONUS} EXP</span>}
-                      {showBonus && bonusClaimed && <span style={{ color: 'var(--green)', border: '1px solid rgba(79,217,138,.35)', borderRadius: 99, padding: '1px 6px', fontSize: '.58rem', fontWeight: 700, background: 'rgba(79,217,138,.08)' }}>✓ Bonus</span>}
-                      <span style={{ color: 'var(--text3)', fontSize: '.68rem' }}>
+                      {entry.active && <span style={{ color: 'var(--accent-fg)', border: '1px solid rgba(232,196,106,.35)', borderRadius: 99, padding: '1px 6px', fontSize: '.58rem', textTransform: 'uppercase', letterSpacing: 1 }}>Actuel</span>}
+                      {showBonus && !bonusClaimed && <span style={{ color: 'var(--accent-fg)', border: '1px solid rgba(232,196,106,.35)', borderRadius: 99, padding: '1px 6px', fontSize: '.58rem', fontWeight: 700, background: 'rgba(232,196,106,.1)' }}>+{config.EXP_FDLS_BONUS} EXP</span>}
+                      {showBonus && bonusClaimed && <span style={{ color: 'var(--ok)', border: '1px solid rgba(79,217,138,.35)', borderRadius: 99, padding: '1px 6px', fontSize: '.58rem', fontWeight: 700, background: 'rgba(79,217,138,.08)' }}>✓ Bonus</span>}
+                      <span style={{ color: 'var(--ink3)', fontSize: '.68rem' }}>
                         {new Date(entry.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
                       </span>
                     </div>
-                    <div style={{ fontFamily: 'var(--font-display)', fontSize: '.95rem', lineHeight: 1.15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{archivedFilm.titre}</div>
-                    <div style={{ color: 'var(--text3)', fontSize: '.72rem', marginTop: '.15rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontFamily: 'var(--f-display)', fontSize: '.95rem', lineHeight: 1.15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{archivedFilm.titre}</div>
+                    <div style={{ color: 'var(--ink3)', fontSize: '.72rem', marginTop: '.15rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {archivedFilm.annee}{archivedFilm.realisateur ? ` · ${archivedFilm.realisateur}` : ''}
                     </div>
-                    <div style={{ color: 'var(--gold)', fontSize: '.68rem', marginTop: '.25rem' }}>{watchPct}% vus</div>
+                    <div style={{ color: 'var(--accent-fg)', fontSize: '.68rem', marginTop: '.25rem' }}>{watchPct}% vus</div>
                   </div>
                 </button>
               )
@@ -294,7 +297,7 @@ export default function SemaineClient({ profile, weekFilm, film, isWatched, watc
             <div className="card" onClick={(event) => event.stopPropagation()} style={{ width: 'min(720px, 100%)', maxHeight: '88vh', overflow: 'auto', padding: '1.2rem', position: 'relative' }}>
               <button type="button" onClick={() => setSelectedArchive(null)} className="btn btn-ghost" style={{ position: 'absolute', top: '.7rem', right: '.7rem', padding: '.25rem .55rem' }}>×</button>
               <div style={{ display: 'flex', gap: '1.2rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
-                <div style={{ width: 110, height: 165, borderRadius: 'var(--r)', overflow: 'hidden', flexShrink: 0, background: 'var(--bg3)' }}>
+                <div style={{ width: 110, height: 165, borderRadius: 'var(--radius)', overflow: 'hidden', flexShrink: 0, background: 'var(--s2)' }}>
                   {archivedFilm.poster ? (
                     <Image src={archivedFilm.poster} alt={archivedFilm.titre} width={110} height={165} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
@@ -302,10 +305,10 @@ export default function SemaineClient({ profile, weekFilm, film, isWatched, watc
                   )}
                 </div>
                 <div style={{ flex: 1, minWidth: 220 }}>
-                  <div style={{ color: 'var(--gold)', fontSize: '.65rem', letterSpacing: 2, textTransform: 'uppercase', marginBottom: '.45rem' }}>Archive film de la semaine</div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.45rem', lineHeight: 1.1 }}>{archivedFilm.titre}</div>
-                  <div style={{ color: 'var(--text2)', fontSize: '.82rem', marginTop: '.35rem' }}>{archivedFilm.annee} · {archivedFilm.realisateur}{archivedFilm.genre ? ` · ${archivedFilm.genre}` : ''}</div>
-                  {archivedFilm.sousgenre && <div style={{ color: 'var(--text3)', fontSize: '.76rem', marginTop: '.2rem' }}>{archivedFilm.sousgenre}</div>}
+                  <div style={{ color: 'var(--accent-fg)', fontSize: '.65rem', letterSpacing: 2, textTransform: 'uppercase', marginBottom: '.45rem' }}>Archive film de la semaine</div>
+                  <div style={{ fontFamily: 'var(--f-display)', fontSize: '1.45rem', lineHeight: 1.1 }}>{archivedFilm.titre}</div>
+                  <div style={{ color: 'var(--ink2)', fontSize: '.82rem', marginTop: '.35rem' }}>{archivedFilm.annee} · {archivedFilm.realisateur}{archivedFilm.genre ? ` · ${archivedFilm.genre}` : ''}</div>
+                  {archivedFilm.sousgenre && <div style={{ color: 'var(--ink3)', fontSize: '.76rem', marginTop: '.2rem' }}>{archivedFilm.sousgenre}</div>}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '.6rem', marginTop: '1rem' }}>
                     <div className="stat"><div className="stat-l">Vus</div><div className="stat-v green">{watchCount}</div></div>
                     <div className="stat"><div className="stat-l">Joueurs</div><div className="stat-v">{totalUsers}</div></div>
@@ -314,7 +317,7 @@ export default function SemaineClient({ profile, weekFilm, film, isWatched, watc
                   <div style={{ marginTop: '1rem' }}>
                     {profile ? (
                       alreadyWatched ? (
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '.5rem', background: 'var(--green2)', border: '1px solid rgba(79,217,138,.3)', color: 'var(--green)', borderRadius: 99, padding: '.4rem 1rem', fontSize: '.82rem' }}>✓ Vu</div>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '.5rem', background: 'rgba(79,217,138,0.12)', border: '1px solid rgba(79,217,138,.3)', color: 'var(--ok)', borderRadius: 99, padding: '.4rem 1rem', fontSize: '.82rem' }}>✓ Vu</div>
                       ) : (
                         <button className="btn btn-gold" disabled={!canMarkArchive || markingWeekFilmId === selectedArchive.id} onClick={() => markSeen(selectedArchive)}>
                           {markingWeekFilmId === selectedArchive.id ? 'Enregistrement...' : `Marquer comme vu (+${config.EXP_FDLS} EXP)`}
@@ -324,7 +327,7 @@ export default function SemaineClient({ profile, weekFilm, film, isWatched, watc
                       <a href="/auth" className="btn btn-outline" style={{ fontSize: '.82rem' }}>Se connecter pour marquer comme vu</a>
                     )}
                     {!alreadyWatched && !canMarkArchive && (
-                      <div style={{ color: 'var(--text3)', fontSize: '.72rem', marginTop: '.55rem' }}>Seule la dernière archive peut être marquée vue le vendredi soir et le samedi.</div>
+                      <div style={{ color: 'var(--ink3)', fontSize: '.72rem', marginTop: '.55rem' }}>Seule la dernière archive peut être marquée vue le vendredi soir et le samedi.</div>
                     )}
                   </div>
                 </div>

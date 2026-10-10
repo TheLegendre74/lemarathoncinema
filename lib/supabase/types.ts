@@ -17,6 +17,11 @@ export type Database = {
           marathon_blocked_until: string | null
           pre_marathon_window_until: string | null
           tutorial_seen: boolean
+          radio_music: boolean
+          radio_volume: number
+          theme_eggs: boolean
+          sursauts: boolean | null
+          son_horreur: boolean | null
         }
         Insert: {
           id: string
@@ -28,6 +33,11 @@ export type Database = {
           active_badge?: string | null
           pre_marathon_window_until?: string | null
           tutorial_seen?: boolean
+          radio_music?: boolean
+          radio_volume?: number
+          theme_eggs?: boolean
+          sursauts?: boolean | null
+          son_horreur?: boolean | null
         }
         Update: {
           pseudo?: string
@@ -38,6 +48,11 @@ export type Database = {
           active_badge?: string | null
           pre_marathon_window_until?: string | null
           tutorial_seen?: boolean
+          radio_music?: boolean
+          radio_volume?: number
+          theme_eggs?: boolean
+          sursauts?: boolean | null
+          son_horreur?: boolean | null
         }
         Relationships: []
       }
@@ -308,6 +323,163 @@ export type Database = {
         Update: {
           value?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      season_weeks: {
+        Row: {
+          id: number
+          saison: number
+          semaine: number
+          theme: string
+          date_debut: string
+          created_at: string
+        }
+        Insert: {
+          saison: number
+          semaine: number
+          theme: string
+          date_debut: string
+        }
+        Update: {
+          saison?: number
+          semaine?: number
+          theme?: string
+          date_debut?: string
+        }
+        Relationships: []
+      }
+      admin_log: {
+        Row: {
+          id: number
+          admin_id: string | null
+          action: string
+          detail: Json | null
+          created_at: string
+        }
+        Insert: {
+          admin_id?: string | null
+          action: string
+          detail?: Json | null
+        }
+        Update: {
+          action?: string
+          detail?: Json | null
+        }
+        Relationships: []
+      }
+      site_prive: {
+        Row: {
+          key: string
+          value: string
+          updated_at: string
+        }
+        Insert: {
+          key: string
+          value: string
+        }
+        Update: {
+          value?: string
+        }
+        Relationships: []
+      }
+      news: {
+        Row: {
+          id: string
+          title: string
+          content: string
+          pinned: boolean
+          created_at: string
+        }
+        Insert: {
+          title: string
+          content: string
+          pinned?: boolean
+        }
+        Update: {
+          title?: string
+          content?: string
+          pinned?: boolean
+        }
+        Relationships: []
+      }
+      recommendations: {
+        Row: {
+          id: string
+          titre: string
+          annee: number | null
+          realisateur: string
+          description: string
+          niveau: string
+          position: number
+          created_at: string
+        }
+        Insert: {
+          titre: string
+          annee?: number | null
+          realisateur?: string
+          description?: string
+          niveau: string
+          position?: number
+        }
+        Update: {
+          titre?: string
+          annee?: number | null
+          realisateur?: string
+          description?: string
+          niveau?: string
+          position?: number
+        }
+        Relationships: []
+      }
+      forum_topics: {
+        Row: {
+          id: string
+          title: string
+          type: string
+          created_at: string
+        }
+        Insert: {
+          title: string
+          type?: string
+        }
+        Update: {
+          title?: string
+          type?: string
+        }
+        Relationships: []
+      }
+      forum_posts: {
+        Row: {
+          id: string
+          topic_id: string
+          user_id: string
+          content: string
+          created_at: string
+        }
+        Insert: {
+          topic_id: string
+          user_id: string
+          content: string
+        }
+        Update: {
+          content?: string
+        }
+        Relationships: []
+      }
+      marathon_requests: {
+        Row: {
+          id: string
+          user_id: string
+          status: string
+          created_at: string
+        }
+        Insert: {
+          user_id: string
+          status?: string
+        }
+        Update: {
+          status?: string
         }
         Relationships: []
       }

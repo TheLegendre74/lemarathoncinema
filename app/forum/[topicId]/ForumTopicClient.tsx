@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { addForumPost, deleteForumPost, deleteForumTopic, updateForumTopic } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
+import { emitDestruction } from '@/lib/destruction'
 import { getActiveBadge } from '@/lib/config'
 import type { Profile } from '@/lib/supabase/types'
 
@@ -66,13 +67,15 @@ export default function ForumTopicClient({ topic, posts: initialPosts, profile }
   async function handleDeletePost(postId: string) {
     setPosts(prev => prev.filter(p => p.id !== postId))
     const res = await deleteForumPost(postId)
-    if (res.error) addToast(res.error, 'error')
+    if (res.error) { addToast(res.error, 'error'); return }
+    emitDestruction()
   }
 
   async function handleDeleteTopic() {
     if (!confirm('Supprimer ce topic ? Tous les messages seront perdus.')) return
     const res = await deleteForumTopic(topic.id)
     if (res.error) { addToast(res.error, 'error'); return }
+    emitDestruction()
     router.push('/forum')
   }
 
@@ -91,7 +94,7 @@ export default function ForumTopicClient({ topic, posts: initialPosts, profile }
     <div>
       {/* Header */}
       <div style={{ marginBottom: '1.5rem' }}>
-        <Link href="/forum" style={{ fontSize: '.78rem', color: 'var(--text3)', textDecoration: 'none' }}>← Forum</Link>
+        <Link href="/forum" style={{ fontSize: '.78rem', color: 'var(--ink3)', textDecoration: 'none' }}>← Forum</Link>
 
         {editing ? (
           <div style={{ marginTop: '.5rem', display: 'flex', flexDirection: 'column', gap: '.6rem' }}>
@@ -100,9 +103,9 @@ export default function ForumTopicClient({ topic, posts: initialPosts, profile }
               onChange={e => setEditTitle(e.target.value)}
               maxLength={100}
               style={{
-                background: 'var(--bg2)', border: '1px solid var(--border2)',
-                borderRadius: 'var(--r)', padding: '.55rem .9rem',
-                color: 'var(--text)', fontFamily: 'var(--font-display)', fontSize: '1.5rem',
+                background: 'var(--s1)', border: '1px solid var(--line2)',
+                borderRadius: 'var(--radius)', padding: '.55rem .9rem',
+                color: 'var(--ink)', fontFamily: 'var(--f-display)', fontSize: '1.5rem',
               }}
             />
             <textarea
@@ -112,9 +115,9 @@ export default function ForumTopicClient({ topic, posts: initialPosts, profile }
               placeholder="Description (optionnelle)…"
               rows={2}
               style={{
-                background: 'var(--bg2)', border: '1px solid var(--border2)',
-                borderRadius: 'var(--r)', padding: '.55rem .9rem',
-                color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.85rem', resize: 'vertical',
+                background: 'var(--s1)', border: '1px solid var(--line2)',
+                borderRadius: 'var(--radius)', padding: '.55rem .9rem',
+                color: 'var(--ink)', fontFamily: 'var(--font-body)', fontSize: '.85rem', resize: 'vertical',
               }}
             />
             <div style={{ display: 'flex', gap: '.5rem' }}>
@@ -129,9 +132,9 @@ export default function ForumTopicClient({ topic, posts: initialPosts, profile }
         ) : (
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', marginTop: '.5rem' }}>
             <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', lineHeight: 1 }}>{topic.title}</div>
-              {topic.description && <div style={{ color: 'var(--text2)', fontSize: '.83rem', marginTop: '.35rem' }}>{topic.description}</div>}
-              <div style={{ fontSize: '.73rem', color: 'var(--text3)', marginTop: '.3rem' }}>{posts.length} message{posts.length !== 1 ? 's' : ''}</div>
+              <div style={{ fontFamily: 'var(--f-display)', fontSize: '2rem', lineHeight: 1 }}>{topic.title}</div>
+              {topic.description && <div style={{ color: 'var(--ink2)', fontSize: '.83rem', marginTop: '.35rem' }}>{topic.description}</div>}
+              <div style={{ fontSize: '.73rem', color: 'var(--ink3)', marginTop: '.3rem' }}>{posts.length} message{posts.length !== 1 ? 's' : ''}</div>
             </div>
             {(isCreator || isAdmin) && (
               <div style={{ display: 'flex', gap: '.4rem', flexShrink: 0, marginTop: '.3rem' }}>
@@ -144,8 +147,9 @@ export default function ForumTopicClient({ topic, posts: initialPosts, profile }
                 <button
                   onClick={handleDeleteTopic}
                   className="btn btn-outline"
-                  style={{ fontSize: '.75rem', padding: '.35rem .7rem', borderColor: 'rgba(232,90,90,.4)', color: 'var(--red)' }}
+                  style={{ fontSize: '.75rem', padding: '.35rem .7rem', borderColor: 'rgba(232,90,90,.4)', color: 'var(--bad)' }}
                   title="Supprimer le topic"
+                  data-destructif=""
                 >🗑️ Supprimer</button>
               </div>
             )}
@@ -167,15 +171,15 @@ export default function ForumTopicClient({ topic, posts: initialPosts, profile }
           const badge = getActiveBadge(p.profiles?.exp ?? 0, p.profiles?.active_badge ?? null)
           return (
             <div key={p.id} style={{
-              background: isMe ? 'rgba(232,196,106,.04)' : 'var(--bg2)',
-              border: `1px solid ${isMe ? 'rgba(232,196,106,.25)' : 'var(--border)'}`,
-              borderRadius: 'var(--r)', padding: '1rem 1.2rem',
+              background: isMe ? 'rgba(232,196,106,.04)' : 'var(--s1)',
+              border: `1px solid ${isMe ? 'rgba(232,196,106,.25)' : 'var(--line)'}`,
+              borderRadius: 'var(--radius)', padding: '1rem 1.2rem',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '.7rem', marginBottom: '.6rem' }}>
                 <div style={{
                   width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-                  background: isMe ? 'linear-gradient(135deg, var(--gold2), var(--purple))' : 'var(--bg3)',
-                  color: isMe ? '#0a0a0f' : 'var(--text2)',
+                  background: isMe ? 'linear-gradient(135deg, var(--accent-2), var(--purple))' : 'var(--s2)',
+                  color: isMe ? '#0a0a0f' : 'var(--ink2)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '.72rem', fontWeight: 600,
                   backgroundImage: p.profiles?.avatar_url ? `url(${p.profiles.avatar_url})` : undefined,
@@ -186,20 +190,21 @@ export default function ForumTopicClient({ topic, posts: initialPosts, profile }
                 <div style={{ flex: 1 }}>
                   <span style={{ fontSize: '.83rem', fontWeight: 500 }}>{p.profiles?.pseudo ?? 'Inconnu'}</span>
                   {badge && <span style={{ marginLeft: '.4rem', fontSize: '.75rem' }}>{badge.icon}</span>}
-                  {isMe && <span style={{ fontSize: '.63rem', color: 'var(--gold)', marginLeft: '.4rem' }}>(toi)</span>}
+                  {isMe && <span style={{ fontSize: '.63rem', color: 'var(--accent-fg)', marginLeft: '.4rem' }}>(toi)</span>}
                 </div>
-                <span style={{ fontSize: '.68rem', color: 'var(--text3)' }}>
+                <span style={{ fontSize: '.68rem', color: 'var(--ink3)' }}>
                   {new Date(p.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                 </span>
                 {canDelete && (
                   <button
                     onClick={() => handleDeletePost(p.id)}
-                    style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: '.75rem', padding: '2px 6px' }}
+                    style={{ background: 'none', border: 'none', color: 'var(--ink3)', cursor: 'pointer', fontSize: '.75rem', padding: '2px 6px' }}
                     title="Supprimer"
+                    data-destructif=""
                   >✕</button>
                 )}
               </div>
-              <div style={{ fontSize: '.85rem', color: 'var(--text)', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              <div style={{ fontSize: '.85rem', color: 'var(--ink)', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                 {p.content}
               </div>
             </div>
@@ -218,8 +223,8 @@ export default function ForumTopicClient({ topic, posts: initialPosts, profile }
             maxLength={2000}
             rows={3}
             style={{
-              flex: 1, background: 'var(--bg2)', border: '1px solid var(--border2)',
-              borderRadius: 'var(--r)', padding: '.65rem .9rem', color: 'var(--text)',
+              flex: 1, background: 'var(--s1)', border: '1px solid var(--line2)',
+              borderRadius: 'var(--radius)', padding: '.65rem .9rem', color: 'var(--ink)',
               fontFamily: 'var(--font-body)', fontSize: '.85rem', resize: 'vertical',
             }}
           />
@@ -228,8 +233,8 @@ export default function ForumTopicClient({ topic, posts: initialPosts, profile }
           </button>
         </form>
       ) : (
-        <div style={{ textAlign: 'center', padding: '1.5rem', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', fontSize: '.83rem', color: 'var(--text2)' }}>
-          <Link href="/auth" style={{ color: 'var(--gold)' }}>Connecte-toi</Link> pour participer à la discussion.
+        <div style={{ textAlign: 'center', padding: '1.5rem', background: 'var(--s1)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', fontSize: '.83rem', color: 'var(--ink2)' }}>
+          <Link href="/auth" style={{ color: 'var(--accent-fg)' }}>Connecte-toi</Link> pour participer à la discussion.
         </div>
       )}
     </div>

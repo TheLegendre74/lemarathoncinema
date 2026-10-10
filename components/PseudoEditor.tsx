@@ -29,7 +29,7 @@ export default function PseudoEditor({ initial }: { initial: string }) {
 
   return (
     <div style={{ marginBottom: '1.5rem' }}>
-      <div style={{ fontSize: '.68rem', letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: '.5rem' }}>
+      <div style={{ fontSize: '.68rem', letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--ink3)', marginBottom: '.5rem' }}>
         Pseudo
       </div>
       {editing ? (
@@ -40,9 +40,9 @@ export default function PseudoEditor({ initial }: { initial: string }) {
             placeholder="Nouveau pseudo..."
             autoFocus
             onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') cancel() }}
-            style={{ width: '100%', background: 'var(--bg3)', border: `1px solid ${error ? 'var(--red)' : 'var(--border2)'}`, borderRadius: 'var(--r)', padding: '.65rem .9rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.88rem', outline: 'none', boxSizing: 'border-box' }}
+            style={{ width: '100%', background: 'var(--s2)', border: `1px solid ${error ? 'var(--bad)' : 'var(--line2)'}`, borderRadius: 'var(--radius)', padding: '.65rem .9rem', color: 'var(--ink)', fontFamily: 'var(--font-body)', fontSize: '.88rem', outline: 'none', boxSizing: 'border-box' }}
           />
-          {error && <div style={{ fontSize: '.75rem', color: 'var(--red)', marginTop: '.3rem' }}>{error}</div>}
+          {error && <div style={{ fontSize: '.75rem', color: 'var(--bad)', marginTop: '.3rem' }}>{error}</div>}
           <div style={{ display: 'flex', gap: '.5rem', alignItems: 'center', marginTop: '.5rem' }}>
             <button onClick={save} disabled={pending} className="btn btn-gold" style={{ fontSize: '.8rem', padding: '.4rem .9rem' }}>
               {pending ? 'Sauvegarde...' : 'Sauvegarder'}
@@ -50,16 +50,16 @@ export default function PseudoEditor({ initial }: { initial: string }) {
             <button onClick={cancel} className="btn btn-outline" style={{ fontSize: '.8rem', padding: '.4rem .9rem' }}>
               Annuler
             </button>
-            <span style={{ fontSize: '.68rem', color: 'var(--text3)', marginLeft: 'auto' }}>{value.length}/20</span>
+            <span style={{ fontSize: '.68rem', color: 'var(--ink3)', marginLeft: 'auto' }}>{value.length}/20</span>
           </div>
         </div>
       ) : (
         <div
           onClick={() => setEditing(true)}
-          style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.65rem .9rem', fontSize: '.88rem', color: 'var(--text2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+          style={{ background: 'var(--s2)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', padding: '.65rem .9rem', fontSize: '.88rem', color: 'var(--ink2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
         >
           <span>{initial}</span>
-          <span style={{ fontSize: '.65rem', color: 'var(--text3)' }}>✏️ Modifier</span>
+          <span style={{ fontSize: '.65rem', color: 'var(--ink3)' }}>✏️ Modifier</span>
         </div>
       )}
     </div>

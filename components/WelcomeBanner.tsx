@@ -25,7 +25,7 @@ export default function WelcomeBanner() {
     <div style={{
       background: 'linear-gradient(135deg, rgba(232,196,106,.13), rgba(167,139,250,.08))',
       border: '1px solid rgba(232,196,106,.45)',
-      borderRadius: 'var(--rl)',
+      borderRadius: 'var(--radius)',
       padding: '1rem 1.2rem',
       marginBottom: '1.5rem',
       display: 'flex',
@@ -35,31 +35,31 @@ export default function WelcomeBanner() {
     }}>
       <span style={{ fontSize: '1.8rem', lineHeight: 1, flexShrink: 0 }}>👋</span>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', marginBottom: '.3rem', color: 'var(--gold)' }}>
+        <div style={{ fontFamily: 'var(--f-display)', fontSize: '1rem', marginBottom: '.3rem', color: 'var(--accent-fg)' }}>
           Bienvenue sur le Ciné Marathon !
         </div>
-        <div style={{ fontSize: '.82rem', color: 'var(--text2)', lineHeight: 1.6, marginBottom: '.7rem' }}>
+        <div style={{ fontSize: '.82rem', color: 'var(--ink2)', lineHeight: 1.6, marginBottom: '.7rem' }}>
           Avant de commencer, consulte les règles du jeu ci-dessous pour tout comprendre en 2 minutes.
         </div>
         <div style={{ display: 'flex', gap: '.6rem', flexWrap: 'wrap' }}>
-          <a
-            href="#regles"
+          <Link
+            href="/regles"
             onClick={dismiss}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: '.4rem',
               background: 'rgba(232,196,106,.18)', border: '1px solid rgba(232,196,106,.4)',
-              borderRadius: 'var(--r)', padding: '.45rem 1rem',
-              color: 'var(--gold)', textDecoration: 'none', fontSize: '.82rem', fontWeight: 500,
+              borderRadius: 'var(--radius)', padding: '.45rem 1rem',
+              color: 'var(--accent-fg)', textDecoration: 'none', fontSize: '.82rem', fontWeight: 500,
             }}
           >
-            📖 Voir les règles
-          </a>
+            Voir les règles
+          </Link>
           <button
             onClick={dismiss}
             style={{
-              background: 'none', border: '1px solid var(--border2)',
-              borderRadius: 'var(--r)', padding: '.45rem .9rem',
-              color: 'var(--text3)', fontSize: '.78rem', cursor: 'pointer',
+              background: 'none', border: '1px solid var(--line2)',
+              borderRadius: 'var(--radius)', padding: '.45rem .9rem',
+              color: 'var(--ink3)', fontSize: '.78rem', cursor: 'pointer',
             }}
           >
             Je connais déjà
@@ -68,7 +68,7 @@ export default function WelcomeBanner() {
       </div>
       <button
         onClick={dismiss}
-        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: '1rem', padding: 0, flexShrink: 0 }}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink3)', fontSize: '1rem', padding: 0, flexShrink: 0 }}
         aria-label="Fermer"
       >
         ✕

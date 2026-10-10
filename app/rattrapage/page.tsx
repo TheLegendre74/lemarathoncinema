@@ -7,7 +7,7 @@ const LEVEL_INFO = {
   debutant: {
     label: 'Débutant',
     emoji: '🎬',
-    color: 'var(--green)',
+    color: 'var(--ok)',
     desc: 'Les incontournables absolus — films que tout cinéphile doit avoir vu au moins une fois.',
     bgColor: 'rgba(60,180,60,.08)',
     borderColor: 'rgba(60,180,60,.3)',
@@ -15,7 +15,7 @@ const LEVEL_INFO = {
   intermediaire: {
     label: 'Intermédiaire',
     emoji: '🎭',
-    color: 'var(--gold)',
+    color: 'var(--accent-fg)',
     desc: 'Des œuvres importantes moins connues du grand public — pour aller plus loin.',
     bgColor: 'rgba(232,196,106,.08)',
     borderColor: 'rgba(232,196,106,.3)',
@@ -47,8 +47,8 @@ export default async function RattrapagePage() {
   return (
     <div>
       <div style={{ marginBottom: '2rem' }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', lineHeight: 1 }}>Rattrapage Cinéma</div>
-        <div style={{ color: 'var(--text2)', fontSize: '.83rem', marginTop: '.35rem' }}>
+        <div style={{ fontFamily: 'var(--f-display)', fontSize: '2rem', lineHeight: 1 }}>Rattrapage Cinéma</div>
+        <div style={{ color: 'var(--ink2)', fontSize: '.83rem', marginTop: '.35rem' }}>
           Des listes de films essentiels à voir, classées par niveau de culture ciné.
         </div>
       </div>
@@ -61,18 +61,18 @@ export default async function RattrapagePage() {
             <div style={{
               display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem',
               background: info.bgColor, border: `1px solid ${info.borderColor}`,
-              borderRadius: 'var(--rl)', padding: '1rem 1.4rem',
+              borderRadius: 'var(--radius)', padding: '1rem 1.4rem',
             }}>
               <span style={{ fontSize: '2rem' }}>{info.emoji}</span>
               <div>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: info.color }}>{info.label}</div>
-                <div style={{ fontSize: '.78rem', color: 'var(--text2)', marginTop: '.2rem' }}>{info.desc}</div>
+                <div style={{ fontFamily: 'var(--f-display)', fontSize: '1.3rem', color: info.color }}>{info.label}</div>
+                <div style={{ fontSize: '.78rem', color: 'var(--ink2)', marginTop: '.2rem' }}>{info.desc}</div>
               </div>
-              <div style={{ marginLeft: 'auto', fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: info.color }}>{list.length}</div>
+              <div style={{ marginLeft: 'auto', fontFamily: 'var(--f-display)', fontSize: '1.5rem', color: info.color }}>{list.length}</div>
             </div>
 
             {list.length === 0 ? (
-              <div style={{ color: 'var(--text3)', fontSize: '.83rem', textAlign: 'center', padding: '1.5rem' }}>
+              <div style={{ color: 'var(--ink3)', fontSize: '.83rem', textAlign: 'center', padding: '1.5rem' }}>
                 Aucun film dans cette liste pour l'instant.
               </div>
             ) : (
@@ -80,10 +80,10 @@ export default async function RattrapagePage() {
                 {list.map((f: any, i: number) => (
                   <div key={f.id} style={{
                     display: 'flex', alignItems: 'center', gap: '1rem',
-                    background: 'var(--bg2)', border: '1px solid var(--border)',
-                    borderRadius: 'var(--r)', padding: '.75rem 1rem',
+                    background: 'var(--s1)', border: '1px solid var(--line)',
+                    borderRadius: 'var(--radius)', padding: '.75rem 1rem',
                   }}>
-                    <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: 'var(--text3)', width: 28, textAlign: 'center', flexShrink: 0 }}>
+                    <div style={{ fontFamily: 'var(--f-display)', fontSize: '1.2rem', color: 'var(--ink3)', width: 28, textAlign: 'center', flexShrink: 0 }}>
                       {i + 1}
                     </div>
                     {f.poster ? (
@@ -91,15 +91,15 @@ export default async function RattrapagePage() {
                         <Image src={f.poster} alt={f.titre} width={36} height={54} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
                       </div>
                     ) : (
-                      <div style={{ width: 36, height: 54, borderRadius: 5, background: 'var(--bg3)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>🎬</div>
+                      <div style={{ width: 36, height: 54, borderRadius: 5, background: 'var(--s2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>🎬</div>
                     )}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: '.88rem', fontWeight: 500 }}>{f.titre}</div>
-                      <div style={{ fontSize: '.72rem', color: 'var(--text3)' }}>
+                      <div style={{ fontSize: '.72rem', color: 'var(--ink3)' }}>
                         {f.annee}{f.realisateur ? ` · ${f.realisateur}` : ''}
                       </div>
                       {f.description && (
-                        <div style={{ fontSize: '.73rem', color: 'var(--text2)', marginTop: '.2rem', lineHeight: 1.4 }}>{f.description}</div>
+                        <div style={{ fontSize: '.73rem', color: 'var(--ink2)', marginTop: '.2rem', lineHeight: 1.4 }}>{f.description}</div>
                       )}
                     </div>
                   </div>

@@ -1,14 +1,14 @@
 export default function MentionsLegales() {
   return (
     <div style={{ maxWidth: 680, margin: '0 auto', lineHeight: 1.8 }}>
-      <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.8rem', marginBottom: '2rem' }}>Mentions légales</h1>
+      <h1 style={{ fontFamily: 'var(--f-display)', fontSize: '1.8rem', marginBottom: '2rem' }}>Mentions légales</h1>
 
       <Section title="Éditeur du site">
         <p>Le présent site <strong>Le Marathon Cinéma</strong> est édité par :</p>
         <p>
           <strong>The Legendre</strong><br />
           Var (83), France<br />
-          Email : <a href="mailto:LeMarathonCinema@gmail.com" style={{ color: 'var(--gold)' }}>LeMarathonCinema@gmail.com</a>
+          Email : <a href="mailto:LeMarathonCinema@gmail.com" style={{ color: 'var(--accent-fg)' }}>LeMarathonCinema@gmail.com</a>
         </p>
       </Section>
 
@@ -17,7 +17,7 @@ export default function MentionsLegales() {
           Le site est hébergé par :<br />
           <strong>Vercel Inc.</strong><br />
           440 N Barranca Ave #4133, Covina, CA 91723, États-Unis<br />
-          <a href="https://vercel.com" style={{ color: 'var(--gold)' }}>vercel.com</a>
+          <a href="https://vercel.com" style={{ color: 'var(--accent-fg)' }}>vercel.com</a>
         </p>
       </Section>
 
@@ -43,11 +43,11 @@ export default function MentionsLegales() {
       <Section title="Contact">
         <p>
           Pour toute question relative au site :<br />
-          <a href="mailto:LeMarathonCinema@gmail.com" style={{ color: 'var(--gold)' }}>LeMarathonCinema@gmail.com</a>
+          <a href="mailto:LeMarathonCinema@gmail.com" style={{ color: 'var(--accent-fg)' }}>LeMarathonCinema@gmail.com</a>
         </p>
       </Section>
 
-      <p style={{ fontSize: '.75rem', color: 'var(--text3)', marginTop: '3rem' }}>
+      <p style={{ fontSize: '.75rem', color: 'var(--ink3)', marginTop: '3rem' }}>
         Dernière mise à jour : avril 2026
       </p>
     </div>
@@ -57,10 +57,10 @@ export default function MentionsLegales() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: '2rem' }}>
-      <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--gold)', marginBottom: '.6rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
+      <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--accent-fg)', marginBottom: '.6rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
         {title}
       </h2>
-      <div style={{ color: 'var(--text2)', fontSize: '.88rem' }}>{children}</div>
+      <div style={{ color: 'var(--ink2)', fontSize: '.88rem' }}>{children}</div>
     </div>
   )
 }

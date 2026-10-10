@@ -7,7 +7,7 @@ export default function PageLoading() {
           50%      { opacity:.65; }
         }
         .pg-sk {
-          background: var(--bg2);
+          background: var(--s1);
           border-radius: 8px;
           animation: pg-pulse 1.4s ease-in-out infinite;
         }

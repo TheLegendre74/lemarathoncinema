@@ -1,0 +1,274 @@
+/* ═══════════════════════════════════════════════════════════
+   Comédie — hero accueil T1 (§14.7)
+   ═══════════════════════════════════════════════════════════ */
+
+.hero {
+  position: relative;
+  padding: var(--sp-7) var(--sp-5) var(--sp-6);
+  padding-left: calc(110px + var(--sp-5));
+  padding-right: calc(110px + var(--sp-5));
+}
+
+.heroContent {
+  display: flex;
+  gap: var(--sp-6);
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.heroMain {
+  flex: 1;
+  min-width: 0;
+}
+
+.heroSidebar {
+  width: 280px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+/* ── Poster with gold frame ── */
+.posterWrap {
+  position: relative;
+  width: 200px;
+  border: 3px solid var(--or);
+  box-shadow: inset 0 0 0 1px var(--or-eteint), 0 4px 20px rgba(0,0,0,.5);
+  margin-bottom: var(--sp-4);
+}
+
+.posterRibbon {
+  position: absolute;
+  top: 8px;
+  right: -6px;
+  background: var(--or);
+  color: var(--bg);
+  font-family: var(--f-data);
+  font-size: 10px;
+  letter-spacing: .06em;
+  padding: 3px 10px;
+  text-transform: uppercase;
+  z-index: 1;
+}
+
+.citation {
+  font-family: var(--f-main);
+  font-size: 18px;
+  color: var(--ink2);
+  line-height: 1.3;
+  margin-top: var(--sp-3);
+}
+
+/* ── Title ── */
+.seanceLine {
+  font-family: var(--f-ui);
+  font-size: var(--fs-1);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--ui-track);
+  color: var(--ink3);
+  margin-bottom: var(--sp-2);
+}
+
+.heroTitle {
+  font-family: var(--f-display);
+  font-weight: var(--disp-weight);
+  text-transform: var(--disp-case);
+  font-size: clamp(34px, 5vw, 56px);
+  line-height: 1.05;
+  color: var(--ink);
+  text-shadow: var(--ombre-titre);
+  margin-bottom: var(--sp-2);
+}
+
+.heroMeta {
+  font-family: var(--f-ui);
+  font-size: var(--fs-2);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--ink2);
+  margin-bottom: var(--sp-2);
+}
+
+.heroCount {
+  font-family: var(--f-ui);
+  font-size: var(--fs-1);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--ink3);
+  margin-bottom: var(--sp-3);
+}
+
+.synopsis {
+  font-family: var(--f-body);
+  font-size: var(--fs-3);
+  color: var(--ink2);
+  line-height: 1.55;
+  margin-bottom: var(--sp-4);
+}
+
+/* ── Buttons ── */
+.heroBtns {
+  display: flex;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+
+.btnTicket {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-family: var(--f-ui);
+  font-size: var(--fs-2);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--ui-track);
+  padding: var(--sp-3) var(--sp-5);
+  border: none;
+  border-radius: var(--radius);
+  text-decoration: none;
+  min-height: 44px;
+  cursor: pointer;
+  transition: background var(--dur) var(--ease);
+}
+.btnTicket:hover { background: var(--rideau-vif); }
+
+.btnStub {
+  font-family: var(--f-data);
+  font-size: 11px;
+  color: var(--or-clair);
+  padding: 0 8px;
+  border-left: 1px dashed var(--accent-ink);
+  opacity: 0.8;
+}
+
+.btnOutline {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line2);
+  color: var(--ink);
+  font-family: var(--f-ui);
+  font-size: var(--fs-2);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--ui-track);
+  padding: var(--sp-3) var(--sp-5);
+  text-decoration: none;
+  border-radius: var(--radius);
+  min-height: 44px;
+  transition: border-color var(--dur) var(--ease);
+}
+.btnOutline:hover { border-color: var(--ink3); }
+
+/* ── Sidebar sections ── */
+.sideSection {
+  padding: var(--sp-3);
+  background: var(--s1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.sideTitle {
+  font-family: var(--f-ui);
+  font-size: var(--fs-1);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--ink3);
+  margin-bottom: var(--sp-2);
+}
+
+/* ── Activity feed ── */
+.actLine {
+  display: flex;
+  gap: var(--sp-2);
+  font-size: var(--fs-1);
+  padding: 2px 0;
+  align-items: baseline;
+}
+
+.actTime {
+  font-family: var(--f-data);
+  color: var(--info);
+  flex-shrink: 0;
+  font-size: 11px;
+}
+
+.actText {
+  color: var(--ink2);
+  font-size: 11px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actAmount {
+  font-family: var(--f-data);
+  color: var(--or-clair);
+  flex-shrink: 0;
+  font-size: 11px;
+}
+
+/* ── EXP gauge ── */
+.gauge {
+  height: 6px;
+  background: var(--s3);
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius);
+}
+
+.gaugeFill {
+  height: 100%;
+  background: var(--or);
+  transition: width var(--dur) var(--ease);
+}
+
+.gaugeMeta {
+  font-family: var(--f-data);
+  font-size: 10px;
+  color: var(--ink3);
+  margin-top: 4px;
+}
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  .hero {
+    padding: var(--sp-5) calc(14px + var(--sp-4));
+  }
+
+  .heroContent {
+    flex-direction: column;
+    gap: var(--sp-5);
+  }
+
+  .heroSidebar {
+    width: 100%;
+  }
+
+  .posterWrap {
+    width: 60%;
+    max-width: 240px;
+    margin: 0 auto var(--sp-4);
+  }
+
+  .heroTitle {
+    font-size: clamp(34px, 10vw, 60px);
+  }
+
+  .heroBtns {
+    flex-direction: column;
+    gap: var(--sp-2);
+  }
+
+  .btnTicket, .btnOutline {
+    width: 100%;
+    justify-content: center;
+  }
+}

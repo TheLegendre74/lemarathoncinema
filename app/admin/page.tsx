@@ -1,91 +1,138 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import AdminClient from './AdminClient'
-import { getServerConfig } from '@/lib/serverConfig'
-import { adminGetMarathonRequests, adminGetSeasonJoinRequests, adminGetAllSeasonJoinRequests } from '@/lib/actions'
-import type { Profile } from '@/lib/supabase/types'
 import { getUserCached } from '@/lib/auth'
+import { getServerConfig } from '@/lib/serverConfig'
+import { getSeasonWeeks } from '@/lib/themes/seasonWeeks'
+import { resolveTheme } from '@/lib/themes/resolve'
+import { cookies } from 'next/headers'
+import { READY_THEMES, type ThemeKey } from '@/lib/themes/types'
+import Link from 'next/link'
+import styles from './admin.module.css'
 
 export const revalidate = 0
 
-export default async function AdminPage() {
+const THEME_LABELS: Record<string, string> = {
+  neutre: 'Neutre', action: 'Action', comedie: 'Comedie',
+  western: 'Western', horreur: 'Horreur',
+}
+
+const SOURCE_LABELS: Record<string, string> = {
+  apercu: 'apercu admin', force: 'impose depuis l\'admin',
+  planning: 'planning', defaut: 'defaut',
+}
+
+export default async function AdminDashboard() {
   const user = await getUserCached()
-  if (!user) redirect('/auth')
-
   const supabase = await createClient()
-
-  const { data: profileData } = await supabase.from('profiles').select('id, pseudo, exp, is_admin, avatar_url, active_badge').eq('id', user.id).single()
-  const profile = profileData as Profile | null
-  if (!profile?.is_admin) redirect('/')
-
+  const admin = createAdminClient()
   const cfg = await getServerConfig()
-  // Service role client pour bypass RLS sur les colonnes d'administration
-  const adminDb = createAdminClient()
 
   const [
-    { data: films },
-    { data: users },
-    { data: duels },
+    seasonWeeks,
+    cookieStore,
+    { count: pendingJoin },
+    { count: pendingFilms },
+    { count: flagged18 },
+    { count: reports },
+    { count: pendingDuels },
     { data: weekFilm },
-    { data: filmStats },
-    { data: flaggedFilms },
-    { data: pendingFilms18 },
-    { data: pendingApprovalFilms },
-    { data: reports },
-    { data: siteConfigs },
-    { data: news },
-    { data: recommendations },
-    { data: forumTopics },
+    { data: activeDuel },
+    { data: recentLog },
   ] = await Promise.all([
-    adminDb.from('films').select('id, titre, annee, realisateur, genre, sousgenre, poster, saison, added_by, tmdb_id, flagged_18plus, flagged_16plus, flagged_18_pending, flagged_18strange, pending_admin_approval, created_at, overview').eq('pending_admin_approval', false).order('titre'),
-    supabase.from('profiles').select('*, watched:watched(film_id), votes:votes(duel_id)').order('exp', { ascending: false }),
-    supabase.from('duels').select('*, film1:films!duels_film1_id_fkey(titre), film2:films!duels_film2_id_fkey(titre), votes(film_choice)').order('created_at', { ascending: false }).limit(10),
-    adminDb.from('week_films').select('*, films(titre)').eq('active', true).order('created_at', { ascending: false }).limit(1).single(),
-    (adminDb as any).rpc('get_film_stats').then((r: any) => ({ data: r.data ?? [] })),
-    adminDb.from('films').select('id, titre, annee, poster, flagged_18_pending, flagged_18plus, created_at').eq('flagged_18_pending', true).order('titre'),
-    adminDb.from('films').select('id, titre, annee, poster, flagged_18plus, created_at').eq('flagged_18plus', true).order('created_at', { ascending: false }),
-    (adminDb as any).from('films').select('*, profiles!films_added_by_fkey(pseudo)').eq('pending_admin_approval', true).order('created_at', { ascending: false }),
-    supabase.from('reports').select('*, film:films(titre), reporter:profiles!reports_user_id_fkey(pseudo)').eq('resolved', false).order('created_at', { ascending: false }),
-    supabase.from('site_config').select('key, value'),
-    (adminDb as any).from('news').select('*, profiles(pseudo)').order('pinned', { ascending: false }).order('created_at', { ascending: false }),
-    (adminDb as any).from('recommendation_films').select('id, titre, annee, realisateur, poster, niveau, position, description, film_id').order('niveau').order('position'),
-    (adminDb as any).from('forum_topics').select('id, title, pinned, is_social, created_at, author_id').order('pinned', { ascending: false }).order('created_at', { ascending: false }),
+    getSeasonWeeks(),
+    cookies(),
+    admin.from('season_join_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+    admin.from('films').select('id', { count: 'exact', head: true }).eq('pending_admin_approval', true),
+    admin.from('films').select('id', { count: 'exact', head: true }).eq('flagged_18_pending', true),
+    supabase.from('reports').select('id', { count: 'exact', head: true }).eq('resolved', false),
+    supabase.from('duels').select('id', { count: 'exact', head: true }).eq('pending', true),
+    admin.from('week_films').select('films(titre)').eq('active', true).limit(1).single(),
+    supabase.from('duels').select('id, closes_at, film1:films!duels_film1_id_fkey(titre), film2:films!duels_film2_id_fkey(titre)').eq('closed', false).eq('pending', false).order('created_at', { ascending: false }).limit(1).single(),
+    admin.from('admin_log').select('action, detail, created_at').order('created_at', { ascending: false }).limit(10),
   ])
 
-  const [marathonRequests, seasonJoinRequests, allSeasonJoinRequests] = await Promise.all([
-    adminGetMarathonRequests(),
-    adminGetSeasonJoinRequests(),
-    adminGetAllSeasonJoinRequests(),
-  ])
+  const previewRaw = cookieStore.get('cm_theme_apercu')?.value ?? null
+  const previewCookie = (previewRaw && READY_THEMES.includes(previewRaw as ThemeKey)) ? previewRaw as ThemeKey : null
+  const resolved = resolveTheme({
+    now: new Date(),
+    cfg: { theme_mode: cfg.theme_mode, theme_force: cfg.theme_force as ThemeKey },
+    weeks: seasonWeeks,
+    previewCookie,
+    isAdmin: true,
+  })
 
-  const totalUsers = users?.length ?? 1
-  const watchCountMap: Record<number, number> = {}
-  ;(filmStats as any[] ?? []).forEach((s: any) => { if (s.watch_count > 0) watchCountMap[s.film_id] = Number(s.watch_count) })
+  const todoItems: Array<{ label: string; count: number; href: string }> = []
+  if ((pendingJoin ?? 0) > 0) todoItems.push({ label: 'Demandes d\'inscription', count: pendingJoin ?? 0, href: '/admin/joueurs' })
+  if ((pendingFilms ?? 0) > 0) todoItems.push({ label: 'Films a approuver', count: pendingFilms ?? 0, href: '/admin/films' })
+  if ((flagged18 ?? 0) > 0) todoItems.push({ label: 'Films 18+ a confirmer', count: flagged18 ?? 0, href: '/admin/films' })
+  if ((reports ?? 0) > 0) todoItems.push({ label: 'Signalements', count: reports ?? 0, href: '/admin/films' })
+  if ((pendingDuels ?? 0) > 0) todoItems.push({ label: 'Duels a approuver', count: pendingDuels ?? 0, href: '/admin/seances' })
 
-  const configMap: Record<string, string> = {}
-  siteConfigs?.forEach(({ key, value }: { key: string; value: string }) => { configMap[key] = value })
+  const weekInfo = resolved.week
+    ? `semaine ${resolved.week.semaine} / ${resolved.week.total}`
+    : null
+
+  const themeLine = `En ce moment : ${THEME_LABELS[resolved.key] ?? resolved.key} — ${SOURCE_LABELS[resolved.source]}${weekInfo ? `, ${weekInfo}` : ''}.`
 
   return (
-    <AdminClient
-      profile={profile}
-      films={films ?? []}
-      users={users ?? []}
-      duels={duels ?? []}
-      weekFilm={weekFilm}
-      totalUsers={totalUsers}
-      watchCountMap={watchCountMap}
-      flaggedFilms={(flaggedFilms ?? []) as any}
-      pendingFilms18={(pendingFilms18 ?? []) as any}
-      pendingApprovalFilms={pendingApprovalFilms ?? []}
-      reports={reports ?? []}
-      siteConfig={configMap}
-      serverConfig={cfg}
-      news={news ?? []}
-      recommendations={recommendations ?? []}
-      forumTopics={forumTopics ?? []}
-      marathonRequests={marathonRequests}
-      seasonJoinRequests={seasonJoinRequests}
-      allSeasonJoinRequests={allSeasonJoinRequests}
-    />
+    <>
+      <h1 className={styles.pageTitle}>Tableau de bord</h1>
+
+      {todoItems.length > 0 && (
+        <div className={styles.section}>
+          <h2 className={styles.sectionTitle}>A traiter</h2>
+          {todoItems.map(item => (
+            <Link key={item.href + item.label} href={item.href} className={styles.card} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', textDecoration: 'none', color: 'inherit' }}>
+              <span>{item.label}</span>
+              <span className={styles.badge}>{item.count}</span>
+            </Link>
+          ))}
+        </div>
+      )}
+
+      <div className={styles.section}>
+        <h2 className={styles.sectionTitle}>Le site maintenant</h2>
+        <div className={styles.card}>
+          <div className={styles.row}>
+            <span>{themeLine}</span>
+            <Link href="/admin/theme" className={styles.btn}>Changer de theme</Link>
+          </div>
+          <div className={styles.row}>
+            <span>Saison {cfg.SAISON_NUMERO} — {cfg.SAISON_LABEL}</span>
+          </div>
+          <div className={styles.row}>
+            <span>Film de la semaine : {(weekFilm as any)?.films?.titre ?? 'aucun'}</span>
+            <Link href="/admin/seances" className={styles.btn}>Gerer</Link>
+          </div>
+          {activeDuel && (
+            <div className={styles.row}>
+              <span>Duel : {(activeDuel as any)?.film1?.titre} vs {(activeDuel as any)?.film2?.titre}{activeDuel.closes_at ? ` — cloture le ${new Date(activeDuel.closes_at).toLocaleDateString('fr-FR')}` : ''}</span>
+              <Link href="/admin/seances" className={styles.btn}>Voir</Link>
+            </div>
+          )}
+          <div className={styles.row}>
+            <span>Videoclub : {cfg.videoclub_mode === 'bientot' ? 'Bientot' : cfg.videoclub_mode === 'cache' ? 'Cache' : cfg.videoclub_mode}</span>
+          </div>
+        </div>
+      </div>
+
+      {recentLog && (recentLog as any[]).length > 0 && (
+        <div className={styles.section}>
+          <h2 className={styles.sectionTitle}>Dernieres modifications</h2>
+          <div className={styles.card}>
+            {(recentLog as any[]).map((entry: any, i: number) => (
+              <div key={i} className={styles.row}>
+                <span style={{ fontSize: 'var(--fs-1)' }}>
+                  {entry.action}
+                  {entry.detail ? ` — ${typeof entry.detail === 'string' ? entry.detail : JSON.stringify(entry.detail).slice(0, 60)}` : ''}
+                </span>
+                <span style={{ fontSize: 'var(--fs-0)', color: 'var(--ink3)', flexShrink: 0 }}>
+                  {new Date(entry.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
   )
 }

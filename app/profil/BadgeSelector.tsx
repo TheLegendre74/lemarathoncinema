@@ -35,11 +35,11 @@ export default function BadgeSelector({ expBadges, specialBadges, activeBadge }:
 
   return (
     <div>
-      <div className="section-title" style={{ marginBottom: '.6rem' }}>Badge actif <span style={{ color: 'var(--text3)', fontStyle: 'italic', textTransform: 'none', letterSpacing: 0, fontSize: '.68rem' }}>— cliquer pour activer / désactiver</span></div>
+      <div className="section-title" style={{ marginBottom: '.6rem' }}>Badge actif <span style={{ color: 'var(--ink3)', fontStyle: 'italic', textTransform: 'none', letterSpacing: 0, fontSize: '.68rem' }}>— cliquer pour activer / désactiver</span></div>
 
       {specialBadges.length > 0 && (
         <>
-          <div style={{ fontSize: '.65rem', color: 'var(--text3)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '.4rem' }}>Secrets débloqués</div>
+          <div style={{ fontSize: '.65rem', color: 'var(--ink3)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '.4rem' }}>Secrets débloqués</div>
           <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
             {specialBadges.map(b => {
               const isActive = active === b.id
@@ -70,7 +70,7 @@ export default function BadgeSelector({ expBadges, specialBadges, activeBadge }:
 
       {unlocked.length > 0 && (
         <>
-          <div style={{ fontSize: '.65rem', color: 'var(--text3)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '.4rem' }}>Badges EXP</div>
+          <div style={{ fontSize: '.65rem', color: 'var(--ink3)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '.4rem' }}>Badges EXP</div>
           <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
             {unlocked.map(b => {
               const isActive = active === b.id

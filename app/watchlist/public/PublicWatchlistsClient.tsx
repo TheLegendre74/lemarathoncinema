@@ -11,6 +11,7 @@ import {
   unfavoriteWatchlist,
 } from '@/lib/actions'
 import { useToast } from '@/components/ToastProvider'
+import { emitDestruction } from '@/lib/destruction'
 
 interface Film {
   id: number
@@ -144,7 +145,7 @@ export default function PublicWatchlistsClient({
       setFavorites(f => f.filter(id => id !== wl.id))
       const res = await unfavoriteWatchlist(wl.id)
       if (res.error) { setFavorites(f => [...f, wl.id]); addToast(res.error, 'error') }
-      else addToast('Coup de coeur retiré', 'success')
+      else { addToast('Coup de coeur retiré', 'success'); emitDestruction() }
     } else {
       setFavorites(f => [...f, wl.id])
       const res = await favoriteWatchlist(wl.id)
@@ -165,8 +166,8 @@ export default function PublicWatchlistsClient({
       {popularSorted.length > 0 && (
         <div style={{ marginBottom: '2.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem', marginBottom: '1rem' }}>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem' }}>🔥 Watchlists populaires</div>
-            <div style={{ fontSize: '.72rem', color: 'var(--text3)', background: 'rgba(232,196,106,.08)', border: '1px solid rgba(232,196,106,.2)', borderRadius: 99, padding: '2px 8px' }}>
+            <div style={{ fontFamily: 'var(--f-display)', fontSize: '1.25rem' }}>🔥 Watchlists populaires</div>
+            <div style={{ fontSize: '.72rem', color: 'var(--ink3)', background: 'rgba(232,196,106,.08)', border: '1px solid rgba(232,196,106,.2)', borderRadius: 99, padding: '2px 8px' }}>
               ≥ 5 👍
             </div>
           </div>
@@ -182,7 +183,7 @@ export default function PublicWatchlistsClient({
                   key={wl.id}
                   className="wl-popular-row"
                   onClick={() => setSelected(wl)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '.85rem', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.75rem 1rem', cursor: 'pointer' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '.85rem', background: 'var(--s1)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', padding: '.75rem 1rem', cursor: 'pointer' }}
                 >
                   {/* Rang */}
                   <div style={{ width: 28, textAlign: 'center', flexShrink: 0 }}>
@@ -192,13 +193,13 @@ export default function PublicWatchlistsClient({
                       ? <span style={{ fontSize: '1.1rem' }}>🥈</span>
                       : idx === 2
                       ? <span style={{ fontSize: '1.1rem' }}>🥉</span>
-                      : <span style={{ fontSize: '.8rem', color: 'var(--text3)', fontWeight: 600 }}>#{idx + 1}</span>
+                      : <span style={{ fontSize: '.8rem', color: 'var(--ink3)', fontWeight: 600 }}>#{idx + 1}</span>
                     }
                   </div>
                   {/* Mini posters */}
                   <div style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
                     {items.slice(0, 3).map(item => (
-                      <div key={item.film_id} style={{ width: 28, height: 42, borderRadius: 3, overflow: 'hidden', background: 'var(--bg3)', position: 'relative', flexShrink: 0 }}>
+                      <div key={item.film_id} style={{ width: 28, height: 42, borderRadius: 3, overflow: 'hidden', background: 'var(--s2)', position: 'relative', flexShrink: 0 }}>
                         {item.films?.poster
                           ? <Image src={item.films.poster} alt={item.films.titre} fill style={{ objectFit: 'cover' }} sizes="28px" />
                           : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.5rem' }}>🎬</div>
@@ -209,7 +210,7 @@ export default function PublicWatchlistsClient({
                   {/* Info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: '.9rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{wl.name}</div>
-                    <div style={{ fontSize: '.7rem', color: 'var(--text3)', marginTop: '.1rem' }}>
+                    <div style={{ fontSize: '.7rem', color: 'var(--ink3)', marginTop: '.1rem' }}>
                       {items.length} film{items.length !== 1 ? 's' : ''}
                       {author && <span> · {author.pseudo}</span>}
                     </div>
@@ -218,13 +219,13 @@ export default function PublicWatchlistsClient({
                   <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
                     <button
                       onClick={() => handleReaction(wl.id, 'like')}
-                      style={{ display: 'flex', alignItems: 'center', gap: '.3rem', background: userR === 'like' ? 'rgba(79,217,138,.15)' : 'var(--bg3)', border: `1px solid ${userR === 'like' ? 'rgba(79,217,138,.4)' : 'var(--border2)'}`, borderRadius: 6, padding: '.25rem .55rem', fontSize: '.78rem', color: userR === 'like' ? 'var(--green)' : 'var(--text2)', cursor: 'pointer', fontWeight: 700 }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '.3rem', background: userR === 'like' ? 'rgba(79,217,138,.15)' : 'var(--s2)', border: `1px solid ${userR === 'like' ? 'rgba(79,217,138,.4)' : 'var(--line2)'}`, borderRadius: 6, padding: '.25rem .55rem', fontSize: '.78rem', color: userR === 'like' ? 'var(--ok)' : 'var(--ink2)', cursor: 'pointer', fontWeight: 700 }}
                     >
                       👍 {r.likes}
                     </button>
                     <button
                       onClick={() => handleFavorite(wl)}
-                      style={{ background: isFav ? 'rgba(232,90,90,.12)' : 'var(--bg3)', border: `1px solid ${isFav ? 'rgba(232,90,90,.35)' : 'var(--border2)'}`, borderRadius: 6, padding: '.25rem .45rem', fontSize: '.85rem', cursor: 'pointer', lineHeight: 1 }}
+                      style={{ background: isFav ? 'rgba(232,90,90,.12)' : 'var(--s2)', border: `1px solid ${isFav ? 'rgba(232,90,90,.35)' : 'var(--line2)'}`, borderRadius: 6, padding: '.25rem .45rem', fontSize: '.85rem', cursor: 'pointer', lineHeight: 1 }}
                     >
                       {isFav ? '❤️' : '🤍'}
                     </button>
@@ -233,12 +234,12 @@ export default function PublicWatchlistsClient({
               )
             })}
           </div>
-          <div style={{ height: '1px', background: 'var(--border)', margin: '2rem 0' }} />
+          <div style={{ height: '1px', background: 'var(--line)', margin: '2rem 0' }} />
         </div>
       )}
 
       {/* ── Toutes les watchlists ── */}
-      <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', marginBottom: '1rem', color: 'var(--text2)' }}>Toutes les watchlists</div>
+      <div style={{ fontFamily: 'var(--f-display)', fontSize: '1.1rem', marginBottom: '1rem', color: 'var(--ink2)' }}>Toutes les watchlists</div>
       {/* Grille des cartes */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))', gap: '1.2rem' }}>
         {initial.map(wl => {
@@ -258,7 +259,7 @@ export default function PublicWatchlistsClient({
               onClick={() => setSelected(wl)}
             >
               {/* Poster grid preview */}
-              <div style={{ height: 110, background: 'var(--bg3)', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', overflow: 'hidden', position: 'relative' }}>
+              <div style={{ height: 110, background: 'var(--s2)', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', overflow: 'hidden', position: 'relative' }}>
                 {previewFilms.length > 0
                   ? previewFilms.map(item => (
                       <div key={item.film_id} style={{ position: 'relative', overflow: 'hidden' }}>
@@ -268,21 +269,21 @@ export default function PublicWatchlistsClient({
                         }
                       </div>
                     ))
-                  : <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)', fontSize: '2rem' }}>📋</div>
+                  : <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink3)', fontSize: '2rem' }}>📋</div>
                 }
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 50%, rgba(15,15,26,.9))', pointerEvents: 'none' }} />
               </div>
 
               <div style={{ padding: '1rem' }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.05rem', marginBottom: '.3rem', lineHeight: 1.2 }}>{wl.name}</div>
+                <div style={{ fontFamily: 'var(--f-display)', fontSize: '1.05rem', marginBottom: '.3rem', lineHeight: 1.2 }}>{wl.name}</div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '.75rem' }}>
-                  <div style={{ fontSize: '.72rem', color: 'var(--text3)' }}>
+                  <div style={{ fontSize: '.72rem', color: 'var(--ink3)' }}>
                     {items.length} film{items.length !== 1 ? 's' : ''}
                   </div>
-                  <div style={{ fontSize: '.72rem', color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: '.3rem' }}>
+                  <div style={{ fontSize: '.72rem', color: 'var(--ink3)', display: 'flex', alignItems: 'center', gap: '.3rem' }}>
                     {author ? (
                       <>
-                        <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'var(--bg3)', border: '1px solid var(--border2)', overflow: 'hidden', flexShrink: 0 }}>
+                        <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'var(--s2)', border: '1px solid var(--line2)', overflow: 'hidden', flexShrink: 0 }}>
                           {author.avatar_url
                             ? <Image src={author.avatar_url} alt={author.pseudo} width={18} height={18} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
                             : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.55rem' }}>{author.pseudo?.[0]?.toUpperCase()}</div>
@@ -298,20 +299,21 @@ export default function PublicWatchlistsClient({
                 <div style={{ display: 'flex', gap: '.4rem', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
                   <button
                     onClick={() => handleReaction(wl.id, 'like')}
-                    style={{ display: 'flex', alignItems: 'center', gap: '.3rem', background: userR === 'like' ? 'rgba(79,217,138,.15)' : 'var(--bg3)', border: `1px solid ${userR === 'like' ? 'rgba(79,217,138,.4)' : 'var(--border2)'}`, borderRadius: 6, padding: '.3rem .6rem', fontSize: '.75rem', color: userR === 'like' ? 'var(--green)' : 'var(--text2)', cursor: 'pointer', transition: 'all .15s' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '.3rem', background: userR === 'like' ? 'rgba(79,217,138,.15)' : 'var(--s2)', border: `1px solid ${userR === 'like' ? 'rgba(79,217,138,.4)' : 'var(--line2)'}`, borderRadius: 6, padding: '.3rem .6rem', fontSize: '.75rem', color: userR === 'like' ? 'var(--ok)' : 'var(--ink2)', cursor: 'pointer', transition: 'all .15s' }}
                   >
                     👍 {r.likes}
                   </button>
                   <button
                     onClick={() => handleReaction(wl.id, 'dislike')}
-                    style={{ display: 'flex', alignItems: 'center', gap: '.3rem', background: userR === 'dislike' ? 'rgba(232,90,90,.12)' : 'var(--bg3)', border: `1px solid ${userR === 'dislike' ? 'rgba(232,90,90,.35)' : 'var(--border2)'}`, borderRadius: 6, padding: '.3rem .6rem', fontSize: '.75rem', color: userR === 'dislike' ? 'var(--red)' : 'var(--text2)', cursor: 'pointer', transition: 'all .15s' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '.3rem', background: userR === 'dislike' ? 'rgba(232,90,90,.12)' : 'var(--s2)', border: `1px solid ${userR === 'dislike' ? 'rgba(232,90,90,.35)' : 'var(--line2)'}`, borderRadius: 6, padding: '.3rem .6rem', fontSize: '.75rem', color: userR === 'dislike' ? 'var(--bad)' : 'var(--ink2)', cursor: 'pointer', transition: 'all .15s' }}
                   >
                     👎 {r.dislikes}
                   </button>
                   <button
                     onClick={() => handleFavorite(wl)}
                     title={isFav ? 'Retirer le coup de coeur' : 'Coup de coeur — copier dans mes watchlists'}
-                    style={{ marginLeft: 'auto', background: isFav ? 'rgba(232,90,90,.12)' : 'var(--bg3)', border: `1px solid ${isFav ? 'rgba(232,90,90,.35)' : 'var(--border2)'}`, borderRadius: 6, padding: '.3rem .55rem', fontSize: '.9rem', cursor: 'pointer', transition: 'all .15s', lineHeight: 1 }}
+                    {...(isFav ? { 'data-destructif': '' } : {})}
+                    style={{ marginLeft: 'auto', background: isFav ? 'rgba(232,90,90,.12)' : 'var(--s2)', border: `1px solid ${isFav ? 'rgba(232,90,90,.35)' : 'var(--line2)'}`, borderRadius: 6, padding: '.3rem .55rem', fontSize: '.9rem', cursor: 'pointer', transition: 'all .15s', lineHeight: 1 }}
                   >
                     {isFav ? '❤️' : '🤍'}
                   </button>
@@ -320,7 +322,7 @@ export default function PublicWatchlistsClient({
                       href="/watchlist"
                       onClick={e => e.stopPropagation()}
                       title="Gérer cette watchlist"
-                      style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 6, padding: '.3rem .55rem', fontSize: '.75rem', color: 'var(--text3)', textDecoration: 'none', lineHeight: 1.4 }}
+                      style={{ background: 'var(--s2)', border: '1px solid var(--line2)', borderRadius: 6, padding: '.3rem .55rem', fontSize: '.75rem', color: 'var(--ink3)', textDecoration: 'none', lineHeight: 1.4 }}
                     >
                       ✏️
                     </Link>
@@ -384,22 +386,22 @@ function WatchlistDetailModal({
       onClick={onClose}
     >
       <div
-        style={{ width: '100%', maxWidth: 640, maxHeight: '90vh', background: 'var(--bg1)', borderRadius: 'var(--rl) var(--rl) 0 0', display: 'flex', flexDirection: 'column', animation: 'wl-modal-in .25s ease', overflow: 'hidden' }}
+        style={{ width: '100%', maxWidth: 640, maxHeight: '90vh', background: 'var(--s1)', borderRadius: 'var(--radius) var(--radius) 0 0', display: 'flex', flexDirection: 'column', animation: 'wl-modal-in .25s ease', overflow: 'hidden' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Handle */}
-        <div style={{ width: 40, height: 4, background: 'var(--border2)', borderRadius: 99, margin: '12px auto 0' }} />
+        <div style={{ width: 40, height: 4, background: 'var(--line2)', borderRadius: 99, margin: '12px auto 0' }} />
 
         {/* Header */}
-        <div style={{ padding: '1rem 1.25rem .75rem', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+        <div style={{ padding: '1rem 1.25rem .75rem', borderBottom: '1px solid var(--line)', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '.75rem' }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', lineHeight: 1.2, marginBottom: '.25rem' }}>{wl.name}</div>
-              <div style={{ fontSize: '.75rem', color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: '.5rem', flexWrap: 'wrap' }}>
+              <div style={{ fontFamily: 'var(--f-display)', fontSize: '1.3rem', lineHeight: 1.2, marginBottom: '.25rem' }}>{wl.name}</div>
+              <div style={{ fontSize: '.75rem', color: 'var(--ink3)', display: 'flex', alignItems: 'center', gap: '.5rem', flexWrap: 'wrap' }}>
                 <span>{items.length} film{items.length !== 1 ? 's' : ''}</span>
                 {author ? (
                   <span style={{ display: 'flex', alignItems: 'center', gap: '.3rem' }}>
-                    <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'var(--bg3)', border: '1px solid var(--border2)', overflow: 'hidden', flexShrink: 0 }}>
+                    <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'var(--s2)', border: '1px solid var(--line2)', overflow: 'hidden', flexShrink: 0 }}>
                       {author.avatar_url
                         ? <Image src={author.avatar_url} alt={author.pseudo} width={16} height={16} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
                         : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.5rem' }}>{author.pseudo?.[0]?.toUpperCase()}</div>
@@ -410,27 +412,28 @@ function WatchlistDetailModal({
                 ) : <span>👤 Anonyme</span>}
               </div>
             </div>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text3)', fontSize: '1.3rem', cursor: 'pointer', padding: '2px 4px', lineHeight: 1, flexShrink: 0 }}>✕</button>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--ink3)', fontSize: '1.3rem', cursor: 'pointer', padding: '2px 4px', lineHeight: 1, flexShrink: 0 }}>✕</button>
           </div>
 
           {/* Réactions */}
           <div style={{ display: 'flex', gap: '.5rem', alignItems: 'center', marginTop: '.75rem' }}>
             <button
               onClick={() => onReaction('like')}
-              style={{ display: 'flex', alignItems: 'center', gap: '.35rem', background: userReaction === 'like' ? 'rgba(79,217,138,.15)' : 'var(--bg2)', border: `1px solid ${userReaction === 'like' ? 'rgba(79,217,138,.4)' : 'var(--border2)'}`, borderRadius: 8, padding: '.4rem .8rem', fontSize: '.82rem', color: userReaction === 'like' ? 'var(--green)' : 'var(--text2)', cursor: 'pointer', transition: 'all .15s', fontWeight: userReaction === 'like' ? 600 : 400 }}
+              style={{ display: 'flex', alignItems: 'center', gap: '.35rem', background: userReaction === 'like' ? 'rgba(79,217,138,.15)' : 'var(--s1)', border: `1px solid ${userReaction === 'like' ? 'rgba(79,217,138,.4)' : 'var(--line2)'}`, borderRadius: 8, padding: '.4rem .8rem', fontSize: '.82rem', color: userReaction === 'like' ? 'var(--ok)' : 'var(--ink2)', cursor: 'pointer', transition: 'all .15s', fontWeight: userReaction === 'like' ? 600 : 400 }}
             >
               👍 <span>{reactions.likes}</span>
             </button>
             <button
               onClick={() => onReaction('dislike')}
-              style={{ display: 'flex', alignItems: 'center', gap: '.35rem', background: userReaction === 'dislike' ? 'rgba(232,90,90,.12)' : 'var(--bg2)', border: `1px solid ${userReaction === 'dislike' ? 'rgba(232,90,90,.35)' : 'var(--border2)'}`, borderRadius: 8, padding: '.4rem .8rem', fontSize: '.82rem', color: userReaction === 'dislike' ? 'var(--red)' : 'var(--text2)', cursor: 'pointer', transition: 'all .15s', fontWeight: userReaction === 'dislike' ? 600 : 400 }}
+              style={{ display: 'flex', alignItems: 'center', gap: '.35rem', background: userReaction === 'dislike' ? 'rgba(232,90,90,.12)' : 'var(--s1)', border: `1px solid ${userReaction === 'dislike' ? 'rgba(232,90,90,.35)' : 'var(--line2)'}`, borderRadius: 8, padding: '.4rem .8rem', fontSize: '.82rem', color: userReaction === 'dislike' ? 'var(--bad)' : 'var(--ink2)', cursor: 'pointer', transition: 'all .15s', fontWeight: userReaction === 'dislike' ? 600 : 400 }}
             >
               👎 <span>{reactions.dislikes}</span>
             </button>
             <button
               onClick={onFavorite}
               title={isFavorite ? 'Retirer le coup de coeur' : 'Ajouter aux mes watchlists'}
-              style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '.35rem', background: isFavorite ? 'rgba(232,90,90,.12)' : 'var(--bg2)', border: `1px solid ${isFavorite ? 'rgba(232,90,90,.35)' : 'var(--border2)'}`, borderRadius: 8, padding: '.4rem .8rem', fontSize: '.82rem', color: isFavorite ? '#f87171' : 'var(--text2)', cursor: 'pointer', transition: 'all .15s', fontWeight: isFavorite ? 600 : 400 }}
+              {...(isFavorite ? { 'data-destructif': '' } : {})}
+              style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '.35rem', background: isFavorite ? 'rgba(232,90,90,.12)' : 'var(--s1)', border: `1px solid ${isFavorite ? 'rgba(232,90,90,.35)' : 'var(--line2)'}`, borderRadius: 8, padding: '.4rem .8rem', fontSize: '.82rem', color: isFavorite ? '#f87171' : 'var(--ink2)', cursor: 'pointer', transition: 'all .15s', fontWeight: isFavorite ? 600 : 400 }}
             >
               {isFavorite ? '❤️' : '🤍'} <span style={{ fontSize: '.78rem' }}>{isFavorite ? 'Coup de coeur' : 'Coup de coeur'}</span>
             </button>
@@ -438,7 +441,7 @@ function WatchlistDetailModal({
               <Link
                 href="/watchlist"
                 onClick={onClose}
-                style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 8, padding: '.4rem .75rem', fontSize: '.78rem', color: 'var(--gold)', textDecoration: 'none', whiteSpace: 'nowrap' }}
+                style={{ background: 'var(--s1)', border: '1px solid var(--line2)', borderRadius: 8, padding: '.4rem .75rem', fontSize: '.78rem', color: 'var(--accent-fg)', textDecoration: 'none', whiteSpace: 'nowrap' }}
               >
                 ✏️ Gérer
               </Link>
@@ -449,7 +452,7 @@ function WatchlistDetailModal({
         {/* Liste des films */}
         <div style={{ overflowY: 'auto', flex: 1, padding: '1rem 1.25rem' }}>
           {items.length === 0 ? (
-            <div style={{ textAlign: 'center', color: 'var(--text3)', padding: '2rem', fontSize: '.85rem' }}>
+            <div style={{ textAlign: 'center', color: 'var(--ink3)', padding: '2rem', fontSize: '.85rem' }}>
               <div style={{ fontSize: '2rem', marginBottom: '.5rem' }}>🎬</div>
               Aucun film dans cette watchlist.
             </div>
@@ -459,8 +462,8 @@ function WatchlistDetailModal({
                 const film = item.films
                 if (!film) return null
                 return (
-                  <div key={item.film_id} style={{ display: 'flex', alignItems: 'center', gap: '.85rem', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.6rem .85rem' }}>
-                    <div style={{ width: 38, height: 56, borderRadius: 4, overflow: 'hidden', flexShrink: 0, background: 'var(--bg3)', position: 'relative' }}>
+                  <div key={item.film_id} style={{ display: 'flex', alignItems: 'center', gap: '.85rem', background: 'var(--s1)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', padding: '.6rem .85rem' }}>
+                    <div style={{ width: 38, height: 56, borderRadius: 4, overflow: 'hidden', flexShrink: 0, background: 'var(--s2)', position: 'relative' }}>
                       {film.poster
                         ? <Image src={film.poster} alt={film.titre} fill style={{ objectFit: 'cover' }} sizes="38px" />
                         : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.75rem' }}>🎬</div>
@@ -468,8 +471,8 @@ function WatchlistDetailModal({
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: '.88rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{film.titre}</div>
-                      <div style={{ fontSize: '.7rem', color: 'var(--text3)', marginTop: '.1rem' }}>{film.annee} · {film.realisateur}</div>
-                      <div style={{ fontSize: '.65rem', color: 'var(--text3)', marginTop: '.1rem' }}>{film.genre}</div>
+                      <div style={{ fontSize: '.7rem', color: 'var(--ink3)', marginTop: '.1rem' }}>{film.annee} · {film.realisateur}</div>
+                      <div style={{ fontSize: '.65rem', color: 'var(--ink3)', marginTop: '.1rem' }}>{film.genre}</div>
                     </div>
                   </div>
                 )

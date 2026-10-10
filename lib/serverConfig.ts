@@ -6,6 +6,8 @@ import { fromParis } from './time/paris'
 
 export type ServerConfig = typeof CONFIG & {
   ACCUEIL_SOUS_TITRE: string
+  ACCUEIL_ACCROCHE: string
+  ACCUEIL_TEXTE: string
   MARATHON_RULES: string | null
   MATRIX_LINE1: string; MATRIX_LINE2: string; MATRIX_LINE3: string
   JOKER_PHRASE: string
@@ -25,6 +27,9 @@ export type ServerConfig = typeof CONFIG & {
   limite_jour_max: number
   eggs_disabled: string[]
   videoclub_mode: 'cache' | 'bientot'
+  theme_mode: 'auto' | 'force'
+  theme_force: string
+  action_car_speed: number
 }
 
 function safeDate(str: string | undefined, fallback: Date): Date {
@@ -64,6 +69,8 @@ export const getServerConfig = cache(async (): Promise<ServerConfig> => {
   const defaults: ServerConfig = {
     ...CONFIG,
     ACCUEIL_SOUS_TITRE:  'Le marathon cinématographique collaboratif',
+    ACCUEIL_ACCROCHE:    'UN MARATHON.\nUNE LISTE.\nTA CULTURE CINÉ.',
+    ACCUEIL_TEXTE:       'Les films qui ont fait le cinéma, réunis dans une seule liste. Coche ceux que tu as déjà vus, rattrape les autres pendant le marathon, et regarde ta culture ciné grandir.',
     MARATHON_RULES:      null,
     MATRIX_LINE1:        'Wake up, Neo...',
     MATRIX_LINE2:        'The Matrix has you.',
@@ -90,6 +97,9 @@ export const getServerConfig = cache(async (): Promise<ServerConfig> => {
     limite_jour_max:     8,
     eggs_disabled:       [],
     videoclub_mode:      'bientot',
+    theme_mode:          'auto',
+    theme_force:         'neutre',
+    action_car_speed:    2000,
   }
 
   const data = await getSiteConfigRows()
@@ -113,6 +123,8 @@ export const getServerConfig = cache(async (): Promise<ServerConfig> => {
     EXP_DUEL_WIN:      db.exp_duel_win      ? parseInt(db.exp_duel_win)   : defaults.EXP_DUEL_WIN,
     EXP_VOTE:          db.exp_vote          ? parseInt(db.exp_vote)       : defaults.EXP_VOTE,
     ACCUEIL_SOUS_TITRE: db.accueil_sous_titre ?? defaults.ACCUEIL_SOUS_TITRE,
+    ACCUEIL_ACCROCHE:   db.accueil_accroche   ?? defaults.ACCUEIL_ACCROCHE,
+    ACCUEIL_TEXTE:      db.accueil_texte      ?? defaults.ACCUEIL_TEXTE,
     MATRIX_LINE1:      db.matrix_line1      ?? defaults.MATRIX_LINE1,
     MATRIX_LINE2:      db.matrix_line2      ?? defaults.MATRIX_LINE2,
     MATRIX_LINE3:      db.matrix_line3      ?? defaults.MATRIX_LINE3,
@@ -140,6 +152,9 @@ export const getServerConfig = cache(async (): Promise<ServerConfig> => {
     limite_jour_max:   clampInt(db.limite_jour_max, 1, 50, 8),
     eggs_disabled:     (() => { try { const p = JSON.parse(db.eggs_disabled ?? '[]'); return Array.isArray(p) ? p.filter((x: unknown) => typeof x === 'string') : [] } catch { return [] } })(),
     videoclub_mode:    db.videoclub_mode === 'cache' ? 'cache' : 'bientot',
+    theme_mode:        db.theme_mode === 'force' ? 'force' : 'auto',
+    theme_force:       db.theme_force ?? 'neutre',
+    action_car_speed:  clampInt(db.action_car_speed, 500, 10000, 2000),
   }
 })
 

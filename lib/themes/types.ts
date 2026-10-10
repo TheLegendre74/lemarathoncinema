@@ -1,4 +1,6 @@
-export type ThemeId = 'neutre' | 'action' | 'comedie' | 'western' | 'horreur'
+export type ThemeKey = 'neutre' | 'action' | 'comedie' | 'western' | 'horreur'
+
+export const READY_THEMES: ThemeKey[] = ['neutre', 'action', 'comedie', 'western', 'horreur']
 
 export type ThemeEggId =
   | 'theme-action-voiture'
@@ -22,6 +24,8 @@ export type NavKey =
   | 'catSecret' | 'tamagotchi' | 'clippyRevanche' | 'easterEggs'
   | 'profil' | 'admin' | 'logout' | 'login'
 
+export type NavCourtKey = 'home' | 'films' | 'notes' | 'forum' | 'marathoniens'
+
 export type VocabKey =
   | 'markSeen' | 'markSeenDone' | 'unmarkSeen' | 'notSeen' | 'addToList'
   | 'level' | 'badge' | 'badges' | 'rating' | 'vote'
@@ -40,17 +44,27 @@ export type VocabKey =
 
 export type RepliqueKey = string
 
-export type NavCourtKey = 'home' | 'films' | 'notes' | 'forum' | 'marathoniens'
+export interface WeekInfo {
+  saison: number
+  semaine: number
+  total: number
+}
 
 export interface ThemeDef {
-  id: ThemeId
-  nav: Record<NavKey, string>
-  navCourt: Record<NavCourtKey, string>
-  vocab: Record<VocabKey, string>
-  repliques: Record<string, string>
-  citations: string[]
+  key: ThemeKey
+  label: string
+  nav: Partial<Record<NavKey, string>>
+  navCourt: Partial<Record<NavCourtKey, string>>
+  vocab: Partial<Record<VocabKey, string>>
+  levels: string[] | null
+  levelLabel: (level: number) => string
   expUnit: string
-  levels: string[]
+  weekLabel: (w: WeekInfo) => string
+  weekCourt: (w: WeekInfo) => string
+  repliques: Partial<Record<string, string>>
+  citations: string[]
+  eggs: ThemeEggId[]
+  radioTrack: string | null
 }
 
 export interface ThemeConfig {
@@ -58,4 +72,18 @@ export interface ThemeConfig {
   fdlsHeure: string
   seanceJour: string
   seanceHeure: string
+}
+
+export interface ResolvedTheme {
+  key: ThemeKey
+  real: ThemeKey
+  source: 'apercu' | 'force' | 'planning' | 'defaut'
+  week: (WeekInfo & { theme: string }) | null
+}
+
+export interface SeasonWeek {
+  saison: number
+  semaine: number
+  theme: string
+  date_debut: string
 }

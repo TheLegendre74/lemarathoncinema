@@ -1,0 +1,211 @@
+/* ═══════════════════════════════════════════════════════════
+   Comédie — décor (§14.5)
+   Rideaux, fronton, rampe, plancher
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Rideaux — jambes (sides) ── */
+.curtainLeft,
+.curtainRight {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 110px;
+  z-index: var(--z-decor, 0);
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    var(--rideau-ombre) 0%,
+    var(--accent) 30%,
+    var(--rideau-vif) 50%,
+    var(--accent) 70%,
+    var(--rideau-ombre) 100%
+  );
+}
+
+.curtainLeft {
+  left: 0;
+  border-right: 2px solid var(--or-eteint);
+}
+
+.curtainRight {
+  right: 0;
+  border-left: 2px solid var(--or-eteint);
+}
+
+/* ── Frise (valance, top) ── */
+.valance {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 28px;
+  z-index: calc(var(--z-nav) + 1);
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    var(--accent) 0%,
+    var(--rideau-vif) 40%,
+    var(--rideau-ombre) 100%
+  );
+  border-bottom: 2px solid var(--or-eteint);
+}
+
+.valanceScallop {
+  position: absolute;
+  bottom: -8px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: repeating-conic-gradient(
+    var(--rideau-ombre) 0% 25%,
+    transparent 0% 50%
+  ) 0 0 / 24px 16px;
+  mask: repeating-linear-gradient(90deg, transparent 0 2px, black 2px 22px);
+  -webkit-mask: repeating-linear-gradient(90deg, transparent 0 2px, black 2px 22px);
+  opacity: 0.6;
+}
+
+/* ── Fronton (below topbar) ── */
+.fronton {
+  position: fixed;
+  top: 56px;
+  left: 110px;
+  right: 110px;
+  height: 32px;
+  z-index: calc(var(--z-nav) - 1);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--s1);
+  border-bottom: 1px solid var(--line);
+}
+
+.frontonName {
+  font-family: var(--f-theatre);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--or-clair);
+  letter-spacing: .02em;
+}
+
+.bulb {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--or);
+  box-shadow: 0 0 4px var(--or-clair);
+  flex-shrink: 0;
+}
+
+/* ── Rampe (footlights, bottom of content) ── */
+.ramp {
+  width: 100%;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 0 16px;
+  background: var(--s2);
+  border-top: 1px solid var(--line);
+  position: relative;
+}
+
+.rampBulb {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--or);
+  box-shadow: 0 0 6px var(--or-clair);
+  flex-shrink: 0;
+}
+
+.rampBulbGreen {
+  background: var(--interdit);
+  box-shadow: 0 0 6px var(--interdit);
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+}
+
+.rampBulbGreen::before {
+  content: '';
+  position: absolute;
+  inset: -18px;
+}
+
+.rampBulbDead {
+  background: var(--ink-ghost);
+  box-shadow: none;
+}
+
+@keyframes rampFlash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.rampFlash .rampBulb {
+  animation: rampFlash 333ms ease-in-out 3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rampFlash .rampBulb { animation: none; }
+}
+
+/* ── Plancher ── */
+.floor {
+  width: 100%;
+  height: 24px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--plancher) 0 40px,
+    color-mix(in srgb, var(--plancher) 85%, black) 40px 42px
+  );
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .curtainLeft,
+  .curtainRight {
+    width: 14px;
+  }
+
+  .valance {
+    height: 26px;
+  }
+
+  .fronton {
+    left: 14px;
+    right: 14px;
+    height: 28px;
+  }
+
+  .frontonName {
+    font-size: 12px;
+  }
+
+  .bulb {
+    width: 4px;
+    height: 4px;
+  }
+
+  .bulb:nth-child(2n) {
+    display: none;
+  }
+
+  .ramp {
+    height: 32px;
+    gap: 10px;
+  }
+
+  .rampBulb {
+    width: 6px;
+    height: 6px;
+  }
+
+  .floor {
+    height: 16px;
+  }
+}

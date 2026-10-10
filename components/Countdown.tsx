@@ -20,10 +20,10 @@ export default function Countdown({ marathonStart }: { marathonStart?: string })
       <div style={{ padding: '1.5rem 2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
         <div className="dot-live" />
         <div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: 'var(--green)' }}>
+          <div style={{ fontFamily: 'var(--f-display)', fontSize: '1.2rem', color: 'var(--ok)' }}>
             🎬 Marathon en cours — {config.SAISON_LABEL}
           </div>
-          <div style={{ fontSize: '.78rem', color: 'var(--text2)', marginTop: '.2rem' }}>
+          <div style={{ fontSize: '.78rem', color: 'var(--ink2)', marginTop: '.2rem' }}>
             Démarré le {start.toLocaleDateString('fr-FR', {
               weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
             })}
@@ -45,17 +45,17 @@ export default function Countdown({ marathonStart }: { marathonStart?: string })
       <div style={{ padding: '2.5rem 2rem', textAlign: 'center' }}>
         <div style={{
           fontSize: '.65rem', letterSpacing: '4px', textTransform: 'uppercase',
-          color: 'var(--text3)', marginBottom: '.8rem',
+          color: 'var(--ink3)', marginBottom: '.8rem',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.7rem',
         }}>
-          <span style={{ flex: 1, height: 1, background: 'var(--border)', maxWidth: 80, display: 'inline-block' }} />
+          <span style={{ flex: 1, height: 1, background: 'var(--line)', maxWidth: 80, display: 'inline-block' }} />
           Début du marathon
-          <span style={{ flex: 1, height: 1, background: 'var(--border)', maxWidth: 80, display: 'inline-block' }} />
+          <span style={{ flex: 1, height: 1, background: 'var(--line)', maxWidth: 80, display: 'inline-block' }} />
         </div>
 
         <div style={{
-          fontFamily: 'var(--font-display)', fontSize: '1.3rem',
-          color: 'var(--text2)', marginBottom: '1.5rem', fontStyle: 'italic',
+          fontFamily: 'var(--f-display)', fontSize: '1.3rem',
+          color: 'var(--ink2)', marginBottom: '1.5rem', fontStyle: 'italic',
         }}>
           Le temps presse avant l&apos;ouverture des séances…
         </div>
@@ -72,13 +72,13 @@ export default function Countdown({ marathonStart }: { marathonStart?: string })
           ].map((item, i) =>
             'sep' in item ? (
               <div key={i} style={{
-                fontFamily: 'var(--font-display)', fontSize: '3rem',
-                color: 'var(--text3)', marginTop: 4, opacity: .4,
+                fontFamily: 'var(--f-display)', fontSize: '3rem',
+                color: 'var(--ink3)', marginTop: 4, opacity: .4,
               }}>{item.sep}</div>
             ) : (
               <div key={i} style={{ textAlign: 'center', minWidth: 90 }}>
                 <span className="hc-num">{pad(item.val!)}</span>
-                <span style={{ fontSize: '.6rem', textTransform: 'uppercase', letterSpacing: '2.5px', color: 'var(--text3)', marginTop: '.25rem', display: 'block' }}>
+                <span style={{ fontSize: '.6rem', textTransform: 'uppercase', letterSpacing: '2.5px', color: 'var(--ink3)', marginTop: '.25rem', display: 'block' }}>
                   {item.label}
                 </span>
               </div>
@@ -86,12 +86,12 @@ export default function Countdown({ marathonStart }: { marathonStart?: string })
           )}
         </div>
 
-        <div style={{ marginTop: '1.5rem', display: 'inline-flex', alignItems: 'center', gap: '.6rem', background: 'var(--gold3)', border: '1px solid rgba(232,196,106,.25)', color: 'var(--gold)', fontSize: '.82rem', padding: '.45rem 1.1rem', borderRadius: 99, fontWeight: 500 }}>
+        <div style={{ marginTop: '1.5rem', display: 'inline-flex', alignItems: 'center', gap: '.6rem', background: 'rgba(232,196,106,0.12)', border: '1px solid rgba(232,196,106,.25)', color: 'var(--accent-fg)', fontSize: '.82rem', padding: '.45rem 1.1rem', borderRadius: 99, fontWeight: 500 }}>
           📅 {start.toLocaleDateString('fr-FR', {
             weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
           })} à 00h00
         </div>
-        <div style={{ marginTop: '.7rem', fontSize: '.75rem', color: 'var(--text3)' }}>
+        <div style={{ marginTop: '.7rem', fontSize: '.75rem', color: 'var(--ink3)' }}>
           Inscris-toi et ajoute des films avant le coup d&apos;envoi
         </div>
       </div>

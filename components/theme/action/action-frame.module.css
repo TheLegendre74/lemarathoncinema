@@ -1,0 +1,251 @@
+.haze {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-decor, 0);
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 50% at 15% 20%, rgba(255, 107, 31, .07), transparent 70%),
+    radial-gradient(ellipse 50% 40% at 85% 80%, rgba(23, 162, 201, .05), transparent 70%);
+}
+
+.streaks {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-decor, 0);
+  pointer-events: none;
+  background: var(--tex);
+  animation: streakDrift 30s linear infinite;
+}
+
+@keyframes streakDrift {
+  from { background-position: 0 0; }
+  to { background-position: 26px 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .streaks {
+    animation: none;
+  }
+}
+
+.grit {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-decor, 0);
+  pointer-events: none;
+  background: var(--grit);
+}
+
+/* --- Floor rail (left, desktop >=1100px) --- */
+.rail {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 48px;
+  z-index: var(--z-decor, 0);
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 80px 0 60px;
+}
+
+.railInteractive {
+  pointer-events: auto;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.railFloor {
+  font-family: var(--f-data);
+  font-size: 10px;
+  letter-spacing: .06em;
+  line-height: 18px;
+  color: var(--ink-ghost);
+  text-align: center;
+  width: 100%;
+  transition: color var(--dur) var(--ease);
+}
+
+.railFloorActive {
+  color: var(--accent-fg);
+  font-weight: 700;
+}
+
+.railLabel {
+  font-family: var(--f-ui);
+  font-size: 9px;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: var(--ink-ghost);
+  writing-mode: vertical-lr;
+  text-orientation: mixed;
+  margin-top: 8px;
+}
+
+@media (max-width: 1099px) {
+  .rail { display: none; }
+}
+
+/* --- Frequency band (below topbar, >=769px) --- */
+.freqBand {
+  position: fixed;
+  top: 56px;
+  left: 0;
+  right: 0;
+  height: 28px;
+  z-index: calc(var(--z-nav) - 1);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px 0 56px;
+  background: var(--s1);
+  border-bottom: 1px solid var(--line);
+  font-family: var(--f-data);
+  font-size: 11px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink3);
+  gap: 16px;
+}
+
+.freqDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-fg);
+  display: inline-block;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+.freqLabel {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.freqEvent {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.freqEventTime {
+  color: var(--info);
+}
+
+.freqRight {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .freqBand { display: none; }
+}
+
+/* --- Glass cracks SVG overlay --- */
+.cracks {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.cracksReduced {
+  opacity: 0.6;
+}
+
+@media (max-width: 768px) {
+  .cracks {
+    width: 60%;
+    height: 60%;
+  }
+}
+
+/* --- Poster color grading --- */
+.posterGrade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 107, 31, .15), rgba(23, 162, 201, .15));
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* --- Chrome title --- */
+.chrome {
+  background: var(--chrome);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: var(--chrome-frange);
+}
+
+/* --- Skew (biseau) utilities --- */
+.skew {
+  transform: skewX(var(--skew));
+}
+
+.skewInner {
+  transform: skewX(calc(var(--skew) * -1));
+  display: inline-block;
+}
+
+/* --- Rivet decoration --- */
+.riveted {
+  position: relative;
+}
+
+.riveted::before,
+.riveted::after {
+  content: '';
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 40%, var(--ink3), var(--s3));
+  box-shadow: inset 0 1px 1px rgba(0,0,0,.5);
+}
+
+.riveted::before {
+  top: 6px;
+  left: 6px;
+  box-shadow:
+    inset 0 1px 1px rgba(0,0,0,.5),
+    calc(100% - 12px) 0 0 0 var(--ink3);
+}
+
+.riveted::after {
+  bottom: 6px;
+  left: 6px;
+  box-shadow:
+    inset 0 1px 1px rgba(0,0,0,.5),
+    calc(100% - 12px) 0 0 0 var(--ink3);
+}
+
+/* --- Button shake --- */
+@keyframes btnShake {
+  0%, 100% { transform: translateX(0) skewX(var(--skew)); }
+  25% { transform: translateX(-2px) skewX(var(--skew)); }
+  75% { transform: translateX(2px) skewX(var(--skew)); }
+}
+
+.shakeable:active {
+  animation: btnShake 120ms var(--ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shakeable:active {
+    animation: none;
+  }
+}

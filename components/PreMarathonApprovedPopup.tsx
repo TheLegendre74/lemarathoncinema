@@ -51,8 +51,8 @@ export default function PreMarathonApprovedPopup({ userId, preMarathonWindowUnti
       >
         <div
           style={{
-            background: 'var(--bg2)', border: '2px solid rgba(79,217,138,.45)',
-            borderRadius: 'var(--rl)', padding: '2rem 1.8rem',
+            background: 'var(--s1)', border: '2px solid rgba(79,217,138,.45)',
+            borderRadius: 'var(--radius)', padding: '2rem 1.8rem',
             maxWidth: 460, width: '100%', position: 'relative',
             boxShadow: '0 8px 40px rgba(0,0,0,.5)',
           }}
@@ -60,7 +60,7 @@ export default function PreMarathonApprovedPopup({ userId, preMarathonWindowUnti
         >
           <button
             onClick={dismiss}
-            style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: '1.1rem' }}
+            style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink3)', fontSize: '1.1rem' }}
             aria-label="Fermer"
           >
             ✕
@@ -68,33 +68,33 @@ export default function PreMarathonApprovedPopup({ userId, preMarathonWindowUnti
 
           <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
             <div style={{ fontSize: '3rem', marginBottom: '.5rem' }}>🎉</div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', color: 'var(--green)', lineHeight: 1.1 }}>
+            <div style={{ fontFamily: 'var(--f-display)', fontSize: '1.6rem', color: 'var(--ok)', lineHeight: 1.1 }}>
               Bienvenue dans le Marathon !
             </div>
           </div>
 
-          <div style={{ fontSize: '.88rem', color: 'var(--text2)', lineHeight: 1.7, marginBottom: '1.2rem' }}>
+          <div style={{ fontSize: '.88rem', color: 'var(--ink2)', lineHeight: 1.7, marginBottom: '1.2rem' }}>
             Tu as été accepté en cours de saison. Pour rattraper ton retard, tu disposes d'une{' '}
-            <strong style={{ color: 'var(--text)' }}>fenêtre de 24h</strong> pour cocher les films que tu as{' '}
-            <strong style={{ color: 'var(--text)' }}>déjà vus avant de rejoindre le marathon</strong>.
+            <strong style={{ color: 'var(--ink)' }}>fenêtre de 24h</strong> pour cocher les films que tu as{' '}
+            <strong style={{ color: 'var(--ink)' }}>déjà vus avant de rejoindre le marathon</strong>.
           </div>
 
           <div style={{
             background: 'rgba(79,217,138,.08)', border: '1px solid rgba(79,217,138,.3)',
-            borderRadius: 'var(--r)', padding: '.8rem 1rem', marginBottom: '1.2rem',
+            borderRadius: 'var(--radius)', padding: '.8rem 1rem', marginBottom: '1.2rem',
           }}>
-            <div style={{ fontSize: '.72rem', color: 'var(--text3)', marginBottom: '.3rem' }}>
+            <div style={{ fontSize: '.72rem', color: 'var(--ink3)', marginBottom: '.3rem' }}>
               Temps restant pour cocher tes films pré-marathon
             </div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--green)', fontFamily: 'var(--font-display)' }}>
+            <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--ok)', fontFamily: 'var(--f-display)' }}>
               {timeLeft || '…'}
             </div>
           </div>
 
-          <div style={{ fontSize: '.8rem', color: 'var(--text3)', lineHeight: 1.6, marginBottom: '1.4rem' }}>
-            <strong style={{ color: 'var(--text2)' }}>Comment faire ?</strong><br />
+          <div style={{ fontSize: '.8rem', color: 'var(--ink3)', lineHeight: 1.6, marginBottom: '1.4rem' }}>
+            <strong style={{ color: 'var(--ink2)' }}>Comment faire ?</strong><br />
             Va sur la page <strong>Films</strong>, ouvre la fiche d'un film que tu as déjà vu, et clique sur{' '}
-            <span style={{ color: 'var(--gold)', fontStyle: 'italic' }}>"J'ai vu ce film (pré-marathon)"</span>.
+            <span style={{ color: 'var(--accent-fg)', fontStyle: 'italic' }}>"J'ai vu ce film (pré-marathon)"</span>.
             Ce bouton est exceptionnellement actif pour toi pendant 24h.<br /><br />
             Passé ce délai, tu ne pourras plus ajouter de films "pré-marathon" — seulement les films vus{' '}
             <strong>pendant</strong> le marathon.

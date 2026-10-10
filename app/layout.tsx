@@ -1,11 +1,16 @@
 import type { Metadata, Viewport } from 'next'
-import { Playfair_Display, Syne, Inter, Newsreader, JetBrains_Mono } from 'next/font/google'
+import {
+  Playfair_Display, Syne, Inter, Newsreader, JetBrains_Mono,
+  Saira_Condensed, Anton, Oswald, Lora, Courier_Prime, Caveat,
+  Rye, Alfa_Slab_One, Bitter,
+  Cormorant_Garamond, Spectral, IBM_Plex_Mono, Reenie_Beanie,
+} from 'next/font/google'
 
 const playfairDisplay = Playfair_Display({
   subsets: ['latin'],
-  weight: ['700', '900'],
+  weight: ['500', '700', '900'],
   style: ['normal', 'italic'],
-  variable: '--font-display',
+  variable: '--ff-playfair',
   display: 'swap',
   preload: false,
 })
@@ -40,20 +45,140 @@ const jetbrainsMono = JetBrains_Mono({
   display: 'swap',
 })
 
+const sairaCondensed = Saira_Condensed({
+  subsets: ['latin'],
+  weight: ['700', '900'],
+  variable: '--ff-saira',
+  display: 'swap',
+  preload: false,
+})
+
+const anton = Anton({
+  subsets: ['latin'],
+  weight: ['400'],
+  variable: '--ff-anton',
+  display: 'swap',
+  preload: false,
+})
+
+const oswald = Oswald({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--ff-oswald',
+  display: 'swap',
+  preload: false,
+})
+
+const lora = Lora({
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  style: ['normal', 'italic'],
+  variable: '--ff-lora',
+  display: 'swap',
+  preload: false,
+})
+
+const courierPrime = Courier_Prime({
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  style: ['normal', 'italic'],
+  variable: '--ff-courier',
+  display: 'swap',
+  preload: false,
+})
+
+const caveat = Caveat({
+  subsets: ['latin'],
+  weight: ['600'],
+  variable: '--ff-caveat',
+  display: 'swap',
+  preload: false,
+})
+
+const rye = Rye({
+  subsets: ['latin'],
+  weight: ['400'],
+  variable: '--ff-rye',
+  display: 'swap',
+  preload: false,
+})
+
+const alfaSlabOne = Alfa_Slab_One({
+  subsets: ['latin'],
+  weight: ['400'],
+  variable: '--ff-alfa',
+  display: 'swap',
+  preload: false,
+})
+
+const bitter = Bitter({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  style: ['normal', 'italic'],
+  variable: '--ff-bitter',
+  display: 'swap',
+  preload: false,
+})
+
+const cormorantGaramond = Cormorant_Garamond({
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  style: ['normal', 'italic'],
+  variable: '--ff-cormorant',
+  display: 'swap',
+  preload: false,
+})
+
+const spectral = Spectral({
+  subsets: ['latin'],
+  weight: ['300', '400', '600'],
+  style: ['normal', 'italic'],
+  variable: '--ff-spectral',
+  display: 'swap',
+  preload: false,
+})
+
+const ibmPlexMono = IBM_Plex_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  variable: '--ff-plex',
+  display: 'swap',
+  preload: false,
+})
+
+const reenieBeanie = Reenie_Beanie({
+  subsets: ['latin'],
+  weight: ['400'],
+  variable: '--ff-reenie',
+  display: 'swap',
+  preload: false,
+})
+
 export const viewport: Viewport = {
   viewportFit: 'cover',
   width: 'device-width',
   initialScale: 1,
 }
 import './styles/tokens.css'
+import './styles/themes/action.css'
+import './styles/themes/action-screens.css'
+import './styles/themes/comedie-screens.css'
+import './styles/themes/comedie.css'
+import './styles/themes/western.css'
+import './styles/themes/western-screens.css'
+import './styles/themes/horreur.css'
+import './styles/themes/horreur-screens.css'
 import './styles/legacy.css'
 import './globals.css'
-import './weekly-theme.css'
+import { cookies } from 'next/headers'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import ClientShell from '@/components/ClientShell'
 import { ToastProvider } from '@/components/ToastProvider'
 import EasterEggsLoader from '@/components/EasterEggsLoader'
-import WeeklyThemeProvider from '@/components/WeeklyTheme/WeeklyThemeProvider'
+import ThemeProvider from '@/components/theme/ThemeProvider'
+import ThemeFrame from '@/components/theme/ThemeFrame'
+import ThemeBehaviors from '@/components/theme/ThemeBehaviors'
+import ThemePreviewBanner from '@/components/theme/ThemePreviewBanner'
 import { getServerConfig } from '@/lib/serverConfig'
 import { getUnreadMessageCountForUser } from '@/lib/messages'
 import { getUserCached } from '@/lib/auth'
@@ -61,6 +186,13 @@ import DiscordFab from '@/components/DiscordFab'
 import { ConfigProvider } from '@/components/config/ConfigProvider'
 import type { PublicConfig } from '@/components/config/ConfigProvider'
 import { withCache } from '@/lib/redis'
+import { resolveTheme, nextMondayParis } from '@/lib/themes/resolve'
+import { getSeasonWeeks } from '@/lib/themes/seasonWeeks'
+import type { ThemeKey } from '@/lib/themes/types'
+import { READY_THEMES } from '@/lib/themes/types'
+import { getSeasonPlayerCount, getActivePlayerCount } from '@/lib/home'
+import { getRecentActivity } from '@/lib/activity'
+import { parisParts } from '@/lib/time/paris'
 
 export async function generateMetadata(): Promise<Metadata> {
   const cfg = await getServerConfig()
@@ -71,10 +203,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const [user, cfg, supabase] = await Promise.all([
+  const [user, cfg, supabase, seasonWeeks, cookieStore] = await Promise.all([
     getUserCached(),
     getServerConfig(),
     createClient(),
+    getSeasonWeeks(),
+    cookies(),
   ])
 
   let profile = null
@@ -162,24 +296,95 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     videoclubMode: cfg.videoclub_mode,
   }
 
+  const isAdmin = !!(profile as any)?.is_admin
+  const previewRaw = cookieStore.get('cm_theme_apercu')?.value ?? null
+  const previewCookie = (previewRaw && READY_THEMES.includes(previewRaw as ThemeKey)) ? previewRaw as ThemeKey : null
+
+  const resolved = resolveTheme({
+    now: new Date(),
+    cfg: { theme_mode: cfg.theme_mode, theme_force: cfg.theme_force as ThemeKey },
+    weeks: seasonWeeks,
+    previewCookie,
+    isAdmin,
+  })
+
+  const nextSwitch = nextMondayParis(new Date()).toISOString()
+
+  let freqData = null
+  if (resolved.key === 'action') {
+    const [totalPlayers, activePlayers, activity] = await Promise.all([
+      getSeasonPlayerCount(cfg.SAISON_NUMERO),
+      getActivePlayerCount(cfg.SAISON_NUMERO),
+      getRecentActivity(1),
+    ])
+    const lastAct = activity[0] ?? null
+    let lastEvent: string | null = null
+    let lastEventTime: string | null = null
+    if (lastAct) {
+      const d = new Date(lastAct.at)
+      const p = parisParts(d)
+      lastEventTime = `${String(p.h).padStart(2, '0')}:${String(p.min).padStart(2, '0')}`
+      if (lastAct.type === 'watched') {
+        lastEvent = `${lastAct.pseudo} A ENCAISSÉ ${lastAct.titre} — +${lastAct.exp}`
+      } else if (lastAct.type === 'rated') {
+        lastEvent = `${lastAct.pseudo} A NOTÉ ${lastAct.titre} — ${lastAct.note}/10`
+      } else if (lastAct.type === 'duel_opened') {
+        lastEvent = `FACE-À-FACE : ${lastAct.film1} VS ${lastAct.film2}`
+      } else if (lastAct.type === 'duel_closed') {
+        lastEvent = `${lastAct.winner} L'EMPORTE`
+      }
+    }
+    freqData = {
+      weekNum: resolved.week?.semaine ?? null,
+      lastEvent,
+      lastEventTime,
+      activePlayers,
+      totalPlayers,
+    }
+  }
+
+  const fontVars = [
+    playfairDisplay.variable, syne.variable, inter.variable,
+    newsreader.variable, jetbrainsMono.variable,
+    sairaCondensed.variable, anton.variable, oswald.variable,
+    lora.variable, courierPrime.variable, caveat.variable,
+    rye.variable, alfaSlabOne.variable, bitter.variable,
+    cormorantGaramond.variable, spectral.variable,
+    ibmPlexMono.variable, reenieBeanie.variable,
+  ].join(' ')
+
   return (
-    <html lang="fr" data-theme="neutre" className={`${playfairDisplay.variable} ${syne.variable} ${inter.variable} ${newsreader.variable} ${jetbrainsMono.variable}`}>
+    <html lang="fr" data-theme={resolved.key} className={fontVars}>
       <body>
         <ConfigProvider config={publicConfig}>
-          <ToastProvider>
-            <WeeklyThemeProvider />
-            <EasterEggsLoader config={eeConfig} isGuest={!user} watchedCount={watchedCount} hasClippyEgg={hasClippyEgg} isAdmin={!!(profile as any)?.is_admin} userId={user?.id} />
-            <ClientShell
-              profile={profile}
-              hasRageuxEgg={hasRageuxEgg}
-              hasTamagotchiEgg={hasTamagotchiEgg}
-              unreadMessages={unreadMessages}
-              userId={user?.id}
-            >
-              {children}
-            </ClientShell>
-            <DiscordFab />
-          </ToastProvider>
+          <ThemeProvider resolved={resolved} nextSwitch={nextSwitch} isAdmin={isAdmin}>
+            <ToastProvider>
+              <ThemePreviewBanner />
+              <ThemeFrame
+                playerExp={profile ? (profile as any).exp ?? 0 : null}
+                weekNum={resolved.week?.semaine ?? null}
+                freqData={freqData}
+              />
+              <ThemeBehaviors
+                playerExp={profile ? (profile as any).exp ?? 0 : null}
+                themeEggsEnabled={profile ? (profile as any).theme_eggs !== false : true}
+                eggsDisabled={publicConfig.eggsDisabled}
+                actionCarSpeed={cfg.action_car_speed}
+                isGuest={!user}
+              />
+              <EasterEggsLoader config={eeConfig} isGuest={!user} watchedCount={watchedCount} hasClippyEgg={hasClippyEgg} isAdmin={isAdmin} userId={user?.id} />
+              <ClientShell
+                profile={profile}
+                hasRageuxEgg={hasRageuxEgg}
+                hasTamagotchiEgg={hasTamagotchiEgg}
+                unreadMessages={unreadMessages}
+                userId={user?.id}
+              >
+                {children}
+              </ClientShell>
+              <DiscordFab />
+            </ToastProvider>
+          </ThemeProvider>
         </ConfigProvider>
       </body>
     </html>

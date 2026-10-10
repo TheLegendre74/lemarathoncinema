@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { navLabel, navCourtLabel } from '@/lib/themes/neutre'
+import { useTheme, useNavLabel, useNavCourtLabel } from '@/components/theme/ThemeProvider'
 import { NAV_ENTRIES, ACCOUNT_ENTRIES, CATEGORIES, BOTTOM_NAV_KEYS, getCategoryEntries, isEntryVisible } from '@/lib/nav'
 import type { NavConditions, NavEntry, NavCategory } from '@/lib/nav'
 import type { NavKey, NavCourtKey } from '@/lib/themes/types'
@@ -14,12 +14,16 @@ import styles from './TopBar.module.css'
 interface TopBarProps {
   cond: NavConditions
   pseudo?: string
+  playerLevel?: number | null
   onLogout: () => void
 }
 
-export default function TopBar({ cond, pseudo, onLogout }: TopBarProps) {
+export default function TopBar({ cond, pseudo, playerLevel, onLogout }: TopBarProps) {
   const pathname = usePathname()
   const config = useConfig()
+  const { key: themeKey, week, def } = useTheme()
+  const navLabel = useNavLabel()
+  const navCourtLabel = useNavCourtLabel()
   const [openMenu, setOpenMenu] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const menuTimerRef = useRef<ReturnType<typeof setTimeout>>()
@@ -51,7 +55,12 @@ export default function TopBar({ cond, pseudo, onLogout }: TopBarProps) {
   const seasonLabel = `SAISON ${String(config.SAISON_NUMERO).padStart(2, '0')}`
   const daysUntil = Math.max(0, Math.ceil((new Date(config.MARATHON_START).getTime() - Date.now()) / 86400000))
   const isPreSeason = new Date(config.MARATHON_START) > new Date()
-  const weekPill = isPreSeason ? `${seasonLabel} · J-${daysUntil}` : seasonLabel
+  const weekPill = week
+    ? def.weekLabel(week)
+    : isPreSeason ? `${seasonLabel} · J-${daysUntil}` : seasonLabel
+  const weekPillCourt = week
+    ? def.weekCourt(week)
+    : isPreSeason ? `J-${daysUntil}` : `S${String(config.SAISON_NUMERO).padStart(2, '0')}`
 
   const videoclubEntry = NAV_ENTRIES.find(e => e.key === 'videoclub')
   const showVideoclub = videoclubEntry && isEntryVisible(videoclubEntry, cond)
@@ -99,7 +108,13 @@ export default function TopBar({ cond, pseudo, onLogout }: TopBarProps) {
           </div>
 
           <div className={styles.right}>
-            <span className={styles.weekPill}>{weekPill}</span>
+            {themeKey === 'action' && (
+              <EtageBadge level={playerLevel ?? null} />
+            )}
+            <span className={styles.weekPill}>
+              <span className={styles.weekPillFull}>{weekPill}</span>
+              <span className={styles.weekPillCourt}>{weekPillCourt}</span>
+            </span>
             {/* Tablet menu button */}
             <button className={styles.tabletMenuBtn} onClick={() => setDrawerOpen(true)} aria-label="Menu">
               <IconMenu />
@@ -210,6 +225,7 @@ function DropdownMenu({
   unreadMessages: number
 }) {
   const ref = useRef<HTMLDivElement>(null)
+  const navLabel = useNavLabel()
   const isOpen = openMenu === menuKey
   const active = checkActive(entries)
 
@@ -267,6 +283,7 @@ function AccountMenu({
   closeMenus: () => void
 }) {
   const ref = useRef<HTMLDivElement>(null)
+  const navLabel = useNavLabel()
   const isOpen = openMenu === 'account'
 
   useEffect(() => {
@@ -306,6 +323,36 @@ function AccountMenu({
         </div>
       )}
     </div>
+  )
+}
+
+function EtageBadge({ level }: { level: number | null }) {
+  const touchCountRef = useRef(0)
+  const touchTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const pad2 = (n: number) => String(n).padStart(2, '0')
+  const label = level !== null ? `ÉTAGE ${pad2(Math.min(level, 12))}` : 'ÉTAGE —'
+
+  const handleTouch = useCallback(() => {
+    touchCountRef.current++
+    if (touchTimerRef.current) clearTimeout(touchTimerRef.current)
+    touchTimerRef.current = setTimeout(() => { touchCountRef.current = 0 }, 3000)
+    if (touchCountRef.current >= 5) {
+      touchCountRef.current = 0
+      window.dispatchEvent(new CustomEvent('action:nakatomi-secours'))
+    }
+  }, [])
+
+  return (
+    <span
+      className={styles.etageBadge}
+      data-etage-badge
+      onClick={handleTouch}
+      role="button"
+      tabIndex={0}
+      style={{ touchAction: 'manipulation' }}
+    >
+      {label}
+    </span>
   )
 }
 

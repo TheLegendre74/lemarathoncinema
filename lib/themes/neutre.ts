@@ -1,7 +1,10 @@
-import type { ThemeDef, ThemeConfig, NavKey, NavCourtKey, VocabKey } from './types'
+import type { ThemeDef, WeekInfo } from './types'
+
+const pad2 = (n: number) => String(n).padStart(2, '0')
 
 export const neutreTheme: ThemeDef = {
-  id: 'neutre',
+  key: 'neutre',
+  label: 'Neutre',
 
   nav: {
     home: 'Accueil',
@@ -85,70 +88,17 @@ export const neutreTheme: ThemeDef = {
   },
 
   repliques: {},
-
   citations: [],
-
   expUnit: 'EXP',
+  levels: null,
 
-  levels: [
-    '', '', '', '', '', '', '', '', '', '', '', '',
-  ],
-}
+  levelLabel: (level: number) => `Niveau ${level}`,
 
-let currentTheme: ThemeDef = neutreTheme
+  weekLabel: (w: WeekInfo) =>
+    `SEMAINE ${w.semaine} / ${w.total} · SAISON ${pad2(w.saison)}`,
 
-export function setTheme(theme: ThemeDef) {
-  currentTheme = theme
-}
+  weekCourt: (w: WeekInfo) => `${pad2(w.semaine)} / ${pad2(w.total)}`,
 
-export function getTheme(): ThemeDef {
-  return currentTheme
-}
-
-function replaceVars(text: string, vars: Record<string, string>): string {
-  return text.replace(/\{(\w+)\}/g, (match, key) => {
-    if (key in vars) return vars[key]
-    return match
-  })
-}
-
-function commonVars(cfg?: ThemeConfig): Record<string, string> {
-  if (!cfg) return {}
-  return {
-    fdlsJour: cfg.fdlsJour.toLowerCase(),
-    fdlsHeure: cfg.fdlsHeure,
-    seanceJour: cfg.seanceJour.toLowerCase(),
-    seanceHeure: cfg.seanceHeure,
-  }
-}
-
-export function t(key: VocabKey, vars?: Record<string, string>, cfg?: ThemeConfig): string {
-  const raw = currentTheme.vocab[key]
-  if (!raw) return neutreTheme.vocab[key] ?? key
-  const merged = { ...commonVars(cfg), ...vars }
-  return Object.keys(merged).length > 0 ? replaceVars(raw, merged) : raw
-}
-
-export function navLabel(key: NavKey): string {
-  return currentTheme.nav[key] ?? neutreTheme.nav[key] ?? key
-}
-
-export function navCourtLabel(key: NavCourtKey): string {
-  return currentTheme.navCourt[key] ?? neutreTheme.navCourt[key] ?? key
-}
-
-export function levelLabel(level: number): string {
-  const name = currentTheme.levels[level - 1] ?? ''
-  const label = currentTheme.vocab.level ?? neutreTheme.vocab.level
-  if (name) return `${label} ${level} · ${name}`
-  return `${label} ${level}`
-}
-
-export function formatExp(amount: number): string {
-  const unit = currentTheme.expUnit ?? 'EXP'
-  return `${amount >= 0 ? '+' : ''}${amount} ${unit}`
-}
-
-export function accorde(n: number, singulier: string, pluriel: string): string {
-  return n <= 1 ? singulier : pluriel
+  eggs: [],
+  radioTrack: null,
 }

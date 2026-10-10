@@ -6,6 +6,7 @@ import { addPost, deletePost, editPost } from '@/lib/actions'
 import { useToast } from './ToastProvider'
 import { getActiveBadge } from '@/lib/config'
 import { useConfig } from '@/components/config/ConfigProvider'
+import { emitDestruction } from '@/lib/destruction'
 import type { Post, Profile } from '@/lib/supabase/types'
 
 interface ForumProps {
@@ -29,7 +30,7 @@ function RageuxOverlay({ onClose }: { onClose: () => void }) {
         <div style={{ fontSize: 'clamp(3.5rem,12vw,7rem)', lineHeight: 1, marginBottom: '1rem', filter: 'drop-shadow(0 0 30px rgba(239,68,68,.8))' }}>
           😤
         </div>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.8rem,6vw,3.2rem)', color: '#ef4444', textShadow: '0 0 50px rgba(239,68,68,.7)', lineHeight: 1.2, marginBottom: '1rem' }}>
+        <div style={{ fontFamily: 'var(--f-display)', fontSize: 'clamp(1.8rem,6vw,3.2rem)', color: '#ef4444', textShadow: '0 0 50px rgba(239,68,68,.7)', lineHeight: 1.2, marginBottom: '1rem' }}>
           Tu es un rageux, Harry.
         </div>
         <div style={{ fontSize: 'clamp(.8rem,2vw,1rem)', color: 'rgba(255,255,255,.5)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '2rem' }}>
@@ -58,7 +59,7 @@ function TamagotchiOverlay({ onClose }: { onClose: () => void }) {
           <div style={{whiteSpace:'pre'}}>{'  /|  ~~~~~  |  '}</div>
           <div style={{whiteSpace:'pre'}}>{'/ |_________|  '}</div>
         </div>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.4rem,5vw,2.8rem)', color: '#22d3ee', textShadow: '0 0 40px #22d3ee88', lineHeight: 1.2, marginBottom: '.8rem' }}>
+        <div style={{ fontFamily: 'var(--f-display)', fontSize: 'clamp(1.4rem,5vw,2.8rem)', color: '#22d3ee', textShadow: '0 0 40px #22d3ee88', lineHeight: 1.2, marginBottom: '.8rem' }}>
           Un facehugger s'est attaché à toi...
         </div>
         <div style={{ fontSize: 'clamp(.8rem,2vw,1rem)', color: 'rgba(255,255,255,.5)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '1.5rem' }}>
@@ -77,18 +78,18 @@ function FightClubRule({ rule, onClose }: { rule: 1 | 2 | 3; onClose: () => void
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.88)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
       <div style={{ textAlign: 'center', animation: 'ee-rule-in .35s ease', maxWidth: 560, padding: '0 2rem' }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem,6vw,3.5rem)', color: '#fff', textShadow: '0 0 40px rgba(255,255,255,.25)', lineHeight: 1.2 }}>
+        <div style={{ fontFamily: 'var(--f-display)', fontSize: 'clamp(2rem,6vw,3.5rem)', color: '#fff', textShadow: '0 0 40px rgba(255,255,255,.25)', lineHeight: 1.2 }}>
           {title}
         </div>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1rem,3vw,1.7rem)', color: 'var(--red)', marginTop: '1rem', textShadow: '0 0 25px rgba(232,90,90,.6)', lineHeight: 1.4 }}>
+        <div style={{ fontFamily: 'var(--f-display)', fontSize: 'clamp(1rem,3vw,1.7rem)', color: 'var(--bad)', marginTop: '1rem', textShadow: '0 0 25px rgba(232,90,90,.6)', lineHeight: 1.4 }}>
           {text}
         </div>
         {rule === 3 && (
-          <div style={{ color: 'var(--text2)', fontSize: '.82rem', marginTop: '1.2rem', fontStyle: 'italic' }}>
+          <div style={{ color: 'var(--ink2)', fontSize: '.82rem', marginTop: '1.2rem', fontStyle: 'italic' }}>
             Tu insistes encore ? Le combat commence…
           </div>
         )}
-        <div style={{ color: 'var(--text3)', fontSize: '.75rem', marginTop: '1.5rem' }}>— Cliquer pour fermer —</div>
+        <div style={{ color: 'var(--ink3)', fontSize: '.75rem', marginTop: '1.5rem' }}>— Cliquer pour fermer —</div>
       </div>
     </div>
   )
@@ -194,19 +195,19 @@ function FightGame({ onClose }: { onClose: () => void }) {
         <div style={{ width: 14, height: 24, background: '#1a3a8c', border: '1px solid #122a6a', borderRadius: '0 0 4px 4px' }} />
         <div style={{ width: 14, height: 24, background: '#1a3a8c', border: '1px solid #122a6a', borderRadius: '0 0 4px 4px' }} />
       </div>
-      <div style={{ textAlign: 'center', fontSize: '.6rem', color: 'var(--text3)', marginTop: 1, transform: flip ? 'scaleX(-1)' : undefined }}>{name}</div>
+      <div style={{ textAlign: 'center', fontSize: '.6rem', color: 'var(--ink3)', marginTop: 1, transform: flip ? 'scaleX(-1)' : undefined }}>{name}</div>
     </div>
   )
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.92)', zIndex: 9001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-      <div style={{ width: ARENA_W, maxWidth: '95vw', background: '#131313', border: '2px solid #3a3a3a', borderRadius: 'var(--rl)', overflow: 'hidden' }}>
+      <div style={{ width: ARENA_W, maxWidth: '95vw', background: '#131313', border: '2px solid #3a3a3a', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
         {/* Header */}
         <div style={{ background: '#0a0a0a', padding: '.65rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontFamily: 'var(--font-display)', color: 'var(--red)', fontSize: '1.05rem', letterSpacing: 1 }}>⚔️ FIGHT CLUB</div>
+          <div style={{ fontFamily: 'var(--f-display)', color: 'var(--bad)', fontSize: '1.05rem', letterSpacing: 1 }}>⚔️ FIGHT CLUB</div>
           <div style={{ display: 'flex', gap: '.8rem', alignItems: 'center' }}>
-            <span style={{ fontFamily: 'monospace', color: timeLeft < 10 ? 'var(--red)' : 'var(--gold)', fontSize: '.9rem' }}>⏱ {timeLeft}s</span>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: '1.1rem', padding: '0 .2rem' }}>✕</button>
+            <span style={{ fontFamily: 'monospace', color: timeLeft < 10 ? 'var(--bad)' : 'var(--accent-fg)', fontSize: '.9rem' }}>⏱ {timeLeft}s</span>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--ink3)', cursor: 'pointer', fontSize: '1.1rem', padding: '0 .2rem' }}>✕</button>
           </div>
         </div>
 
@@ -226,8 +227,8 @@ function FightGame({ onClose }: { onClose: () => void }) {
           {winner && (
             <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.78)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <div style={{ textAlign: 'center', animation: 'ee-fadein .4s ease' }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.8rem,4vw,2.8rem)', color: 'var(--gold)' }}>{winner} gagne !</div>
-                <div style={{ color: 'var(--text2)', fontSize: '.88rem', marginTop: '.5rem' }}>
+                <div style={{ fontFamily: 'var(--f-display)', fontSize: 'clamp(1.8rem,4vw,2.8rem)', color: 'var(--accent-fg)' }}>{winner} gagne !</div>
+                <div style={{ color: 'var(--ink2)', fontSize: '.88rem', marginTop: '.5rem' }}>
                   {winner === 'Toi' ? '"Tu es Tyler Durden." 🏆' : '"La première règle du Fight Club..."'}
                 </div>
                 <button onClick={onClose} className="btn btn-outline" style={{ marginTop: '1.2rem', fontSize: '.8rem' }}>Fermer</button>
@@ -237,7 +238,7 @@ function FightGame({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Controls */}
-        <div style={{ background: '#0a0a0a', padding: '.6rem 1rem', display: 'flex', justifyContent: 'space-between', fontSize: '.7rem', color: 'var(--text3)' }}>
+        <div style={{ background: '#0a0a0a', padding: '.6rem 1rem', display: 'flex', justifyContent: 'space-between', fontSize: '.7rem', color: 'var(--ink3)' }}>
           <span>← → Se déplacer · Z Frapper</span>
           <span>Toi: {p1.hp}hp · Tyler: {p2.hp}hp</span>
         </div>
@@ -274,7 +275,7 @@ function HalOverlay({ onClose }: { onClose: () => void }) {
         <div style={{ fontFamily: 'monospace', fontSize: 'clamp(.9rem,2.5vw,1.25rem)', color: '#ff5555', textShadow: '0 0 18px rgba(255,60,0,.8)', maxWidth: 420, lineHeight: 1.7, minHeight: '2em', padding: '0 1rem' }}>
           {typed}<span style={{ animation: 'ee-blink 1s infinite' }}>|</span>
         </div>
-        <div style={{ color: 'var(--text3)', fontSize: '.72rem', marginTop: '1.8rem' }}>— Cliquer pour fermer —</div>
+        <div style={{ color: 'var(--ink3)', fontSize: '.72rem', marginTop: '1.8rem' }}>— Cliquer pour fermer —</div>
       </div>
     </div>
   )
@@ -311,17 +312,17 @@ function ForrestOverlay({ onClose }: { onClose: () => void }) {
       {/* Box */}
       <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', animation: 'ee-fadein .5s ease', pointerEvents: 'none' }}>
         <div style={{ fontSize: '5rem', lineHeight: 1 }}>🍫</div>
-        <div style={{ fontFamily: 'var(--font-display)', color: '#d4a256', fontSize: 'clamp(1rem,3vw,1.4rem)', marginTop: '.7rem', textShadow: '0 2px 10px rgba(0,0,0,.8)' }}>
+        <div style={{ fontFamily: 'var(--f-display)', color: '#d4a256', fontSize: 'clamp(1rem,3vw,1.4rem)', marginTop: '.7rem', textShadow: '0 2px 10px rgba(0,0,0,.8)' }}>
           Life is like a box of chocolates...
         </div>
-        <div style={{ color: 'var(--text3)', fontSize: '.72rem', marginTop: '1rem' }}>Cliquer pour fermer</div>
+        <div style={{ color: 'var(--ink3)', fontSize: '.72rem', marginTop: '1rem' }}>Cliquer pour fermer</div>
       </div>
 
       {/* Falling quotes */}
       {drops.map(q => (
         <div key={q.id} style={{
           position: 'absolute', left: `${q.x}%`, top: `${q.y}%`,
-          color: '#d4a256', fontFamily: 'var(--font-display)', fontSize: '.88rem',
+          color: '#d4a256', fontFamily: 'var(--f-display)', fontSize: '.88rem',
           whiteSpace: 'nowrap', pointerEvents: 'none', textShadow: '0 2px 6px rgba(0,0,0,.9)',
         }}>
           {q.text}
@@ -410,7 +411,7 @@ function ShiningEffect({ onClose }: { onClose: () => void }) {
     }}>
       <div style={{ textAlign: 'center' }}>
         <div style={{
-          fontFamily: 'var(--font-display)',
+          fontFamily: 'var(--f-display)',
           fontSize: 'clamp(3rem,12vw,8rem)',
           color: '#cc0000',
           textShadow: '0 0 50px rgba(200,0,0,.9)',
@@ -426,7 +427,7 @@ function ShiningEffect({ onClose }: { onClose: () => void }) {
             ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
           </div>
         )}
-        <div style={{ color: 'var(--text3)', fontSize: '.72rem', marginTop: '1.8rem' }}>— Cliquer pour fermer —</div>
+        <div style={{ color: 'var(--ink3)', fontSize: '.72rem', marginTop: '1.8rem' }}>— Cliquer pour fermer —</div>
       </div>
     </div>
   )
@@ -564,7 +565,8 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
   async function handleDelete(postId: string) {
     setPosts(prev => prev.filter(p => p.id !== postId))
     const res = await deletePost(postId)
-    if (res.error) addToast(res.error, '⚠️')
+    if (res.error) { addToast(res.error, '⚠️'); return }
+    emitDestruction()
   }
 
   function startEdit(p: any) {
@@ -585,7 +587,7 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
   return (
     <div>
       {posts.length === 0 && (
-        <div style={{ color: 'var(--text3)', fontSize: '.82rem', textAlign: 'center', padding: '1.5rem', background: 'var(--bg3)', borderRadius: 'var(--r)' }}>
+        <div style={{ color: 'var(--ink3)', fontSize: '.82rem', textAlign: 'center', padding: '1.5rem', background: 'var(--s2)', borderRadius: 'var(--radius)' }}>
           Aucun message — sois le premier à donner ton avis !
         </div>
       )}
@@ -601,7 +603,7 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
                 <div className="forum-ava">{p.profiles?.pseudo?.slice(0, 2).toUpperCase()}</div>
                 <span style={{ fontSize: '.8rem', fontWeight: 500 }}>{p.profiles?.pseudo}</span>
                 {(() => { const b = getActiveBadge((p.profiles as any)?.exp ?? 0, (p.profiles as any)?.active_badge); return b ? <span className={`badge-pill ${b.cls}`} style={{ fontSize: '.55rem', padding: '1px 6px', flexShrink: 0 }}>{b.icon} {b.label}</span> : null })()}
-                <span style={{ fontSize: '.67rem', color: 'var(--text3)', marginLeft: 'auto' }}>
+                <span style={{ fontSize: '.67rem', color: 'var(--ink3)', marginLeft: 'auto' }}>
                   {new Date(p.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                 </span>
                 {/* Actions */}
@@ -610,11 +612,12 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
                     {isMe && (
                       <button
                         onClick={() => startEdit(p)}
-                        style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', borderRadius: 4, color: 'var(--text2)', cursor: 'pointer', fontSize: '.7rem', padding: '2px 7px', lineHeight: 1.6 }}
+                        style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--line)', borderRadius: 4, color: 'var(--ink2)', cursor: 'pointer', fontSize: '.7rem', padding: '2px 7px', lineHeight: 1.6 }}
                       >Modifier</button>
                     )}
                     <button
                       onClick={() => handleDelete(p.id)}
+                      data-destructif=""
                       style={{ background: 'rgba(220,60,60,.1)', border: '1px solid rgba(220,60,60,.25)', borderRadius: 4, color: '#e05555', cursor: 'pointer', fontSize: '.7rem', padding: '2px 7px', lineHeight: 1.6 }}
                     >Supprimer</button>
                   </div>
@@ -629,7 +632,7 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
                     autoFocus
                     maxLength={2000}
                     rows={3}
-                    style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--gold)', borderRadius: 'var(--r)', padding: '.5rem .7rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.88rem', lineHeight: 1.6, resize: 'vertical', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', background: 'var(--s2)', border: '1px solid var(--accent-fg)', borderRadius: 'var(--radius)', padding: '.5rem .7rem', color: 'var(--ink)', fontFamily: 'var(--font-body)', fontSize: '.88rem', lineHeight: 1.6, resize: 'vertical', outline: 'none', boxSizing: 'border-box' }}
                     onKeyDown={e => { if (e.key === 'Escape') setEditingId(null) }}
                   />
                   <div style={{ display: 'flex', gap: '.4rem', justifyContent: 'flex-end' }}>
@@ -638,7 +641,7 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
                   </div>
                 </div>
               ) : (
-                <div style={{ fontSize: '.88rem', color: 'var(--text2)', lineHeight: 1.75, whiteSpace: 'pre-wrap', overflowWrap: 'break-word' }}>{p.content}</div>
+                <div style={{ fontSize: '.88rem', color: 'var(--ink2)', lineHeight: 1.75, whiteSpace: 'pre-wrap', overflowWrap: 'break-word' }}>{p.content}</div>
               )}
             </div>
           )
@@ -653,17 +656,17 @@ export default function Forum({ topic, profile, initialPosts = [], filmTitle }: 
             onChange={e => setText(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) submit() }}
             placeholder="Ton commentaire… (Ctrl+Entrée pour envoyer)"
-            style={{ flex: 1, background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.6rem .8rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.88rem', lineHeight: 1.6, resize: 'vertical', minHeight: 68, outline: 'none' }}
-            onFocus={e => { e.target.style.borderColor = 'var(--gold)' }}
-            onBlur={e => { e.target.style.borderColor = 'var(--border2)' }}
+            style={{ flex: 1, background: 'var(--s2)', border: '1px solid var(--line2)', borderRadius: 'var(--radius)', padding: '.6rem .8rem', color: 'var(--ink)', fontFamily: 'var(--font-body)', fontSize: '.88rem', lineHeight: 1.6, resize: 'vertical', minHeight: 68, outline: 'none' }}
+            onFocus={e => { e.target.style.borderColor = 'var(--accent-fg)' }}
+            onBlur={e => { e.target.style.borderColor = 'var(--line2)' }}
           />
           <button className="btn btn-gold" onClick={submit} disabled={loading} style={{ alignSelf: 'flex-end' }}>
             {loading ? '…' : 'Poster'}
           </button>
         </div>
       ) : (
-        <div style={{ marginTop: '1rem', textAlign: 'center', fontSize: '.82rem', color: 'var(--text3)' }}>
-          <a href="/auth" style={{ color: 'var(--gold)', textDecoration: 'none' }}>Connecte-toi</a> pour participer à la discussion.
+        <div style={{ marginTop: '1rem', textAlign: 'center', fontSize: '.82rem', color: 'var(--ink3)' }}>
+          <a href="/auth" style={{ color: 'var(--accent-fg)', textDecoration: 'none' }}>Connecte-toi</a> pour participer à la discussion.
         </div>
       )}
 

@@ -144,7 +144,7 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
             <span style={{ fontSize: '.95rem', width: 18, textAlign: 'center', flexShrink: 0 }}>{n.icon}</span>
             {n.label}
             {(n as any).badge && (
-              <span style={{ marginLeft: 'auto', background: 'var(--red)', color: '#fff', borderRadius: 99, fontSize: '.6rem', fontWeight: 700, padding: '1px 6px', minWidth: 18, textAlign: 'center' }}>
+              <span style={{ marginLeft: 'auto', background: 'var(--bad)', color: '#fff', borderRadius: 99, fontSize: '.6rem', fontWeight: 700, padding: '1px 6px', minWidth: 18, textAlign: 'center' }}>
                 {(n as any).badge > 99 ? '99+' : (n as any).badge}
               </span>
             )}
@@ -172,7 +172,7 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
                   <Link key={item.href} href={item.href} className={`nav-subitem ${isActive(item.href) ? 'active' : ''}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span>{item.label}</span>
                     {(item as any).badge && (
-                      <span style={{ background: 'var(--red)', color: '#fff', borderRadius: 99, fontSize: '.6rem', fontWeight: 700, padding: '1px 6px', minWidth: 18, textAlign: 'center', flexShrink: 0 }}>
+                      <span style={{ background: 'var(--bad)', color: '#fff', borderRadius: 99, fontSize: '.6rem', fontWeight: 700, padding: '1px 6px', minWidth: 18, textAlign: 'center', flexShrink: 0 }}>
                         {(item as any).badge > 99 ? '99+' : (item as any).badge}
                       </span>
                     )}
@@ -193,7 +193,7 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
               </div>
               <div>
                 <div style={{ fontSize: '.85rem', fontWeight: 500 }}>{profile.pseudo}</div>
-                <div style={{ fontSize: '.7rem', color: 'var(--gold)' }}>
+                <div style={{ fontSize: '.7rem', color: 'var(--accent-fg)' }}>
                   {profile.exp} EXP · Niv.{level}
                   {badge && <span style={{ marginLeft: '.4rem' }}>{badge.icon}</span>}
                 </div>
@@ -206,10 +206,10 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
         ) : (
           <>
             <div className="user-chip">
-              <div className="user-ava" style={{ background: 'var(--bg3)', color: 'var(--text3)' }}>👤</div>
+              <div className="user-ava" style={{ background: 'var(--s2)', color: 'var(--ink3)' }}>👤</div>
               <div>
-                <div style={{ fontSize: '.85rem', fontWeight: 500, color: 'var(--text2)' }}>Mode Invité</div>
-                <div style={{ fontSize: '.7rem', color: 'var(--text3)' }}>Lecture seule</div>
+                <div style={{ fontSize: '.85rem', fontWeight: 500, color: 'var(--ink2)' }}>Mode Invité</div>
+                <div style={{ fontSize: '.7rem', color: 'var(--ink3)' }}>Lecture seule</div>
               </div>
             </div>
             <Link href="/auth" className="btn btn-gold btn-full" style={{ fontSize: '.78rem', textDecoration: 'none', display: 'block', textAlign: 'center' }}>
@@ -261,7 +261,7 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
                 </div>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: '1rem' }}>{profile.pseudo}</div>
-                  <div style={{ fontSize: '.75rem', color: 'var(--gold)', marginTop: '.1rem' }}>
+                  <div style={{ fontSize: '.75rem', color: 'var(--accent-fg)', marginTop: '.1rem' }}>
                     {profile.exp} EXP · Niveau {level}
                     {badge && <span style={{ marginLeft: '.35rem' }}>{badge.icon}</span>}
                   </div>
@@ -269,10 +269,10 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
               </>
             ) : (
               <>
-                <div className="user-ava" style={{ background: 'var(--bg3)', color: 'var(--text3)', width: 46, height: 46 }}>👤</div>
+                <div className="user-ava" style={{ background: 'var(--s2)', color: 'var(--ink3)', width: 46, height: 46 }}>👤</div>
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: '1rem', color: 'var(--text2)' }}>Mode Invité</div>
-                  <div style={{ fontSize: '.75rem', color: 'var(--text3)' }}>Lecture seule</div>
+                  <div style={{ fontWeight: 600, fontSize: '1rem', color: 'var(--ink2)' }}>Mode Invité</div>
+                  <div style={{ fontSize: '.75rem', color: 'var(--ink3)' }}>Lecture seule</div>
                 </div>
               </>
             )}
@@ -290,7 +290,7 @@ export default function Sidebar({ profile, hasRageuxEgg = false, hasTamagotchiEg
                 <span className="mobile-drawer-item-icon">{n.icon}</span>
                 <span className="mobile-drawer-item-label">{n.short}</span>
                 {(n.href === '/profil' || n.href === '/messages') && unreadMessages > 0 && (
-                  <span style={{ position: 'absolute', top: 4, right: 4, background: 'var(--red)', color: '#fff', borderRadius: 99, fontSize: '.55rem', fontWeight: 700, padding: '1px 5px', minWidth: 16, textAlign: 'center' }}>
+                  <span style={{ position: 'absolute', top: 4, right: 4, background: 'var(--bad)', color: '#fff', borderRadius: 99, fontSize: '.55rem', fontWeight: 700, padding: '1px 5px', minWidth: 16, textAlign: 'center' }}>
                     {unreadMessages > 99 ? '99+' : unreadMessages}
                   </span>
                 )}

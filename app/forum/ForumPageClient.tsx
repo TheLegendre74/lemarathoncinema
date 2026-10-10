@@ -54,15 +54,15 @@ function ChatangoEmbed() {
       }}>
         <div style={{ fontSize: '2rem' }}>💬</div>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', marginBottom: '.35rem' }}>Le Salon — Chat en direct</div>
-          <div style={{ fontSize: '.75rem', color: 'var(--text3)', marginBottom: '1rem' }}>
+          <div style={{ fontFamily: 'var(--f-display)', fontSize: '1rem', marginBottom: '.35rem' }}>Le Salon — Chat en direct</div>
+          <div style={{ fontSize: '.75rem', color: 'var(--ink3)', marginBottom: '1rem' }}>
             L'embed n'est pas disponible sur mobile
           </div>
           <a href={CHATANGO_URL} target="_blank" rel="noopener noreferrer" style={{
             display: 'inline-flex', alignItems: 'center', gap: '.5rem',
             background: 'rgba(232,196,106,.15)', border: '1px solid rgba(232,196,106,.4)',
-            borderRadius: 'var(--r)', padding: '.75rem 1.5rem',
-            color: 'var(--gold)', textDecoration: 'none', fontSize: '.88rem', fontWeight: 500,
+            borderRadius: 'var(--radius)', padding: '.75rem 1.5rem',
+            color: 'var(--accent-fg)', textDecoration: 'none', fontSize: '.88rem', fontWeight: 500,
           }}>
             💬 Rejoindre le chat ↗
           </a>
@@ -80,8 +80,8 @@ export default function ForumPageClient({
       {/* Header */}
       <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
         <div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', lineHeight: 1 }}>Forum</div>
-          <div style={{ color: 'var(--text2)', fontSize: '.83rem', marginTop: '.35rem' }}>
+          <div style={{ fontFamily: 'var(--f-display)', fontSize: '2rem', lineHeight: 1 }}>Forum</div>
+          <div style={{ color: 'var(--ink2)', fontSize: '.83rem', marginTop: '.35rem' }}>
             {totalTopics} topic{totalTopics !== 1 ? 's' : ''} · chat en direct
           </div>
         </div>
@@ -92,7 +92,7 @@ export default function ForumPageClient({
       <div style={{
         background: 'linear-gradient(135deg, rgba(232,196,106,.07), rgba(232,160,60,.04))',
         border: '1px solid rgba(232,196,106,.35)',
-        borderRadius: 'var(--rl)',
+        borderRadius: 'var(--radius)',
         marginBottom: '2rem',
         overflow: 'hidden',
       }}>
@@ -103,8 +103,8 @@ export default function ForumPageClient({
         }}>
           <div style={{ fontSize: '1.6rem', lineHeight: 1 }}>💬</div>
           <div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem' }}>Le Salon</div>
-            <div style={{ fontSize: '.72rem', color: 'var(--text3)', marginTop: '.1rem' }}>Chat en temps réel</div>
+            <div style={{ fontFamily: 'var(--f-display)', fontSize: '1.1rem' }}>Le Salon</div>
+            <div style={{ fontSize: '.72rem', color: 'var(--ink3)', marginTop: '.1rem' }}>Chat en temps réel</div>
           </div>
           <div style={{
             marginLeft: 'auto', width: 8, height: 8, borderRadius: '50%',
@@ -127,9 +127,9 @@ export default function ForumPageClient({
             <Link key={t.id} href={`/forum/${t.id}`} style={{ textDecoration: 'none' }}>
               <div style={{
                 display: 'flex', alignItems: 'center', gap: '1rem',
-                background: 'var(--bg2)',
-                border: `1px solid ${t.pinned ? 'rgba(232,196,106,.3)' : 'var(--border)'}`,
-                borderRadius: 'var(--r)', padding: '.9rem 1.1rem',
+                background: 'var(--s1)',
+                border: `1px solid ${t.pinned ? 'rgba(232,196,106,.3)' : 'var(--line)'}`,
+                borderRadius: 'var(--radius)', padding: '.9rem 1.1rem',
                 transition: 'border-color .2s',
               }}>
                 <div style={{ fontSize: '1.3rem' }}>{t.pinned ? '📌' : '💬'}</div>
@@ -137,27 +137,27 @@ export default function ForumPageClient({
                   <div style={{ fontSize: '.88rem', fontWeight: 500, marginBottom: '.15rem', display: 'flex', alignItems: 'center', gap: '.5rem' }}>
                     {t.title}
                     {t.pinned && (
-                      <span style={{ fontSize: '.6rem', color: 'var(--gold)', border: '1px solid rgba(232,196,106,.3)', borderRadius: 99, padding: '1px 6px' }}>
+                      <span style={{ fontSize: '.6rem', color: 'var(--accent-fg)', border: '1px solid rgba(232,196,106,.3)', borderRadius: 99, padding: '1px 6px' }}>
                         ÉPINGLÉ
                       </span>
                     )}
                   </div>
                   {t.description && (
-                    <div style={{ fontSize: '.73rem', color: 'var(--text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: '.73rem', color: 'var(--ink3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {t.description}
                     </div>
                   )}
                   {lastPostMap[t.id] && (
-                    <div style={{ fontSize: '.68rem', color: 'var(--text3)', marginTop: '.2rem' }}>
+                    <div style={{ fontSize: '.68rem', color: 'var(--ink3)', marginTop: '.2rem' }}>
                       Dernier message de <strong>{lastPostMap[t.id].profiles?.pseudo}</strong> · {new Date(lastPostMap[t.id].created_at).toLocaleDateString('fr-FR')}
                     </div>
                   )}
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--text2)' }}>
+                  <div style={{ fontFamily: 'var(--f-display)', fontSize: '1.1rem', color: 'var(--ink2)' }}>
                     {countMap[t.id] ?? 0}
                   </div>
-                  <div style={{ fontSize: '.63rem', color: 'var(--text3)' }}>messages</div>
+                  <div style={{ fontSize: '.63rem', color: 'var(--ink3)' }}>messages</div>
                 </div>
               </div>
             </Link>
@@ -166,8 +166,8 @@ export default function ForumPageClient({
       )}
 
       {!profile && (
-        <div style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '.83rem', color: 'var(--text3)' }}>
-          <Link href="/auth" style={{ color: 'var(--gold)' }}>Connecte-toi</Link> pour créer des topics et participer aux discussions.
+        <div style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '.83rem', color: 'var(--ink3)' }}>
+          <Link href="/auth" style={{ color: 'var(--accent-fg)' }}>Connecte-toi</Link> pour créer des topics et participer aux discussions.
         </div>
       )}
     </div>

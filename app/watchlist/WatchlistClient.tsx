@@ -8,6 +8,7 @@ import {
   toggleWatchlistVisibility, removeFilmFromWatchlist, toggleWatched,
 } from '@/lib/actions'
 import Link from 'next/link'
+import { emitDestruction } from '@/lib/destruction'
 
 // Miniature d'affiche robuste : gère les URLs nulles et les erreurs de chargement
 function PosterThumb({ src, alt, opacity }: { src: string | null; alt: string; opacity?: number }) {
@@ -121,6 +122,7 @@ export default function WatchlistClient({ watchlists: initial, watchedFilmIds: i
     if (selected === id) setSelected(remaining[0]?.id ?? null)
     setConfirmDelete(null)
     addToast('Watchlist supprimée', 'success')
+    emitDestruction()
     startTransition(() => router.refresh())
   }
 
@@ -151,6 +153,7 @@ export default function WatchlistClient({ watchlists: initial, watchedFilmIds: i
       : w
     ))
     addToast(`"${titre}" retiré`, 'success')
+    emitDestruction()
     startTransition(() => router.refresh())
   }
 
@@ -184,10 +187,10 @@ export default function WatchlistClient({ watchlists: initial, watchedFilmIds: i
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', lineHeight: 1 }}>Mes Watchlists</div>
-          <div style={{ color: 'var(--text3)', fontSize: '.82rem', marginTop: '.4rem' }}>Tes listes de films à voir pendant le marathon</div>
+          <div style={{ fontFamily: 'var(--f-display)', fontSize: '2rem', lineHeight: 1 }}>Mes Watchlists</div>
+          <div style={{ color: 'var(--ink3)', fontSize: '.82rem', marginTop: '.4rem' }}>Tes listes de films à voir pendant le marathon</div>
         </div>
-        <Link href="/watchlist/public" style={{ fontSize: '.8rem', color: 'var(--gold)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '.4rem', background: 'rgba(232,196,106,.08)', border: '1px solid rgba(232,196,106,.25)', borderRadius: 'var(--r)', padding: '.45rem .9rem' }}>
+        <Link href="/watchlist/public" style={{ fontSize: '.8rem', color: 'var(--accent-fg)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '.4rem', background: 'rgba(232,196,106,.08)', border: '1px solid rgba(232,196,106,.25)', borderRadius: 'var(--radius)', padding: '.45rem .9rem' }}>
           🌍 Watchlists publiques
         </Link>
       </div>
@@ -197,15 +200,15 @@ export default function WatchlistClient({ watchlists: initial, watchedFilmIds: i
         {/* Sidebar — liste des watchlists */}
         <div className={mobileView === 'detail' ? 'wl-sidebar-hidden' : ''}>
           {/* Créer une nouvelle watchlist */}
-          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--rl)', padding: '1rem', marginBottom: '1rem' }}>
-            <div style={{ fontSize: '.72rem', color: 'var(--text3)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '.6rem' }}>Nouvelle watchlist</div>
+          <div style={{ background: 'var(--s1)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', padding: '1rem', marginBottom: '1rem' }}>
+            <div style={{ fontSize: '.72rem', color: 'var(--ink3)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '.6rem' }}>Nouvelle watchlist</div>
             <div style={{ display: 'flex', gap: '.5rem' }}>
               <input
                 value={newName}
                 onChange={e => setNewName(e.target.value.slice(0, 60))}
                 onKeyDown={e => e.key === 'Enter' && handleCreate()}
                 placeholder="Nom de la liste…"
-                style={{ flex: 1, minWidth: 0, background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.45rem .65rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.82rem', outline: 'none' }}
+                style={{ flex: 1, minWidth: 0, background: 'var(--s2)', border: '1px solid var(--line2)', borderRadius: 'var(--radius)', padding: '.45rem .65rem', color: 'var(--ink)', fontFamily: 'var(--font-body)', fontSize: '.82rem', outline: 'none' }}
               />
               <button
                 className="btn btn-gold"
@@ -221,7 +224,7 @@ export default function WatchlistClient({ watchlists: initial, watchedFilmIds: i
           {/* Liste des watchlists */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
             {watchlists.length === 0 && (
-              <div style={{ color: 'var(--text3)', fontSize: '.82rem', textAlign: 'center', padding: '1.5rem 1rem' }}>
+              <div style={{ color: 'var(--ink3)', fontSize: '.82rem', textAlign: 'center', padding: '1.5rem 1rem' }}>
                 Aucune watchlist.<br />Crée-en une !
               </div>
             )}
@@ -230,9 +233,9 @@ export default function WatchlistClient({ watchlists: initial, watchedFilmIds: i
                 key={wl.id}
                 onClick={() => { setSelected(wl.id); setRenameId(null); setConfirmDelete(null); setMobileView('detail') }}
                 style={{
-                  background: selected === wl.id ? 'rgba(232,196,106,.08)' : 'var(--bg2)',
-                  border: `1px solid ${selected === wl.id ? 'rgba(232,196,106,.3)' : 'var(--border)'}`,
-                  borderRadius: 'var(--r)',
+                  background: selected === wl.id ? 'rgba(232,196,106,.08)' : 'var(--s1)',
+                  border: `1px solid ${selected === wl.id ? 'rgba(232,196,106,.3)' : 'var(--line)'}`,
+                  borderRadius: 'var(--radius)',
                   padding: '.65rem .9rem',
                   cursor: 'pointer',
                   transition: 'all .15s',
@@ -241,10 +244,10 @@ export default function WatchlistClient({ watchlists: initial, watchedFilmIds: i
                 <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
                   <span style={{ fontSize: '.95rem' }}>{wl.is_public ? '🌍' : '🔒'}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '.84rem', fontWeight: selected === wl.id ? 600 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: selected === wl.id ? 'var(--gold)' : 'var(--text)' }}>
+                    <div style={{ fontSize: '.84rem', fontWeight: selected === wl.id ? 600 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: selected === wl.id ? 'var(--accent-fg)' : 'var(--ink)' }}>
                       {wl.name}
                     </div>
-                    <div style={{ fontSize: '.65rem', color: 'var(--text3)' }}>
+                    <div style={{ fontSize: '.65rem', color: 'var(--ink3)' }}>
                       {wl.watchlist_items.length} film{wl.watchlist_items.length !== 1 ? 's' : ''}
                     </div>
                   </div>
@@ -264,12 +267,12 @@ export default function WatchlistClient({ watchlists: initial, watchedFilmIds: i
             ← Mes listes
           </button>
           {!current ? (
-            <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--rl)', padding: '3rem', textAlign: 'center', color: 'var(--text3)' }}>
+            <div style={{ background: 'var(--s1)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', padding: '3rem', textAlign: 'center', color: 'var(--ink3)' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📋</div>
               <div style={{ fontSize: '.9rem' }}>Sélectionne ou crée une watchlist</div>
             </div>
           ) : (
-            <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--rl)', padding: '1.5rem' }}>
+            <div style={{ background: 'var(--s1)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', padding: '1.5rem' }}>
               {/* Header watchlist */}
               <div style={{ marginBottom: '1.2rem' }}>
                 {renameId === current.id ? (
@@ -279,14 +282,14 @@ export default function WatchlistClient({ watchlists: initial, watchedFilmIds: i
                       onChange={e => setRenameVal(e.target.value.slice(0, 60))}
                       onKeyDown={e => { if (e.key === 'Enter') handleRename(current.id); if (e.key === 'Escape') setRenameId(null) }}
                       autoFocus
-                      style={{ flex: 1, background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.45rem .65rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '1rem', outline: 'none' }}
+                      style={{ flex: 1, background: 'var(--s2)', border: '1px solid var(--line2)', borderRadius: 'var(--radius)', padding: '.45rem .65rem', color: 'var(--ink)', fontFamily: 'var(--font-body)', fontSize: '1rem', outline: 'none' }}
                     />
                     <button className="btn btn-gold" style={{ fontSize: '.8rem', padding: '.4rem .8rem' }} onClick={() => handleRename(current.id)}>OK</button>
                     <button className="btn btn-outline" style={{ fontSize: '.8rem', padding: '.4rem .8rem' }} onClick={() => setRenameId(null)}>✕</button>
                   </div>
                 ) : (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', marginBottom: '.75rem', flexWrap: 'wrap' }}>
-                    <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: 'var(--f-display)', fontSize: '1.4rem', flex: 1, minWidth: 0 }}>
                       {current.is_public ? '🌍' : '🔒'} {current.name}
                     </div>
                     <button
@@ -298,14 +301,14 @@ export default function WatchlistClient({ watchlists: initial, watchedFilmIds: i
                     </button>
                     {confirmDelete === current.id ? (
                       <div style={{ display: 'flex', gap: '.4rem', alignItems: 'center' }}>
-                        <span style={{ fontSize: '.75rem', color: 'var(--red)' }}>Confirmer ?</span>
-                        <button className="btn btn-red" style={{ fontSize: '.72rem', padding: '.35rem .7rem' }} onClick={() => handleDelete(current.id)}>Supprimer</button>
+                        <span style={{ fontSize: '.75rem', color: 'var(--bad)' }}>Confirmer ?</span>
+                        <button className="btn btn-red" style={{ fontSize: '.72rem', padding: '.35rem .7rem' }} data-destructif="" onClick={() => handleDelete(current.id)}>Supprimer</button>
                         <button className="btn btn-outline" style={{ fontSize: '.72rem', padding: '.35rem .7rem' }} onClick={() => setConfirmDelete(null)}>Annuler</button>
                       </div>
                     ) : (
                       <button
                         className="btn btn-outline"
-                        style={{ fontSize: '.72rem', padding: '.35rem .7rem', color: 'var(--red)', borderColor: 'rgba(232,90,90,.3)' }}
+                        style={{ fontSize: '.72rem', padding: '.35rem .7rem', color: 'var(--bad)', borderColor: 'rgba(232,90,90,.3)' }}
                         onClick={() => setConfirmDelete(current.id)}
                       >
                         🗑️ Supprimer
@@ -320,10 +323,10 @@ export default function WatchlistClient({ watchlists: initial, watchedFilmIds: i
                     onClick={() => handleTogglePublic(current, !current.is_public, current.is_anonymous)}
                     style={{
                       display: 'flex', alignItems: 'center', gap: '.5rem',
-                      padding: '.4rem .85rem', borderRadius: 'var(--r)', cursor: 'pointer',
-                      background: current.is_public ? 'rgba(79,217,138,.08)' : 'var(--bg3)',
-                      border: `1px solid ${current.is_public ? 'rgba(79,217,138,.3)' : 'var(--border2)'}`,
-                      fontSize: '.78rem', color: current.is_public ? 'var(--green)' : 'var(--text2)',
+                      padding: '.4rem .85rem', borderRadius: 'var(--radius)', cursor: 'pointer',
+                      background: current.is_public ? 'rgba(79,217,138,.08)' : 'var(--s2)',
+                      border: `1px solid ${current.is_public ? 'rgba(79,217,138,.3)' : 'var(--line2)'}`,
+                      fontSize: '.78rem', color: current.is_public ? 'var(--ok)' : 'var(--ink2)',
                       transition: 'all .15s',
                     }}
                   >
@@ -335,10 +338,10 @@ export default function WatchlistClient({ watchlists: initial, watchedFilmIds: i
                       onClick={() => handleTogglePublic(current, true, !current.is_anonymous)}
                       style={{
                         display: 'flex', alignItems: 'center', gap: '.5rem',
-                        padding: '.4rem .85rem', borderRadius: 'var(--r)', cursor: 'pointer',
-                        background: current.is_anonymous ? 'rgba(160,90,232,.08)' : 'var(--bg3)',
-                        border: `1px solid ${current.is_anonymous ? 'rgba(160,90,232,.3)' : 'var(--border2)'}`,
-                        fontSize: '.78rem', color: current.is_anonymous ? '#c084fc' : 'var(--text2)',
+                        padding: '.4rem .85rem', borderRadius: 'var(--radius)', cursor: 'pointer',
+                        background: current.is_anonymous ? 'rgba(160,90,232,.08)' : 'var(--s2)',
+                        border: `1px solid ${current.is_anonymous ? 'rgba(160,90,232,.3)' : 'var(--line2)'}`,
+                        fontSize: '.78rem', color: current.is_anonymous ? '#c084fc' : 'var(--ink2)',
                         transition: 'all .15s',
                       }}
                     >
@@ -347,21 +350,21 @@ export default function WatchlistClient({ watchlists: initial, watchedFilmIds: i
                   )}
 
                   {current.is_public && (
-                    <div style={{ fontSize: '.72rem', color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: '.3rem' }}>
+                    <div style={{ fontSize: '.72rem', color: 'var(--ink3)', display: 'flex', alignItems: 'center', gap: '.3rem' }}>
                       ✓ Visible dans les{' '}
-                      <Link href="/watchlist/public" style={{ color: 'var(--gold)', textDecoration: 'none' }}>watchlists publiques</Link>
+                      <Link href="/watchlist/public" style={{ color: 'var(--accent-fg)', textDecoration: 'none' }}>watchlists publiques</Link>
                     </div>
                   )}
                 </div>
               </div>
 
               {/* Films */}
-              <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1.2rem' }}>
+              <div style={{ borderTop: '1px solid var(--line)', paddingTop: '1.2rem' }}>
                 {current.watchlist_items.length === 0 ? (
-                  <div style={{ textAlign: 'center', color: 'var(--text3)', padding: '2rem', fontSize: '.85rem' }}>
+                  <div style={{ textAlign: 'center', color: 'var(--ink3)', padding: '2rem', fontSize: '.85rem' }}>
                     <div style={{ fontSize: '2rem', marginBottom: '.75rem' }}>🎬</div>
                     Aucun film dans cette watchlist.<br />
-                    <span style={{ fontSize: '.78rem' }}>Ajoute des films depuis la <Link href="/films" style={{ color: 'var(--gold)', textDecoration: 'none' }}>liste des films</Link>.</span>
+                    <span style={{ fontSize: '.78rem' }}>Ajoute des films depuis la <Link href="/films" style={{ color: 'var(--accent-fg)', textDecoration: 'none' }}>liste des films</Link>.</span>
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
@@ -371,8 +374,8 @@ export default function WatchlistClient({ watchlists: initial, watchedFilmIds: i
                       const isWatched = watchedIds.has(item.film_id)
                       const isLoading = watchingFilm === item.film_id
                       return (
-                        <div key={item.film_id} style={{ display: 'flex', alignItems: 'center', gap: '.9rem', background: isWatched ? 'rgba(74,222,128,.04)' : 'var(--bg3)', border: `1px solid ${isWatched ? 'rgba(74,222,128,.2)' : 'var(--border)'}`, borderRadius: 'var(--r)', padding: '.65rem .9rem', transition: 'all .15s' }}>
-                          <div style={{ width: 32, height: 48, borderRadius: 4, overflow: 'hidden', flexShrink: 0, background: 'var(--bg2)', position: 'relative' }}>
+                        <div key={item.film_id} style={{ display: 'flex', alignItems: 'center', gap: '.9rem', background: isWatched ? 'rgba(74,222,128,.04)' : 'var(--s2)', border: `1px solid ${isWatched ? 'rgba(74,222,128,.2)' : 'var(--line)'}`, borderRadius: 'var(--radius)', padding: '.65rem .9rem', transition: 'all .15s' }}>
+                          <div style={{ width: 32, height: 48, borderRadius: 4, overflow: 'hidden', flexShrink: 0, background: 'var(--s1)', position: 'relative' }}>
                             <PosterThumb src={film.poster} alt={film.titre} opacity={isWatched ? 0.5 : 1} />
                             {isWatched && (
                               <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,.35)', borderRadius: 4 }}>
@@ -381,8 +384,8 @@ export default function WatchlistClient({ watchlists: initial, watchedFilmIds: i
                             )}
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: '.87rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: isWatched ? 'line-through' : 'none', color: isWatched ? 'var(--text3)' : 'var(--text)' }}>{film.titre}</div>
-                            <div style={{ fontSize: '.7rem', color: 'var(--text3)' }}>{film.annee} · {film.realisateur}</div>
+                            <div style={{ fontSize: '.87rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: isWatched ? 'line-through' : 'none', color: isWatched ? 'var(--ink3)' : 'var(--ink)' }}>{film.titre}</div>
+                            <div style={{ fontSize: '.7rem', color: 'var(--ink3)' }}>{film.annee} · {film.realisateur}</div>
                           </div>
                           <button
                             onClick={() => !isLoading && handleToggleWatched(item.film_id, film.titre)}
@@ -390,10 +393,10 @@ export default function WatchlistClient({ watchlists: initial, watchedFilmIds: i
                             title={isWatched ? 'Marquer comme non vu' : 'Marquer comme vu'}
                             style={{
                               display: 'flex', alignItems: 'center', gap: '.3rem',
-                              background: isWatched ? 'rgba(74,222,128,.12)' : 'var(--bg2)',
-                              border: `1px solid ${isWatched ? 'rgba(74,222,128,.35)' : 'var(--border2)'}`,
-                              color: isWatched ? '#4ade80' : 'var(--text3)',
-                              borderRadius: 'var(--r)', cursor: isLoading ? 'wait' : 'pointer',
+                              background: isWatched ? 'rgba(74,222,128,.12)' : 'var(--s1)',
+                              border: `1px solid ${isWatched ? 'rgba(74,222,128,.35)' : 'var(--line2)'}`,
+                              color: isWatched ? '#4ade80' : 'var(--ink3)',
+                              borderRadius: 'var(--radius)', cursor: isLoading ? 'wait' : 'pointer',
                               fontSize: '.72rem', padding: '.3rem .6rem', flexShrink: 0,
                               transition: 'all .15s', fontFamily: 'var(--font-body)',
                               opacity: isLoading ? 0.6 : 1,
@@ -403,8 +406,9 @@ export default function WatchlistClient({ watchlists: initial, watchedFilmIds: i
                           </button>
                           <button
                             onClick={() => handleRemoveFilm(current.id, item.film_id, film.titre)}
-                            style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: '1rem', padding: '.25rem', borderRadius: 4, transition: 'color .15s', flexShrink: 0 }}
+                            style={{ background: 'none', border: 'none', color: 'var(--ink3)', cursor: 'pointer', fontSize: '1rem', padding: '.25rem', borderRadius: 4, transition: 'color .15s', flexShrink: 0 }}
                             title="Retirer de la watchlist"
+                            data-destructif=""
                           >
                             ✕
                           </button>

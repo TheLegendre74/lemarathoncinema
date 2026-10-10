@@ -39,11 +39,13 @@ export default async function FilmsPage() {
       return error ? null : (data ?? null)
     }),
     withCache(`duels:winners:v2:s${cfg.SAISON_NUMERO}`, 120, async () => {
+      const since = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
       const { data } = await supabase
         .from('duels')
         .select('id, winner_id, closed_at, winner:films!duels_winner_id_fkey(saison)')
         .eq('closed', true)
         .not('winner_id', 'is', null)
+        .gte('closed_at', since)
       return (data ?? [])
         .filter((d: any) => d.winner?.saison === cfg.SAISON_NUMERO)
         .map((d: any) => ({ filmId: d.winner_id as number, duelId: d.id as number, closedAt: d.closed_at as string | null }))
@@ -81,17 +83,30 @@ export default async function FilmsPage() {
     weekFilmBonusClaimed = !!bonusClaim
   }
 
-  // Agréger les stats globales par film
+  // Agréger les stats globales par film — on n'envoie que moyenne + compteur
   const totalUsers = (profileCount as number) ?? 1
   const watchCountMap: Record<number, number> = {}
-  const ratingMap: Record<number, number[]> = {}
-  const negativeRatingMap: Record<number, number[]> = {}
+  const ratingAvgMap: Record<number, number> = {}
+  const ratingCountMap: Record<number, number> = {}
+  const negRatingAvgMap: Record<number, number> = {}
+  const negRatingCountMap: Record<number, number> = {}
+
+  function avg(scores: number[]): number {
+    if (!scores.length) return 0
+    return Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10
+  }
 
   if (statsRows) {
     ;(statsRows as any[]).forEach((s) => {
       if (s.watch_count > 0) watchCountMap[s.film_id] = Number(s.watch_count)
-      if (s.pos_scores?.length) ratingMap[s.film_id] = s.pos_scores
-      if (s.neg_scores?.length) negativeRatingMap[s.film_id] = s.neg_scores
+      if (s.pos_scores?.length) {
+        ratingAvgMap[s.film_id] = avg(s.pos_scores)
+        ratingCountMap[s.film_id] = s.pos_scores.length
+      }
+      if (s.neg_scores?.length) {
+        negRatingAvgMap[s.film_id] = avg(s.neg_scores)
+        negRatingCountMap[s.film_id] = s.neg_scores.length
+      }
     })
   } else {
     const [{ data: allWatched }, { data: allRatings }, { data: allNegRatings }] = await Promise.all([
@@ -102,14 +117,24 @@ export default async function FilmsPage() {
     allWatched?.forEach((w: { film_id: number }) => {
       watchCountMap[w.film_id] = (watchCountMap[w.film_id] ?? 0) + 1
     })
+    const posMap: Record<number, number[]> = {}
     allRatings?.forEach((r: { film_id: number; score: number }) => {
-      if (!ratingMap[r.film_id]) ratingMap[r.film_id] = []
-      ratingMap[r.film_id].push(r.score)
+      if (!posMap[r.film_id]) posMap[r.film_id] = []
+      posMap[r.film_id].push(r.score)
     })
+    for (const [id, scores] of Object.entries(posMap)) {
+      ratingAvgMap[Number(id)] = avg(scores)
+      ratingCountMap[Number(id)] = scores.length
+    }
+    const negMap: Record<number, number[]> = {}
     ;(allNegRatings ?? []).forEach((r: { film_id: number; score: number }) => {
-      if (!negativeRatingMap[r.film_id]) negativeRatingMap[r.film_id] = []
-      negativeRatingMap[r.film_id].push(r.score)
+      if (!negMap[r.film_id]) negMap[r.film_id] = []
+      negMap[r.film_id].push(r.score)
     })
+    for (const [id, scores] of Object.entries(negMap)) {
+      negRatingAvgMap[Number(id)] = avg(scores)
+      negRatingCountMap[Number(id)] = scores.length
+    }
   }
 
   const watchedIds = new Set(watched.map((w: { film_id: number }) => w.film_id) as number[])
@@ -152,14 +177,16 @@ export default async function FilmsPage() {
       watchedPreMap={watchedPreMap}
       myRatings={myRatings}
       watchCountMap={watchCountMap}
-      ratingMap={ratingMap}
+      ratingAvgMap={ratingAvgMap}
+      ratingCountMap={ratingCountMap}
       totalUsers={totalUsers}
       weekFilmId={weekFilmId}
       isMarathonLive={isMarathonLiveFromConfig(cfg)}
       saisonNumero={cfg.SAISON_NUMERO}
       age18confirmed={age18confirmed}
       myNegativeRatings={myNegativeRatings}
-      negativeRatingMap={negativeRatingMap}
+      negRatingAvgMap={negRatingAvgMap}
+      negRatingCountMap={negRatingCountMap}
       hasRageuxEgg={hasRageuxEgg}
       rattrapageMap={rattrapageMap}
       userWatchlists={userWatchlists}

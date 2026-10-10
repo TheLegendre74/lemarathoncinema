@@ -1,0 +1,31 @@
+[data-theme="western"] {
+  --bg: #2A1E12;  --s1: #1A1410;  --s2: #211910;  --s3: #3A2A1B;
+  --line: rgba(227,207,164,.17);  --line2: rgba(227,207,164,.32);
+  --ink: #E3CFA4;  --ink2: #C3AB7E;  --ink3: #A8916A;  --ink-ghost: #6E5E45;
+  --accent: #8E2216;  --accent-ink: #F2E3C0;  --accent-fg: #E8836E;  --accent-2: #B93222;
+  --info: #9BA8AE;
+  --ok: #D9AE55;  --warn: #E0A64A;  --bad: #8E2216;  --bad-fg: #E07A68;
+  --f-display: var(--ff-rye), Georgia, serif;
+  --disp-weight: 400;  --disp-style: normal;  --disp-case: none;  --disp-track: 0;
+  --f-ui: var(--ff-bitter), Georgia, serif;  --ui-case: uppercase;  --ui-track: .1em;
+  --f-body: var(--ff-bitter), Georgia, serif;
+  --f-data: var(--ff-courier), ui-monospace, monospace;
+  --radius: 0;  --skew: 0deg;
+  --tex: none;  --grit: none;
+  --f-num: var(--ff-alfa), Georgia, serif;
+  --papier: #D8C295;  --papier-2: #C6AC78;  --papier-3: #B79A64;
+  --encre: #3E2D1C;
+  --sang: #8E2216;  --sang-vif: #B93222;  --laiton: #C08A2E;  --laiton-clair: #E6BE6C;
+  --impact: #0D0906;
+  --ombre-titre: 3px 3px 0 rgba(20,12,7,.85);
+  --ease: cubic-bezier(.16,.84,.34,1);  --dur: 500ms;  --dur-clic: 0ms;
+  --cursor: url("/cursors/western-colt.png") 2 8, pointer;
+}
+
+.impact { position: absolute; width: 17px; height: 17px; margin: -8.5px 0 0 -8.5px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle at 46% 42%, var(--impact) 0 38%, #241810 52%, rgba(36,24,16,0) 72%);
+  box-shadow: 0 0 0 1px rgba(255,238,200,.16), 0 1px 2px rgba(0,0,0,.7); }
+.impact::before, .impact::after { content: ""; position: absolute; left: 50%; top: 50%;
+  width: 22px; height: 1.4px; margin: -.7px 0 0 -11px; background: rgba(20,12,7,.55); }
+.impact::before { transform: rotate(28deg); }
+.impact::after  { transform: rotate(-64deg); }

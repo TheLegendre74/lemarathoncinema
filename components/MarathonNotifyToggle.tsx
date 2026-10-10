@@ -18,15 +18,15 @@ export default function MarathonNotifyToggle({ initial }: { initial: boolean }) 
   return (
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      background: 'var(--bg2)', border: '1px solid var(--border)',
-      borderRadius: 'var(--r)', padding: '.75rem 1rem',
+      background: 'var(--s1)', border: '1px solid var(--line)',
+      borderRadius: 'var(--radius)', padding: '.75rem 1rem',
       marginBottom: '1.5rem', gap: '1rem',
     }}>
       <div>
         <div style={{ fontSize: '.85rem', fontWeight: 500 }}>
           🔔 Me prévenir par e-mail
         </div>
-        <div style={{ fontSize: '.72rem', color: 'var(--text3)', marginTop: '.15rem' }}>
+        <div style={{ fontSize: '.72rem', color: 'var(--ink3)', marginTop: '.15rem' }}>
           Reçois un mail 3 jours avant le lancement du marathon
         </div>
       </div>
@@ -39,7 +39,7 @@ export default function MarathonNotifyToggle({ initial }: { initial: boolean }) 
           borderRadius: 12,
           border: 'none',
           cursor: pending ? 'default' : 'pointer',
-          background: enabled ? 'var(--gold)' : 'var(--bg3)',
+          background: enabled ? 'var(--accent-fg)' : 'var(--s2)',
           position: 'relative',
           transition: 'background .2s',
           opacity: pending ? .6 : 1,

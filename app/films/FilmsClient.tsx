@@ -5,9 +5,10 @@ import Image from 'next/image'
 import Poster from '@/components/Poster'
 import Forum from '@/components/Forum'
 import { useToast } from '@/components/ToastProvider'
-import { toggleWatched, markWatched, markWatchedDuelWinner, upsertRating, upsertNegativeRating, addFilm, updateFilm, reportFilm, discoverEgg, getFilmWatchProviders, adminSetFilmCategory, setFilmRattrapage, submitMarathonWatchRequest, addFilmToWatchlist, removeFilmFromWatchlist, createWatchlist, adminCreateDuelFromFilms, claimWeekFilmBonus } from '@/lib/actions'
+import { toggleWatched, markWatched, markWatchedDuelWinner, upsertRating, upsertNegativeRating, addFilm, updateFilm, reportFilm, discoverEgg, getFilmWatchProviders, adminSetFilmCategory, setFilmRattrapage, submitMarathonWatchRequest, addFilmToWatchlist, removeFilmFromWatchlist, createWatchlist, adminCreateDuelFromFilms, claimWeekFilmBonus, getFilmRatings } from '@/lib/actions'
 import type { TMDBSuggestion } from '@/lib/tmdb'
 import { useConfig } from '@/components/config/ConfigProvider'
+import { emitDestruction } from '@/lib/destruction'
 import { useRouter } from 'next/navigation'
 import JawsScrollOverlay from '@/components/JawsScrollOverlay'
 import type { Film, Profile } from '@/lib/supabase/types'
@@ -26,8 +27,10 @@ interface Props {
   myRatings: Record<number, number>
   myNegativeRatings: Record<number, number>
   watchCountMap: Record<number, number>
-  ratingMap: Record<number, number[]>
-  negativeRatingMap: Record<number, number[]>
+  ratingAvgMap: Record<number, number>
+  ratingCountMap: Record<number, number>
+  negRatingAvgMap: Record<number, number>
+  negRatingCountMap: Record<number, number>
   totalUsers: number
   weekFilmId: number | null
   isMarathonLive: boolean
@@ -172,8 +175,10 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
   }, [isGodfather])
 
   async function handleToggle() {
+    const wasWatched = isWatched
     await toggleWatched(film.id, film.titre)
-    addToast(isWatched ? `"${film.titre}" retiré` : `+${expGain} EXP — "${film.titre}" vu !`, '🎬')
+    addToast(wasWatched ? `"${film.titre}" retiré` : `+${expGain} EXP — "${film.titre}" vu !`, '🎬')
+    if (wasWatched) emitDestruction()
     onRefresh()
   }
 
@@ -185,6 +190,7 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
     }
     if (res?.error) { addToast(res.error, '⚠️'); return }
     addToast(res?.action === 'removed' ? `"${film.titre}" retiré` : `"${film.titre}" marqué vu (pré-marathon)`, '🎬')
+    if (res?.action === 'removed') emitDestruction()
     onRefresh()
   }
 
@@ -199,6 +205,7 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
       if (!myRating) setRatePrompt(true)
     } else {
       addToast(`"${film.titre}" retiré`, '🎬')
+      emitDestruction()
     }
     onRefresh()
   }
@@ -253,7 +260,7 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
       <div className="modal">
         {/* Hero / Poster */}
         <div
-          style={{ position: 'relative', height: 420, overflow: 'hidden', background: 'var(--bg3)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: isInception ? 'pointer' : 'default' }}
+          style={{ position: 'relative', height: 420, overflow: 'hidden', background: 'var(--s2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: isInception ? 'pointer' : 'default' }}
           onClick={handlePosterClick}
           title={isInception ? 'Cliquer 5 fois...' : undefined}
         >
@@ -261,8 +268,8 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
             ? <Image src={film.poster} alt={film.titre} fill style={{ objectFit: 'contain', objectPosition: 'center' }} sizes="500px" onError={() => setPosterErr(true)} />
             : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem' }}>🎬</div>
           }
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 60%, var(--bg2) 100%)' }} />
-          <button onClick={e => { e.stopPropagation(); onClose() }} style={{ position: 'absolute', top: '1rem', right: '1rem', width: 34, height: 34, borderRadius: '50%', background: 'rgba(8,8,14,.75)', border: '1px solid var(--border2)', color: 'var(--text2)', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 60%, var(--s1) 100%)' }} />
+          <button onClick={e => { e.stopPropagation(); onClose() }} style={{ position: 'absolute', top: '1rem', right: '1rem', width: 34, height: 34, borderRadius: '50%', background: 'rgba(8,8,14,.75)', border: '1px solid var(--line2)', color: 'var(--ink2)', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
           {isInception && inceptionClicks > 0 && inceptionClicks < 5 && (
             <div style={{ position: 'absolute', bottom: '1rem', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,.7)', color: '#aaa', fontSize: '.65rem', padding: '3px 8px', borderRadius: 99, whiteSpace: 'nowrap' }}>
               {inceptionClicks}/5...
@@ -276,7 +283,7 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
               display: 'flex', alignItems: 'center', gap: '.6rem',
               background: 'rgba(180,0,0,.12)',
               border: '2px solid rgba(220,30,30,.6)',
-              borderRadius: 'var(--r)', padding: '.75rem 1rem', marginBottom: '1rem',
+              borderRadius: 'var(--radius)', padding: '.75rem 1rem', marginBottom: '1rem',
               boxShadow: '0 0 16px rgba(220,30,30,.2)',
             }}>
               <span style={{ fontSize: '1.3rem', flexShrink: 0 }}>🔞</span>
@@ -290,34 +297,34 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
               </div>
             </div>
           )}
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.8rem', lineHeight: 1.1, marginBottom: '.35rem' }}>{film.titre}</div>
+          <div style={{ fontFamily: 'var(--f-display)', fontSize: '1.8rem', lineHeight: 1.1, marginBottom: '.35rem' }}>{film.titre}</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.6rem', marginBottom: '1.2rem' }}>
-            <span style={{ fontSize: '.75rem', color: 'var(--text2)' }}>{film.annee}</span>
-            <span style={{ color: 'var(--text3)' }}>·</span>
-            <span style={{ fontSize: '.75rem', color: 'var(--text2)' }}>{film.realisateur}</span>
+            <span style={{ fontSize: '.75rem', color: 'var(--ink2)' }}>{film.annee}</span>
+            <span style={{ color: 'var(--ink3)' }}>·</span>
+            <span style={{ fontSize: '.75rem', color: 'var(--ink2)' }}>{film.realisateur}</span>
             <span className="tag">{film.genre}</span>
             {film.sousgenre && <span className="tag" style={{ opacity: .7 }}>{film.sousgenre}</span>}
-            {film.saison !== config.SAISON_NUMERO && <span className="tag" style={{ color: 'var(--red)', borderColor: 'rgba(232,90,90,.3)' }}>Saison {film.saison}</span>}
-            {avg && <span className="tag" style={{ color: 'var(--gold)', borderColor: 'rgba(232,196,106,.3)' }}>⭐ {avg}/10 ({ratingScores.length})</span>}
+            {film.saison !== config.SAISON_NUMERO && <span className="tag" style={{ color: 'var(--bad)', borderColor: 'rgba(232,90,90,.3)' }}>Saison {film.saison}</span>}
+            {avg && <span className="tag" style={{ color: 'var(--accent-fg)', borderColor: 'rgba(232,196,106,.3)' }}>⭐ {avg}/10 ({ratingScores.length})</span>}
             <span className="tag">{watchPct}% vus</span>
-            {isWeekFilm && <span className="tag" style={{ color: 'var(--gold)', borderColor: 'rgba(232,196,106,.4)', fontWeight: 600 }}>⭐ Film de la semaine · +{config.EXP_FDLS} EXP</span>}
+            {isWeekFilm && <span className="tag" style={{ color: 'var(--accent-fg)', borderColor: 'rgba(232,196,106,.4)', fontWeight: 600 }}>⭐ Film de la semaine · +{config.EXP_FDLS} EXP</span>}
           </div>
 
           {/* Synopsis — chargé à la demande */}
           {overview && (
-            <p style={{ fontSize: '.82rem', color: 'var(--text2)', lineHeight: 1.6, margin: '0 0 1.2rem', fontStyle: 'italic' }}>
+            <p style={{ fontSize: '.82rem', color: 'var(--ink2)', lineHeight: 1.6, margin: '0 0 1.2rem', fontStyle: 'italic' }}>
               {overview}
             </p>
           )}
 
           {/* Stars + watched : invité → message de connexion */}
           {!profile ? (
-            <div style={{ background: 'rgba(232,196,106,.06)', border: '1px solid rgba(232,196,106,.2)', borderRadius: 'var(--r)', padding: '1rem', marginBottom: '1rem', textAlign: 'center' }}>
+            <div style={{ background: 'rgba(232,196,106,.06)', border: '1px solid rgba(232,196,106,.2)', borderRadius: 'var(--radius)', padding: '1rem', marginBottom: '1rem', textAlign: 'center' }}>
               <div style={{ fontSize: '1.3rem', marginBottom: '.4rem' }}>🔒</div>
-              <div style={{ fontSize: '.83rem', color: 'var(--text2)', marginBottom: '.6rem' }}>
+              <div style={{ fontSize: '.83rem', color: 'var(--ink2)', marginBottom: '.6rem' }}>
                 Connecte-toi pour noter ce film et marquer comme vu
               </div>
-              <a href="/auth" style={{ display: 'inline-block', background: 'var(--gold)', color: '#0a0a0f', fontWeight: 600, fontSize: '.8rem', padding: '.45rem 1.1rem', borderRadius: 'var(--r)', textDecoration: 'none' }}>
+              <a href="/auth" style={{ display: 'inline-block', background: 'var(--accent-fg)', color: '#0a0a0f', fontWeight: 600, fontSize: '.8rem', padding: '.45rem 1.1rem', borderRadius: 'var(--radius)', textDecoration: 'none' }}>
                 Se connecter / S'inscrire
               </a>
             </div>
@@ -325,13 +332,13 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
             <>
               {/* Stars positives */}
               <div style={{ marginBottom: '.6rem' }}>
-                <div style={{ fontSize: '.7rem', color: 'var(--text3)', marginBottom: '.4rem', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                  Ta note positive {avgRating(ratingScores) ? <span style={{ color: 'var(--gold)', textTransform: 'none', letterSpacing: 0 }}>· moy. {avgRating(ratingScores)}/10 ({ratingScores.length})</span> : ''}
+                <div style={{ fontSize: '.7rem', color: 'var(--ink3)', marginBottom: '.4rem', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                  Ta note positive {avgRating(ratingScores) ? <span style={{ color: 'var(--accent-fg)', textTransform: 'none', letterSpacing: 0 }}>· moy. {avgRating(ratingScores)}/10 ({ratingScores.length})</span> : ''}
                 </div>
                 <div style={{ display: 'flex', gap: 3 }}>
                   {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
                     <span key={n} onMouseEnter={() => setHov(n)} onMouseLeave={() => setHov(0)} onClick={() => handleRate(n)}
-                      style={{ fontSize: '1.1rem', cursor: 'pointer', color: (hov || (myRating ?? 0)) >= n ? 'var(--gold)' : 'var(--text3)', transition: 'transform .1s', transform: (hov || (myRating ?? 0)) >= n ? 'scale(1.15)' : 'scale(1)' }}>
+                      style={{ fontSize: '1.1rem', cursor: 'pointer', color: (hov || (myRating ?? 0)) >= n ? 'var(--accent-fg)' : 'var(--ink3)', transition: 'transform .1s', transform: (hov || (myRating ?? 0)) >= n ? 'scale(1.15)' : 'scale(1)' }}>
                       ★
                     </span>
                   ))}
@@ -341,13 +348,13 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
               {/* Stars négatives (bleues) — visible uniquement pour les rageuxs */}
               {hasRageuxEgg && (
                 <div style={{ marginBottom: '1rem' }}>
-                  <div style={{ fontSize: '.7rem', color: 'var(--text3)', marginBottom: '.4rem', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                  <div style={{ fontSize: '.7rem', color: 'var(--ink3)', marginBottom: '.4rem', letterSpacing: '1px', textTransform: 'uppercase' }}>
                     Ta note négative {avgRating(negativeRatingScores) ? <span style={{ color: '#60a5fa', textTransform: 'none', letterSpacing: 0 }}>· moy. {avgRating(negativeRatingScores)}/10 ({negativeRatingScores.length})</span> : ''}
                   </div>
                   <div style={{ display: 'flex', gap: 3 }}>
                     {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
                       <span key={n} onMouseEnter={() => setNegHov(n)} onMouseLeave={() => setNegHov(0)} onClick={() => handleNegativeRate(n)}
-                        style={{ fontSize: '1.1rem', cursor: 'pointer', color: (negHov || (myNegativeRating ?? 0)) >= n ? '#60a5fa' : 'var(--text3)', transition: 'transform .1s', transform: (negHov || (myNegativeRating ?? 0)) >= n ? 'scale(1.15)' : 'scale(1)' }}>
+                        style={{ fontSize: '1.1rem', cursor: 'pointer', color: (negHov || (myNegativeRating ?? 0)) >= n ? '#60a5fa' : 'var(--ink3)', transition: 'transform .1s', transform: (negHov || (myNegativeRating ?? 0)) >= n ? 'scale(1.15)' : 'scale(1)' }}>
                         ★
                       </span>
                     ))}
@@ -358,14 +365,15 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
               {/* Watched buttons */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem', marginBottom: '1rem' }}>
                 {film.saison !== config.SAISON_NUMERO ? (
-                  <div style={{ background: 'rgba(232,90,90,.06)', border: '1px solid rgba(232,90,90,.25)', borderRadius: 'var(--r)', padding: '.85rem 1rem', textAlign: 'center' }}>
+                  <div style={{ background: 'rgba(232,90,90,.06)', border: '1px solid rgba(232,90,90,.25)', borderRadius: 'var(--radius)', padding: '.85rem 1rem', textAlign: 'center' }}>
                     <div style={{ fontSize: '.88rem', fontWeight: 700, color: '#ff9999', marginBottom: '.3rem' }}>🔒 Disponible en Saison {film.saison}</div>
-                    <div style={{ fontSize: '.75rem', color: 'var(--text3)', lineHeight: 1.5 }}>Ce film a été ajouté pendant le marathon et sera disponible lors de la prochaine saison. Tu pourras le marquer vu à partir de la Saison {film.saison} !</div>
+                    <div style={{ fontSize: '.75rem', color: 'var(--ink3)', lineHeight: 1.5 }}>Ce film a été ajouté pendant le marathon et sera disponible lors de la prochaine saison. Tu pourras le marquer vu à partir de la Saison {film.saison} !</div>
                   </div>
                 ) : <>
                 <button
                   className={`btn ${isWatched && watchedPre === true ? 'btn-green' : 'btn-outline'} btn-full`}
                   onClick={handleMarkPre}
+                  {...(isWatched && watchedPre === true ? { 'data-destructif': '' } : {})}
                 >
                   {isWatched && watchedPre === true ? '✓ Vu avant le marathon — Retirer' : '🎬 J\'ai vu ce film (pré-marathon)'}
                 </button>
@@ -373,13 +381,13 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
                 {/* Marathon : actif uniquement pendant le marathon */}
                 {isMarathonLive && marathonLimitState === 'limit_reached' ? (
                   /* Formulaire de demande */
-                  <div style={{ background: 'rgba(232,196,106,.06)', border: '1px solid rgba(232,196,106,.25)', borderRadius: 'var(--r)', padding: '1rem' }}>
-                    <div style={{ fontSize: '.8rem', color: 'var(--gold)', fontWeight: 600, marginBottom: '.4rem' }}>⚠️ Limite de 3 films/jour atteinte</div>
-                    <div style={{ fontSize: '.75rem', color: 'var(--text2)', marginBottom: '.7rem', lineHeight: 1.5 }}>
+                  <div style={{ background: 'rgba(232,196,106,.06)', border: '1px solid rgba(232,196,106,.25)', borderRadius: 'var(--radius)', padding: '1rem' }}>
+                    <div style={{ fontSize: '.8rem', color: 'var(--accent-fg)', fontWeight: 600, marginBottom: '.4rem' }}>⚠️ Limite de 3 films/jour atteinte</div>
+                    <div style={{ fontSize: '.75rem', color: 'var(--ink2)', marginBottom: '.7rem', lineHeight: 1.5 }}>
                       Tu as atteint la limite quotidienne pendant le marathon. Tu peux envoyer une demande à l'admin avec un message explicatif (optionnel).
                     </div>
                     {requestSent ? (
-                      <div style={{ fontSize: '.78rem', color: 'var(--green)', textAlign: 'center', padding: '.5rem' }}>✓ Demande envoyée ! L'admin examinera ta requête.</div>
+                      <div style={{ fontSize: '.78rem', color: 'var(--ok)', textAlign: 'center', padding: '.5rem' }}>✓ Demande envoyée ! L'admin examinera ta requête.</div>
                     ) : (
                       <>
                         <textarea
@@ -387,7 +395,7 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
                           onChange={e => setRequestMsg(e.target.value.slice(0, 300))}
                           placeholder="Message pour l'admin (optionnel, 300 caractères max)..."
                           rows={3}
-                          style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.5rem .75rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.78rem', resize: 'vertical', outline: 'none', marginBottom: '.5rem', boxSizing: 'border-box' }}
+                          style={{ width: '100%', background: 'var(--s2)', border: '1px solid var(--line2)', borderRadius: 'var(--radius)', padding: '.5rem .75rem', color: 'var(--ink)', fontFamily: 'var(--font-body)', fontSize: '.78rem', resize: 'vertical', outline: 'none', marginBottom: '.5rem', boxSizing: 'border-box' }}
                         />
                         <button
                           onClick={handleSubmitRequest}
@@ -401,11 +409,11 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
                     )}
                   </div>
                 ) : isMarathonLive && marathonLimitState === 'pending' ? (
-                  <div style={{ background: 'rgba(255,160,60,.07)', border: '1px solid rgba(255,160,60,.3)', borderRadius: 'var(--r)', padding: '.75rem 1rem', fontSize: '.78rem', color: 'var(--orange)', textAlign: 'center' }}>
+                  <div style={{ background: 'rgba(255,160,60,.07)', border: '1px solid rgba(255,160,60,.3)', borderRadius: 'var(--radius)', padding: '.75rem 1rem', fontSize: '.78rem', color: 'var(--warn)', textAlign: 'center' }}>
                     ⏳ Demande en attente d'examen par l'admin
                   </div>
                 ) : isMarathonLive && marathonLimitState === 'blocked' ? (
-                  <div style={{ background: 'rgba(232,90,90,.07)', border: '1px solid rgba(232,90,90,.3)', borderRadius: 'var(--r)', padding: '.75rem 1rem', fontSize: '.78rem', color: 'var(--red)', textAlign: 'center' }}>
+                  <div style={{ background: 'rgba(232,90,90,.07)', border: '1px solid rgba(232,90,90,.3)', borderRadius: 'var(--radius)', padding: '.75rem 1rem', fontSize: '.78rem', color: 'var(--bad)', textAlign: 'center' }}>
                     🔒 Ajout bloqué temporairement (24h)
                   </div>
                 ) : (
@@ -415,6 +423,7 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
                     disabled={!isMarathonLive}
                     title={!isMarathonLive ? 'Le marathon n\'a pas encore commencé' : undefined}
                     style={!isMarathonLive ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}
+                    {...(isWatched && watchedPre === false ? { 'data-destructif': '' } : {})}
                   >
                     {isWatched && watchedPre === false
                       ? '✓ Vu pendant le marathon — Retirer'
@@ -429,39 +438,40 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
                 <button
                   onClick={() => { setWlDropOpen(o => !o); setWlModalNewName('') }}
                   className="btn btn-outline btn-full"
-                  style={{ fontSize: '.83rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.5rem', color: watchlistFilmMap[film.id]?.length ? '#c084fc' : 'var(--text2)', borderColor: watchlistFilmMap[film.id]?.length ? 'rgba(160,90,232,.35)' : undefined, background: watchlistFilmMap[film.id]?.length ? 'rgba(160,90,232,.06)' : undefined }}
+                  style={{ fontSize: '.83rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.5rem', color: watchlistFilmMap[film.id]?.length ? '#c084fc' : 'var(--ink2)', borderColor: watchlistFilmMap[film.id]?.length ? 'rgba(160,90,232,.35)' : undefined, background: watchlistFilmMap[film.id]?.length ? 'rgba(160,90,232,.06)' : undefined }}
                 >
                   📋 {watchlistFilmMap[film.id]?.length
                     ? `Dans ${watchlistFilmMap[film.id].length} watchlist${watchlistFilmMap[film.id].length > 1 ? 's' : ''}`
                     : 'Ajouter à une watchlist'}
                 </button>
                 {wlDropOpen && (
-                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.5rem', marginTop: '.3rem', boxShadow: '0 8px 24px rgba(0,0,0,.6)' }}>
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--s1)', border: '1px solid var(--line2)', borderRadius: 'var(--radius)', padding: '.5rem', marginTop: '.3rem', boxShadow: '0 8px 24px rgba(0,0,0,.6)' }}>
                     {watchlists.length === 0 && (
-                      <div style={{ fontSize: '.75rem', color: 'var(--text3)', padding: '.3rem .4rem', marginBottom: '.4rem' }}>Aucune watchlist — crée-en une ci-dessous</div>
+                      <div style={{ fontSize: '.75rem', color: 'var(--ink3)', padding: '.3rem .4rem', marginBottom: '.4rem' }}>Aucune watchlist — crée-en une ci-dessous</div>
                     )}
                     {watchlists.map(wl => {
                       const inList = watchlistFilmMap[film.id]?.includes(wl.id)
                       return (
                         <button key={wl.id} onClick={() => onWatchlistToggle(wl.id, film.id)}
-                          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '.5rem', background: inList ? 'rgba(160,90,232,.1)' : 'transparent', border: 'none', borderRadius: 6, padding: '.4rem .6rem', fontSize: '.8rem', color: inList ? '#c084fc' : 'var(--text2)', cursor: 'pointer', textAlign: 'left', transition: 'background .1s', marginBottom: '.2rem' }}>
+                          {...(inList ? { 'data-destructif': '' } : {})}
+                          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '.5rem', background: inList ? 'rgba(160,90,232,.1)' : 'transparent', border: 'none', borderRadius: 6, padding: '.4rem .6rem', fontSize: '.8rem', color: inList ? '#c084fc' : 'var(--ink2)', cursor: 'pointer', textAlign: 'left', transition: 'background .1s', marginBottom: '.2rem' }}>
                           <span style={{ fontSize: '.9rem', width: 18 }}>{inList ? '✓' : '+'}</span>
                           <span>{wl.name}</span>
                         </button>
                       )
                     })}
-                    <div style={{ borderTop: watchlists.length > 0 ? '1px solid var(--border)' : 'none', marginTop: watchlists.length > 0 ? '.4rem' : 0, paddingTop: watchlists.length > 0 ? '.4rem' : 0, display: 'flex', gap: '.4rem' }}>
+                    <div style={{ borderTop: watchlists.length > 0 ? '1px solid var(--line)' : 'none', marginTop: watchlists.length > 0 ? '.4rem' : 0, paddingTop: watchlists.length > 0 ? '.4rem' : 0, display: 'flex', gap: '.4rem' }}>
                       <input
                         value={wlModalNewName}
                         onChange={e => setWlModalNewName(e.target.value.slice(0, 40))}
                         onKeyDown={e => { if (e.key === 'Enter' && wlModalNewName.trim()) { setWlModalCreating(true); onWatchlistCreate(wlModalNewName, film.id).then(() => { setWlModalCreating(false); setWlModalNewName('') }) } }}
                         placeholder="Nouvelle liste…"
-                        style={{ flex: 1, background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 6, padding: '.4rem .6rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.8rem', outline: 'none' }}
+                        style={{ flex: 1, background: 'var(--s2)', border: '1px solid var(--line2)', borderRadius: 6, padding: '.4rem .6rem', color: 'var(--ink)', fontFamily: 'var(--font-body)', fontSize: '.8rem', outline: 'none' }}
                       />
                       <button
                         onClick={() => { if (!wlModalNewName.trim()) return; setWlModalCreating(true); onWatchlistCreate(wlModalNewName, film.id).then(() => { setWlModalCreating(false); setWlModalNewName('') }) }}
                         disabled={wlModalCreating || !wlModalNewName.trim()}
-                        style={{ background: 'var(--gold)', border: 'none', borderRadius: 6, padding: '.4rem .75rem', fontSize: '.8rem', color: '#0a0a0f', cursor: 'pointer', fontWeight: 700, flexShrink: 0 }}
+                        style={{ background: 'var(--accent-fg)', border: 'none', borderRadius: 6, padding: '.4rem .75rem', fontSize: '.8rem', color: '#0a0a0f', cursor: 'pointer', fontWeight: 700, flexShrink: 0 }}
                       >
                         {wlModalCreating ? '…' : '+'}
                       </button>
@@ -473,10 +483,10 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
           )}
 
           {/* Tabs */}
-          <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: '1.2rem', overflowX: 'auto' }}>
+          <div style={{ display: 'flex', borderBottom: '1px solid var(--line)', marginBottom: '1.2rem', overflowX: 'auto' }}>
             {[{ k: 'info', l: 'Infos' }, { k: 'streaming', l: '📺 Où regarder' }, { k: 'forum', l: '💬 Forum' }].map(t => (
               <button key={t.k} onClick={() => setTab(t.k as any)}
-                style={{ padding: '.55rem 1.1rem', fontSize: '.82rem', color: tab === t.k ? 'var(--gold)' : 'var(--text2)', cursor: 'pointer', background: 'none', border: 'none', borderBottom: tab === t.k ? '2px solid var(--gold)' : '2px solid transparent', whiteSpace: 'nowrap', fontFamily: 'var(--font-body)' }}>
+                style={{ padding: '.55rem 1.1rem', fontSize: '.82rem', color: tab === t.k ? 'var(--accent-fg)' : 'var(--ink2)', cursor: 'pointer', background: 'none', border: 'none', borderBottom: tab === t.k ? '2px solid var(--accent-fg)' : '2px solid transparent', whiteSpace: 'nowrap', fontFamily: 'var(--font-body)' }}>
                 {t.l}
               </button>
             ))}
@@ -486,22 +496,22 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
             <div>
               <div className="progress-label"><span>Visionné par</span><span>{watchPct}% des joueurs</span></div>
               <div className="expbar" style={{ height: 6, marginBottom: '1rem' }}>
-                <div className="expbar-fill" style={{ width: `${watchPct}%`, height: 6, background: watchPct >= config.SEUIL_MAJORITY ? 'var(--text3)' : undefined }} />
+                <div className="expbar-fill" style={{ width: `${watchPct}%`, height: 6, background: watchPct >= config.SEUIL_MAJORITY ? 'var(--ink3)' : undefined }} />
               </div>
               {watchPct >= config.SEUIL_MAJORITY && (
-                <div style={{ fontSize: '.78rem', color: 'var(--text2)', background: 'rgba(255,255,255,.04)', borderRadius: 'var(--r)', padding: '.6rem .8rem', marginBottom: '.8rem' }}>
+                <div style={{ fontSize: '.78rem', color: 'var(--ink2)', background: 'rgba(255,255,255,.04)', borderRadius: 'var(--radius)', padding: '.6rem .8rem', marginBottom: '.8rem' }}>
                   ⚠️ Plus de {config.SEUIL_MAJORITY}% des joueurs ont vu ce film — il est grisé et exclu des duels.
                 </div>
               )}
               {/* Signaler une erreur */}
-              <div style={{ marginTop: '.8rem', borderTop: '1px solid var(--border)', paddingTop: '.8rem' }}>
+              <div style={{ marginTop: '.8rem', borderTop: '1px solid var(--line)', paddingTop: '.8rem' }}>
                 {reporting ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
                     <input
                       value={reportReason}
                       onChange={e => setReportReason(e.target.value)}
                       placeholder="Décris le problème (affiche incorrecte, mauvais titre…)"
-                      style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.5rem .75rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.83rem' }}
+                      style={{ width: '100%', background: 'var(--s2)', border: '1px solid var(--line2)', borderRadius: 'var(--radius)', padding: '.5rem .75rem', color: 'var(--ink)', fontFamily: 'var(--font-body)', fontSize: '.83rem' }}
                     />
                     <div style={{ display: 'flex', gap: '.5rem' }}>
                       <button className="btn btn-red" style={{ fontSize: '.78rem', flex: 1 }} onClick={handleReport} disabled={!reportReason.trim()}>Envoyer le signalement</button>
@@ -509,15 +519,15 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
                     </div>
                   </div>
                 ) : (
-                  <button className="btn btn-outline" style={{ fontSize: '.75rem', color: 'var(--text3)' }} onClick={() => setReporting(true)}>
+                  <button className="btn btn-outline" style={{ fontSize: '.75rem', color: 'var(--ink3)' }} onClick={() => setReporting(true)}>
                     ⚠️ Signaler une erreur
                   </button>
                 )}
               </div>
 
               {isAuthor && (
-                <div style={{ marginTop: '.8rem', borderTop: '1px solid var(--border)', paddingTop: '.8rem' }}>
-                  <div style={{ fontSize: '.68rem', color: 'var(--text3)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '.5rem' }}>
+                <div style={{ marginTop: '.8rem', borderTop: '1px solid var(--line)', paddingTop: '.8rem' }}>
+                  <div style={{ fontSize: '.68rem', color: 'var(--ink3)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '.5rem' }}>
                     Tu as proposé ce film
                   </div>
                   {editingGenre ? (
@@ -525,7 +535,7 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
                       <select
                         value={genreVal}
                         onChange={e => setGenreVal(e.target.value)}
-                        style={{ flex: 1, background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.5rem .7rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.85rem' }}
+                        style={{ flex: 1, background: 'var(--s2)', border: '1px solid var(--line2)', borderRadius: 'var(--radius)', padding: '.5rem .7rem', color: 'var(--ink)', fontFamily: 'var(--font-body)', fontSize: '.85rem' }}
                       >
                         {['Action','Animation','Aventure','Comédie','Crime','Drame','Fantaisie','Guerre','Horreur','Policier','SF','Thriller','Western'].map(g => (
                           <option key={g}>{g}</option>
@@ -547,7 +557,7 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
           {tab === 'streaming' && (
             <div>
               {providers === 'loading' && (
-                <div style={{ fontSize: '.82rem', color: 'var(--text3)', padding: '.5rem 0' }}>Recherche des plateformes…</div>
+                <div style={{ fontSize: '.82rem', color: 'var(--ink3)', padding: '.5rem 0' }}>Recherche des plateformes…</div>
               )}
               {providers && providers !== 'loading' && (() => {
                 const flatrate = providers.flatrate ?? []
@@ -559,17 +569,17 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
                     {flatrate.map(p => (
                       <a key={p.provider_id} href={justWatchUrl} target="_blank" rel="noopener noreferrer" className="streaming-platform">
                         <Image src={`https://image.tmdb.org/t/p/w92${p.logo_path}`} alt={p.provider_name} width={32} height={32} style={{ borderRadius: 6, objectFit: 'cover' }} />
-                        <span style={{ flex: 1, fontSize: '.88rem', fontWeight: 500, color: 'var(--text)' }}>{p.provider_name}</span>
+                        <span style={{ flex: 1, fontSize: '.88rem', fontWeight: 500, color: 'var(--ink)' }}>{p.provider_name}</span>
                         <span className="sp-type svod">Abonnement</span>
-                        <span style={{ fontSize: '.8rem', color: 'var(--text3)' }}>↗</span>
+                        <span style={{ fontSize: '.8rem', color: 'var(--ink3)' }}>↗</span>
                       </a>
                     ))}
                     {deduped.map(p => (
                       <a key={p.provider_id} href={justWatchUrl} target="_blank" rel="noopener noreferrer" className="streaming-platform">
                         <Image src={`https://image.tmdb.org/t/p/w92${p.logo_path}`} alt={p.provider_name} width={32} height={32} style={{ borderRadius: 6, objectFit: 'cover' }} />
-                        <span style={{ flex: 1, fontSize: '.88rem', fontWeight: 500, color: 'var(--text)' }}>{p.provider_name}</span>
+                        <span style={{ flex: 1, fontSize: '.88rem', fontWeight: 500, color: 'var(--ink)' }}>{p.provider_name}</span>
                         <span className="sp-type tvod">Location/Achat</span>
-                        <span style={{ fontSize: '.8rem', color: 'var(--text3)' }}>↗</span>
+                        <span style={{ fontSize: '.8rem', color: 'var(--ink3)' }}>↗</span>
                       </a>
                     ))}
                   </>
@@ -579,19 +589,19 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
               {providers !== 'loading' && (
                 <a href={justWatchUrl} target="_blank" rel="noopener noreferrer" className="streaming-platform" style={{ opacity: .75 }}>
                   <div className="sp-icon" style={{ background: '#1e2030', color: '#fff' }}>🔍</div>
-                  <span style={{ flex: 1, fontSize: '.85rem', color: 'var(--text2)' }}>Toutes les plateformes — JustWatch</span>
-                  <span style={{ fontSize: '.8rem', color: 'var(--text3)' }}>↗</span>
+                  <span style={{ flex: 1, fontSize: '.85rem', color: 'var(--ink2)' }}>Toutes les plateformes — JustWatch</span>
+                  <span style={{ fontSize: '.8rem', color: 'var(--ink3)' }}>↗</span>
                 </a>
               )}
               {/* IMDB link si tmdb_id dispo */}
               {(film as any).tmdb_id && providers !== 'loading' && (
                 <a href={`https://www.imdb.com/find/?q=${encodeURIComponent(film.titre)}&s=tt&ttype=ft`} target="_blank" rel="noopener noreferrer" className="streaming-platform" style={{ opacity: .65 }}>
                   <div className="sp-icon" style={{ background: '#f5c518', color: '#000', fontWeight: 700, fontSize: '.7rem' }}>IMDb</div>
-                  <span style={{ flex: 1, fontSize: '.85rem', color: 'var(--text2)' }}>Voir sur IMDb</span>
-                  <span style={{ fontSize: '.8rem', color: 'var(--text3)' }}>↗</span>
+                  <span style={{ flex: 1, fontSize: '.85rem', color: 'var(--ink2)' }}>Voir sur IMDb</span>
+                  <span style={{ fontSize: '.8rem', color: 'var(--ink3)' }}>↗</span>
                 </a>
               )}
-              <div style={{ fontSize: '.73rem', color: 'var(--text3)', marginTop: '.6rem', lineHeight: 1.5, fontStyle: 'italic', background: 'rgba(255,255,255,.03)', borderRadius: 'var(--r)', padding: '.6rem .8rem' }}>
+              <div style={{ fontSize: '.73rem', color: 'var(--ink3)', marginTop: '.6rem', lineHeight: 1.5, fontStyle: 'italic', background: 'rgba(255,255,255,.03)', borderRadius: 'var(--radius)', padding: '.6rem .8rem' }}>
                 ℹ️ Les disponibilités peuvent varier. Les liens JustWatch listent toujours les options légales les plus récentes.
               </div>
             </div>
@@ -606,7 +616,7 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
       {/* Inception dream message */}
       {inceptionTilt && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.2rem,4vw,2rem)', color: '#fff', textShadow: '0 2px 20px rgba(0,0,0,.9)', animation: 'ee-dream-msg .8s ease', transform: 'rotate(-45deg)', textAlign: 'center', padding: '0 2rem' }}>
+          <div style={{ fontFamily: 'var(--f-display)', fontSize: 'clamp(1.2rem,4vw,2rem)', color: '#fff', textShadow: '0 2px 20px rgba(0,0,0,.9)', animation: 'ee-dream-msg .8s ease', transform: 'rotate(-45deg)', textAlign: 'center', padding: '0 2rem' }}>
             Tu es encore en train de rêver.
           </div>
         </div>
@@ -617,10 +627,10 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
         <div onClick={() => setGodfatherOverlay(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.75)', zIndex: 9000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', cursor: 'pointer', paddingBottom: '6rem' }}>
           <div style={{ textAlign: 'center', animation: 'ee-hand-rise 2s ease' }}>
             <div style={{ fontSize: '5rem', lineHeight: 1 }}>🤌🌹</div>
-            <div style={{ fontFamily: 'var(--font-display)', color: '#d4a256', fontSize: 'clamp(1rem,3vw,1.4rem)', marginTop: '1rem', textShadow: '0 2px 12px rgba(0,0,0,.9)' }}>
+            <div style={{ fontFamily: 'var(--f-display)', color: '#d4a256', fontSize: 'clamp(1rem,3vw,1.4rem)', marginTop: '1rem', textShadow: '0 2px 12px rgba(0,0,0,.9)' }}>
               "Je vais lui faire une offre qu'il ne pourra pas refuser."
             </div>
-            <div style={{ color: 'var(--text3)', fontSize: '.72rem', marginTop: '1rem' }}>— Cliquer pour fermer —</div>
+            <div style={{ color: 'var(--ink3)', fontSize: '.72rem', marginTop: '1rem' }}>— Cliquer pour fermer —</div>
           </div>
         </div>
       )}
@@ -628,11 +638,11 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
       {/* Rate after marathon watch prompt */}
       {ratePrompt && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(8,8,14,.88)', zIndex: 9500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--rxl)', padding: '2rem 1.5rem', maxWidth: 400, width: '100%', textAlign: 'center' }}>
+          <div style={{ background: 'var(--s1)', border: '1px solid var(--line2)', borderRadius: 'var(--radius)', padding: '2rem 1.5rem', maxWidth: 400, width: '100%', textAlign: 'center' }}>
             <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>⭐</div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', marginBottom: '.5rem' }}>Note ce film !</div>
-            <div style={{ fontSize: '.83rem', color: 'var(--text2)', marginBottom: '1.5rem', lineHeight: 1.5 }}>
-              Tu viens de marquer <strong style={{ color: 'var(--text)' }}>{film.titre}</strong> comme vu pendant le marathon.<br />Quelle note lui donnes-tu ?
+            <div style={{ fontFamily: 'var(--f-display)', fontSize: '1.4rem', marginBottom: '.5rem' }}>Note ce film !</div>
+            <div style={{ fontSize: '.83rem', color: 'var(--ink2)', marginBottom: '1.5rem', lineHeight: 1.5 }}>
+              Tu viens de marquer <strong style={{ color: 'var(--ink)' }}>{film.titre}</strong> comme vu pendant le marathon.<br />Quelle note lui donnes-tu ?
             </div>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '.25rem', marginBottom: '.5rem' }}>
               {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
@@ -641,14 +651,14 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
                   onMouseEnter={() => setPromptHov(n)}
                   onMouseLeave={() => setPromptHov(0)}
                   onClick={() => setPromptRating(n)}
-                  style={{ fontSize: '1.4rem', cursor: 'pointer', color: (promptHov || promptRating) >= n ? 'var(--gold)' : 'var(--text3)', transition: 'transform .1s', transform: (promptHov || promptRating) >= n ? 'scale(1.2)' : 'scale(1)', lineHeight: 1 }}
+                  style={{ fontSize: '1.4rem', cursor: 'pointer', color: (promptHov || promptRating) >= n ? 'var(--accent-fg)' : 'var(--ink3)', transition: 'transform .1s', transform: (promptHov || promptRating) >= n ? 'scale(1.2)' : 'scale(1)', lineHeight: 1 }}
                 >
                   ★
                 </span>
               ))}
             </div>
             {promptRating > 0 && (
-              <div style={{ fontSize: '.78rem', color: 'var(--gold)', marginBottom: '1rem' }}>{promptRating}/10</div>
+              <div style={{ fontSize: '.78rem', color: 'var(--accent-fg)', marginBottom: '1rem' }}>{promptRating}/10</div>
             )}
             <div style={{ display: 'flex', gap: '.7rem', justifyContent: 'center', marginTop: '1.2rem' }}>
               <button className="btn btn-ghost" onClick={() => { setRatePrompt(false); setPromptRating(0) }}>Plus tard</button>
@@ -793,8 +803,8 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
   }
 
   const inputStyle: React.CSSProperties = {
-    width: '100%', background: 'var(--bg3)', border: '1px solid var(--border2)',
-    borderRadius: 'var(--r)', padding: '.5rem .75rem', color: 'var(--text)',
+    width: '100%', background: 'var(--s2)', border: '1px solid var(--line2)',
+    borderRadius: 'var(--radius)', padding: '.5rem .75rem', color: 'var(--ink)',
     fontFamily: 'var(--font-body)', fontSize: '.85rem', boxSizing: 'border-box',
   }
 
@@ -806,17 +816,17 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
     <div className="modal-wrap" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ maxWidth: 520 }}>
         <div style={{ padding: '2rem 1.5rem' }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.8rem', marginBottom: '1.2rem' }}>Ajouter un film</div>
+          <div style={{ fontFamily: 'var(--f-display)', fontSize: '1.8rem', marginBottom: '1.2rem' }}>Ajouter un film</div>
 
           {isMarathonLive && (
-            <div style={{ background: 'rgba(232,90,90,.07)', border: '1px solid rgba(232,90,90,.22)', borderRadius: 'var(--r)', padding: '.85rem', marginBottom: '1rem', fontSize: '.8rem', color: 'var(--red)', lineHeight: 1.6 }}>
+            <div style={{ background: 'rgba(232,90,90,.07)', border: '1px solid rgba(232,90,90,.22)', borderRadius: 'var(--radius)', padding: '.85rem', marginBottom: '1rem', fontSize: '.8rem', color: 'var(--bad)', lineHeight: 1.6 }}>
               🔴 Le marathon est en cours. Ce film sera réservé pour la <strong>Saison {saisonNumero + 1}</strong>.
             </div>
           )}
 
           {/* Selected film banner */}
           {selectedTmdb && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', background: 'rgba(52,211,153,.08)', border: '1px solid rgba(52,211,153,.3)', borderRadius: 'var(--r)', padding: '.7rem .9rem', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', background: 'rgba(52,211,153,.08)', border: '1px solid rgba(52,211,153,.3)', borderRadius: 'var(--radius)', padding: '.7rem .9rem', marginBottom: '1rem' }}>
               {selectedTmdb.poster
                 ? <Image src={selectedTmdb.poster} alt="" width={28} height={42} style={{ objectFit: 'cover', borderRadius: 3, flexShrink: 0 }} />
                 : <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>🎬</span>
@@ -845,26 +855,26 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
                 autoComplete="off"
               />
               {searching && (
-                <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(4px)', fontSize: '.7rem', color: 'var(--text3)' }}>⏳</span>
+                <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(4px)', fontSize: '.7rem', color: 'var(--ink3)' }}>⏳</span>
               )}
             </div>
 
             {/* Suggestions dropdown */}
             {hasSuggestions && (
-              <div style={{ border: '1px solid var(--border2)', borderTop: 'none', borderRadius: '0 0 var(--r) var(--r)', background: 'var(--bg2)', marginBottom: '.9rem', maxHeight: 300, overflowY: 'auto' }}>
+              <div style={{ border: '1px solid var(--line2)', borderTop: 'none', borderRadius: '0 0 var(--radius) var(--radius)', background: 'var(--s1)', marginBottom: '.9rem', maxHeight: 300, overflowY: 'auto' }}>
                 {existingMatches.length > 0 && (
                   <div>
-                    <div style={{ fontSize: '.6rem', letterSpacing: '1.5px', color: 'var(--text3)', textTransform: 'uppercase', padding: '.4rem .75rem .2rem', borderBottom: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: '.6rem', letterSpacing: '1.5px', color: 'var(--ink3)', textTransform: 'uppercase', padding: '.4rem .75rem .2rem', borderBottom: '1px solid var(--line)' }}>
                       Déjà dans la liste
                     </div>
                     {existingMatches.map(f => (
-                      <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: '.6rem', padding: '.5rem .75rem', opacity: .65, cursor: 'default', borderBottom: '1px solid var(--border)' }}>
+                      <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: '.6rem', padding: '.5rem .75rem', opacity: .65, cursor: 'default', borderBottom: '1px solid var(--line)' }}>
                         <span style={{ fontSize: '.8rem' }}>🚫</span>
                         <div>
-                          <div style={{ fontSize: '.82rem', fontWeight: 600, color: 'var(--text2)' }}>{f.titre}</div>
-                          <div style={{ fontSize: '.68rem', color: 'var(--text3)' }}>{f.annee} · {f.realisateur} · {f.genre}</div>
+                          <div style={{ fontSize: '.82rem', fontWeight: 600, color: 'var(--ink2)' }}>{f.titre}</div>
+                          <div style={{ fontSize: '.68rem', color: 'var(--ink3)' }}>{f.annee} · {f.realisateur} · {f.genre}</div>
                         </div>
-                        <span style={{ marginLeft: 'auto', fontSize: '.62rem', background: 'rgba(232,90,90,.15)', color: 'var(--red)', borderRadius: 99, padding: '2px 7px', flexShrink: 0 }}>Présent</span>
+                        <span style={{ marginLeft: 'auto', fontSize: '.62rem', background: 'rgba(232,90,90,.15)', color: 'var(--bad)', borderRadius: 99, padding: '2px 7px', flexShrink: 0 }}>Présent</span>
                       </div>
                     ))}
                   </div>
@@ -872,29 +882,29 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
 
                 {tmdbSuggestions.length > 0 && (
                   <div>
-                    <div style={{ fontSize: '.6rem', letterSpacing: '1.5px', color: 'var(--text3)', textTransform: 'uppercase', padding: '.4rem .75rem .2rem', borderBottom: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: '.6rem', letterSpacing: '1.5px', color: 'var(--ink3)', textTransform: 'uppercase', padding: '.4rem .75rem .2rem', borderBottom: '1px solid var(--line)' }}>
                       Suggestions TMDB — cliquez pour sélectionner
                     </div>
                     {tmdbSuggestions.map(s => (
                       <div
                         key={s.tmdb_id}
                         onClick={() => selectTmdb(s)}
-                        style={{ display: 'flex', alignItems: 'center', gap: '.7rem', padding: '.5rem .75rem', cursor: 'pointer', borderBottom: '1px solid var(--border)', transition: 'background .15s' }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '.7rem', padding: '.5rem .75rem', cursor: 'pointer', borderBottom: '1px solid var(--line)', transition: 'background .15s' }}
                         onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,.06)')}
                         onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                       >
                         {s.poster
                           ? <Image src={s.poster} alt="" width={32} height={48} style={{ objectFit: 'cover', borderRadius: 3, flexShrink: 0 }} />
-                          : <div style={{ width: 32, height: 48, background: 'var(--bg3)', borderRadius: 3, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.7rem' }}>🎬</div>
+                          : <div style={{ width: 32, height: 48, background: 'var(--s2)', borderRadius: 3, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.7rem' }}>🎬</div>
                         }
                         <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: '.83rem', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <div style={{ fontSize: '.83rem', fontWeight: 600, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {s.titre}
                             {s.titreOriginal && s.titreOriginal !== s.titre && (
-                              <span style={{ fontSize: '.7rem', color: 'var(--text3)', marginLeft: '.4rem' }}>({s.titreOriginal})</span>
+                              <span style={{ fontSize: '.7rem', color: 'var(--ink3)', marginLeft: '.4rem' }}>({s.titreOriginal})</span>
                             )}
                           </div>
-                          <div style={{ fontSize: '.68rem', color: 'var(--text3)', marginTop: 1 }}>
+                          <div style={{ fontSize: '.68rem', color: 'var(--ink3)', marginTop: 1 }}>
                             {s.annee ?? '?'}{s.realisateur ? ` · ${s.realisateur}` : ''}{s.genre ? ` · ${s.genre}` : ''}
                           </div>
                           {s.overview && <div style={{ fontSize: '.65rem', color: 'rgba(255,255,255,.35)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.overview}…</div>}
@@ -905,7 +915,7 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
                 )}
 
                 {searching && !tmdbSuggestions.length && (
-                  <div style={{ padding: '.6rem .75rem', fontSize: '.75rem', color: 'var(--text3)', textAlign: 'center' }}>Recherche TMDB en cours…</div>
+                  <div style={{ padding: '.6rem .75rem', fontSize: '.75rem', color: 'var(--ink3)', textAlign: 'center' }}>Recherche TMDB en cours…</div>
                 )}
               </div>
             )}
@@ -958,7 +968,7 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
 
             {/* Status indicator */}
             {!selectedTmdb && hasInput && !searching && (
-              <div style={{ fontSize: '.72rem', color: 'var(--text3)', background: 'rgba(255,255,255,.04)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.55rem .75rem', marginBottom: '.8rem', lineHeight: 1.5 }}>
+              <div style={{ fontSize: '.72rem', color: 'var(--ink3)', background: 'rgba(255,255,255,.04)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', padding: '.55rem .75rem', marginBottom: '.8rem', lineHeight: 1.5 }}>
                 💡 Sélectionnez un film dans les suggestions TMDB pour l'ajouter directement.<br />
                 {canSubmitPending && <span style={{ color: '#f5a623' }}>Si le film est introuvable, vous pouvez le <strong>soumettre à l'admin</strong> pour validation manuelle.</span>}
               </div>
@@ -966,7 +976,7 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
 
             {/* J'ai vu ce film */}
             <div style={{ marginBottom: '1rem' }}>
-              <div style={{ fontSize: '.78rem', color: 'var(--text2)', marginBottom: '.5rem', fontWeight: 500 }}>J'ai vu ce film…</div>
+              <div style={{ fontSize: '.78rem', color: 'var(--ink2)', marginBottom: '.5rem', fontWeight: 500 }}>J'ai vu ce film…</div>
               <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap' }}>
                 {(['none', 'pre', 'marathon'] as const).map(opt => {
                   const labels: Record<typeof opt, string> = { none: '🚫 Pas encore vu', pre: '⏮️ Avant le marathon', marathon: '🎬 Pendant le marathon' }
@@ -980,9 +990,9 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
                       onClick={() => setWatchedStatus(opt)}
                       style={{
                         fontSize: '.76rem', padding: '.4rem .85rem',
-                        borderRadius: 'var(--r)', border: `1px solid ${active ? 'var(--gold)' : 'var(--border2)'}`,
-                        background: active ? 'rgba(232,196,106,.15)' : 'var(--bg3)',
-                        color: active ? 'var(--gold)' : disabled ? 'var(--text3)' : 'var(--text2)',
+                        borderRadius: 'var(--radius)', border: `1px solid ${active ? 'var(--accent-fg)' : 'var(--line2)'}`,
+                        background: active ? 'rgba(232,196,106,.15)' : 'var(--s2)',
+                        color: active ? 'var(--accent-fg)' : disabled ? 'var(--ink3)' : 'var(--ink2)',
                         cursor: disabled ? 'not-allowed' : 'pointer',
                         opacity: disabled ? .45 : 1,
                         transition: 'all .15s',
@@ -994,11 +1004,11 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
                 })}
               </div>
               {watchedStatus === 'marathon' && !isMarathonLive && (
-                <div style={{ fontSize: '.68rem', color: 'var(--text3)', marginTop: '.35rem' }}>Le marathon n'est pas en cours.</div>
+                <div style={{ fontSize: '.68rem', color: 'var(--ink3)', marginTop: '.35rem' }}>Le marathon n'est pas en cours.</div>
               )}
             </div>
 
-            {err && <div style={{ color: 'var(--red)', fontSize: '.78rem', marginBottom: '.8rem' }}>{err}</div>}
+            {err && <div style={{ color: 'var(--bad)', fontSize: '.78rem', marginBottom: '.8rem' }}>{err}</div>}
 
             <div style={{ display: 'flex', gap: '.7rem' }}>
               <button type="button" className="btn btn-outline" onClick={onClose} style={{ flex: 1 }}>Annuler</button>
@@ -1021,7 +1031,7 @@ function AddFilmModal({ profile, isMarathonLive, saisonNumero, films, onClose, o
 
 
 // ─── MAIN FILMS CLIENT ───────────────────────────────────────────────────────
-export default function FilmsClient({ films, profile, watchedIds, watchedPreMap, myRatings, myNegativeRatings, watchCountMap, ratingMap, negativeRatingMap, totalUsers, weekFilmId, isMarathonLive, saisonNumero, age18confirmed, hasRageuxEgg, rattrapageMap: initialRattrapageMap, userWatchlists: initialWatchlists, preMarathonWindowUntil, duelWinnerIds, bonusFilmId, bonusWeekFilmDbId, bonusAvailable, weekFilmBonusClaimed }: Props) {
+export default function FilmsClient({ films, profile, watchedIds, watchedPreMap, myRatings, myNegativeRatings, watchCountMap, ratingAvgMap, ratingCountMap, negRatingAvgMap, negRatingCountMap, totalUsers, weekFilmId, isMarathonLive, saisonNumero, age18confirmed, hasRageuxEgg, rattrapageMap: initialRattrapageMap, userWatchlists: initialWatchlists, preMarathonWindowUntil, duelWinnerIds, bonusFilmId, bonusWeekFilmDbId, bonusAvailable, weekFilmBonusClaimed }: Props) {
   const config = useConfig()
   const router = useRouter()
   const { addToast } = useToast()
@@ -1046,6 +1056,13 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
   const [duelPick, setDuelPick] = useState<number | null>(null)
   const [bonusClaimed, setBonusClaimed] = useState(weekFilmBonusClaimed)
   const [bonusClaiming, setBonusClaiming] = useState(false)
+
+  const [modalRatings, setModalRatings] = useState<{ scores: number[]; negScores: number[] } | null>(null)
+  useEffect(() => {
+    if (!modal) { setModalRatings(null); return }
+    setModalRatings(null)
+    getFilmRatings(modal.id).then(setModalRatings)
+  }, [modal?.id])
 
   // ── Watchlist state ─────────────────────���──────────────────
   const [watchlists, setWatchlists] = useState<WatchlistInfo[]>(initialWatchlists ?? [])
@@ -1073,6 +1090,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
         ? { ...wl, watchlist_items: wl.watchlist_items.filter(i => i.film_id !== filmId) }
         : wl
       ))
+      emitDestruction()
     } else {
       await addFilmToWatchlist(watchlistId, filmId)
       setWatchlists(prev => prev.map(wl => wl.id === watchlistId
@@ -1182,6 +1200,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
     }
     const label = niveau === 'debutant' ? '🎬 Débutant' : niveau === 'intermediaire' ? '🎭 Intermédiaire' : niveau === 'confirme' ? '🏆 Confirmé' : 'retiré du rattrapage'
     addToast(`"${film.titre}" → Rattrapage ${label}`, '📚')
+    if (!niveau) emitDestruction()
   }
 
   async function handleQuickToggle(e: React.MouseEvent, filmId: number, filmTitre: string) {
@@ -1331,8 +1350,8 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
     <div>
       <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
         <div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', lineHeight: 1 }}>Films</div>
-          <div style={{ color: 'var(--text2)', fontSize: '.83rem', marginTop: '.35rem' }}>{s1Total} films S1 · {watchedCount} vus</div>
+          <div style={{ fontFamily: 'var(--f-display)', fontSize: '2rem', lineHeight: 1 }}>Films</div>
+          <div style={{ color: 'var(--ink2)', fontSize: '.83rem', marginTop: '.35rem' }}>{s1Total} films S1 · {watchedCount} vus</div>
         </div>
         {profile && <button className="btn btn-outline" onClick={() => setAddModal(true)}>+ Ajouter un film</button>}
       </div>
@@ -1352,26 +1371,26 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
       </div>
 
       {/* Random banner */}
-      <div onClick={pickRandom} style={{ background: 'linear-gradient(135deg, var(--bg3), var(--bg4))', border: '1px dashed var(--border2)', borderRadius: 'var(--rl)', padding: '1.2rem 1.5rem', display: 'flex', alignItems: 'center', gap: '1.2rem', cursor: 'pointer', marginBottom: '1.5rem', transition: 'border-color .2s' }}>
+      <div onClick={pickRandom} style={{ background: 'linear-gradient(135deg, var(--s2), var(--s3))', border: '1px dashed var(--line2)', borderRadius: 'var(--radius)', padding: '1.2rem 1.5rem', display: 'flex', alignItems: 'center', gap: '1.2rem', cursor: 'pointer', marginBottom: '1.5rem', transition: 'border-color .2s' }}>
         <div style={{ fontSize: '2rem' }}>🎲</div>
         <div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: 'var(--text)', marginBottom: '.2rem' }}>Film aléatoire</div>
-          <div style={{ fontSize: '.78rem', color: 'var(--text2)' }}>Tire un film non vu parmi ceux disponibles</div>
+          <div style={{ fontFamily: 'var(--f-display)', fontSize: '1rem', color: 'var(--ink)', marginBottom: '.2rem' }}>Film aléatoire</div>
+          <div style={{ fontSize: '.78rem', color: 'var(--ink2)' }}>Tire un film non vu parmi ceux disponibles</div>
         </div>
         <button className="btn btn-outline" style={{ marginLeft: 'auto' }}>Tirer !</button>
       </div>
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: '.6rem', flexWrap: 'wrap', marginBottom: '1.3rem' }}>
-        <input style={{ flex: 1, minWidth: 180, background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.55rem .9rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.83rem' }}
+        <input style={{ flex: 1, minWidth: 180, background: 'var(--s1)', border: '1px solid var(--line2)', borderRadius: 'var(--radius)', padding: '.55rem .9rem', color: 'var(--ink)', fontFamily: 'var(--font-body)', fontSize: '.83rem' }}
           placeholder="🔍 Rechercher titre, réalisateur…" value={search} onChange={e => setSearch(e.target.value)} />
-        <select style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.55rem .8rem', color: 'var(--text2)', fontFamily: 'var(--font-body)', fontSize: '.8rem' }} value={filterGenre} onChange={e => setFilterGenre(e.target.value)}>
+        <select style={{ background: 'var(--s1)', border: '1px solid var(--line2)', borderRadius: 'var(--radius)', padding: '.55rem .8rem', color: 'var(--ink2)', fontFamily: 'var(--font-body)', fontSize: '.8rem' }} value={filterGenre} onChange={e => setFilterGenre(e.target.value)}>
           <option value="">Genres</option>{genres.map(g => <option key={g}>{g}</option>)}
         </select>
-        <select style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.55rem .8rem', color: 'var(--text2)', fontFamily: 'var(--font-body)', fontSize: '.8rem' }} value={filterDecade} onChange={e => setFilterDecade(e.target.value)}>
+        <select style={{ background: 'var(--s1)', border: '1px solid var(--line2)', borderRadius: 'var(--radius)', padding: '.55rem .8rem', color: 'var(--ink2)', fontFamily: 'var(--font-body)', fontSize: '.8rem' }} value={filterDecade} onChange={e => setFilterDecade(e.target.value)}>
           <option value="">Décennies</option>{decades.map(d => <option key={d} value={d}>{d}s</option>)}
         </select>
-        <select style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.55rem .8rem', color: 'var(--text2)', fontFamily: 'var(--font-body)', fontSize: '.8rem' }} value={filterReal} onChange={e => setFilterReal(e.target.value)}>
+        <select style={{ background: 'var(--s1)', border: '1px solid var(--line2)', borderRadius: 'var(--radius)', padding: '.55rem .8rem', color: 'var(--ink2)', fontFamily: 'var(--font-body)', fontSize: '.8rem' }} value={filterReal} onChange={e => setFilterReal(e.target.value)}>
           <option value="">Réalisateurs</option>{reals.map(r => <option key={r} value={r}>{r}</option>)}
         </select>
       </div>
@@ -1389,21 +1408,21 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
               onClick={() => { if (!showRestricted18) setAgeWarnModal(18); else { setShowRestricted18(false); document.cookie = 'age18confirmed=; max-age=0; path=/' } }}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: '.6rem',
-                padding: '.45rem .9rem', borderRadius: 'var(--r)', cursor: 'pointer',
+                padding: '.45rem .9rem', borderRadius: 'var(--radius)', cursor: 'pointer',
                 background: showRestricted18 ? 'rgba(180,0,0,.14)' : 'rgba(255,255,255,.03)',
-                border: `1px solid ${showRestricted18 ? 'rgba(220,30,30,.5)' : 'var(--border2)'}`,
+                border: `1px solid ${showRestricted18 ? 'rgba(220,30,30,.5)' : 'var(--line2)'}`,
                 transition: 'all .2s', userSelect: 'none',
               }}
             >
               <div style={{
                 width: 16, height: 16, borderRadius: 3, flexShrink: 0,
-                background: showRestricted18 ? 'var(--red)' : 'transparent',
-                border: `2px solid ${showRestricted18 ? 'var(--red)' : 'rgba(255,255,255,.3)'}`,
+                background: showRestricted18 ? 'var(--bad)' : 'transparent',
+                border: `2px solid ${showRestricted18 ? 'var(--bad)' : 'rgba(255,255,255,.3)'}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .15s',
               }}>
                 {showRestricted18 && <span style={{ color: '#fff', fontSize: '.6rem', fontWeight: 700, lineHeight: 1 }}>✓</span>}
               </div>
-              <span style={{ fontSize: '.78rem', color: showRestricted18 ? '#ff6b6b' : 'var(--text3)' }}>
+              <span style={{ fontSize: '.78rem', color: showRestricted18 ? '#ff6b6b' : 'var(--ink3)' }}>
                 🔞 Films <strong style={{ color: showRestricted18 ? '#ff6b6b' : undefined }}>-18 ans</strong>
               </span>
               <span style={{ fontSize: '.65rem', background: 'rgba(220,30,30,.2)', color: '#ff6b6b', border: '1px solid rgba(220,30,30,.35)', borderRadius: 99, padding: '1px 7px' }}>
@@ -1420,7 +1439,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
           const isWatched = watchedSet.has(film.id)
           const maj    = isMajority(film.id)
           const s2     = film.saison !== config.SAISON_NUMERO
-          const rat    = avgRating(ratingMap[film.id])
+          const rat    = ratingAvgMap[film.id] ? String(ratingAvgMap[film.id]) : null
           const isWeek = weekFilmId === film.id
           const isAdmin = !!profile?.is_admin
           const catOverride = categoryOverrides[film.id]
@@ -1429,26 +1448,26 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
           const menuOpen   = adminCategoryOpen === film.id
 
           const cardGlow = isStrange
-            ? { boxShadow: '0 0 0 2px rgba(160,0,220,.85), 0 0 22px rgba(160,0,220,.4)', borderRadius: 'var(--rl)' }
+            ? { boxShadow: '0 0 0 2px rgba(160,0,220,.85), 0 0 22px rgba(160,0,220,.4)', borderRadius: 'var(--radius)' }
             : is18
-            ? { boxShadow: '0 0 0 2px rgba(200,0,0,.8), 0 0 22px rgba(200,0,0,.4)', borderRadius: 'var(--rl)' }
+            ? { boxShadow: '0 0 0 2px rgba(200,0,0,.8), 0 0 22px rgba(200,0,0,.4)', borderRadius: 'var(--radius)' }
             : undefined
 
           return (
             <div key={film.id}
-              className={`film-card ${isWatched ? 'watched' : ''} ${maj ? 'majority' : ''} ${s2 ? 's2' : ''}`}
+              className={`film-card ${isWatched ? 'watched' : ''} ${maj ? 'majority' : ''} ${s2 ? 's2' : ''} ${watchlistDropOpen === film.id || adminCategoryOpen === film.id || rattrapageOpen === film.id ? 'menu-open' : ''}`}
               onClick={() => { if (menuOpen) { setAdminCategoryOpen(null); return } if (rattrapageOpen === film.id) { setRattrapageOpen(null); return } setModal(film) }}
               style={cardGlow}
             >
-              <div style={{ width: '100%', aspectRatio: '2/3', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--rl) var(--rl) 0 0' }}>
+              <div style={{ width: '100%', aspectRatio: '2/3', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--radius) var(--radius) 0 0' }}>
                 <Poster film={film} fill style={{ objectFit: 'cover' }} />
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(8,8,14,.92) 0%, transparent 55%)', opacity: 0, transition: 'opacity .2s', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '.8rem' }} className="poster-hover-overlay">
-                  <div style={{ fontSize: '.82rem', fontWeight: 600, color: 'var(--text)', lineHeight: 1.2, marginBottom: '.15rem' }}>{film.titre}</div>
-                  <div style={{ fontSize: '.68rem', color: 'var(--text2)' }}>{film.annee} · {film.realisateur}</div>
+                  <div style={{ fontSize: '.82rem', fontWeight: 600, color: 'var(--ink)', lineHeight: 1.2, marginBottom: '.15rem' }}>{film.titre}</div>
+                  <div style={{ fontSize: '.68rem', color: 'var(--ink2)' }}>{film.annee} · {film.realisateur}</div>
                 </div>
                 {s2 && <div style={{ position: 'absolute', top: 7, left: 7, background: 'rgba(8,8,14,.82)', border: '1px solid rgba(232,90,90,.55)', color: '#ff9999', fontSize: '.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: 99, letterSpacing: '.3px', zIndex: 4 }}>🔒 Saison 2</div>}
                 {!isWatched && maj && <div style={{ position: 'absolute', top: 7, right: 7, background: 'rgba(255,255,255,.12)', color: '#aaa', fontSize: '.58rem', padding: '2px 7px', borderRadius: 99 }}>60%+</div>}
-                {isWeek && <div style={{ position: 'absolute', bottom: 7, left: 7, background: 'var(--gold)', color: '#0a0a0f', fontSize: '.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: 99 }}>⭐ SEMAINE</div>}
+                {isWeek && <div style={{ position: 'absolute', bottom: 7, left: 7, background: 'var(--accent-fg)', color: '#0a0a0f', fontSize: '.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: 99 }}>⭐ SEMAINE</div>}
 
                 {film.id === bonusFilmId && profile && bonusAvailable && isWatched && !bonusClaimed && (
                   <button
@@ -1471,7 +1490,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                   <div style={{
                     position: 'absolute', bottom: 7, right: 7, zIndex: 6,
                     background: 'rgba(79,217,138,.2)', border: '1px solid rgba(79,217,138,.4)',
-                    color: 'var(--green)', fontSize: '.55rem', fontWeight: 700,
+                    color: 'var(--ok)', fontSize: '.55rem', fontWeight: 700,
                     padding: '3px 7px', borderRadius: 99,
                   }}>
                     ✓ +{config.EXP_FDLS_BONUS}
@@ -1505,7 +1524,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                 {isAdmin && (
                   <button
                     onClick={e => { e.stopPropagation(); setRattrapageOpen(rattrapageOpen === film.id ? null : film.id); setAdminCategoryOpen(null) }}
-                    style={{ position: 'absolute', top: 5, right: 5, background: rattrapageMap[film.id] ? 'rgba(232,196,106,.3)' : 'rgba(0,0,0,.7)', border: `1px solid ${rattrapageMap[film.id] ? 'rgba(232,196,106,.6)' : 'rgba(255,255,255,.25)'}`, borderRadius: 4, padding: '2px 5px', fontSize: '.55rem', color: rattrapageMap[film.id] ? 'var(--gold)' : '#ccc', cursor: 'pointer', zIndex: 10, lineHeight: 1.4 }}
+                    style={{ position: 'absolute', top: 5, right: 5, background: rattrapageMap[film.id] ? 'rgba(232,196,106,.3)' : 'rgba(0,0,0,.7)', border: `1px solid ${rattrapageMap[film.id] ? 'rgba(232,196,106,.6)' : 'rgba(255,255,255,.25)'}`, borderRadius: 4, padding: '2px 5px', fontSize: '.55rem', color: rattrapageMap[film.id] ? 'var(--accent-fg)' : '#ccc', cursor: 'pointer', zIndex: 10, lineHeight: 1.4 }}
                     title="Rattrapage"
                   >📚</button>
                 )}
@@ -1529,7 +1548,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                         else addToast(`Duel en attente : ${f1?.titre} VS ${film.titre}`, '⚔️')
                       }
                     }}
-                    style={{ position: 'absolute', bottom: is18 || isStrange ? 32 : 7, left: 7, background: duelPick === film.id ? 'rgba(232,90,90,.85)' : 'rgba(0,0,0,.7)', border: `1px solid ${duelPick === film.id ? 'rgba(232,90,90,.8)' : duelPick ? 'rgba(232,196,106,.6)' : 'rgba(255,255,255,.25)'}`, borderRadius: 4, padding: '2px 5px', fontSize: '.55rem', color: duelPick === film.id ? '#fff' : duelPick ? 'var(--gold)' : '#ccc', cursor: 'pointer', zIndex: 10, lineHeight: 1.4 }}
+                    style={{ position: 'absolute', bottom: is18 || isStrange ? 32 : 7, left: 7, background: duelPick === film.id ? 'rgba(232,90,90,.85)' : 'rgba(0,0,0,.7)', border: `1px solid ${duelPick === film.id ? 'rgba(232,90,90,.8)' : duelPick ? 'rgba(232,196,106,.6)' : 'rgba(255,255,255,.25)'}`, borderRadius: 4, padding: '2px 5px', fontSize: '.55rem', color: duelPick === film.id ? '#fff' : duelPick ? 'var(--accent-fg)' : '#ccc', cursor: 'pointer', zIndex: 10, lineHeight: 1.4 }}
                     title={duelPick === film.id ? 'Annuler la sélection' : duelPick ? 'Sélectionner comme film 2' : 'Sélectionner pour un duel'}
                   >{duelPick === film.id ? '✕' : '⚔️'}</button>
                 )}
@@ -1541,14 +1560,15 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                     style={{ position: 'absolute', top: 24, right: 5, zIndex: 20, background: 'rgba(10,10,20,.97)', border: '1px solid rgba(255,255,255,.2)', borderRadius: 6, padding: '.3rem', display: 'flex', flexDirection: 'column', gap: '.2rem', minWidth: 130 }}
                   >
                     {([
-                      { key: 'debutant',     label: '🎬 Débutant',     color: 'var(--green)' },
-                      { key: 'intermediaire',label: '🎭 Intermédiaire', color: 'var(--gold)'  },
+                      { key: 'debutant',     label: '🎬 Débutant',     color: 'var(--ok)' },
+                      { key: 'intermediaire',label: '🎭 Intermédiaire', color: 'var(--accent-fg)'  },
                       { key: 'confirme',     label: '🏆 Confirmé',      color: 'var(--purple)'},
                       { key: null,           label: '✕ Retirer',        color: '#888'         },
                     ] as const).map(opt => {
                       const active = rattrapageMap[film.id] === opt.key
                       return (
                         <button key={String(opt.key)} onClick={() => handleSetRattrapage(film, opt.key)}
+                          {...(opt.key === null ? { 'data-destructif': '' } : {})}
                           style={{ background: active ? 'rgba(255,255,255,.08)' : 'transparent', border: active ? '1px solid rgba(255,255,255,.15)' : '1px solid transparent', borderRadius: 4, padding: '.25rem .4rem', fontSize: '.65rem', color: opt.color, cursor: 'pointer', textAlign: 'left', fontWeight: active ? 700 : 400 }}
                         >{opt.label}</button>
                       )
@@ -1582,7 +1602,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                 const ep = film.id in localPreOverride ? localPreOverride[film.id] : watchedPreMap[film.id]
                 return (
                   <div style={{ position: 'absolute', top: 6, right: 6, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px', pointerEvents: 'none', zIndex: 5 }}>
-                    <div style={{ background: 'var(--green)', color: '#041a0e', fontSize: '.6rem', fontWeight: 700, padding: '2px 6px', borderRadius: 99, letterSpacing: '.4px' }}>VU ✓</div>
+                    <div style={{ background: 'var(--ok)', color: '#041a0e', fontSize: '.6rem', fontWeight: 700, padding: '2px 6px', borderRadius: 99, letterSpacing: '.4px' }}>VU ✓</div>
                     <div style={{ background: ep === false ? 'rgba(249,199,79,.92)' : 'rgba(0,0,0,.78)', color: ep === false ? '#0a0a0f' : 'rgba(255,255,255,.88)', fontSize: '.55rem', fontWeight: 700, padding: '2px 5px', borderRadius: 99, whiteSpace: 'nowrap' }}>
                       {ep === false ? '🏁 marathon' : '⏳ avant'}
                     </div>
@@ -1592,12 +1612,12 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
               <div style={{ padding: '.65rem .75rem .5rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '.82rem', fontWeight: 500, lineHeight: 1.3, marginBottom: '.15rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{film.titre}</div>
-                  <div style={{ fontSize: '.68rem', color: 'var(--text3)' }}>
+                  <div style={{ fontSize: '.68rem', color: 'var(--ink3)' }}>
                     {film.annee} · <span className="chip">{film.genre}</span>
                     {film.sousgenre && <span className="chip" style={{ marginLeft: 3, opacity: .7 }}>{film.sousgenre}</span>}
                   </div>
                   <div style={{ minHeight: '1.1rem', marginTop: '.2rem' }}>
-                    {rat && <div style={{ fontSize: '.7rem', color: 'var(--gold)' }}>⭐ {rat}/10</div>}
+                    {rat && <div style={{ fontSize: '.7rem', color: 'var(--accent-fg)' }}>⭐ {rat}/10</div>}
                   </div>
                 </div>
                 {profile && (
@@ -1615,14 +1635,14 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                         <>
                           <button
                             onClick={e => handleQuickToggle(e, film.id, film.titre)}
-                            style={{ width: '100%', background: 'rgba(79,217,138,.12)', border: '1px solid rgba(79,217,138,.35)', borderRadius: 6, padding: '.28rem .4rem', fontSize: '.68rem', color: 'var(--green)', cursor: 'pointer', fontWeight: 600, transition: 'background .15s', lineHeight: 1.3 }}
+                            style={{ width: '100%', background: 'rgba(79,217,138,.12)', border: '1px solid rgba(79,217,138,.35)', borderRadius: 6, padding: '.28rem .4rem', fontSize: '.68rem', color: 'var(--ok)', cursor: 'pointer', fontWeight: 600, transition: 'background .15s', lineHeight: 1.3 }}
                           >
                             {`✓ Vu · ${effectivePre === false ? '🏁 marathon' : '⏳ avant'}`}
                           </button>
                           {canClaimDuel && (
                             <button
                               onClick={e => handleQuickDuelWin(e, film.id, film.titre)}
-                              style={{ marginTop: '.25rem', width: '100%', background: 'rgba(232,196,106,.12)', border: '1px solid rgba(232,196,106,.4)', borderRadius: 6, padding: '.3rem .4rem', fontSize: '.68rem', color: 'var(--gold)', cursor: 'pointer', lineHeight: 1.3, fontWeight: 600 }}
+                              style={{ marginTop: '.25rem', width: '100%', background: 'rgba(232,196,106,.12)', border: '1px solid rgba(232,196,106,.4)', borderRadius: 6, padding: '.3rem .4rem', fontSize: '.68rem', color: 'var(--accent-fg)', cursor: 'pointer', lineHeight: 1.3, fontWeight: 600 }}
                             >
                               🏆 Je l&apos;ai vu pendant le duel
                             </button>
@@ -1636,20 +1656,20 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                           {duelWinnerSet.has(film.id) && (
                             <button
                               onClick={e => handleQuickDuelWin(e, film.id, film.titre)}
-                              style={{ width: '100%', marginBottom: '.25rem', background: 'rgba(232,196,106,.12)', border: '1px solid rgba(232,196,106,.4)', borderRadius: 6, padding: '.3rem .4rem', fontSize: '.68rem', color: 'var(--gold)', cursor: 'pointer', lineHeight: 1.3, fontWeight: 600, transition: 'background .15s' }}
+                              style={{ width: '100%', marginBottom: '.25rem', background: 'rgba(232,196,106,.12)', border: '1px solid rgba(232,196,106,.4)', borderRadius: 6, padding: '.3rem .4rem', fontSize: '.68rem', color: 'var(--accent-fg)', cursor: 'pointer', lineHeight: 1.3, fontWeight: 600, transition: 'background .15s' }}
                             >
                               🏆 Je l&apos;ai vu pendant le duel
                             </button>
                           )}
                           <button
                             onClick={e => handleQuickMarkMarathon(e, film.id, film.titre)}
-                            style={{ width: '100%', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 6, padding: '.28rem .4rem', fontSize: '.68rem', color: 'var(--text2)', cursor: 'pointer', lineHeight: 1.3, transition: 'background .15s' }}
+                            style={{ width: '100%', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 6, padding: '.28rem .4rem', fontSize: '.68rem', color: 'var(--ink2)', cursor: 'pointer', lineHeight: 1.3, transition: 'background .15s' }}
                           >
                             🏁 Vu pendant le marathon
                           </button>
                           <button
                             onClick={e => handleQuickMarkPre(e, film.id, film.titre)}
-                            style={{ marginTop: '.25rem', width: '100%', background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 6, padding: '.22rem .4rem', fontSize: '.62rem', color: 'var(--text3)', cursor: 'pointer', lineHeight: 1.3 }}
+                            style={{ marginTop: '.25rem', width: '100%', background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 6, padding: '.22rem .4rem', fontSize: '.62rem', color: 'var(--ink3)', cursor: 'pointer', lineHeight: 1.3 }}
                           >
                             ⏳ Vu avant le marathon
                           </button>
@@ -1660,7 +1680,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                     return (
                       <button
                         onClick={e => handleQuickToggle(e, film.id, film.titre)}
-                        style={{ width: '100%', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 6, padding: '.28rem .4rem', fontSize: '.68rem', color: 'var(--text2)', cursor: 'pointer', lineHeight: 1.3, transition: 'background .15s' }}
+                        style={{ width: '100%', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 6, padding: '.28rem .4rem', fontSize: '.68rem', color: 'var(--ink2)', cursor: 'pointer', lineHeight: 1.3, transition: 'background .15s' }}
                       >
                         + J&apos;ai vu
                       </button>
@@ -1679,7 +1699,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                         borderRadius: 6,
                         padding: '.28rem .4rem',
                         fontSize: '.65rem',
-                        color: watchlistFilmMap[film.id]?.length ? '#c084fc' : 'var(--text3)',
+                        color: watchlistFilmMap[film.id]?.length ? '#c084fc' : 'var(--ink3)',
                         cursor: 'pointer',
                         transition: 'background .15s, border-color .15s',
                         lineHeight: 1.3,
@@ -1696,24 +1716,25 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                       <div
                         onClick={e => e.stopPropagation()}
                         onMouseDown={e => e.stopPropagation()}
-                        style={{ position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.6rem', marginBottom: '.4rem', boxShadow: '0 8px 32px rgba(0,0,0,.8)', width: 240 }}
+                        style={{ position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, background: 'var(--s1)', border: '1px solid var(--line2)', borderRadius: 'var(--radius)', padding: '.6rem', marginBottom: '.4rem', boxShadow: '0 8px 32px rgba(0,0,0,.8)', width: 240 }}
                       >
-                        <div style={{ fontSize: '.72rem', color: 'var(--text3)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '.5rem', padding: '0 .3rem' }}>📋 Ajouter à…</div>
+                        <div style={{ fontSize: '.72rem', color: 'var(--ink3)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '.5rem', padding: '0 .3rem' }}>📋 Ajouter à…</div>
                         {watchlists.length === 0 && (
-                          <div style={{ fontSize: '.8rem', color: 'var(--text3)', padding: '.3rem .5rem', marginBottom: '.4rem' }}>Aucune watchlist</div>
+                          <div style={{ fontSize: '.8rem', color: 'var(--ink3)', padding: '.3rem .5rem', marginBottom: '.4rem' }}>Aucune watchlist</div>
                         )}
                         {watchlists.map(wl => {
                           const inList = watchlistFilmMap[film.id]?.includes(wl.id)
                           return (
                             <button key={wl.id} onClick={e => handleWatchlistToggle(e, film.id, wl.id)}
-                              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '.5rem', background: inList ? 'rgba(160,90,232,.15)' : 'rgba(255,255,255,.03)', border: `1px solid ${inList ? 'rgba(160,90,232,.3)' : 'transparent'}`, borderRadius: 6, padding: '.45rem .6rem', fontSize: '.82rem', color: inList ? '#c084fc' : 'var(--text)', cursor: 'pointer', textAlign: 'left', transition: 'background .1s', marginBottom: '.25rem' }}>
+                              {...(inList ? { 'data-destructif': '' } : {})}
+                              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '.5rem', background: inList ? 'rgba(160,90,232,.15)' : 'rgba(255,255,255,.03)', border: `1px solid ${inList ? 'rgba(160,90,232,.3)' : 'transparent'}`, borderRadius: 6, padding: '.45rem .6rem', fontSize: '.82rem', color: inList ? '#c084fc' : 'var(--ink)', cursor: 'pointer', textAlign: 'left', transition: 'background .1s', marginBottom: '.25rem' }}>
                               <span style={{ fontSize: '.9rem', flexShrink: 0 }}>{inList ? '✓' : '○'}</span>
                               <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{wl.name}</span>
                             </button>
                           )
                         })}
-                        <div style={{ borderTop: '1px solid var(--border)', marginTop: '.4rem', paddingTop: '.5rem' }}>
-                          <div style={{ fontSize: '.72rem', color: 'var(--text3)', marginBottom: '.35rem', padding: '0 .2rem' }}>Nouvelle liste</div>
+                        <div style={{ borderTop: '1px solid var(--line)', marginTop: '.4rem', paddingTop: '.5rem' }}>
+                          <div style={{ fontSize: '.72rem', color: 'var(--ink3)', marginBottom: '.35rem', padding: '0 .2rem' }}>Nouvelle liste</div>
                           <div style={{ display: 'flex', gap: '.4rem' }}>
                             <input
                               value={wlNewName}
@@ -1721,13 +1742,13 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                               onKeyDown={e => { e.stopPropagation(); if (e.key === 'Enter') handleWlCreate(e as any, film.id) }}
                               onClick={e => e.stopPropagation()}
                               placeholder="Nom de la liste…"
-                              style={{ flex: 1, minWidth: 0, background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 6, padding: '.4rem .6rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.8rem', outline: 'none' }}
+                              style={{ flex: 1, minWidth: 0, background: 'var(--s2)', border: '1px solid var(--line2)', borderRadius: 6, padding: '.4rem .6rem', color: 'var(--ink)', fontFamily: 'var(--font-body)', fontSize: '.8rem', outline: 'none' }}
                             />
                             <button
                               onMouseDown={e => { e.stopPropagation(); e.preventDefault() }}
                               onClick={e => handleWlCreate(e, film.id)}
                               disabled={wlCreating || !wlNewName.trim()}
-                              style={{ background: 'var(--gold)', border: 'none', borderRadius: 6, padding: '.4rem .7rem', fontSize: '.82rem', color: '#0a0a0f', cursor: 'pointer', fontWeight: 700, flexShrink: 0 }}>
+                              style={{ background: 'var(--accent-fg)', border: 'none', borderRadius: 6, padding: '.4rem .7rem', fontSize: '.82rem', color: '#0a0a0f', cursor: 'pointer', fontWeight: 700, flexShrink: 0 }}>
                               {wlCreating ? '…' : '+'}
                             </button>
                           </div>
@@ -1756,8 +1777,8 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
           myRating={myRatings[modal.id]}
           myNegativeRating={myNegativeRatings[modal.id]}
           watchPct={getWatchPct(modal.id)}
-          ratingScores={ratingMap[modal.id] ?? []}
-          negativeRatingScores={negativeRatingMap[modal.id] ?? []}
+          ratingScores={modalRatings?.scores ?? []}
+          negativeRatingScores={modalRatings?.negScores ?? []}
           isWeekFilm={weekFilmId === modal.id}
           isMarathonLive={isMarathonLive}
           canMarkPre={canMarkPre}
@@ -1769,6 +1790,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
             if (inList) {
               await removeFilmFromWatchlist(wlId, filmId)
               setWatchlists(prev => prev.map(wl => wl.id === wlId ? { ...wl, watchlist_items: wl.watchlist_items.filter(i => i.film_id !== filmId) } : wl))
+              emitDestruction()
             } else {
               await addFilmToWatchlist(wlId, filmId)
               setWatchlists(prev => prev.map(wl => wl.id === wlId ? { ...wl, watchlist_items: [...wl.watchlist_items, { film_id: filmId }] } : wl))
@@ -1808,14 +1830,14 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
             <div style={{ padding: '2rem 1.5rem' }}>
               <div style={{ textAlign: 'center', marginBottom: '1.2rem' }}>
                 <div style={{ fontSize: '3rem', marginBottom: '.5rem' }}>🔞</div>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: '#ff6b6b', marginBottom: '.4rem' }}>
+                <div style={{ fontFamily: 'var(--f-display)', fontSize: '1.5rem', color: '#ff6b6b', marginBottom: '.4rem' }}>
                   Films interdits aux -18 ans
                 </div>
               </div>
               <div style={{
                 background: 'rgba(180,0,0,.1)',
                 border: '2px solid rgba(220,30,30,.5)',
-                borderRadius: 'var(--r)', padding: '1rem 1.2rem', marginBottom: '1.2rem',
+                borderRadius: 'var(--radius)', padding: '1rem 1.2rem', marginBottom: '1.2rem',
                 boxShadow: '0 0 20px rgba(220,30,30,.15)',
               }}>
                 <div style={{ fontSize: '.85rem', fontWeight: 700, color: '#ff6b6b', marginBottom: '.5rem', letterSpacing: '.5px' }}>
@@ -1825,14 +1847,14 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
                   Ces films contiennent des scènes de <strong style={{ color: '#ffb3b3' }}>violence extrême, gore ou de sexualité explicite</strong> classifiés -18 ans par le CNC. Ils sont déconseillés à tout public sensible.
                 </div>
               </div>
-              <div style={{ fontSize: '.75rem', color: 'var(--text3)', textAlign: 'center', marginBottom: '1.2rem', lineHeight: 1.5 }}>
+              <div style={{ fontSize: '.75rem', color: 'var(--ink3)', textAlign: 'center', marginBottom: '1.2rem', lineHeight: 1.5 }}>
                 En continuant, tu confirmes avoir 18 ans ou plus<br />et accepter de voir ce contenu.
               </div>
               <div style={{ display: 'flex', gap: '.7rem' }}>
                 <button className="btn btn-outline" style={{ flex: 1 }} onClick={() => setAgeWarnModal(null)}>Annuler</button>
                 <button
                   className="btn"
-                  style={{ flex: 1, background: 'var(--red)', color: '#fff', border: 'none' }}
+                  style={{ flex: 1, background: 'var(--bad)', color: '#fff', border: 'none' }}
                   onClick={() => { setShowRestricted18(true); document.cookie = 'age18confirmed=true; max-age=31536000; path=/; SameSite=Strict'; setAgeWarnModal(null) }}
                 >
                   J'ai 18 ans — Afficher

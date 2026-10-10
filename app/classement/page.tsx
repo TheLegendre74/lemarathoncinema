@@ -21,13 +21,13 @@ export default async function ClassementPage() {
     return (
       <div>
         <div style={{ marginBottom: '2rem' }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', lineHeight: 1 }}>Classement</div>
-          <div style={{ color: 'var(--text2)', fontSize: '.83rem', marginTop: '.35rem' }}>Le classement s&apos;ouvre au lancement du marathon</div>
+          <div style={{ fontFamily: 'var(--f-display)', fontSize: '2rem', lineHeight: 1 }}>Classement</div>
+          <div style={{ color: 'var(--ink2)', fontSize: '.83rem', marginTop: '.35rem' }}>Le classement s&apos;ouvre au lancement du marathon</div>
         </div>
         <div className="card" style={{ textAlign: 'center', padding: '3rem 2rem' }}>
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🏆</div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', marginBottom: '.5rem' }}>Pas encore…</div>
-          <div style={{ fontSize: '.85rem', color: 'var(--text2)', marginBottom: '2rem' }}>
+          <div style={{ fontFamily: 'var(--f-display)', fontSize: '1.3rem', marginBottom: '.5rem' }}>Pas encore…</div>
+          <div style={{ fontSize: '.85rem', color: 'var(--ink2)', marginBottom: '2rem' }}>
             Le classement des joueurs sera disponible dès le coup d&apos;envoi du marathon.
           </div>
           <Countdown marathonStart={cfg.MARATHON_START.toISOString()} />

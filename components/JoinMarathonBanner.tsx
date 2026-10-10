@@ -37,7 +37,7 @@ export default function JoinMarathonBanner({ initialStatus, preMarathonWindowUnt
       <div style={{
         background: 'linear-gradient(135deg, rgba(79,217,138,.08), rgba(79,217,138,.04))',
         border: '1px solid rgba(79,217,138,.3)',
-        borderRadius: 'var(--rl)',
+        borderRadius: 'var(--radius)',
         padding: '1rem 1.2rem',
         marginBottom: '1.5rem',
         display: 'flex',
@@ -46,10 +46,10 @@ export default function JoinMarathonBanner({ initialStatus, preMarathonWindowUnt
       }}>
         <span style={{ fontSize: '1.6rem', lineHeight: 1, flexShrink: 0 }}>✅</span>
         <div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '.95rem', marginBottom: '.25rem', color: 'var(--green)' }}>
+          <div style={{ fontFamily: 'var(--f-display)', fontSize: '.95rem', marginBottom: '.25rem', color: 'var(--ok)' }}>
             Inscription acceptée — Saison {config.SAISON_NUMERO + 1}
           </div>
-          <div style={{ fontSize: '.8rem', color: 'var(--text2)', lineHeight: 1.5 }}>
+          <div style={{ fontSize: '.8rem', color: 'var(--ink2)', lineHeight: 1.5 }}>
             Tu es inscrit pour la prochaine saison. Tu pourras participer pleinement dès son lancement.
           </div>
         </div>
@@ -62,7 +62,7 @@ export default function JoinMarathonBanner({ initialStatus, preMarathonWindowUnt
       <div style={{
         background: 'linear-gradient(135deg, rgba(232,196,106,.08), rgba(232,196,106,.04))',
         border: '1px solid rgba(232,196,106,.35)',
-        borderRadius: 'var(--rl)',
+        borderRadius: 'var(--radius)',
         padding: '1rem 1.2rem',
         marginBottom: '1.5rem',
         display: 'flex',
@@ -71,14 +71,14 @@ export default function JoinMarathonBanner({ initialStatus, preMarathonWindowUnt
       }}>
         <span style={{ fontSize: '1.6rem', lineHeight: 1, flexShrink: 0 }}>⏳</span>
         <div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '.95rem', marginBottom: '.25rem', color: 'var(--gold)' }}>
+          <div style={{ fontFamily: 'var(--f-display)', fontSize: '.95rem', marginBottom: '.25rem', color: 'var(--accent-fg)' }}>
             Demande en attente de validation
           </div>
-          <div style={{ fontSize: '.8rem', color: 'var(--text2)', lineHeight: 1.5 }}>
+          <div style={{ fontSize: '.8rem', color: 'var(--ink2)', lineHeight: 1.5 }}>
             Ton inscription en cours de saison a bien été envoyée à l'admin. Tu recevras une réponse prochainement.
           </div>
           {status.message && (
-            <div style={{ fontSize: '.75rem', color: 'var(--text3)', fontStyle: 'italic', marginTop: '.4rem' }}>
+            <div style={{ fontSize: '.75rem', color: 'var(--ink3)', fontStyle: 'italic', marginTop: '.4rem' }}>
               Ton message : "{status.message}"
             </div>
           )}
@@ -102,20 +102,20 @@ export default function JoinMarathonBanner({ initialStatus, preMarathonWindowUnt
     <div style={{
       background: 'linear-gradient(135deg, rgba(167,139,250,.08), rgba(167,139,250,.04))',
       border: '1px solid rgba(167,139,250,.35)',
-      borderRadius: 'var(--rl)',
+      borderRadius: 'var(--radius)',
       padding: '1.2rem 1.4rem',
       marginBottom: '1.5rem',
     }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '.8rem', marginBottom: '.9rem' }}>
         <span style={{ fontSize: '1.6rem', lineHeight: 1, flexShrink: 0 }}>🎬</span>
         <div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: 'var(--purple, #a78bfa)', marginBottom: '.2rem' }}>
+          <div style={{ fontFamily: 'var(--f-display)', fontSize: '1rem', color: 'var(--purple, #a78bfa)', marginBottom: '.2rem' }}>
             Rejoindre le Marathon en cours
           </div>
-          <div style={{ fontSize: '.8rem', color: 'var(--text2)', lineHeight: 1.6 }}>
+          <div style={{ fontSize: '.8rem', color: 'var(--ink2)', lineHeight: 1.6 }}>
             Le marathon est déjà lancé. Tu peux demander à rejoindre la saison en cours. L'admin validera ta demande.{' '}
             {status?.status === 'rejected' && (
-              <span style={{ color: 'var(--red)', fontWeight: 500 }}>Ta précédente demande a été refusée — tu peux en envoyer une nouvelle.</span>
+              <span style={{ color: 'var(--bad)', fontWeight: 500 }}>Ta précédente demande a été refusée — tu peux en envoyer une nouvelle.</span>
             )}
           </div>
         </div>
@@ -129,14 +129,14 @@ export default function JoinMarathonBanner({ initialStatus, preMarathonWindowUnt
           maxLength={500}
           rows={2}
           style={{
-            width: '100%', background: 'var(--bg3)', border: '1px solid var(--border2)',
-            borderRadius: 'var(--r)', padding: '.55rem .8rem', color: 'var(--text)',
+            width: '100%', background: 'var(--s2)', border: '1px solid var(--line2)',
+            borderRadius: 'var(--radius)', padding: '.55rem .8rem', color: 'var(--ink)',
             fontFamily: 'var(--font-body)', fontSize: '.83rem', resize: 'vertical',
             boxSizing: 'border-box',
           }}
         />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '.5rem' }}>
-          <span style={{ fontSize: '.68rem', color: 'var(--text3)' }}>
+          <span style={{ fontSize: '.68rem', color: 'var(--ink3)' }}>
             {message.length}/500 caractères
           </span>
           <button

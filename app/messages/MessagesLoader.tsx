@@ -12,8 +12,8 @@ function Skeleton() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
       {[1, 2, 3].map(i => (
         <div key={i} style={{
-          height: 64, borderRadius: 'var(--r)',
-          background: 'var(--bg2)', border: '1px solid var(--border)',
+          height: 64, borderRadius: 'var(--radius)',
+          background: 'var(--s1)', border: '1px solid var(--line)',
           animation: 'pulse 1.4s ease-in-out infinite',
           opacity: 1 - i * 0.15,
         }} />

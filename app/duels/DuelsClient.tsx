@@ -101,27 +101,27 @@ function FilmPreview({ film, watchPct, avg, profile, isWatched, watchedPre, myRa
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.7)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--rxl)', maxWidth: 440, width: '100%', overflow: 'hidden', boxShadow: '0 24px 80px rgba(0,0,0,.5)' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--s1)', border: '1px solid var(--line2)', borderRadius: 'var(--radius)', maxWidth: 440, width: '100%', overflow: 'hidden', boxShadow: '0 24px 80px rgba(0,0,0,.5)' }}>
         {/* Header film */}
         <div style={{ display: 'flex', gap: '1rem', padding: '1.2rem' }}>
-          <div style={{ width: 100, height: 150, borderRadius: 'var(--r)', overflow: 'hidden', flexShrink: 0, border: '2px solid var(--border2)' }}>
+          <div style={{ width: 100, height: 150, borderRadius: 'var(--radius)', overflow: 'hidden', flexShrink: 0, border: '2px solid var(--line2)' }}>
             {film.poster
               ? <Image src={film.poster} alt={film.titre} width={100} height={150} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
-              : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', background: 'var(--bg3)' }}>🎬</div>
+              : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', background: 'var(--s2)' }}>🎬</div>
             }
           </div>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', lineHeight: 1.2 }}>{film.titre}</div>
-            <div style={{ fontSize: '.75rem', color: 'var(--text3)' }}>{film.annee} · {film.realisateur}</div>
+            <div style={{ fontFamily: 'var(--f-display)', fontSize: '1.1rem', lineHeight: 1.2 }}>{film.titre}</div>
+            <div style={{ fontSize: '.75rem', color: 'var(--ink3)' }}>{film.annee} · {film.realisateur}</div>
             <div style={{ display: 'flex', gap: '.4rem', flexWrap: 'wrap', marginTop: '.2rem' }}>
-              <span style={{ fontSize: '.65rem', background: 'rgba(232,196,106,.1)', color: 'var(--gold)', padding: '.15rem .5rem', borderRadius: 99 }}>{film.genre}</span>
-              {film.sousgenre && <span style={{ fontSize: '.65rem', background: 'rgba(255,255,255,.06)', color: 'var(--text3)', padding: '.15rem .5rem', borderRadius: 99 }}>{film.sousgenre}</span>}
+              <span style={{ fontSize: '.65rem', background: 'rgba(232,196,106,.1)', color: 'var(--accent-fg)', padding: '.15rem .5rem', borderRadius: 99 }}>{film.genre}</span>
+              {film.sousgenre && <span style={{ fontSize: '.65rem', background: 'rgba(255,255,255,.06)', color: 'var(--ink3)', padding: '.15rem .5rem', borderRadius: 99 }}>{film.sousgenre}</span>}
             </div>
             <div style={{ display: 'flex', gap: '.8rem', marginTop: 'auto', paddingTop: '.4rem', alignItems: 'center' }}>
-              {avg && <div style={{ fontSize: '.78rem' }}><span style={{ color: 'var(--gold)' }}>★</span> {avg}/10</div>}
-              <div style={{ fontSize: '.78rem', color: 'var(--text3)' }}>{watchPct}% vus</div>
+              {avg && <div style={{ fontSize: '.78rem' }}><span style={{ color: 'var(--accent-fg)' }}>★</span> {avg}/10</div>}
+              <div style={{ fontSize: '.78rem', color: 'var(--ink3)' }}>{watchPct}% vus</div>
               {localWatched.watched && (
-                <span style={{ fontSize: '.6rem', background: 'var(--green)', color: '#041a0e', padding: '2px 6px', borderRadius: 99, fontWeight: 700 }}>
+                <span style={{ fontSize: '.6rem', background: 'var(--ok)', color: '#041a0e', padding: '2px 6px', borderRadius: 99, fontWeight: 700 }}>
                   VU {localWatched.pre ? '(avant)' : '(marathon)'}
                 </span>
               )}
@@ -131,15 +131,15 @@ function FilmPreview({ film, watchPct, avg, profile, isWatched, watchedPre, myRa
 
         {/* Synopsis */}
         {overview && (
-          <div style={{ padding: '0 1.2rem .8rem', fontSize: '.78rem', color: 'var(--text2)', lineHeight: 1.5, borderTop: '1px solid var(--border)', paddingTop: '.8rem', marginLeft: '1.2rem', marginRight: '1.2rem', maxHeight: 100, overflowY: 'auto' }}>
+          <div style={{ padding: '0 1.2rem .8rem', fontSize: '.78rem', color: 'var(--ink2)', lineHeight: 1.5, borderTop: '1px solid var(--line)', paddingTop: '.8rem', marginLeft: '1.2rem', marginRight: '1.2rem', maxHeight: 100, overflowY: 'auto' }}>
             {overview}
           </div>
         )}
 
         {/* Notation */}
         {profile && (
-          <div style={{ padding: '.8rem 1.2rem', borderTop: '1px solid var(--border)' }}>
-            <div style={{ fontSize: '.72rem', color: 'var(--text3)', marginBottom: '.4rem' }}>Ta note :</div>
+          <div style={{ padding: '.8rem 1.2rem', borderTop: '1px solid var(--line)' }}>
+            <div style={{ fontSize: '.72rem', color: 'var(--ink3)', marginBottom: '.4rem' }}>Ta note :</div>
             <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
               {stars.map(s => (
                 <button
@@ -150,7 +150,7 @@ function FilmPreview({ film, watchPct, avg, profile, isWatched, watchedPre, myRa
                   style={{
                     background: 'none', border: 'none', cursor: 'pointer', padding: '2px',
                     fontSize: '1.1rem', lineHeight: 1,
-                    color: (hov || localRating) >= s ? 'var(--gold)' : 'var(--border2)',
+                    color: (hov || localRating) >= s ? 'var(--accent-fg)' : 'var(--line2)',
                     transition: 'color .15s, transform .15s',
                     transform: hov === s ? 'scale(1.3)' : 'scale(1)',
                   }}
@@ -158,7 +158,7 @@ function FilmPreview({ film, watchPct, avg, profile, isWatched, watchedPre, myRa
                   ★
                 </button>
               ))}
-              {localRating > 0 && <span style={{ fontSize: '.72rem', color: 'var(--text3)', marginLeft: '.4rem' }}>{localRating}/10</span>}
+              {localRating > 0 && <span style={{ fontSize: '.72rem', color: 'var(--ink3)', marginLeft: '.4rem' }}>{localRating}/10</span>}
             </div>
           </div>
         )}
@@ -173,8 +173,8 @@ function FilmPreview({ film, watchPct, avg, profile, isWatched, watchedPre, myRa
               style={{
                 fontSize: '.72rem', padding: '.3rem .7rem',
                 background: localWatched.watched && localWatched.pre === true ? 'rgba(79,217,138,.15)' : undefined,
-                border: localWatched.watched && localWatched.pre === true ? '1px solid var(--green)' : undefined,
-                color: localWatched.watched && localWatched.pre === true ? 'var(--green)' : undefined,
+                border: localWatched.watched && localWatched.pre === true ? '1px solid var(--ok)' : undefined,
+                color: localWatched.watched && localWatched.pre === true ? 'var(--ok)' : undefined,
               }}
             >
               ⏳ Vu avant marathon
@@ -186,8 +186,8 @@ function FilmPreview({ film, watchPct, avg, profile, isWatched, watchedPre, myRa
               style={{
                 fontSize: '.72rem', padding: '.3rem .7rem',
                 background: localWatched.watched && localWatched.pre === false ? 'rgba(249,199,79,.15)' : undefined,
-                border: localWatched.watched && localWatched.pre === false ? '1px solid var(--gold)' : undefined,
-                color: localWatched.watched && localWatched.pre === false ? 'var(--gold)' : undefined,
+                border: localWatched.watched && localWatched.pre === false ? '1px solid var(--accent-fg)' : undefined,
+                color: localWatched.watched && localWatched.pre === false ? 'var(--accent-fg)' : undefined,
               }}
             >
               🏁 Vu pendant marathon
@@ -200,7 +200,7 @@ function FilmPreview({ film, watchPct, avg, profile, isWatched, watchedPre, myRa
                 style={{
                   fontSize: '.72rem', padding: '.3rem .7rem',
                   background: 'rgba(232,196,106,.12)', border: '1px solid rgba(232,196,106,.4)',
-                  color: 'var(--gold)', fontWeight: 600,
+                  color: 'var(--accent-fg)', fontWeight: 600,
                 }}
               >
                 🏆 Vu pendant le duel
@@ -262,7 +262,7 @@ function DuelPoster({ film, w, h, border, watchPct, avg, profile, isWatched, wat
           }
         }}
         style={{
-          width: w, height: h, borderRadius: 'var(--r)', overflow: 'hidden', background: 'var(--bg3)',
+          width: w, height: h, borderRadius: 'var(--radius)', overflow: 'hidden', background: 'var(--s2)',
           border, transition: 'transform .25s ease, box-shadow .25s ease, border-color .2s',
           transform: hovered ? 'scale(1.08)' : 'scale(1)',
           boxShadow: hovered ? '0 8px 32px rgba(0,0,0,.4)' : 'none',
@@ -275,7 +275,7 @@ function DuelPoster({ film, w, h, border, watchPct, avg, profile, isWatched, wat
         }
         {hovered && (
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,.85) 0%, transparent 60%)', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '.5rem', pointerEvents: 'none' }}>
-            <div style={{ fontSize: '.6rem', color: 'var(--text2)', textAlign: 'center' }}>Voir les infos</div>
+            <div style={{ fontSize: '.6rem', color: 'var(--ink2)', textAlign: 'center' }}>Voir les infos</div>
           </div>
         )}
       </div>
@@ -322,30 +322,30 @@ function WinnerHero({
 
   return (
     <div style={{
-      background: 'var(--bg2)',
+      background: 'var(--s1)',
       border: '1px solid rgba(232,196,106,.22)',
-      borderRadius: 'var(--rxl)',
+      borderRadius: 'var(--radius)',
       marginBottom: '1.5rem',
       boxShadow: compact ? undefined : '0 0 48px rgba(232,196,106,.07)',
     }}>
       {/* Header */}
       <div style={{
         padding: '1rem 1.5rem',
-        borderBottom: '1px solid var(--border)',
+        borderBottom: '1px solid var(--line)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '.5rem',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '.8rem', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '.68rem', letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--text3)' }}>
+          <span style={{ fontSize: '.68rem', letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--ink3)' }}>
             Semaine {duel.week_num}
           </span>
           <span style={{
             background: 'rgba(232,196,106,.1)', border: '1px solid rgba(232,196,106,.3)',
-            color: 'var(--gold)', fontSize: '.72rem', padding: '.25rem .75rem', borderRadius: 99,
+            color: 'var(--accent-fg)', fontSize: '.72rem', padding: '.25rem .75rem', borderRadius: 99,
           }}>
             Duel clos
           </span>
         </div>
-        <span style={{ fontSize: '.75rem', color: 'var(--text3)' }}>{tot} vote{tot > 1 ? 's' : ''}</span>
+        <span style={{ fontSize: '.75rem', color: 'var(--ink3)' }}>{tot} vote{tot > 1 ? 's' : ''}</span>
       </div>
 
       {/* Contenu : vainqueur centré + perdant à côté */}
@@ -360,30 +360,30 @@ function WinnerHero({
             <DuelPoster
               film={loser}
               w={compact ? 70 : 90} h={compact ? 105 : 135}
-              border="2px solid var(--border)"
+              border="2px solid var(--line)"
               watchPct={getWatchPct(loser.id)} avg={avgRating(ratingMap[loser.id])}
               profile={profile} isWatched={loser.id in myWatched} watchedPre={myWatched[loser.id] ?? null} myRating={myRatings[loser.id]}
               onRefresh={onRefresh}
             />
           </div>
-          <div style={{ fontSize: '.68rem', color: 'var(--text3)', textAlign: 'center', maxWidth: 90 }}>
+          <div style={{ fontSize: '.68rem', color: 'var(--ink3)', textAlign: 'center', maxWidth: 90 }}>
             {loser.titre}
           </div>
-          <div style={{ fontSize: '.62rem', color: 'var(--text3)' }}>{lv}v ({pctL}%)</div>
+          <div style={{ fontSize: '.62rem', color: 'var(--ink3)' }}>{lv}v ({pctL}%)</div>
         </div>
 
         {/* Vainqueur */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.6rem', textAlign: 'center' }}>
           <div style={{
             fontSize: '.7rem', letterSpacing: '4px', textTransform: 'uppercase',
-            color: 'var(--gold)', fontWeight: 700,
+            color: 'var(--accent-fg)', fontWeight: 700,
           }}>
             Vainqueur
           </div>
           <div style={{ position: 'relative' }}>
             <div style={{
               position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)',
-              background: 'var(--gold)', color: '#0c0c12', fontSize: '.65rem', fontWeight: 800,
+              background: 'var(--accent-fg)', color: '#0c0c12', fontSize: '.65rem', fontWeight: 800,
               letterSpacing: '2.5px', padding: '.22rem .9rem', borderRadius: 99,
               textTransform: 'uppercase', whiteSpace: 'nowrap', zIndex: 2,
             }}>
@@ -392,18 +392,18 @@ function WinnerHero({
             <DuelPoster
               film={winner}
               w={pw} h={ph}
-              border="3px solid var(--gold)"
+              border="3px solid var(--accent-fg)"
               watchPct={getWatchPct(winner.id)} avg={avgRating(ratingMap[winner.id])}
               profile={profile} isWatched={winner.id in myWatched} watchedPre={myWatched[winner.id] ?? null} myRating={myRatings[winner.id]}
               isDuelWinner={duelWinnerSet?.has(winner.id)} isMarathonLive={isMarathonLive}
               onRefresh={onRefresh}
             />
           </div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: compact ? '1.25rem' : '1.6rem', lineHeight: 1.2, marginTop: '.25rem' }}>
+          <div style={{ fontFamily: 'var(--f-display)', fontSize: compact ? '1.25rem' : '1.6rem', lineHeight: 1.2, marginTop: '.25rem' }}>
             {winner.titre}
           </div>
-          <div style={{ fontSize: '.8rem', color: 'var(--text3)' }}>{winner.annee} · {winner.realisateur}</div>
-          <div style={{ fontSize: '.82rem', color: 'var(--green)', fontWeight: 500 }}>
+          <div style={{ fontSize: '.8rem', color: 'var(--ink3)' }}>{winner.annee} · {winner.realisateur}</div>
+          <div style={{ fontSize: '.82rem', color: 'var(--ok)', fontWeight: 500 }}>
             {wv} vote{wv > 1 ? 's' : ''} ({pctW}%)
           </div>
         </div>
@@ -412,17 +412,17 @@ function WinnerHero({
       {/* Barre résultat */}
       <div style={{ padding: '0 1.5rem .8rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.68rem', marginBottom: '.3rem' }}>
-          <span style={{ color: winner?.id === f1.id ? 'var(--gold)' : 'var(--text3)' }}>{f1.titre}</span>
-          <span style={{ color: winner?.id === f2.id ? 'var(--gold)' : 'var(--text3)' }}>{f2.titre}</span>
+          <span style={{ color: winner?.id === f1.id ? 'var(--accent-fg)' : 'var(--ink3)' }}>{f1.titre}</span>
+          <span style={{ color: winner?.id === f2.id ? 'var(--accent-fg)' : 'var(--ink3)' }}>{f2.titre}</span>
         </div>
-        <div style={{ borderRadius: 99, height: 8, overflow: 'hidden', display: 'flex', background: 'var(--bg3)' }}>
+        <div style={{ borderRadius: 99, height: 8, overflow: 'hidden', display: 'flex', background: 'var(--s2)' }}>
           <div style={{ height: '100%', width: `${Math.round(v1 / tot * 100)}%`, minWidth: v1 > 0 ? 4 : 0, background: winner?.id === f1.id ? 'linear-gradient(90deg, #e8c46a, #f0d78a)' : 'rgba(255,255,255,.15)', transition: 'width .6s ease' }} />
           <div style={{ height: '100%', width: `${Math.round(v2 / tot * 100)}%`, minWidth: v2 > 0 ? 4 : 0, background: winner?.id === f2.id ? 'linear-gradient(90deg, #6699ff, #88bbff)' : 'rgba(255,255,255,.15)', transition: 'width .6s ease' }} />
         </div>
       </div>
 
       {/* Forum */}
-      <div style={{ padding: '0 1.5rem .9rem', borderTop: '1px solid var(--border)', paddingTop: '.7rem' }}>
+      <div style={{ padding: '0 1.5rem .9rem', borderTop: '1px solid var(--line)', paddingTop: '.7rem' }}>
         <button className="btn btn-ghost" style={{ fontSize: '.78rem' }} onClick={() => setForumOpen(!forumOpen)}>
           💬 Débattre du duel {forumOpen ? '▲' : '▼'}
         </button>
@@ -482,15 +482,15 @@ function DuelCard({
         {isLeader && !tied && <div style={{ fontSize: '.6rem', letterSpacing: '2px', textTransform: 'uppercase', color, fontWeight: 700 }}>En tête</div>}
         <DuelPoster
           film={film} w={pw} h={ph}
-          border={`${isLeader && !tied ? '3px' : '2px'} solid ${isLeader && !tied ? color : myVote === film.id ? color : 'var(--border)'}`}
+          border={`${isLeader && !tied ? '3px' : '2px'} solid ${isLeader && !tied ? color : myVote === film.id ? color : 'var(--line)'}`}
           watchPct={getWatchPct(film.id)} avg={avgRating(ratingMap[film.id])}
           profile={profile} isWatched={film.id in myWatched} watchedPre={myWatched[film.id] ?? null} myRating={myRatings[film.id]}
           isDuelWinner={duelWinnerSet?.has(film.id)} isMarathonLive={isMarathonLive}
           onRefresh={onRefresh}
         />
         <div style={{ fontSize: isLeader && !tied ? '1rem' : '.82rem', fontWeight: isLeader ? 600 : 500, lineHeight: 1.3 }}>{film.titre}</div>
-        <div style={{ fontSize: '.7rem', color: 'var(--text3)' }}>{film.annee} · {film.realisateur}</div>
-        {myVote && <div style={{ fontSize: '.78rem', color: myVote === film.id ? color : 'var(--text3)', fontWeight: myVote === film.id ? 600 : 400 }}>
+        <div style={{ fontSize: '.7rem', color: 'var(--ink3)' }}>{film.annee} · {film.realisateur}</div>
+        {myVote && <div style={{ fontSize: '.78rem', color: myVote === film.id ? color : 'var(--ink3)', fontWeight: myVote === film.id ? 600 : 400 }}>
           {votes} vote{votes > 1 ? 's' : ''} ({pct}%)
         </div>}
       </div>
@@ -510,7 +510,7 @@ function DuelCard({
 
   return (
     <div style={{
-      background: 'var(--bg2)', borderRadius: 'var(--rxl)', overflow: 'hidden', marginBottom: '1.5rem',
+      background: 'var(--s1)', borderRadius: 'var(--radius)', overflow: 'hidden', marginBottom: '1.5rem',
       border: '1px solid rgba(232,196,106,.35)',
       boxShadow: '0 0 24px rgba(232,196,106,.08), 0 0 60px rgba(232,196,106,.04)',
       animation: 'duelGlow 3s ease-in-out infinite',
@@ -524,18 +524,18 @@ function DuelCard({
       `}</style>
 
       {/* Header */}
-      <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '.5rem' }}>
+      <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '.8rem', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '.68rem', letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--text3)' }}>Semaine {duel.week_num}</span>
+          <span style={{ fontSize: '.68rem', letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--ink3)' }}>Semaine {duel.week_num}</span>
           <span style={{
             background: 'rgba(232,196,106,.12)', border: '1px solid rgba(232,196,106,.35)',
-            color: 'var(--gold)', fontSize: '.72rem', padding: '.25rem .75rem', borderRadius: 99,
+            color: 'var(--accent-fg)', fontSize: '.72rem', padding: '.25rem .75rem', borderRadius: 99,
             animation: 'pulse 2s ease-in-out infinite',
           }}>
             Vote ouvert
           </span>
         </div>
-        <span style={{ fontSize: '.75rem', color: 'var(--text3)' }}>{v1 + v2} vote{v1 + v2 > 1 ? 's' : ''}</span>
+        <span style={{ fontSize: '.75rem', color: 'var(--ink3)' }}>{v1 + v2} vote{v1 + v2 > 1 ? 's' : ''}</span>
       </div>
 
       {/* Films : trailer | VS | leader(centré, 30% plus grand) */}
@@ -543,7 +543,7 @@ function DuelCard({
         {renderFilmSide(leftFilm, leftVotes, leftPct, leftColor, leftIsLeader)}
         <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 .5rem' }}>
           <div style={{
-            fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: 'var(--gold)',
+            fontFamily: 'var(--f-display)', fontSize: '1.3rem', color: 'var(--accent-fg)',
             background: 'rgba(232,196,106,.08)', border: '2px solid rgba(232,196,106,.25)',
             width: 50, height: 50, borderRadius: '50%',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -554,12 +554,12 @@ function DuelCard({
       </div>
 
       {/* Barre interactive */}
-      <div style={{ padding: '.8rem 1.5rem 1.2rem', borderTop: '1px solid var(--border)' }}>
+      <div style={{ padding: '.8rem 1.5rem 1.2rem', borderTop: '1px solid var(--line)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.72rem', marginBottom: '.35rem' }}>
           <span style={{ color: '#e8c46a', fontWeight: myVote === f1.id ? 700 : 400 }}>{f1.titre}</span>
           <span style={{ color: '#6699ff', fontWeight: myVote === f2.id ? 700 : 400 }}>{f2.titre}</span>
         </div>
-        <div style={{ borderRadius: 99, height: 14, overflow: 'hidden', display: 'flex', cursor: canVote ? 'pointer' : 'default', background: 'var(--bg3)', position: 'relative' }}>
+        <div style={{ borderRadius: 99, height: 14, overflow: 'hidden', display: 'flex', cursor: canVote ? 'pointer' : 'default', background: 'var(--s2)', position: 'relative' }}>
           <div
             onClick={() => canVote && onVote(duel.id, f1.id)}
             title={canVote ? `Voter pour ${f1.titre}` : undefined}
@@ -591,20 +591,20 @@ function DuelCard({
 
       {/* Info vote */}
       {profile && !duel.closed && (
-        <div style={{ padding: '.2rem 1.5rem .8rem', fontSize: '.78rem', color: 'var(--text3)', textAlign: 'center' }}>
+        <div style={{ padding: '.2rem 1.5rem .8rem', fontSize: '.78rem', color: 'var(--ink3)', textAlign: 'center' }}>
           {myVote
             ? 'Clique sur un autre film ou sur la barre pour changer ton vote'
             : `Clique sur un film pour voter (+${config.EXP_VOTE} EXP) · Le vainqueur est diffusé ${config.SEANCE_JOUR} ${config.SEANCE_HEURE} (+${config.EXP_DUEL_WIN} EXP)`}
         </div>
       )}
       {!profile && !duel.closed && (
-        <div style={{ padding: '.2rem 1.5rem .8rem', fontSize: '.78rem', color: 'var(--text3)', textAlign: 'center' }}>
-          <a href="/auth" style={{ color: 'var(--gold)', textDecoration: 'none' }}>Connecte-toi</a> pour voter (+{config.EXP_VOTE} EXP)
+        <div style={{ padding: '.2rem 1.5rem .8rem', fontSize: '.78rem', color: 'var(--ink3)', textAlign: 'center' }}>
+          <a href="/auth" style={{ color: 'var(--accent-fg)', textDecoration: 'none' }}>Connecte-toi</a> pour voter (+{config.EXP_VOTE} EXP)
         </div>
       )}
 
       {/* Forum */}
-      <div style={{ padding: '0 1.5rem .8rem', borderTop: '1px solid var(--border)', paddingTop: '.7rem', marginTop: '.3rem' }}>
+      <div style={{ padding: '0 1.5rem .8rem', borderTop: '1px solid var(--line)', paddingTop: '.7rem', marginTop: '.3rem' }}>
         <button className="btn btn-ghost" style={{ fontSize: '.78rem' }} onClick={() => setForumOpen(!forumOpen)}>
           💬 Débattre du duel {forumOpen ? '▲' : '▼'}
         </button>
@@ -634,7 +634,7 @@ function ArchiveCard({ duel, v1, v2, watchCountMap, ratingMap, totalUsers, profi
 
   return (
     <div style={{
-      background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)',
+      background: 'var(--s1)', border: '1px solid var(--line)', borderRadius: 'var(--radius)',
       padding: '1rem 1.2rem', display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '.6rem',
     }}>
       {/* Affiches miniatures */}
@@ -653,7 +653,7 @@ function ArchiveCard({ duel, v1, v2, watchCountMap, ratingMap, totalUsers, profi
           <div style={{ opacity: .4, filter: 'grayscale(.5)' }}>
             <DuelPoster
               film={loser} w={32} h={48}
-              border="1px solid var(--border)"
+              border="1px solid var(--line)"
               watchPct={getWatchPct(loser.id)} avg={avgRating(ratingMap[loser.id])}
               profile={profile} isWatched={loser.id in myWatched} watchedPre={myWatched[loser.id] ?? null} myRating={myRatings[loser.id]}
               onRefresh={onRefresh}
@@ -665,22 +665,22 @@ function ArchiveCard({ duel, v1, v2, watchCountMap, ratingMap, totalUsers, profi
       {/* Infos */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '.65rem', color: 'var(--text3)', letterSpacing: '1.5px', textTransform: 'uppercase' }}>S{duel.week_num}</span>
-          <span style={{ fontSize: '.72rem', color: 'var(--gold)', fontWeight: 600 }}>🏆 {winner?.titre ?? '—'}</span>
+          <span style={{ fontSize: '.65rem', color: 'var(--ink3)', letterSpacing: '1.5px', textTransform: 'uppercase' }}>S{duel.week_num}</span>
+          <span style={{ fontSize: '.72rem', color: 'var(--accent-fg)', fontWeight: 600 }}>🏆 {winner?.titre ?? '—'}</span>
         </div>
-        <div style={{ fontSize: '.7rem', color: 'var(--text3)', marginTop: '.2rem' }}>
+        <div style={{ fontSize: '.7rem', color: 'var(--ink3)', marginTop: '.2rem' }}>
           vs {loser?.titre}
         </div>
       </div>
 
       {/* Score avec mini barre */}
       <div style={{ flexShrink: 0, textAlign: 'right' }}>
-        <div style={{ fontSize: '.72rem', color: 'var(--text2)', fontWeight: 500 }}>{wv}–{lv}</div>
-        <div style={{ width: 50, height: 4, borderRadius: 99, overflow: 'hidden', display: 'flex', background: 'var(--bg3)', marginTop: '.3rem' }}>
-          <div style={{ height: '100%', width: `${Math.round(wv / tot * 100)}%`, background: 'var(--gold)' }} />
+        <div style={{ fontSize: '.72rem', color: 'var(--ink2)', fontWeight: 500 }}>{wv}–{lv}</div>
+        <div style={{ width: 50, height: 4, borderRadius: 99, overflow: 'hidden', display: 'flex', background: 'var(--s2)', marginTop: '.3rem' }}>
+          <div style={{ height: '100%', width: `${Math.round(wv / tot * 100)}%`, background: 'var(--accent-fg)' }} />
           <div style={{ height: '100%', width: `${Math.round(lv / tot * 100)}%`, background: 'rgba(255,255,255,.15)' }} />
         </div>
-        <div style={{ fontSize: '.58rem', color: 'var(--text3)', marginTop: '.15rem' }}>{tot} vote{tot > 1 ? 's' : ''}</div>
+        <div style={{ fontSize: '.58rem', color: 'var(--ink3)', marginTop: '.15rem' }}>{tot} vote{tot > 1 ? 's' : ''}</div>
       </div>
     </div>
   )
@@ -778,8 +778,8 @@ export default function DuelsClient({ profile, duels, myVotes, allVotes, watchCo
   return (
     <div>
       <div style={{ marginBottom: '2rem' }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', lineHeight: 1 }}>Duels</div>
-        <div style={{ color: 'var(--text2)', fontSize: '.83rem', marginTop: '.35rem' }}>
+        <div style={{ fontFamily: 'var(--f-display)', fontSize: '2rem', lineHeight: 1 }}>Duels</div>
+        <div style={{ color: 'var(--ink2)', fontSize: '.83rem', marginTop: '.35rem' }}>
           Vote pour le prochain film collectif · Séance {config.SEANCE_JOUR} {config.SEANCE_HEURE}
         </div>
       </div>

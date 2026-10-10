@@ -1,0 +1,73 @@
+.band {
+  margin-bottom: var(--sp-6);
+}
+
+.label {
+  font-family: var(--f-data);
+  font-size: var(--fs-1);
+  font-weight: 700;
+  color: var(--ink3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--sp-3);
+}
+
+.weeks {
+  display: flex;
+  gap: var(--sp-2);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  padding-bottom: var(--sp-2);
+}
+
+.week {
+  flex: 0 0 auto;
+  min-width: 120px;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--radius);
+  background: var(--s1);
+  border: 1px solid var(--line);
+  text-align: center;
+  transition: border-color 0.2s;
+}
+
+.weekCurrent {
+  border-color: var(--accent-fg);
+  background: var(--accent-bg);
+}
+
+.weekPast {
+  opacity: 0.5;
+}
+
+.weekNum {
+  font-family: var(--f-data);
+  font-size: var(--fs-3);
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: var(--sp-1);
+}
+
+.weekTheme {
+  font-family: var(--f-ui);
+  font-size: var(--fs-2);
+  font-weight: 600;
+  color: var(--ink2);
+  margin-bottom: var(--sp-1);
+}
+
+.weekDates {
+  font-family: var(--f-data);
+  font-size: var(--fs-0);
+  color: var(--ink3);
+}
+
+@media (max-width: 768px) {
+  .week {
+    min-width: 100px;
+    padding: var(--sp-2) var(--sp-3);
+  }
+  .weekNum { font-size: var(--fs-2); }
+  .weekTheme { font-size: var(--fs-1); }
+}

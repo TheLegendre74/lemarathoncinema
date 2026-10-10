@@ -1,13 +1,13 @@
 export default function Confidentialite() {
   return (
     <div style={{ maxWidth: 680, margin: '0 auto', lineHeight: 1.8 }}>
-      <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.8rem', marginBottom: '2rem' }}>Politique de confidentialité</h1>
+      <h1 style={{ fontFamily: 'var(--f-display)', fontSize: '1.8rem', marginBottom: '2rem' }}>Politique de confidentialité</h1>
 
       <Section title="Qui sommes-nous ?">
         <p>
           Le Marathon Cinéma est un site de suivi collaboratif de marathon cinématographique,
           édité par <strong>The Legendre</strong>, Var (83), France.<br />
-          Contact : <a href="mailto:LeMarathonCinema@gmail.com" style={{ color: 'var(--gold)' }}>LeMarathonCinema@gmail.com</a>
+          Contact : <a href="mailto:LeMarathonCinema@gmail.com" style={{ color: 'var(--accent-fg)' }}>LeMarathonCinema@gmail.com</a>
         </p>
       </Section>
 
@@ -46,7 +46,7 @@ export default function Confidentialite() {
         </p>
         <p style={{ marginTop: '.6rem' }}>
           Les e-mails sont envoyés via <strong>Resend</strong> (resend.com) depuis l'adresse
-          <code style={{ background: 'var(--bg2)', padding: '0 .4rem', borderRadius: 4, margin: '0 .3rem' }}>
+          <code style={{ background: 'var(--s1)', padding: '0 .4rem', borderRadius: 4, margin: '0 .3rem' }}>
             noreply@le-marathon-cinema.fr
           </code>.
         </p>
@@ -64,7 +64,7 @@ export default function Confidentialite() {
         <p>
           Vos données sont conservées tant que votre compte est actif. Vous pouvez demander
           la suppression de votre compte et de toutes vos données à tout moment en contactant :
-          <a href="mailto:LeMarathonCinema@gmail.com" style={{ color: 'var(--gold)', marginLeft: '.3rem' }}>
+          <a href="mailto:LeMarathonCinema@gmail.com" style={{ color: 'var(--accent-fg)', marginLeft: '.3rem' }}>
             LeMarathonCinema@gmail.com
           </a>
         </p>
@@ -80,7 +80,7 @@ export default function Confidentialite() {
         </ul>
         <p style={{ marginTop: '.8rem' }}>
           Pour exercer ces droits, contactez-nous à :
-          <a href="mailto:LeMarathonCinema@gmail.com" style={{ color: 'var(--gold)', marginLeft: '.3rem' }}>
+          <a href="mailto:LeMarathonCinema@gmail.com" style={{ color: 'var(--accent-fg)', marginLeft: '.3rem' }}>
             LeMarathonCinema@gmail.com
           </a>
         </p>
@@ -96,7 +96,7 @@ export default function Confidentialite() {
         </p>
       </Section>
 
-      <p style={{ fontSize: '.75rem', color: 'var(--text3)', marginTop: '3rem' }}>
+      <p style={{ fontSize: '.75rem', color: 'var(--ink3)', marginTop: '3rem' }}>
         Dernière mise à jour : avril 2026
       </p>
     </div>
@@ -106,10 +106,10 @@ export default function Confidentialite() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: '2rem' }}>
-      <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--gold)', marginBottom: '.6rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
+      <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--accent-fg)', marginBottom: '.6rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
         {title}
       </h2>
-      <div style={{ color: 'var(--text2)', fontSize: '.88rem' }}>{children}</div>
+      <div style={{ color: 'var(--ink2)', fontSize: '.88rem' }}>{children}</div>
     </div>
   )
 }

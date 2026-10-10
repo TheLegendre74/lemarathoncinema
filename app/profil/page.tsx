@@ -76,19 +76,19 @@ export default async function ProfilPage({ searchParams }: { searchParams: Promi
   return (
     <div>
       <div style={{ marginBottom: '2rem' }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', lineHeight: 1 }}>Mon Profil</div>
+        <div style={{ fontFamily: 'var(--f-display)', fontSize: '2rem', lineHeight: 1 }}>Mon Profil</div>
       </div>
 
       {/* Hero card */}
-      <div style={{ background: 'linear-gradient(135deg, var(--bg2), var(--bg3))', border: '1px solid var(--border2)', borderRadius: 'var(--rxl)', padding: '2rem', marginBottom: '1.5rem' }}>
+      <div style={{ background: 'linear-gradient(135deg, var(--s1), var(--s2))', border: '1px solid var(--line2)', borderRadius: 'var(--radius)', padding: '2rem', marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
           <AvatarUpload
             currentAvatar={profile.avatar_url ?? null}
             pseudo={profile.pseudo}
           />
           <div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.7rem', lineHeight: 1 }}>{profile.pseudo}</div>
-            <div style={{ fontSize: '.75rem', color: 'var(--text3)', marginTop: '.3rem' }}>{user.email}</div>
+            <div style={{ fontFamily: 'var(--f-display)', fontSize: '1.7rem', lineHeight: 1 }}>{profile.pseudo}</div>
+            <div style={{ fontSize: '.75rem', color: 'var(--ink3)', marginTop: '.3rem' }}>{user.email}</div>
             <div style={{ marginTop: '.6rem', display: 'flex', gap: '.5rem', flexWrap: 'wrap' }}>
               <span className="chip">Niveau {level}</span>
               <span className="chip">#{rank} au classement</span>
@@ -106,9 +106,9 @@ export default async function ProfilPage({ searchParams }: { searchParams: Promi
             { v: votes?.length ?? 0, l: 'Votes', cls: 'blue' },
             { v: level, l: 'Niveau', cls: '' },
           ].map(s => (
-            <div key={s.l} style={{ textAlign: 'center', background: 'var(--bg3)', borderRadius: 'var(--r)', padding: '.8rem' }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', lineHeight: 1, color: s.cls ? `var(--${s.cls})` : 'var(--text)' }}>{s.v}</div>
-              <div style={{ fontSize: '.63rem', color: 'var(--text3)', letterSpacing: '1px', textTransform: 'uppercase', marginTop: '.2rem' }}>{s.l}</div>
+            <div key={s.l} style={{ textAlign: 'center', background: 'var(--s2)', borderRadius: 'var(--radius)', padding: '.8rem' }}>
+              <div style={{ fontFamily: 'var(--f-display)', fontSize: '1.6rem', lineHeight: 1, color: s.cls ? `var(--${s.cls})` : 'var(--ink)' }}>{s.v}</div>
+              <div style={{ fontSize: '.63rem', color: 'var(--ink3)', letterSpacing: '1px', textTransform: 'uppercase', marginTop: '.2rem' }}>{s.l}</div>
             </div>
           ))}
         </div>
@@ -143,13 +143,13 @@ export default async function ProfilPage({ searchParams }: { searchParams: Promi
 
       {/* Watchlist */}
       <div className="section-title" style={{ marginTop: '1rem' }}>Mes Watchlists</div>
-      <a href="/watchlist" style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.9rem 1.1rem', marginBottom: '1.5rem', textDecoration: 'none', color: 'var(--text)', transition: 'border-color .2s' }}>
+      <a href="/watchlist" style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: 'var(--s1)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', padding: '.9rem 1.1rem', marginBottom: '1.5rem', textDecoration: 'none', color: 'var(--ink)', transition: 'border-color .2s' }}>
         <span style={{ fontSize: '1.5rem' }}>📋</span>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: '.9rem', fontWeight: 500 }}>Gérer mes watchlists</div>
-          <div style={{ fontSize: '.75rem', color: 'var(--text3)', marginTop: '.15rem' }}>Crée et partage tes listes de films à voir</div>
+          <div style={{ fontSize: '.75rem', color: 'var(--ink3)', marginTop: '.15rem' }}>Crée et partage tes listes de films à voir</div>
         </div>
-        <span style={{ fontSize: '.8rem', color: 'var(--text3)' }}>→</span>
+        <span style={{ fontSize: '.8rem', color: 'var(--ink3)' }}>→</span>
       </a>
 
       {/* Messages privés */}
@@ -171,15 +171,15 @@ export default async function ProfilPage({ searchParams }: { searchParams: Promi
               Films vus avant le marathon ({preList.length})
             </div>
             {!preList.length ? (
-              <div style={{ color: 'var(--text3)', fontSize: '.83rem', marginBottom: '1.5rem' }}>Aucun film vu avant le marathon.</div>
+              <div style={{ color: 'var(--ink3)', fontSize: '.83rem', marginBottom: '1.5rem' }}>Aucun film vu avant le marathon.</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '.4rem', marginBottom: '1.5rem' }}>
                 {preList.map((w: any) => {
                   const film = w.films
                   if (!film) return null
                   return (
-                    <div key={`pre-${w.film_id}`} style={{ display: 'flex', alignItems: 'center', gap: '.9rem', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.65rem .9rem' }}>
-                      <div style={{ width: 30, height: 45, borderRadius: 4, overflow: 'hidden', flexShrink: 0, background: 'var(--bg3)' }}>
+                    <div key={`pre-${w.film_id}`} style={{ display: 'flex', alignItems: 'center', gap: '.9rem', background: 'var(--s1)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', padding: '.65rem .9rem' }}>
+                      <div style={{ width: 30, height: 45, borderRadius: 4, overflow: 'hidden', flexShrink: 0, background: 'var(--s2)' }}>
                         {film.poster
                           ? <Image src={film.poster} alt={film.titre} width={30} height={45} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
                           : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.8rem' }}>🎬</div>
@@ -187,9 +187,9 @@ export default async function ProfilPage({ searchParams }: { searchParams: Promi
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: '.87rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{film.titre}</div>
-                        <div style={{ fontSize: '.7rem', color: 'var(--text3)' }}>{film.annee} · {film.genre}</div>
+                        <div style={{ fontSize: '.7rem', color: 'var(--ink3)' }}>{film.annee} · {film.genre}</div>
                       </div>
-                      <div style={{ fontSize: '.68rem', color: 'var(--text3)', flexShrink: 0 }}>{new Date(w.watched_at).toLocaleDateString('fr-FR')}</div>
+                      <div style={{ fontSize: '.68rem', color: 'var(--ink3)', flexShrink: 0 }}>{new Date(w.watched_at).toLocaleDateString('fr-FR')}</div>
                     </div>
                   )
                 })}
@@ -208,15 +208,15 @@ export default async function ProfilPage({ searchParams }: { searchParams: Promi
               Films vus pendant le marathon ({marathonList.length})
             </div>
             {!marathonList.length ? (
-              <div style={{ color: 'var(--text3)', fontSize: '.83rem' }}>Aucun film vu pendant le marathon.</div>
+              <div style={{ color: 'var(--ink3)', fontSize: '.83rem' }}>Aucun film vu pendant le marathon.</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
                 {marathonList.map((w: any) => {
                   const film = w.films
                   if (!film) return null
                   return (
-                    <div key={`marathon-${w.film_id}`} style={{ display: 'flex', alignItems: 'center', gap: '.9rem', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '.65rem .9rem' }}>
-                      <div style={{ width: 30, height: 45, borderRadius: 4, overflow: 'hidden', flexShrink: 0, background: 'var(--bg3)' }}>
+                    <div key={`marathon-${w.film_id}`} style={{ display: 'flex', alignItems: 'center', gap: '.9rem', background: 'var(--s1)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', padding: '.65rem .9rem' }}>
+                      <div style={{ width: 30, height: 45, borderRadius: 4, overflow: 'hidden', flexShrink: 0, background: 'var(--s2)' }}>
                         {film.poster
                           ? <Image src={film.poster} alt={film.titre} width={30} height={45} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
                           : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.8rem' }}>🎬</div>
@@ -224,10 +224,10 @@ export default async function ProfilPage({ searchParams }: { searchParams: Promi
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: '.87rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{film.titre}</div>
-                        <div style={{ fontSize: '.7rem', color: 'var(--text3)' }}>{film.annee} · {film.genre}</div>
+                        <div style={{ fontSize: '.7rem', color: 'var(--ink3)' }}>{film.annee} · {film.genre}</div>
                       </div>
-                      <div style={{ fontSize: '.68rem', color: 'var(--text3)', flexShrink: 0 }}>{new Date(w.watched_at).toLocaleDateString('fr-FR')}</div>
-                      <span style={{ fontSize: '.7rem', color: 'var(--gold)', fontWeight: 500, flexShrink: 0 }}>+{cfg.EXP_FILM} EXP</span>
+                      <div style={{ fontSize: '.68rem', color: 'var(--ink3)', flexShrink: 0 }}>{new Date(w.watched_at).toLocaleDateString('fr-FR')}</div>
+                      <span style={{ fontSize: '.7rem', color: 'var(--accent-fg)', fontWeight: 500, flexShrink: 0 }}>+{cfg.EXP_FILM} EXP</span>
                     </div>
                   )
                 })}

@@ -1,0 +1,256 @@
+/* ═══════════════════════════════════════════════════════════
+   Horreur — screen overrides + behaviours CSS (§16)
+   Found-footage, obscurité, grain, VHS
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Titles ── */
+[data-theme="horreur"] [data-brand-title],
+[data-theme="horreur"] .page-title-chrome {
+  font-family: var(--f-display);
+  font-weight: var(--disp-weight);
+  letter-spacing: var(--disp-track);
+  color: var(--ink);
+}
+
+[data-theme="horreur"] .page-header {
+  font-family: var(--f-display);
+  font-weight: var(--disp-weight);
+  letter-spacing: var(--disp-track);
+}
+
+/* ── Boutons ── */
+[data-theme="horreur"] .btn-primary {
+  border-radius: 0;
+  border: 1px solid var(--line2);
+  background: var(--s2);
+  color: var(--ink);
+  font-family: var(--f-ui);
+  text-transform: var(--ui-case);
+  letter-spacing: var(--ui-track);
+  transition: background var(--dur) var(--ease);
+}
+
+[data-theme="horreur"] .btn-primary:hover {
+  background: var(--s3);
+  border-color: var(--accent);
+}
+
+/* ── Film cards: cassettes ── */
+[data-theme="horreur"] .film-card {
+  border: 1px solid var(--line);
+  background: var(--s1);
+  border-radius: 0;
+}
+
+[data-theme="horreur"] .film-card .film-title {
+  font-family: var(--f-main);
+  font-size: 16px;
+  color: var(--ink);
+}
+
+[data-theme="horreur"] .film-card .poster-container img {
+  filter: grayscale(0.3) contrast(1.1);
+  transition: filter var(--dur) var(--ease);
+}
+
+[data-theme="horreur"] .film-card:hover .poster-container img {
+  filter: grayscale(0) contrast(1);
+}
+
+/* ── Filter chips ── */
+[data-theme="horreur"] .filter-chip {
+  font-family: var(--f-ui);
+  text-transform: var(--ui-case);
+  letter-spacing: var(--ui-track);
+  border-radius: 0;
+  border: 1px solid var(--line);
+}
+
+[data-theme="horreur"] .filter-chip.active {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+
+/* ── Leaderboard: les survivants ── */
+[data-theme="horreur"] .leaderboard-table {
+  font-family: var(--f-data);
+}
+
+[data-theme="horreur"] .leaderboard-rank-1 {
+  font-family: var(--f-display);
+  font-weight: var(--disp-weight);
+  font-size: 36px;
+  color: var(--accent);
+}
+
+[data-theme="horreur"] .leaderboard-rank-2,
+[data-theme="horreur"] .leaderboard-rank-3 {
+  font-family: var(--f-display);
+  font-size: 20px;
+}
+
+/* ── Profil: dossier ── */
+[data-theme="horreur"] .profile-card {
+  border: 1px solid var(--line);
+  background: var(--s1);
+  border-radius: 0;
+}
+
+[data-theme="horreur"] .profile-name {
+  font-family: var(--f-display);
+  font-weight: var(--disp-weight);
+  letter-spacing: var(--disp-track);
+}
+
+/* ── Forum: la veillée ── */
+[data-theme="horreur"] .forum-card,
+[data-theme="horreur"] .forum-topic-row {
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--s1);
+}
+
+/* ── Semaine: les sept nuits ── */
+[data-theme="horreur"] .week-title {
+  font-family: var(--f-display);
+  font-weight: var(--disp-weight);
+  letter-spacing: var(--disp-track);
+}
+
+/* ── Player avatars ── */
+[data-theme="horreur"] .player-avatar {
+  border: 1px solid var(--line2);
+  border-radius: 50%;
+  filter: grayscale(0.2);
+}
+
+/* ── Data cells ── */
+[data-theme="horreur"] .data-cell {
+  font-family: var(--f-data);
+}
+
+/* ── Bottom nav ── */
+@media (max-width: 768px) {
+  [data-theme="horreur"] .bottomBar {
+    font-family: var(--f-ui);
+    font-size: 10px;
+    text-transform: var(--ui-case);
+    letter-spacing: .1em;
+  }
+  [data-theme="horreur"] .bottomBar .bottomActive {
+    color: var(--accent);
+  }
+}
+
+/* ── Auth ── */
+[data-theme="horreur"] .auth-title {
+  font-family: var(--f-display);
+  font-weight: var(--disp-weight);
+  letter-spacing: var(--disp-track);
+}
+
+/* ── 404 ── */
+[data-theme="horreur"] .not-found-title {
+  font-family: var(--f-display);
+  font-weight: var(--disp-weight);
+  letter-spacing: var(--disp-track);
+}
+
+/* ── Home hero: la porte ── */
+.horreur-porte {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 48px 32px;
+  text-align: center;
+}
+
+.horreur-porte-header {
+  font-family: var(--f-ui);
+  text-transform: var(--ui-case);
+  letter-spacing: var(--ui-track);
+  font-size: 11px;
+  color: var(--ink3);
+  margin-bottom: 24px;
+}
+
+.horreur-porte-titre {
+  font-family: var(--f-display);
+  font-weight: var(--disp-weight);
+  font-size: 32px;
+  letter-spacing: var(--disp-track);
+  color: var(--ink);
+  margin-bottom: 16px;
+  line-height: 1.2;
+}
+
+.horreur-porte-sous-titre {
+  font-family: var(--f-body);
+  font-size: 15px;
+  font-style: italic;
+  color: var(--ink3);
+  margin-bottom: 24px;
+}
+
+.horreur-porte-role {
+  font-family: var(--f-data);
+  font-size: 12px;
+  color: var(--rec);
+  letter-spacing: .06em;
+}
+
+@media (max-width: 768px) {
+  .horreur-porte { padding: 32px 16px; }
+  .horreur-porte-titre { font-size: 24px; }
+}
+
+/* ── Cassette (empty state) ── */
+.horreur-cassette {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 40px 16px;
+  color: var(--ink3);
+}
+
+.horreur-cassette-text {
+  font-family: var(--f-data);
+  font-size: 13px;
+  color: var(--ink3);
+  text-align: center;
+}
+
+/* ── Animations for eggs ── */
+@keyframes ballonFloat {
+  0%, 100% { bottom: -40px; }
+  50% { bottom: 60vh; }
+}
+
+@keyframes possessionFlicker {
+  0% { opacity: 0; }
+  25% { opacity: 0.15; }
+  50% { opacity: 0; }
+  75% { opacity: 0.1; }
+  100% { opacity: 0; }
+}
+
+@keyframes apparitionFade {
+  0% { opacity: 0; }
+  30% { opacity: 0.15; }
+  70% { opacity: 0.12; }
+  100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes ballonFloat { 0%, 100% { bottom: 100px; } }
+  @keyframes possessionFlicker { 0%, 100% { opacity: 0; } }
+  @keyframes apparitionFade { 0%, 100% { opacity: 0; } }
+}
+
+/* ── Responsive leaderboard ── */
+@media (max-width: 768px) {
+  [data-theme="horreur"] .leaderboard-rank-1 { font-size: 26px; }
+  [data-theme="horreur"] .leaderboard-rank-2,
+  [data-theme="horreur"] .leaderboard-rank-3 { font-size: 16px; }
+}

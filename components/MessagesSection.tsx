@@ -8,6 +8,7 @@ import {
   sendMessage, deleteMessage, blockUser, unblockUser,
   markMessagesAsRead,
 } from '@/lib/actions'
+import { emitDestruction } from '@/lib/destruction'
 
 interface Profile {
   id: string
@@ -43,7 +44,7 @@ interface Props {
 
 function Avatar({ profile, size = 32 }: { profile: Profile | null; size?: number }) {
   return (
-    <div style={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, background: 'var(--bg3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.4 }}>
+    <div style={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, background: 'var(--s2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.4 }}>
       {profile?.avatar_url
         ? <Image src={profile.avatar_url} alt={profile.pseudo ?? ''} width={size} height={size} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
         : '👤'
@@ -74,7 +75,7 @@ export default function MessagesSection({
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768)
+    const check = () => setIsMobile(window.innerWidth <= 768)
     check()
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
@@ -157,6 +158,7 @@ export default function MessagesSection({
     startTransition(async () => {
       await deleteMessage(msgId)
       setMessages(prev => prev.filter(m => m.id !== msgId))
+      emitDestruction()
     })
   }
 
@@ -183,7 +185,7 @@ export default function MessagesSection({
   const ConvList = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '.3rem' }}>
       {convs.length === 0 ? (
-        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '2rem', textAlign: 'center', color: 'var(--text3)', fontSize: '.83rem' }}>
+        <div style={{ background: 'var(--s1)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', padding: '2rem', textAlign: 'center', color: 'var(--ink3)', fontSize: '.83rem' }}>
           Aucun message. Va sur la page <strong>Marathoniens</strong> pour envoyer un message à quelqu'un !
         </div>
       ) : (
@@ -193,9 +195,9 @@ export default function MessagesSection({
             onClick={() => openConversation(c.otherId, c.profile)}
             style={{
               display: 'flex', alignItems: 'center', gap: '.75rem',
-              background: activeId === c.otherId ? 'rgba(232,196,106,.08)' : 'var(--bg2)',
-              border: `1px solid ${activeId === c.otherId ? 'rgba(232,196,106,.35)' : 'var(--border)'}`,
-              borderRadius: 'var(--r)', padding: '.75rem 1rem', cursor: 'pointer', textAlign: 'left', width: '100%',
+              background: activeId === c.otherId ? 'rgba(232,196,106,.08)' : 'var(--s1)',
+              border: `1px solid ${activeId === c.otherId ? 'rgba(232,196,106,.35)' : 'var(--line)'}`,
+              borderRadius: 'var(--radius)', padding: '.75rem 1rem', cursor: 'pointer', textAlign: 'left', width: '100%',
             }}
           >
             <Avatar profile={c.profile} size={36} />
@@ -203,7 +205,7 @@ export default function MessagesSection({
               <div style={{ fontSize: '.88rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {c.profile?.pseudo ?? '?'}
               </div>
-              <div style={{ fontSize: '.72rem', color: 'var(--text3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '.15rem' }}>
+              <div style={{ fontSize: '.72rem', color: 'var(--ink3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '.15rem' }}>
                 {c.lastMessage.content}
               </div>
             </div>
@@ -212,7 +214,7 @@ export default function MessagesSection({
                 {c.unread}
               </span>
             )}
-            <span style={{ color: 'var(--text3)', fontSize: '1rem', flexShrink: 0 }}>›</span>
+            <span style={{ color: 'var(--ink3)', fontSize: '1rem', flexShrink: 0 }}>›</span>
           </button>
         ))
       )}
@@ -222,19 +224,19 @@ export default function MessagesSection({
   // ── THREAD VIEW ─────────────────────────────────────────────
   const ThreadView = activeId ? (
     <div style={{
-      background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)',
+      background: 'var(--s1)', border: '1px solid var(--line)', borderRadius: 'var(--radius)',
       display: 'flex', flexDirection: 'column',
       // On mobile: fill remaining screen space; on desktop: fixed height
       height: isMobile ? 'calc(100dvh - 13rem)' : 420,
       minHeight: 320,
     }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem', padding: '.75rem 1rem', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem', padding: '.75rem 1rem', borderBottom: '1px solid var(--line)', flexShrink: 0 }}>
         {/* Back button (mobile only) */}
         {isMobile && (
           <button
             onClick={goBackToList}
-            style={{ background: 'none', border: 'none', color: 'var(--text2)', fontSize: '1.3rem', cursor: 'pointer', padding: '0 .25rem', lineHeight: 1, flexShrink: 0 }}
+            style={{ background: 'none', border: 'none', color: 'var(--ink2)', fontSize: '1.3rem', cursor: 'pointer', padding: '0 .25rem', lineHeight: 1, flexShrink: 0 }}
           >
             ‹
           </button>
@@ -247,15 +249,15 @@ export default function MessagesSection({
         {!confirmBlock ? (
           <button
             onClick={() => setConfirmBlock(true)}
-            style={{ fontSize: '.62rem', color: 'var(--text3)', background: 'none', border: '1px solid var(--border)', borderRadius: 99, padding: '3px 9px', cursor: 'pointer', flexShrink: 0 }}
+            style={{ fontSize: '.62rem', color: 'var(--ink3)', background: 'none', border: '1px solid var(--line)', borderRadius: 99, padding: '3px 9px', cursor: 'pointer', flexShrink: 0 }}
           >
             {isBlocked ? '✓ Bloqué' : 'Bloquer'}
           </button>
         ) : (
           <div style={{ display: 'flex', gap: '.35rem', alignItems: 'center', flexShrink: 0 }}>
-            <span style={{ fontSize: '.62rem', color: 'var(--text3)' }}>Bloquer ?</span>
+            <span style={{ fontSize: '.62rem', color: 'var(--ink3)' }}>Bloquer ?</span>
             <button onClick={handleBlock} style={{ fontSize: '.62rem', padding: '3px 8px', background: 'none', border: '1px solid var(--red, #e55)', borderRadius: 99, color: 'var(--red, #e55)', cursor: 'pointer' }}>Oui</button>
-            <button onClick={() => setConfirmBlock(false)} style={{ fontSize: '.62rem', padding: '3px 8px', background: 'none', border: '1px solid var(--border)', borderRadius: 99, color: 'var(--text3)', cursor: 'pointer' }}>Non</button>
+            <button onClick={() => setConfirmBlock(false)} style={{ fontSize: '.62rem', padding: '3px 8px', background: 'none', border: '1px solid var(--line)', borderRadius: 99, color: 'var(--ink3)', cursor: 'pointer' }}>Non</button>
           </div>
         )}
       </div>
@@ -263,7 +265,7 @@ export default function MessagesSection({
       {/* Messages scroll area */}
       <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '.75rem 1rem', display: 'flex', flexDirection: 'column', gap: '.5rem', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
         {messages.length === 0 && (
-          <div style={{ textAlign: 'center', color: 'var(--text3)', fontSize: '.78rem', marginTop: '2rem' }}>
+          <div style={{ textAlign: 'center', color: 'var(--ink3)', fontSize: '.78rem', marginTop: '2rem' }}>
             Début de la conversation
           </div>
         )}
@@ -273,19 +275,20 @@ export default function MessagesSection({
             <div key={m.id} style={{ display: 'flex', flexDirection: isMe ? 'row-reverse' : 'row', gap: '.4rem', alignItems: 'flex-end' }}>
               <div style={{
                 maxWidth: '78%',
-                background: isMe ? 'rgba(232,196,106,.13)' : 'var(--bg3)',
-                border: `1px solid ${isMe ? 'rgba(232,196,106,.28)' : 'var(--border)'}`,
+                background: isMe ? 'rgba(232,196,106,.13)' : 'var(--s2)',
+                border: `1px solid ${isMe ? 'rgba(232,196,106,.28)' : 'var(--line)'}`,
                 borderRadius: isMe ? '14px 14px 3px 14px' : '14px 14px 14px 3px',
                 padding: '.5rem .8rem', fontSize: '.85rem', lineHeight: 1.5,
                 wordBreak: 'break-word',
               }}>
                 {m.content}
-                <div style={{ fontSize: '.58rem', color: 'var(--text3)', marginTop: '.2rem', textAlign: isMe ? 'right' : 'left', display: 'flex', alignItems: 'center', justifyContent: isMe ? 'flex-end' : 'flex-start', gap: '.3rem' }}>
+                <div style={{ fontSize: '.58rem', color: 'var(--ink3)', marginTop: '.2rem', textAlign: isMe ? 'right' : 'left', display: 'flex', alignItems: 'center', justifyContent: isMe ? 'flex-end' : 'flex-start', gap: '.3rem' }}>
                   <span>{new Date(m.created_at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
                   {isMe && (
                     <button
                       onClick={() => handleDelete(m.id)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: '.62rem', padding: 0, lineHeight: 1 }}
+                      data-destructif=""
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink3)', fontSize: '.62rem', padding: 0, lineHeight: 1 }}
                     >🗑</button>
                   )}
                 </div>
@@ -298,12 +301,12 @@ export default function MessagesSection({
 
       {/* Input bar */}
       {isBlocked ? (
-        <div style={{ padding: '.75rem 1rem', borderTop: '1px solid var(--border)', textAlign: 'center', fontSize: '.78rem', color: 'var(--text3)', flexShrink: 0 }}>
+        <div style={{ padding: '.75rem 1rem', borderTop: '1px solid var(--line)', textAlign: 'center', fontSize: '.78rem', color: 'var(--ink3)', flexShrink: 0 }}>
           Tu as bloqué cet utilisateur.
-          <button onClick={() => handleUnblock(activeId)} style={{ marginLeft: '.5rem', background: 'none', border: 'none', color: 'var(--gold)', cursor: 'pointer', fontSize: '.78rem' }}>Débloquer</button>
+          <button onClick={() => handleUnblock(activeId)} style={{ marginLeft: '.5rem', background: 'none', border: 'none', color: 'var(--accent-fg)', cursor: 'pointer', fontSize: '.78rem' }}>Débloquer</button>
         </div>
       ) : (
-        <div style={{ display: 'flex', gap: '.5rem', padding: '.6rem .75rem', borderTop: '1px solid var(--border)', flexShrink: 0, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '.5rem', padding: '.6rem .75rem', borderTop: '1px solid var(--line)', flexShrink: 0, alignItems: 'center' }}>
           <input
             ref={inputRef}
             value={draft}
@@ -311,9 +314,9 @@ export default function MessagesSection({
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
             placeholder="Écris un message..."
             style={{
-              flex: 1, background: 'var(--bg3)', border: '1px solid var(--border2)',
+              flex: 1, background: 'var(--s2)', border: '1px solid var(--line2)',
               borderRadius: 99, padding: '.55rem 1rem',
-              color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.85rem',
+              color: 'var(--ink)', fontFamily: 'var(--font-body)', fontSize: '.85rem',
               outline: 'none', minWidth: 0,
             }}
           />
@@ -322,7 +325,7 @@ export default function MessagesSection({
             disabled={pending || !draft.trim()}
             style={{
               width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
-              background: draft.trim() ? 'var(--gold)' : 'var(--bg3)',
+              background: draft.trim() ? 'var(--accent-fg)' : 'var(--s2)',
               border: 'none', cursor: draft.trim() ? 'pointer' : 'default',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: '1.1rem', transition: 'background .15s',
@@ -337,7 +340,7 @@ export default function MessagesSection({
 
   // ── EMPTY STATE ─────────────────────────────────────────────
   const EmptyThread = (
-    <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '3rem 2rem', textAlign: 'center', color: 'var(--text3)', fontSize: '.83rem' }}>
+    <div style={{ background: 'var(--s1)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', padding: '3rem 2rem', textAlign: 'center', color: 'var(--ink3)', fontSize: '.83rem' }}>
       Sélectionne une conversation
     </div>
   )

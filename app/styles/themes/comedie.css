@@ -1,0 +1,25 @@
+[data-theme="comedie"] {
+  --bg: #140E10;  --s1: #1E1416;  --s2: #2A1C1D;  --s3: #34231F;
+  --line: rgba(246,233,206,.16);  --line2: rgba(246,233,206,.30);
+  --ink: #F6E9CE;  --ink2: #BFA88C;  --ink3: #98836D;  --ink-ghost: #8A7259;
+  --accent: #A6141B;  --accent-ink: #FFF3D0;  --accent-fg: #F0D272;  --accent-2: #D4A62A;
+  --info: #E0728A;
+  --ok: #F0D272;  --warn: #E8A05A;  --bad: #C9232A;  --bad-fg: #D86166;
+  --f-display: var(--ff-anton), Impact, sans-serif;
+  --disp-weight: 400;  --disp-style: normal;  --disp-case: uppercase;  --disp-track: 0;
+  --f-ui: var(--ff-oswald), var(--ff-inter), sans-serif;  --ui-case: uppercase;  --ui-track: .08em;
+  --f-body: var(--ff-lora), Georgia, serif;
+  --f-data: var(--ff-courier), ui-monospace, monospace;
+  --f-theatre: var(--ff-playfair), Georgia, serif;
+  --f-main: var(--ff-caveat), cursive;
+  --radius: 2px;  --skew: 0deg;
+  --tex: none;  --grit: none;
+  --rideau-ombre: #7E0D14;  --rideau-vif: #C9232A;
+  --or: #D4A62A;  --or-clair: #F0D272;  --or-eteint: #8A6A12;
+  --poursuite: #FFF3D0;  --plancher: #4A3226;
+  --interdit: #1E7A4A;
+  --ombre-titre: 2px 3px 0 var(--rideau-ombre), 0 0 26px rgba(255,243,208,.24);
+  --ease: cubic-bezier(.34,1.4,.5,1);  --dur: 200ms;
+  --dur-rideau: 420ms;  --dur-trac: 400ms;  --retard-poursuite: 140ms;
+  --cursor: url("/cursors/comedie-gant.png") 10 3, pointer;
+}

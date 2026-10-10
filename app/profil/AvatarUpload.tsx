@@ -46,15 +46,15 @@ export default function AvatarUpload({ currentAvatar, pseudo }: Props) {
     >
       <div style={{
         width: 80, height: 80, borderRadius: '50%',
-        background: preview ? 'transparent' : 'linear-gradient(135deg, var(--gold2), var(--purple))',
+        background: preview ? 'transparent' : 'linear-gradient(135deg, var(--accent-2), var(--purple))',
         backgroundImage: preview ? `url(${preview})` : undefined,
         backgroundSize: 'cover', backgroundPosition: 'center',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontFamily: 'var(--font-display)', fontSize: '2rem', color: '#0a0a0f', fontWeight: 700,
+        fontFamily: 'var(--f-display)', fontSize: '2rem', color: '#0a0a0f', fontWeight: 700,
         border: '2px solid transparent',
         transition: 'border-color .2s',
       }}
-        onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--gold)')}
+        onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--accent-fg)')}
         onMouseLeave={e => (e.currentTarget.style.borderColor = 'transparent')}
       >
         {!preview && pseudo.slice(0, 2).toUpperCase()}

@@ -611,7 +611,47 @@ export async function markWatched(filmId: number, pre: boolean) {
   }
   await deleteCacheKeys([`user:${user.id}:watched_count`, `user:${user.id}:profile`])
   revalidatePath('/films')
-  return { action: 'added', pre, exp }
+
+  let egg: string | undefined
+  if (!pre && exp > 0) {
+    try {
+      const { resolveTheme } = await import('@/lib/themes/resolve')
+      const { getSeasonWeeks } = await import('@/lib/themes/seasonWeeks')
+      const weeks = await getSeasonWeeks()
+      const resolved = resolveTheme({
+        now: new Date(),
+        cfg: { theme_mode: cfg.theme_mode, theme_force: cfg.theme_force as import('@/lib/themes/types').ThemeKey },
+        weeks,
+        previewCookie: null,
+        isAdmin: false,
+      })
+      if (resolved.key === 'comedie') {
+        const { parisDayRange } = await import('@/lib/time/paris')
+        const { start, end } = parisDayRange()
+        const { count: todayCount } = await admin.from('watched')
+          .select('film_id', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('pre', false)
+          .gte('watched_at', start.toISOString())
+          .lt('watched_at', end.toISOString())
+        if ((todayCount ?? 0) >= 3) {
+          const disabled = cfg.eggs_disabled ?? []
+          const { data: prof } = await supabase.from('profiles').select('theme_eggs').eq('id', user.id).single()
+          if (!disabled.includes('theme-comedie-hyene') && prof?.theme_eggs !== false) {
+            const { data: existingEgg } = await supabase.from('discovered_eggs')
+              .select('egg_id').eq('user_id', user.id).eq('egg_id', 'theme-comedie-hyene').single()
+            if (!existingEgg) {
+              await admin.from('discovered_eggs').upsert({ user_id: user.id, egg_id: 'theme-comedie-hyene' })
+              await deleteCacheKeys([`user:${user.id}:eggs`])
+              egg = 'theme-comedie-hyene'
+            }
+          }
+        }
+      }
+    } catch {}
+  }
+
+  return { action: 'added', pre, exp, egg }
 }
 
 export async function toggleWatched(filmId: number, filmTitre: string) {
@@ -962,6 +1002,8 @@ export async function adminSetConfig(configs: Record<string, string>) {
     'randy_quote','fightclub_gameover','killbill_end','MARATHON_RULES','TIPIAK_LINKS',
     'CLIPPY_REPLIES',
     'duel_egalite','limite_jour','limite_jour_max','eggs_disabled',
+    'accueil_accroche','accueil_texte','_cache_bust',
+    'action_car_speed',
   ])
 
   const adminClient = createAdminClient()
@@ -976,6 +1018,42 @@ export async function adminSetConfig(configs: Record<string, string>) {
   revalidatePath('/', 'layout')
   revalidatePath('/admin')
   return { success: true }
+}
+
+export async function adminSetSitePrive(configs: Record<string, string>) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecte' }
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { error: 'Non autorise.' }
+
+  const ALLOWED_KEYS = new Set(['live_url', 'live_label'])
+  const adminClient = createAdminClient()
+  const entries = Object.entries(configs)
+    .filter(([key]) => ALLOWED_KEYS.has(key))
+    .map(([key, value]) => ({ key, value, updated_at: new Date().toISOString() }))
+  if (!entries.length) return { error: 'Aucune cle valide' }
+  const { error } = await adminClient.from('site_prive').upsert(entries, { onConflict: 'key' })
+  if (error) return { error: error.message }
+
+  revalidatePath('/', 'layout')
+  return { success: true }
+}
+
+export async function adminSearchFilms(query: string, limit = 20) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { films: [] }
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) return { films: [] }
+
+  const adminClient = createAdminClient()
+  const { data } = await adminClient.from('films')
+    .select('id, titre, annee, realisateur, poster')
+    .ilike('titre', `%${query}%`)
+    .order('titre')
+    .limit(limit)
+  return { films: data ?? [] }
 }
 
 // ── POSTER VERIFICATION ───────────────────────────────────────
@@ -1603,6 +1681,7 @@ export async function adminSetFilmCategory(filmId: number, category: 'normal' | 
     .update({ flagged_18strange: category === 'strange' } as any)
     .eq('id', filmId)
 
+  await deleteCacheKeys(['films:list'])
   revalidatePath('/films')
   revalidatePath('/admin')
   return { success: true }
@@ -2238,6 +2317,10 @@ const KNOWN_EGGS = new Set([
   'clippy', 'conway', 'alien',
   'agent-of-chaos', 'legende-vivante', 'rythme-dans-la-peau', 'fever-night',
   'tama_explorateur', 'tama_chasseur', 'tama_legende', 'tama_maitre',
+  'theme-action-voiture', 'theme-action-nakatomi',
+  'theme-comedie-vert', 'theme-comedie-blanquette', 'theme-comedie-hyene',
+  'theme-western-mouche', 'theme-western-404', 'theme-western-duel',
+  'theme-horreur-ballon', 'theme-horreur-possession', 'theme-horreur-cercle', 'theme-horreur-apparition',
 ])
 
 export async function discoverEgg(eggId: string) {
@@ -2252,6 +2335,60 @@ export async function discoverEgg(eggId: string) {
   )
   if (error) return
   await deleteCacheKeys([`user:${user.id}:eggs`])
+}
+
+const THEME_EGG_MAP: Record<string, string> = {
+  'theme-action-voiture': 'action',
+  'theme-action-nakatomi': 'action',
+  'theme-comedie-vert': 'comedie',
+  'theme-comedie-blanquette': 'comedie',
+  'theme-comedie-hyene': 'comedie',
+  'theme-western-mouche': 'western',
+  'theme-western-404': 'western',
+  'theme-western-duel': 'western',
+  'theme-horreur-ballon': 'horreur',
+  'theme-horreur-possession': 'horreur',
+  'theme-horreur-cercle': 'horreur',
+  'theme-horreur-apparition': 'horreur',
+}
+
+export async function discoverThemeEgg(eggId: string) {
+  const requiredTheme = THEME_EGG_MAP[eggId]
+  if (!requiredTheme) return { error: 'Identifiant inconnu' }
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non connecté' }
+
+  const admin = createAdminClient()
+  const cfg = await getServerConfig()
+
+  const disabled = cfg.eggs_disabled ?? []
+  if (disabled.includes(eggId)) return { error: 'Œuf désactivé' }
+
+  const { data: profile } = await supabase.from('profiles').select('theme_eggs').eq('id', user.id).single()
+  if (profile && profile.theme_eggs === false) return { error: 'Œufs du thème désactivés' }
+
+  const { getSeasonWeeks } = await import('@/lib/themes/seasonWeeks')
+  const { resolveTheme } = await import('@/lib/themes/resolve')
+  const weeks = await getSeasonWeeks()
+  const resolved = resolveTheme({
+    now: new Date(),
+    cfg: { theme_mode: cfg.theme_mode, theme_force: cfg.theme_force as import('@/lib/themes/types').ThemeKey },
+    weeks,
+    previewCookie: null,
+    isAdmin: false,
+  })
+
+  if (resolved.key !== requiredTheme) return { error: 'Thème incorrect' }
+
+  const { error } = await admin.from('discovered_eggs').upsert(
+    { user_id: user.id, egg_id: eggId },
+    { onConflict: 'user_id,egg_id', ignoreDuplicates: true }
+  )
+  if (error) return { error: error.message }
+  await deleteCacheKeys([`user:${user.id}:eggs`])
+  return { ok: true }
 }
 
 export async function unlockAgentOfChaos() {
@@ -4128,5 +4265,17 @@ export async function adminGetPreMarathonStats(): Promise<{
     avg,
     total: sorted.length,
     totalWatches,
+  }
+}
+
+export async function getFilmRatings(filmId: number) {
+  const supabase = await createClient()
+  const [{ data: pos }, { data: neg }] = await Promise.all([
+    supabase.from('ratings').select('score').eq('film_id', filmId),
+    (supabase as any).from('negative_ratings').select('score').eq('film_id', filmId),
+  ])
+  return {
+    scores: (pos ?? []).map((r: any) => r.score as number),
+    negScores: (neg ?? []).map((r: any) => r.score as number),
   }
 }

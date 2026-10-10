@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import { useState } from 'react'
+import { estAfficheTmdb, tmdbLoader } from '@/lib/images/tmdb'
 
 const FALLBACKS = ['🎬', '🎭', '🎪', '🎞️', '📽️']
 
@@ -29,7 +30,7 @@ export default function Poster({ film, fill, width = 300, height = 450, classNam
           width: fill ? '100%' : width,
           height: fill ? '100%' : height,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'var(--bg3)', fontSize: '2.5rem', flexShrink: 0,
+          background: 'var(--s2)', fontSize: '2.5rem', flexShrink: 0,
         }}
         className={className}
       >
@@ -37,6 +38,8 @@ export default function Poster({ film, fill, width = 300, height = 450, classNam
       </div>
     )
   }
+
+  const useTmdbLoader = estAfficheTmdb(film.poster)
 
   if (fill) {
     return (
@@ -47,9 +50,10 @@ export default function Poster({ film, fill, width = 300, height = 450, classNam
           fill
           style={{ objectFit }}
           onError={() => setErr(true)}
-          sizes={sizes ?? '(max-width: 768px) 50vw, 200px'}
+          sizes={sizes ?? '(max-width: 768px) 33vw, 190px'}
           priority={priority}
           loading={priority ? undefined : 'lazy'}
+          {...(useTmdbLoader ? { loader: tmdbLoader } : {})}
         />
       </div>
     )
@@ -66,6 +70,7 @@ export default function Poster({ film, fill, width = 300, height = 450, classNam
       onError={() => setErr(true)}
       priority={priority}
       loading={priority ? undefined : 'lazy'}
+      {...(useTmdbLoader ? { loader: tmdbLoader } : {})}
     />
   )
 }

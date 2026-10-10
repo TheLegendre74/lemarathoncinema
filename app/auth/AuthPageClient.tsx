@@ -24,17 +24,17 @@ function CountdownMini({ marathonStart }: { marathonStart: string }) {
   const pad = (n: number) => String(n).padStart(2, '0')
   return (
     <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-      <div style={{ fontSize: '.65rem', letterSpacing: '3px', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: '.6rem' }}>
+      <div style={{ fontSize: '.65rem', letterSpacing: '3px', textTransform: 'uppercase', color: 'var(--ink3)', marginBottom: '.6rem' }}>
         ⏳ Début du marathon dans
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.4rem', flexWrap: 'wrap' }}>
         {[{ val: d, label: 'Jours' }, { sep: ':' }, { val: h, label: 'H' }, { sep: ':' }, { val: m, label: 'Min' }, { sep: ':' }, { val: s, label: 'Sec' }].map((item, i) =>
           'sep' in item ? (
-            <span key={i} style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: 'var(--text3)', marginBottom: 8 }}>{item.sep}</span>
+            <span key={i} style={{ fontFamily: 'var(--f-display)', fontSize: '1.5rem', color: 'var(--ink3)', marginBottom: 8 }}>{item.sep}</span>
           ) : (
             <div key={i} style={{ textAlign: 'center', minWidth: 52 }}>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', color: 'var(--gold)', display: 'block', lineHeight: 1 }}>{pad(item.val!)}</span>
-              <span style={{ fontSize: '.58rem', textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--text3)' }}>{item.label}</span>
+              <span style={{ fontFamily: 'var(--f-display)', fontSize: '2rem', color: 'var(--accent-fg)', display: 'block', lineHeight: 1 }}>{pad(item.val!)}</span>
+              <span style={{ fontSize: '.58rem', textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--ink3)' }}>{item.label}</span>
             </div>
           )
         )}
@@ -127,34 +127,34 @@ export default function AuthPageClient({ marathonStart, saisonLabel, saisonNumer
         Rejoindre le Discord
       </a>
 
-      <div style={{ width: '100%', maxWidth: 400, background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--rxl)', padding: '2.5rem' }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: '2.2rem', color: 'var(--gold)', textAlign: 'center', lineHeight: 1.1, marginBottom: '.3rem' }}>
+      <div style={{ width: '100%', maxWidth: 400, background: 'var(--s1)', border: '1px solid var(--line2)', borderRadius: 'var(--radius)', padding: '2.5rem' }}>
+        <div style={{ fontFamily: 'var(--f-display)', fontSize: '2.2rem', color: 'var(--accent-fg)', textAlign: 'center', lineHeight: 1.1, marginBottom: '.3rem' }}>
           Ciné<br />Marathon
         </div>
-        <div style={{ textAlign: 'center', fontSize: '.66rem', letterSpacing: '3px', color: 'var(--text3)', textTransform: 'uppercase', marginBottom: '2rem' }}>
+        <div style={{ textAlign: 'center', fontSize: '.66rem', letterSpacing: '3px', color: 'var(--ink3)', textTransform: 'uppercase', marginBottom: '2rem' }}>
           {saisonLabel}
         </div>
 
         {tab === 'register' && live && (
-          <div style={{ background: 'rgba(240,160,96,.08)', border: '1px solid rgba(240,160,96,.3)', borderRadius: 'var(--r)', padding: '1rem', marginBottom: '1rem', textAlign: 'center' }}>
+          <div style={{ background: 'rgba(240,160,96,.08)', border: '1px solid rgba(240,160,96,.3)', borderRadius: 'var(--radius)', padding: '1rem', marginBottom: '1rem', textAlign: 'center' }}>
             <div style={{ fontSize: '1.8rem', marginBottom: '.4rem' }}>🎬</div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: 'var(--orange)', marginBottom: '.3rem' }}>
+            <div style={{ fontFamily: 'var(--f-display)', fontSize: '1rem', color: 'var(--warn)', marginBottom: '.3rem' }}>
               Le marathon est déjà en cours !
             </div>
-            <div style={{ fontSize: '.78rem', color: 'var(--text2)', lineHeight: 1.6 }}>
-              Tu participeras à la <strong style={{ color: 'var(--orange)' }}>Saison {saisonNumero + 1}</strong>.
+            <div style={{ fontSize: '.78rem', color: 'var(--ink2)', lineHeight: 1.6 }}>
+              Tu participeras à la <strong style={{ color: 'var(--warn)' }}>Saison {saisonNumero + 1}</strong>.
             </div>
           </div>
         )}
 
-        <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--line)', marginBottom: '1.5rem' }}>
           {(['login', 'register'] as const).map(t => (
             <button key={t} onClick={() => { setTab(t); setErr('') }}
               style={{
                 flex: 1, padding: '.6rem', background: 'none', border: 'none', cursor: 'pointer',
                 fontFamily: 'var(--font-body)', fontSize: '.85rem',
-                color: tab === t ? 'var(--gold)' : 'var(--text2)',
-                borderBottom: tab === t ? '2px solid var(--gold)' : '2px solid transparent',
+                color: tab === t ? 'var(--accent-fg)' : 'var(--ink2)',
+                borderBottom: tab === t ? '2px solid var(--accent-fg)' : '2px solid transparent',
               }}>
               {t === 'login' ? 'Connexion' : 'Inscription'}
             </button>
@@ -184,7 +184,7 @@ export default function AuthPageClient({ marathonStart, saisonLabel, saisonNumer
                 onKeyDown={e => e.key === 'Enter' && handle()}
                 style={{ width: '100%', paddingRight: '2.5rem' }} />
               <button type="button" onClick={() => setShowPwd(v => !v)}
-                style={{ position: 'absolute', right: '.6rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: '.9rem', padding: 0 }}>
+                style={{ position: 'absolute', right: '.6rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink3)', fontSize: '.9rem', padding: 0 }}>
                 {showPwd ? '🙈' : '👁'}
               </button>
             </div>
@@ -193,22 +193,22 @@ export default function AuthPageClient({ marathonStart, saisonLabel, saisonNumer
 
         {tab === 'login' && !forgotMode && (
           <button type="button" onClick={() => { setForgotMode(true); setErr(''); setInfo('') }}
-            style={{ background: 'none', border: 'none', color: 'var(--text3)', fontSize: '.75rem', cursor: 'pointer', padding: 0, marginBottom: '.6rem', textDecoration: 'underline' }}>
+            style={{ background: 'none', border: 'none', color: 'var(--ink3)', fontSize: '.75rem', cursor: 'pointer', padding: 0, marginBottom: '.6rem', textDecoration: 'underline' }}>
             Mot de passe oublié ?
           </button>
         )}
         {forgotMode && (
           <button type="button" onClick={() => { setForgotMode(false); setErr(''); setInfo('') }}
-            style={{ background: 'none', border: 'none', color: 'var(--text3)', fontSize: '.75rem', cursor: 'pointer', padding: 0, marginBottom: '.6rem', textDecoration: 'underline' }}>
+            style={{ background: 'none', border: 'none', color: 'var(--ink3)', fontSize: '.75rem', cursor: 'pointer', padding: 0, marginBottom: '.6rem', textDecoration: 'underline' }}>
             ← Retour à la connexion
           </button>
         )}
 
-        {err && <div style={{ color: 'var(--red)', fontSize: '.78rem', marginBottom: '.8rem', textAlign: 'center' }}>{err}</div>}
-        {info && <div style={{ color: 'var(--green)', fontSize: '.78rem', marginBottom: '.8rem', textAlign: 'center' }}>{info}</div>}
+        {err && <div style={{ color: 'var(--bad)', fontSize: '.78rem', marginBottom: '.8rem', textAlign: 'center' }}>{err}</div>}
+        {info && <div style={{ color: 'var(--ok)', fontSize: '.78rem', marginBottom: '.8rem', textAlign: 'center' }}>{info}</div>}
 
         <button
-          style={{ width: '100%', background: 'var(--gold)', color: '#0a0a0f', fontWeight: 600, fontFamily: 'var(--font-body)', fontSize: '.95rem', padding: '.75rem', border: 'none', borderRadius: 'var(--r)', cursor: loading ? 'not-allowed' : 'pointer', marginTop: '.5rem', opacity: loading ? .7 : 1 }}
+          style={{ width: '100%', background: 'var(--accent-fg)', color: '#0a0a0f', fontWeight: 600, fontFamily: 'var(--font-body)', fontSize: '.95rem', padding: '.75rem', border: 'none', borderRadius: 'var(--radius)', cursor: loading ? 'not-allowed' : 'pointer', marginTop: '.5rem', opacity: loading ? .7 : 1 }}
           onClick={handle}
           disabled={loading}
         >
@@ -216,7 +216,7 @@ export default function AuthPageClient({ marathonStart, saisonLabel, saisonNumer
         </button>
 
         <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
-          <div style={{ fontSize: '.65rem', color: 'var(--text3)', marginBottom: '.6rem', letterSpacing: 1, textTransform: 'uppercase' }}>
+          <div style={{ fontSize: '.65rem', color: 'var(--ink3)', marginBottom: '.6rem', letterSpacing: 1, textTransform: 'uppercase' }}>
             ou
           </div>
           <button
@@ -226,14 +226,14 @@ export default function AuthPageClient({ marathonStart, saisonLabel, saisonNumer
             }}
             style={{
               display: 'block', width: '100%', padding: '.6rem',
-              background: 'none', border: '1px solid var(--border)',
-              borderRadius: 'var(--r)', cursor: 'pointer',
-              color: 'var(--text2)', fontSize: '.85rem', textAlign: 'center',
+              background: 'none', border: '1px solid var(--line)',
+              borderRadius: 'var(--radius)', cursor: 'pointer',
+              color: 'var(--ink2)', fontSize: '.85rem', textAlign: 'center',
               fontFamily: 'var(--font-body)',
             }}>
             👁 Continuer en mode invité
           </button>
-          <div style={{ fontSize: '.68rem', color: 'var(--text3)', marginTop: '.4rem', lineHeight: 1.5 }}>
+          <div style={{ fontSize: '.68rem', color: 'var(--ink3)', marginTop: '.4rem', lineHeight: 1.5 }}>
             Consultation uniquement — sans voter ni noter
           </div>
         </div>

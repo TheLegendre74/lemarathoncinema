@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { getUserCached } from '@/lib/auth'
 import { closeDueDuels } from '@/lib/duels'
+import { getSeasonWeeks } from '@/lib/themes/seasonWeeks'
+import SeasonBand from '@/components/theme/SeasonBand'
 import SemaineClient from './SemaineClient'
 
 export const revalidate = 30
@@ -20,9 +22,10 @@ async function fetchWatchProviders(tmdbId: number) {
 
 export default async function SemainePage() {
   await closeDueDuels({ duringRender: true })
-  const [user, supabase] = await Promise.all([
+  const [user, supabase, seasonWeeks] = await Promise.all([
     getUserCached(),
     createClient(),
+    getSeasonWeeks(),
   ])
 
   const [{ data: weekFilm }, { data: weekFilmHistory }, { count: totalUsers }] = await Promise.all([
@@ -37,7 +40,7 @@ export default async function SemainePage() {
 
   const latestArchivedId = ((weekFilmHistory as any[]) ?? [])[0]?.id ?? null
 
-  const [profileResult, isWatchedResult, watchedRowsResult, myWatchedRowsResult, bonusClaimResult] = await Promise.all([
+  const [profileResult, isWatchedResult, watchedRowsResult, myWatchedRowsResult, bonusClaimResult, watchProviders] = await Promise.all([
     user ? supabase.from('profiles').select('id, pseudo, exp, is_admin, avatar_url, active_badge, saison').eq('id', user.id).single() : Promise.resolve({ data: null }),
     (film && user) ? supabase.from('watched').select('film_id').eq('user_id', user.id).eq('film_id', film.id).single() : Promise.resolve({ data: null }),
     visibleFilmIds.length ? supabase.from('watched').select('film_id').in('film_id', visibleFilmIds) : Promise.resolve({ data: [] }),
@@ -45,6 +48,7 @@ export default async function SemainePage() {
     (user && latestArchivedId)
       ? (supabase as any).from('week_film_bonus_claims').select('week_film_id').eq('user_id', user.id).eq('week_film_id', latestArchivedId).single()
       : Promise.resolve({ data: null }),
+    film?.tmdb_id ? fetchWatchProviders(film.tmdb_id) : Promise.resolve(null),
   ])
 
   const profile = profileResult.data
@@ -55,9 +59,9 @@ export default async function SemainePage() {
   })
   const watchedFilmIds = (myWatchedRowsResult.data ?? []).map((row: { film_id: number }) => row.film_id)
 
-  const watchProviders = film?.tmdb_id ? await fetchWatchProviders(film.tmdb_id) : null
-
   return (
+    <>
+    <SeasonBand weeks={seasonWeeks} />
     <SemaineClient
       profile={profile as any}
       weekFilm={weekFilm as any}
@@ -77,6 +81,7 @@ export default async function SemainePage() {
         return elapsed <= 48
       })()}
     />
+    </>
   )
 }
 

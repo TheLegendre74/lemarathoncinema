@@ -34,22 +34,22 @@ export default function ForumTopicModal() {
         <div className="modal-wrap" onClick={e => e.target === e.currentTarget && setOpen(false)}>
           <div className="modal" style={{ maxWidth: 480 }}>
             <div style={{ padding: '1.5rem' }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', marginBottom: '1.2rem' }}>Créer un topic</div>
+              <div style={{ fontFamily: 'var(--f-display)', fontSize: '1.3rem', marginBottom: '1.2rem' }}>Créer un topic</div>
               <form onSubmit={handleSubmit}>
                 <div style={{ marginBottom: '.8rem' }}>
-                  <label style={{ fontSize: '.78rem', color: 'var(--text2)', marginBottom: '.3rem', display: 'block' }}>Titre *</label>
+                  <label style={{ fontSize: '.78rem', color: 'var(--ink2)', marginBottom: '.3rem', display: 'block' }}>Titre *</label>
                   <input
                     value={title} onChange={e => setTitle(e.target.value)} maxLength={100}
                     placeholder="Titre du topic…"
-                    style={{ width: '100%', background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.55rem .9rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.83rem', boxSizing: 'border-box' }}
+                    style={{ width: '100%', background: 'var(--s1)', border: '1px solid var(--line2)', borderRadius: 'var(--radius)', padding: '.55rem .9rem', color: 'var(--ink)', fontFamily: 'var(--font-body)', fontSize: '.83rem', boxSizing: 'border-box' }}
                   />
                 </div>
                 <div style={{ marginBottom: '1.2rem' }}>
-                  <label style={{ fontSize: '.78rem', color: 'var(--text2)', marginBottom: '.3rem', display: 'block' }}>Description (optionnel)</label>
+                  <label style={{ fontSize: '.78rem', color: 'var(--ink2)', marginBottom: '.3rem', display: 'block' }}>Description (optionnel)</label>
                   <textarea
                     value={description} onChange={e => setDescription(e.target.value)} maxLength={300} rows={3}
                     placeholder="Décris le sujet du topic…"
-                    style={{ width: '100%', background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: '.55rem .9rem', color: 'var(--text)', fontFamily: 'var(--font-body)', fontSize: '.83rem', resize: 'vertical', boxSizing: 'border-box' }}
+                    style={{ width: '100%', background: 'var(--s1)', border: '1px solid var(--line2)', borderRadius: 'var(--radius)', padding: '.55rem .9rem', color: 'var(--ink)', fontFamily: 'var(--font-body)', fontSize: '.83rem', resize: 'vertical', boxSizing: 'border-box' }}
                   />
                 </div>
                 <div style={{ display: 'flex', gap: '.7rem' }}>
