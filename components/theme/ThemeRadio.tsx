@@ -1,149 +1,135 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTheme } from './ThemeProvider'
 import { usePathname } from 'next/navigation'
 import { ecranOccupe } from '@/lib/themes/ecran'
 
 const MUTED_ROUTES = ['/videoclub', '/labo/', '/clippy-revanche', '/tamagotchi']
 
-function shouldMuteForRoute(pathname: string | null): boolean {
-  if (!pathname) return false
-  return MUTED_ROUTES.some(r => pathname.startsWith(r))
-}
-
 export default function ThemeRadio() {
   const { def, key } = useTheme()
   const pathname = usePathname()
   const audioRef = useRef<HTMLAudioElement | null>(null)
-  const trackIndexRef = useRef(0)
-  const [playing, setPlaying] = useState(false)
-  const [volume, setVolume] = useState(40)
+  const idxRef = useRef(0)
   const [muted, setMuted] = useState(false)
-  const [eggMuted, setEggMuted] = useState(false)
-  const prevKeyRef = useRef(key)
-  const tracksRef = useRef(def.radioTracks)
-  tracksRef.current = def.radioTracks
-  const startedRef = useRef(false)
-  const volumeRef = useRef(volume)
-  volumeRef.current = volume
+  const [volume, setVolume] = useState(40)
+  const [started, setStarted] = useState(false)
+  const [suppressed, setSuppressed] = useState(false)
 
   const tracks = def.radioTracks
-  const routeMuted = shouldMuteForRoute(pathname)
+  const routeMuted = MUTED_ROUTES.some(r => pathname?.startsWith(r))
 
-  const createAudio = useCallback((src: string, vol: number) => {
-    const a = new Audio(src)
+  function killAudio() {
+    const a = audioRef.current
+    if (a) {
+      a.pause()
+      a.src = ''
+      audioRef.current = null
+    }
+  }
+
+  function doPlay(trackIdx: number, vol: number): HTMLAudioElement {
+    killAudio()
+    const a = new Audio(tracks[trackIdx])
     a.volume = vol / 100
     a.loop = false
-    return a
-  }, [])
-
-  const playNext = useCallback(() => {
-    const t = tracksRef.current
-    if (!t.length) return
-    const idx = (trackIndexRef.current + 1) % t.length
-    trackIndexRef.current = idx
-    const old = audioRef.current
-    if (old) {
-      old.pause()
-      old.removeAttribute('src')
-      old.load()
-    }
-    const a = createAudio(t[idx], volumeRef.current)
     audioRef.current = a
-    a.addEventListener('ended', () => playNext())
+    a.onended = () => {
+      const next = (idxRef.current + 1) % tracks.length
+      idxRef.current = next
+      doPlay(next, vol)
+    }
     a.play().catch(() => {})
-  }, [createAudio])
+    return a
+  }
 
-  const startPlayback = useCallback(() => {
-    const t = tracksRef.current
-    if (!t.length || startedRef.current) return
-    startedRef.current = true
-    const a = createAudio(t[0], volumeRef.current)
-    audioRef.current = a
-    a.addEventListener('ended', () => playNext())
-    a.play().then(() => setPlaying(true)).catch(() => { startedRef.current = false })
-  }, [createAudio, playNext])
-
-  // Auto-start on first user interaction
+  // Reset on theme change
   useEffect(() => {
-    if (!tracks.length || startedRef.current) return
-    const handler = () => {
-      startPlayback()
-      window.removeEventListener('click', handler, true)
-      window.removeEventListener('keydown', handler, true)
-      window.removeEventListener('touchstart', handler, true)
-    }
-    window.addEventListener('click', handler, true)
-    window.addEventListener('keydown', handler, true)
-    window.addEventListener('touchstart', handler, true)
-    return () => {
-      window.removeEventListener('click', handler, true)
-      window.removeEventListener('keydown', handler, true)
-      window.removeEventListener('touchstart', handler, true)
-    }
-  }, [tracks.length, startPlayback])
-
-  // Theme change: reset
-  useEffect(() => {
-    if (prevKeyRef.current !== key) {
-      prevKeyRef.current = key
-      const old = audioRef.current
-      if (old) {
-        old.pause()
-        old.removeAttribute('src')
-        old.load()
-        audioRef.current = null
-      }
-      startedRef.current = false
-      setPlaying(false)
-      setMuted(false)
-      trackIndexRef.current = 0
-    }
+    killAudio()
+    idxRef.current = 0
+    setStarted(false)
+    setMuted(false)
   }, [key])
 
-  // Volume sync
+  // Auto-start: try playing on first user gesture
+  useEffect(() => {
+    if (!tracks.length || started) return
+    const tryStart = () => {
+      if (started) return
+      const a = new Audio(tracks[0])
+      a.volume = volume / 100
+      a.loop = false
+      audioRef.current = a
+      idxRef.current = 0
+      a.onended = () => {
+        const next = (idxRef.current + 1) % tracks.length
+        idxRef.current = next
+        doPlay(next, volume)
+      }
+      a.play().then(() => {
+        setStarted(true)
+        cleanup()
+      }).catch(() => {
+        audioRef.current = null
+      })
+    }
+    const cleanup = () => {
+      document.removeEventListener('click', tryStart, true)
+      document.removeEventListener('touchstart', tryStart, true)
+      document.removeEventListener('keydown', tryStart, true)
+    }
+    document.addEventListener('click', tryStart, true)
+    document.addEventListener('touchstart', tryStart, true)
+    document.addEventListener('keydown', tryStart, true)
+    return cleanup
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, tracks.length])
+
+  // Volume changes
   useEffect(() => {
     const a = audioRef.current
-    if (!a) return
-    a.volume = muted ? 0 : volume / 100
+    if (a) a.volume = muted ? 0 : volume / 100
   }, [volume, muted])
 
-  // Route / egg mute
+  // Pause/resume on route or egg suppression
   useEffect(() => {
     const a = audioRef.current
-    if (!a || !playing) return
-    if (routeMuted || eggMuted) {
+    if (!a || !started) return
+    if (routeMuted || suppressed) {
       a.pause()
     } else if (!muted) {
       a.play().catch(() => {})
     }
-  }, [routeMuted, eggMuted, playing, muted])
+  }, [routeMuted, suppressed, started, muted])
 
-  // Poll for egg overlays
+  // Poll for easter egg overlays
   useEffect(() => {
-    const interval = setInterval(() => {
-      setEggMuted(ecranOccupe({ seuilZ: 300, part: 0.3 }))
+    const id = setInterval(() => {
+      setSuppressed(ecranOccupe({ seuilZ: 300, part: 0.3 }))
     }, 1000)
-    return () => clearInterval(interval)
+    return () => clearInterval(id)
   }, [])
 
-  // Cleanup
-  useEffect(() => {
-    return () => {
-      const a = audioRef.current
-      if (a) {
-        a.pause()
-        a.removeAttribute('src')
-        a.load()
+  // Cleanup on unmount
+  useEffect(() => () => killAudio(), [])
+
+  function handleToggle() {
+    if (!started) {
+      const a = new Audio(tracks[0])
+      a.volume = volume / 100
+      a.loop = false
+      audioRef.current = a
+      idxRef.current = 0
+      a.onended = () => {
+        const next = (idxRef.current + 1) % tracks.length
+        idxRef.current = next
+        doPlay(next, volume)
       }
-    }
-  }, [])
-
-  const handleMuteToggle = useCallback(() => {
-    if (!playing) {
-      startPlayback()
-      setMuted(false)
+      a.play().then(() => {
+        setStarted(true)
+        setMuted(false)
+      }).catch(() => {})
       return
     }
     const next = !muted
@@ -153,23 +139,16 @@ export default function ThemeRadio() {
     if (next) {
       a.volume = 0
     } else {
-      a.volume = volumeRef.current / 100
-      if (a.paused && !shouldMuteForRoute(window.location.pathname)) {
+      a.volume = volume / 100
+      if (a.paused && !routeMuted && !suppressed) {
         a.play().catch(() => {})
       }
     }
-  }, [playing, muted, startPlayback])
-
-  const handleVolume = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = Number(e.target.value)
-    setVolume(v)
-    if (muted && v > 0) setMuted(false)
-  }, [muted])
+  }
 
   if (!tracks.length) return null
 
-  const suppressed = routeMuted || eggMuted
-  const isAudible = playing && !muted && !suppressed
+  const isAudible = started && !muted && !routeMuted && !suppressed
 
   return (
     <div style={{
@@ -181,7 +160,6 @@ export default function ThemeRadio() {
       alignItems: 'center',
       gap: 8,
     }}>
-      {/* Slider vertical */}
       <div style={{
         display: 'flex',
         flexDirection: 'column',
@@ -204,7 +182,11 @@ export default function ThemeRadio() {
           min={0}
           max={100}
           value={volume}
-          onChange={handleVolume}
+          onChange={e => {
+            const v = Number(e.target.value)
+            setVolume(v)
+            if (muted && v > 0) setMuted(false)
+          }}
           aria-label="Volume musique"
           style={{
             writingMode: 'vertical-lr' as const,
@@ -217,10 +199,8 @@ export default function ThemeRadio() {
           }}
         />
       </div>
-
-      {/* Bouton mute/unmute */}
       <button
-        onClick={handleMuteToggle}
+        onClick={handleToggle}
         title={isAudible ? 'Couper la musique' : 'Activer la musique'}
         aria-label={isAudible ? 'Couper la musique' : 'Activer la musique'}
         style={{
@@ -237,7 +217,7 @@ export default function ThemeRadio() {
           justifyContent: 'center',
           boxShadow: '0 2px 8px rgba(0,0,0,.3)',
           transition: 'background .2s, color .2s',
-          opacity: suppressed ? 0.4 : 1,
+          opacity: routeMuted || suppressed ? 0.4 : 1,
           flexShrink: 0,
         }}
       >
