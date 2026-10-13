@@ -1,8 +1,29 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { routeAncienDomaine, buildRedirectUrl } from '@/lib/demenagement'
 
 export async function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl
+  const { pathname, search } = request.nextUrl
+  const host = request.headers.get('host') ?? ''
+
+  const decision = routeAncienDomaine({
+    host,
+    method: request.method,
+    pathname,
+    accept: request.headers.get('accept') ?? '',
+    cookieDemenage: request.cookies.get('cm_demenage')?.value === '1',
+  })
+
+  if (decision === 'demenager') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/demenagement/depart'
+    url.searchParams.set('vers', pathname + search)
+    return NextResponse.rewrite(url)
+  }
+
+  if (decision === 'rediriger') {
+    return NextResponse.redirect(buildRedirectUrl(pathname, search), 308)
+  }
 
   // Toujours laisser passer : auth, API, fichiers statiques
   if (

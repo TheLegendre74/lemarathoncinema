@@ -193,11 +193,13 @@ import { READY_THEMES } from '@/lib/themes/types'
 import { getSeasonPlayerCount, getActivePlayerCount } from '@/lib/home'
 import { getRecentActivity } from '@/lib/activity'
 import { parisParts } from '@/lib/time/paris'
+import { SITE_NAME, SITE_URL } from '@/lib/site'
 
 export async function generateMetadata(): Promise<Metadata> {
   const cfg = await getServerConfig()
   return {
-    title: 'Ciné Marathon',
+    metadataBase: new URL(SITE_URL),
+    title: { default: SITE_NAME, template: `%s — ${SITE_NAME}` },
     description: cfg.ACCUEIL_SOUS_TITRE,
   }
 }

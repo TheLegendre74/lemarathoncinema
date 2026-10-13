@@ -21,7 +21,7 @@ export default function ComedieFrame({ isHomePage }: ComedieFrameProps) {
         {bulbs.map(i => (
           <span key={`fb${i}`} className={styles.bulb} />
         ))}
-        <span className={styles.frontonName}>Ciné Marathon</span>
+        <span className={styles.frontonName}>Le Marathon Cinéma</span>
         {bulbs.map(i => (
           <span key={`fa${i}`} className={styles.bulb} />
         ))}

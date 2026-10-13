@@ -9,7 +9,7 @@ export type RuleCard = {
 }
 
 export const DEFAULT_RULES: RuleCard[] = [
-  { emoji: '🎬', title: 'Bienvenue sur le Ciné Marathon !', text: "Un marathon de films collectif où tu regardes des films, votes pour les séances, discutes avec les autres joueurs et grimpes dans le classement en gagnant de l'expérience (EXP)." },
+  { emoji: '🎬', title: 'Bienvenue au Marathon Cinéma !', text: "Un marathon de films collectif où tu regardes des films, votes pour les séances, discutes avec les autres joueurs et grimpes dans le classement en gagnant de l'expérience (EXP)." },
   { emoji: '🚀', title: 'Pour commencer', text: "Crée ton compte pour rejoindre le marathon en cours. Si la saison a déjà commencé, tu pourras demander à rejoindre via l'accueil." },
   { emoji: '🎥', title: 'Les films', intro: "Une liste de films t'attend. Pour chaque film tu peux :", list: ['Le cocher comme vu', 'Le noter de 1 à 10', 'Discuter dans le forum du film', 'Voir où le regarder légalement (Netflix, Canal+, Prime…)', 'Tirer un film au hasard si tu ne sais pas quoi regarder'], after: "Tu peux aussi proposer un nouveau film à ajouter à la liste." },
   { emoji: '⭐', title: "Gagner de l'EXP", table: [['Regarder un film', '+{EXP_FILM} EXP'], ['Regarder le film de la semaine', '+{EXP_FDLS} EXP'], ['Regarder le film vainqueur du duel', '+{EXP_DUEL_WIN} EXP'], ['Voter dans un duel', '+{EXP_VOTE} EXP']] },

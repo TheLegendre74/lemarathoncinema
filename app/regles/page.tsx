@@ -4,7 +4,7 @@ import { DEFAULT_RULES, type RuleCard } from '@/lib/rules'
 import { BADGES } from '@/lib/config'
 import type { Metadata } from 'next'
 
-export const metadata: Metadata = { title: 'Règles — Ciné Marathon' }
+export const metadata: Metadata = { title: 'Règles' }
 export const revalidate = 120
 
 function interpolate(text: string, cfg: ServerConfig): string {

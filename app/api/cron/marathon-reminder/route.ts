@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { Resend } from 'resend'
 import { getServerConfig } from '@/lib/serverConfig'
+import { SITE_NAME, SITE_URL } from '@/lib/site'
 
 export const runtime = 'nodejs'
 
@@ -41,8 +42,8 @@ export async function GET(request: Request) {
   const dateLabel = cfg.MARATHON_START.toLocaleDateString('fr-FR', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   })
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://cinema-marathon.vercel.app'
-  const fromEmail = process.env.FROM_EMAIL ?? 'Ciné Marathon <noreply@cinema-marathon.vercel.app>'
+  const siteUrl = SITE_URL
+  const fromEmail = process.env.FROM_EMAIL ?? `${SITE_NAME} <noreply@lemarathoncinema.fr>`
 
   let sent = 0
   for (const profile of profiles) {
@@ -55,7 +56,7 @@ export async function GET(request: Request) {
         subject: '🎬 Le Marathon démarre dans 3 jours !',
         html: `
           <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;background:#0e0e14;color:#e8e8e8;border-radius:12px;">
-            <div style="font-size:1.6rem;font-weight:bold;margin-bottom:.5rem;">🎬 Ciné Marathon — J-3</div>
+            <div style="font-size:1.6rem;font-weight:bold;margin-bottom:.5rem;">🎬 ${SITE_NAME} — J-3</div>
             <p style="color:#aaa;margin-bottom:1.5rem;">Bonjour <strong style="color:#e8c46a">${profile.pseudo}</strong>,</p>
             <p>Le marathon cinématographique démarre dans <strong>3 jours</strong> — le <strong>${dateLabel}</strong>.</p>
             <p style="color:#aaa;font-size:.9rem;margin-top:1rem;">
@@ -66,7 +67,7 @@ export async function GET(request: Request) {
               Voir le programme →
             </a>
             <p style="font-size:.72rem;color:#555;margin-top:2rem;">
-              Tu reçois ce mail parce que tu as activé les rappels sur Ciné Marathon.<br/>
+              Tu reçois ce mail parce que tu as activé les rappels sur ${SITE_NAME}.<br/>
               Pour te désabonner, décoche l'option sur la page d'accueil.
             </p>
           </div>

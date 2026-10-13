@@ -36,7 +36,7 @@ export default function WelcomeBanner() {
       <span style={{ fontSize: '1.8rem', lineHeight: 1, flexShrink: 0 }}>👋</span>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontFamily: 'var(--f-display)', fontSize: '1rem', marginBottom: '.3rem', color: 'var(--accent-fg)' }}>
-          Bienvenue sur le Ciné Marathon !
+          Bienvenue au Marathon Cinéma !
         </div>
         <div style={{ fontSize: '.82rem', color: 'var(--ink2)', lineHeight: 1.6, marginBottom: '.7rem' }}>
           Avant de commencer, consulte les règles du jeu ci-dessous pour tout comprendre en 2 minutes.
