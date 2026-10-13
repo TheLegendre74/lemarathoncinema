@@ -1,6 +1,7 @@
 'use client'
 
 import styles from './comedie-frame.module.css'
+import ComedieVertEgg from './ComedieVertEgg'
 
 interface ComedieFrameProps {
   playerLevel: number | null
@@ -19,7 +20,7 @@ export default function ComedieFrame({ isHomePage }: ComedieFrameProps) {
       </div>
       <div className={styles.fronton}>
         {bulbs.map(i => (
-          <span key={`fb${i}`} className={styles.bulb} />
+          i === 7 ? <ComedieVertEgg key="egg28" /> : <span key={`fb${i}`} className={styles.bulb} />
         ))}
         <span className={styles.frontonName}>Le Marathon Cinéma</span>
         {bulbs.map(i => (

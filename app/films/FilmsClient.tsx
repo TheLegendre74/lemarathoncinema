@@ -1340,10 +1340,10 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
   const pct         = s1Total ? Math.round((watchedCount / s1Total) * 100) : 0
 
   return (
-    <div>
-      <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+    <div data-ecran="films">
+      <div className="page-header" style={{ marginBottom: '2rem', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
         <div>
-          <div style={{ fontFamily: 'var(--f-display)', fontSize: '2rem', lineHeight: 1 }}>Films</div>
+          <div className="page-title-chrome" style={{ fontFamily: 'var(--f-display)', fontSize: '2rem', lineHeight: 1 }}>Films</div>
           <div style={{ color: 'var(--ink2)', fontSize: '.83rem', marginTop: '.35rem' }}>{s1Total} films · {watchedCount} vus</div>
         </div>
         {profile && <button className="btn btn-outline" onClick={() => setAddModal(true)}>+ Ajouter un film</button>}
@@ -1453,7 +1453,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
               <div style={{ width: '100%', aspectRatio: '2/3', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--radius) var(--radius) 0 0' }}>
                 <Poster film={film} fill style={{ objectFit: 'cover' }} />
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(8,8,14,.92) 0%, transparent 55%)', opacity: 0, transition: 'opacity .2s', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '.8rem' }} className="poster-hover-overlay">
-                  <div style={{ fontSize: '.82rem', fontWeight: 600, color: 'var(--ink)', lineHeight: 1.2, marginBottom: '.15rem' }}>{film.titre}</div>
+                  <div className="film-title" style={{ fontSize: '.82rem', fontWeight: 600, color: 'var(--ink)', lineHeight: 1.2, marginBottom: '.15rem' }}>{film.titre}</div>
                   <div style={{ fontSize: '.68rem', color: 'var(--ink2)' }}>{film.annee} · {film.realisateur}</div>
                 </div>
                 {!isWatched && maj && <div style={{ position: 'absolute', top: 7, right: 7, background: 'rgba(255,255,255,.12)', color: '#aaa', fontSize: '.58rem', padding: '2px 7px', borderRadius: 99 }}>60%+</div>}

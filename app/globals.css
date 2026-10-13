@@ -124,9 +124,9 @@ html, body {
   padding: .65rem 1.2rem; border-radius: var(--radius); border: none;
   cursor: pointer; transition: all .2s; white-space: nowrap; text-decoration: none;
 }
-.btn-gold   { background: var(--accent); color: #0a0a0f; font-weight: 600; }
-.btn-gold:hover { background: var(--accent-2); }
-.btn-gold:active { transform: scale(.98); }
+.btn-gold, .btn-primary { background: var(--accent); color: #0a0a0f; font-weight: 600; }
+.btn-gold:hover, .btn-primary:hover { background: var(--accent-2); }
+.btn-gold:active, .btn-primary:active { transform: scale(.98); }
 .btn-outline { background: transparent; border: 1px solid var(--line2); color: var(--ink2); }
 .btn-outline:hover { border-color: var(--line2); color: var(--ink); }
 .btn-ghost  { background: transparent; border: none; color: var(--ink2); padding: .4rem .7rem; }

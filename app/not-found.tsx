@@ -1,8 +1,9 @@
 import Link from 'next/link'
+import NotFoundTheme from '@/components/theme/NotFoundTheme'
 
 export default function NotFound() {
   return (
-    <div style={{
+    <div data-ecran="404" style={{
       minHeight: '60vh',
       display: 'flex',
       flexDirection: 'column',
@@ -12,7 +13,8 @@ export default function NotFound() {
       padding: 'var(--sp-6)',
       textAlign: 'center',
     }}>
-      <h1 style={{
+      <NotFoundTheme />
+      <h1 className="not-found-title" style={{
         fontFamily: 'var(--f-display)',
         fontWeight: 'var(--disp-weight)' as any,
         fontSize: 'clamp(2rem, 6vw, 3.5rem)',

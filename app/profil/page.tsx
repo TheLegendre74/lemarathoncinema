@@ -74,20 +74,20 @@ export default async function ProfilPage({ searchParams }: { searchParams: Promi
   )
 
   return (
-    <div>
-      <div style={{ marginBottom: '2rem' }}>
-        <div style={{ fontFamily: 'var(--f-display)', fontSize: '2rem', lineHeight: 1 }}>Mon Profil</div>
+    <div data-ecran="profil">
+      <div className="page-header" style={{ marginBottom: '2rem' }}>
+        <div className="page-title-chrome" style={{ fontFamily: 'var(--f-display)', fontSize: '2rem', lineHeight: 1 }}>Mon Profil</div>
       </div>
 
       {/* Hero card */}
-      <div style={{ background: 'linear-gradient(135deg, var(--s1), var(--s2))', border: '1px solid var(--line2)', borderRadius: 'var(--radius)', padding: '2rem', marginBottom: '1.5rem' }}>
+      <div className="profile-card" style={{ background: 'linear-gradient(135deg, var(--s1), var(--s2))', border: '1px solid var(--line2)', borderRadius: 'var(--radius)', padding: '2rem', marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
           <AvatarUpload
             currentAvatar={profile.avatar_url ?? null}
             pseudo={profile.pseudo}
           />
           <div>
-            <div style={{ fontFamily: 'var(--f-display)', fontSize: '1.7rem', lineHeight: 1 }}>{profile.pseudo}</div>
+            <div className="profile-name" style={{ fontFamily: 'var(--f-display)', fontSize: '1.7rem', lineHeight: 1 }}>{profile.pseudo}</div>
             <div style={{ fontSize: '.75rem', color: 'var(--ink3)', marginTop: '.3rem' }}>{user.email}</div>
             <div style={{ marginTop: '.6rem', display: 'flex', gap: '.5rem', flexWrap: 'wrap' }}>
               <span className="chip">Niveau {level}</span>

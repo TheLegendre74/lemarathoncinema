@@ -76,11 +76,11 @@ export default function ForumPageClient({
   profile, otherTopics, lastPostMap, countMap, totalTopics
 }: Props) {
   return (
-    <div>
+    <div data-ecran="forum">
       {/* Header */}
-      <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+      <div className="page-header" style={{ marginBottom: '2rem', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
         <div>
-          <div style={{ fontFamily: 'var(--f-display)', fontSize: '2rem', lineHeight: 1 }}>Forum</div>
+          <div className="page-title-chrome" style={{ fontFamily: 'var(--f-display)', fontSize: '2rem', lineHeight: 1 }}>Forum</div>
           <div style={{ color: 'var(--ink2)', fontSize: '.83rem', marginTop: '.35rem' }}>
             {totalTopics} topic{totalTopics !== 1 ? 's' : ''} · chat en direct
           </div>
@@ -89,7 +89,7 @@ export default function ForumPageClient({
       </div>
 
       {/* ─── LE SALON (Chatango embed) ─── */}
-      <div style={{
+      <div className="forum-card" style={{
         background: 'linear-gradient(135deg, rgba(232,196,106,.07), rgba(232,160,60,.04))',
         border: '1px solid rgba(232,196,106,.35)',
         borderRadius: 'var(--radius)',
@@ -125,7 +125,7 @@ export default function ForumPageClient({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
           {otherTopics.map((t: any) => (
             <Link key={t.id} href={`/forum/${t.id}`} style={{ textDecoration: 'none' }}>
-              <div style={{
+              <div className="forum-topic-row" style={{
                 display: 'flex', alignItems: 'center', gap: '1rem',
                 background: 'var(--s1)',
                 border: `1px solid ${t.pinned ? 'rgba(232,196,106,.3)' : 'var(--line)'}`,

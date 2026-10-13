@@ -172,16 +172,6 @@
   }
 }
 
-/* --- Poster color grading --- */
-.posterGrade {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(255, 107, 31, .15), rgba(23, 162, 201, .15));
-  mix-blend-mode: soft-light;
-  pointer-events: none;
-  border-radius: inherit;
-}
-
 /* --- Chrome title --- */
 .chrome {
   background: var(--chrome);

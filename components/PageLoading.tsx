@@ -1,4 +1,23 @@
+'use client'
+
+import { useTheme } from '@/components/theme/ThemeProvider'
+import dynamic from 'next/dynamic'
+
+const ComedieTroisCoups = dynamic(() => import('@/components/theme/comedie/ComedieTroisCoups'), { ssr: false })
+const WesternBarillet = dynamic(() => import('@/components/theme/western/WesternBarillet'), { ssr: false })
+const HorreurVHS = dynamic(() => import('@/components/theme/horreur/HorreurVHS'), { ssr: false })
+
 export default function PageLoading() {
+  const { key } = useTheme()
+
+  if (key === 'comedie') return <ComedieTroisCoups />
+  if (key === 'western') return <WesternBarillet />
+  if (key === 'horreur') return <HorreurVHS />
+
+  return <DefaultSkeleton />
+}
+
+function DefaultSkeleton() {
   return (
     <div aria-label="Chargement…" style={{ display: 'flex', flexDirection: 'column', gap: '.8rem' }}>
       <style>{`

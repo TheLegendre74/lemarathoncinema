@@ -5,3 +5,66 @@
 #   IMPORTANT-STAR app/styles/themes/file.css:42 — raison
 #
 # Chaque exception doit avoir une raison.
+
+# ── Easter eggs (zone interdite §2.1) ──
+ORPHELIN components/AlienEgg.tsx — Easter egg, zone interdite §2.1
+ORPHELIN components/JawsEgg.tsx — Easter egg, zone interdite §2.1
+
+# ── Composants UI — bibliothèque pour les écrans thématiques (étapes 3-6) ──
+ORPHELIN components/Sidebar.tsx — Remplacé par DrawerNav, à supprimer à l'étape 3
+ORPHELIN components/ui/Button.tsx — Composant UI réutilisable, sera branché par les écrans thématiques
+ORPHELIN components/ui/CountdownDisplay.tsx — Composant UI réutilisable, sera branché par les écrans thématiques
+ORPHELIN components/ui/Divider.tsx — Composant UI réutilisable, sera branché par les écrans thématiques
+ORPHELIN components/ui/EmptyState.tsx — Composant UI réutilisable, sera branché par les écrans thématiques
+ORPHELIN components/ui/Field.tsx — Composant UI réutilisable, sera branché par les écrans thématiques
+ORPHELIN components/ui/Gauge.tsx — Composant UI réutilisable, sera branché par les écrans thématiques
+ORPHELIN components/ui/Modal.tsx — Composant UI réutilisable, sera branché par les écrans thématiques
+ORPHELIN components/ui/PageHeader.tsx — Composant UI réutilisable, sera branché par les écrans thématiques
+ORPHELIN components/ui/Panel.tsx — Composant UI réutilisable, sera branché par les écrans thématiques
+ORPHELIN components/ui/Skeleton.tsx — Composant UI réutilisable, sera branché par les écrans thématiques
+ORPHELIN components/ui/StatRow.tsx — Composant UI réutilisable, sera branché par les écrans thématiques
+ORPHELIN components/ui/Tabs.tsx — Composant UI réutilisable, sera branché par les écrans thématiques
+ORPHELIN components/ui/Tag.tsx — Composant UI réutilisable, sera branché par les écrans thématiques
+ORPHELIN components/ui/Ticker.tsx — Composant UI réutilisable, sera branché par les écrans thématiques
+ORPHELIN components/ui/Toggle.tsx — Composant UI réutilisable, sera branché par les écrans thématiques
+
+# ── CSS mort — classes préparées pour les écrans thématiques (étapes 3-6) ──
+# Ces règles ciblent des éléments qui seront créés avec les composants d'écran
+# thématiques aux étapes 3 à 6. Elles ne sont pas mortes, elles sont en avance.
+CSS-MORT app/styles/themes/action-screens.css:.film-stat-bar — Écran A2 (étape 6 Action)
+CSS-MORT app/styles/themes/action-screens.css:.filter-chip — Écran A2 (étape 6 Action)
+CSS-MORT app/styles/themes/action-screens.css:.film-modal-header — Écran A3 (étape 6 Action)
+CSS-MORT app/styles/themes/action-screens.css:.duel-bar — Écran A4 (étape 6 Action)
+CSS-MORT app/styles/themes/action-screens.css:.duel-bar-inner — Écran A4 (étape 6 Action)
+CSS-MORT app/styles/themes/action-screens.css:.duel-winner-glow — Écran A4 (étape 6 Action)
+CSS-MORT app/styles/themes/action-screens.css:.leaderboard-row-self — Écran A5 (étape 6 Action)
+CSS-MORT app/styles/themes/action-screens.css:.forum-topic-freq — Écran A7 (étape 6 Action)
+CSS-MORT app/styles/themes/action-screens.css:.loading-indicator — Écran A18 (étape 6 Action)
+CSS-MORT app/styles/themes/action-screens.css:.not-found-page — Écran A17 (étape 6 Action)
+CSS-MORT app/styles/themes/action-screens.css:.panel-riveted — Habillage Action (étape 6)
+CSS-MORT app/styles/themes/action-screens.css:.data-value — Habillage Action (étape 6)
+CSS-MORT app/styles/themes/action-screens.css:.data-time — Habillage Action (étape 6)
+CSS-MORT app/styles/themes/action.css:.action-skew — Habillage Action (étape 6)
+CSS-MORT app/styles/themes/action.css:.action-skew-inner — Habillage Action (étape 6)
+CSS-MORT app/styles/themes/action.css:.data-mono — Habillage Action (étape 6)
+CSS-MORT app/styles/themes/action.css:.info-cyan — Habillage Action (étape 6)
+CSS-MORT app/styles/themes/action.css:.poster-wrap — Habillage Action (étape 6)
+CSS-MORT app/styles/themes/action.css:.loading-scan — Habillage Action (étape 6)
+CSS-MORT app/styles/themes/comedie-screens.css:.ticket-btn — Écran T (étape 7 Comédie)
+CSS-MORT app/styles/themes/comedie-screens.css:.ticket-stub — Écran T (étape 7 Comédie)
+CSS-MORT app/styles/themes/comedie-screens.css:.poster-wrap — Habillage Comédie (étape 7)
+CSS-MORT app/styles/themes/comedie-screens.css:.film-seen-ribbon — Habillage Comédie (étape 7)
+CSS-MORT app/styles/themes/comedie-screens.css:.filter-chip — Écran T2 (étape 7 Comédie)
+CSS-MORT app/styles/themes/comedie-screens.css:.souffleurHead — 404 Comédie (connecté via NotFoundTheme)
+CSS-MORT app/styles/themes/comedie-screens.css:.souffleurText — 404 Comédie (connecté via NotFoundTheme)
+CSS-MORT app/styles/themes/comedie-screens.css:.troisCoups — Chargement Comédie (connecté via PageLoading)
+CSS-MORT app/styles/themes/comedie-screens.css:.coupVisible — Chargement Comédie (connecté via PageLoading)
+CSS-MORT app/styles/themes/comedie-screens.css:.poster-container — Habillage Comédie (étape 7)
+CSS-MORT app/styles/themes/comedie-screens.css:.data-cell — Habillage Comédie (étape 7)
+CSS-MORT app/styles/themes/horreur-screens.css:.poster-container — Habillage Horreur (étape 3)
+CSS-MORT app/styles/themes/horreur-screens.css:.filter-chip — Habillage Horreur (étape 3)
+CSS-MORT app/styles/themes/horreur-screens.css:.data-cell — Habillage Horreur (étape 3)
+CSS-MORT app/styles/themes/western-screens.css:.poster-container — Habillage Western (étape 4)
+CSS-MORT app/styles/themes/western-screens.css:.film-title — Habillage Western (étape 4)
+CSS-MORT app/styles/themes/western-screens.css:.poster-wrap — Habillage Western (étape 4)
+CSS-MORT app/styles/themes/western-screens.css:.filter-chip — Habillage Western (étape 4)

@@ -3,6 +3,21 @@
    Loaded from layout.tsx alongside action.css
    ═══════════════════════════════════════════════════════════ */
 
+/* ── Étalonnage couleur des affiches (poster grading) ── */
+[data-theme="action"] .film-card {
+  position: relative;
+}
+[data-theme="action"] .film-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 107, 31, .15), rgba(23, 162, 201, .15));
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: 1;
+}
+
 /* ── A2 — L'arsenal (films) ── */
 [data-theme="action"] .film-stat-bar {
   transform: skewX(var(--skew));

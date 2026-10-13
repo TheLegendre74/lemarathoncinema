@@ -101,7 +101,7 @@ export default function AuthPageClient({ marathonStart, saisonLabel, saisonNumer
   const live = new Date() >= new Date(marathonStart)
 
   return (
-    <div style={{
+    <div data-ecran="auth" style={{
       minHeight: '100vh', display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center', gap: '1.5rem',
       background: 'radial-gradient(ellipse 70% 55% at 50% -5%, rgba(232,196,106,.09) 0%, transparent 65%), var(--bg)',
@@ -128,8 +128,8 @@ export default function AuthPageClient({ marathonStart, saisonLabel, saisonNumer
       </a>
 
       <div style={{ width: '100%', maxWidth: 400, background: 'var(--s1)', border: '1px solid var(--line2)', borderRadius: 'var(--radius)', padding: '2.5rem' }}>
-        <div style={{ fontFamily: 'var(--f-display)', fontSize: '2.2rem', color: 'var(--accent-fg)', textAlign: 'center', lineHeight: 1.1, marginBottom: '.3rem' }}>
-          Ciné<br />Marathon
+        <div className="auth-title" style={{ fontFamily: 'var(--f-display)', fontSize: '2.2rem', color: 'var(--accent-fg)', textAlign: 'center', lineHeight: 1.1, marginBottom: '.3rem' }}>
+          Le Marathon<br />Cinéma
         </div>
         <div style={{ textAlign: 'center', fontSize: '.66rem', letterSpacing: '3px', color: 'var(--ink3)', textTransform: 'uppercase', marginBottom: '2rem' }}>
           {saisonLabel}

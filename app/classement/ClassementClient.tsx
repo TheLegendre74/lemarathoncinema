@@ -39,7 +39,7 @@ interface Props {
 
 function Avatar({ user, isMe, size = 34 }: { user: { pseudo: string; avatar_url?: string | null }; isMe: boolean; size?: number }) {
   return (
-    <div style={{
+    <div className="player-avatar" style={{
       width: size, height: size, borderRadius: '50%', flexShrink: 0,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize: size * 0.24, fontWeight: 600,
@@ -58,9 +58,10 @@ function PlayerRow({ u, i, userId, showMarathon }: { u: RankedUser; i: number; u
   const isMe = userId === u.id
   const rankDisplay = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`
   const rankColor = i === 0 ? '#ffd700' : i === 1 ? '#c0c0c0' : i === 2 ? '#cd7f32' : 'var(--ink3)'
+  const rankClass = i === 0 ? 'leaderboard-rank-1' : i === 1 ? 'leaderboard-rank-2' : i === 2 ? 'leaderboard-rank-3' : ''
 
   return (
-    <div style={{
+    <div className={rankClass || undefined} style={{
       display: 'flex', alignItems: 'center', gap: '.9rem',
       background: isMe ? 'rgba(232,196,106,.03)' : 'var(--s1)',
       border: `1px solid ${isMe ? 'rgba(232,196,106,.35)' : 'var(--line)'}`,
@@ -161,9 +162,9 @@ export default function ClassementClient({ userId, ranked, marathonRanked, archi
   })
 
   return (
-    <div>
-      <div style={{ marginBottom: '1.5rem' }}>
-        <div style={{ fontFamily: 'var(--f-display)', fontSize: '2rem', lineHeight: 1 }}>Classement</div>
+    <div data-ecran="classement">
+      <div className="page-header" style={{ marginBottom: '1.5rem' }}>
+        <div className="page-title-chrome" style={{ fontFamily: 'var(--f-display)', fontSize: '2rem', lineHeight: 1 }}>Classement</div>
         <div style={{ color: 'var(--ink2)', fontSize: '.83rem', marginTop: '.35rem' }}>{ranked.length} joueur{ranked.length > 1 ? 's' : ''} inscrits</div>
       </div>
 
@@ -208,7 +209,7 @@ export default function ClassementClient({ userId, ranked, marathonRanked, archi
               {tab === 'marathon' ? 'Aucun film vu et noté pendant le marathon pour l\'instant.' : 'Aucun joueur inscrit.'}
             </div>
           )}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
+          <div className="leaderboard-table" style={{ display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
             {list.map((u, i) => (
               <PlayerRow key={u.id} u={u} i={i} userId={userId} showMarathon={tab === 'marathon'} />
             ))}

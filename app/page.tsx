@@ -25,6 +25,8 @@ import MarathonNotifyToggle from '@/components/MarathonNotifyToggle'
 import Poster from '@/components/Poster'
 import ActionHomeHero from '@/components/theme/action/ActionHomeHero'
 import ComedieHomeHero from '@/components/theme/comedie/ComedieHomeHero'
+import WesternHomeHero from '@/components/theme/western/WesternHomeHero'
+import HorreurHomeHero from '@/components/theme/horreur/HorreurHomeHero'
 import Link from 'next/link'
 import s from './page.module.css'
 
@@ -196,6 +198,19 @@ export default async function HomePage() {
             text: ev.type === 'watched' ? `${ev.pseudo} a applaudi ${ev.titre}` : ev.type === 'rated' ? `${ev.pseudo} a critiqué ${ev.titre}` : ev.type === 'duel_opened' ? `Applaudimètre : ${ev.film1} vs ${ev.film2}` : `L'applaudimètre est clos — ${ev.winner}`,
             amount: ev.type === 'watched' && ev.exp > 0 ? `+${ev.exp}` : undefined,
           }))}
+        />
+      ) : hasWeekFilm && themeKey === 'western' ? (
+        <WesternHomeHero
+          weekFilm={wf ? { id: wf.id, titre: wf.titre, poster: wf.poster } : null}
+          weekLabel={resolved.week ? `SEMAINE ${resolved.week.semaine}` : null}
+          playerRang={null}
+          prime={null}
+        />
+      ) : hasWeekFilm && themeKey === 'horreur' ? (
+        <HorreurHomeHero
+          weekFilm={wf ? { id: wf.id, titre: wf.titre, poster: wf.poster } : null}
+          weekLabel={resolved.week ? `SEMAINE ${resolved.week.semaine}` : null}
+          playerRole={null}
         />
       ) : hasWeekFilm ? (
         <WeekFilmHero

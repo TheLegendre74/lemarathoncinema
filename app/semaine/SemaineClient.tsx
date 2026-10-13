@@ -92,9 +92,9 @@ export default function SemaineClient({ profile, weekFilm, film, isWatched, watc
   const watchedSet = new Set(watchedFilmIds)
 
   return (
-    <div>
-      <div style={{ marginBottom: '2rem' }}>
-        <div style={{ fontFamily: 'var(--f-display)', fontSize: '2rem', lineHeight: 1 }}>Film de la Semaine</div>
+    <div data-ecran="semaine">
+      <div className="page-header" style={{ marginBottom: '2rem' }}>
+        <div className="week-title page-title-chrome" style={{ fontFamily: 'var(--f-display)', fontSize: '2rem', lineHeight: 1 }}>Film de la Semaine</div>
         <div style={{ color: 'var(--ink2)', fontSize: '.83rem', marginTop: '.35rem' }}>Séance collective — chaque {config.FDLS_JOUR} à {config.FDLS_HEURE}</div>
       </div>
 

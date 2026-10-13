@@ -776,9 +776,9 @@ export default function DuelsClient({ profile, duels, myVotes, allVotes, watchCo
   const olderClosed = closedDuels.slice(1)
 
   return (
-    <div>
-      <div style={{ marginBottom: '2rem' }}>
-        <div style={{ fontFamily: 'var(--f-display)', fontSize: '2rem', lineHeight: 1 }}>Duels</div>
+    <div data-ecran="duels">
+      <div className="page-header" style={{ marginBottom: '2rem' }}>
+        <div className="page-title-chrome" style={{ fontFamily: 'var(--f-display)', fontSize: '2rem', lineHeight: 1 }}>Duels</div>
         <div style={{ color: 'var(--ink2)', fontSize: '.83rem', marginTop: '.35rem' }}>
           Vote pour le prochain film collectif · Séance {config.SEANCE_JOUR} {config.SEANCE_HEURE}
         </div>
