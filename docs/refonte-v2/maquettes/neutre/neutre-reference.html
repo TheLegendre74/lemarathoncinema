@@ -1,0 +1,342 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#222;font-family:"Inter 18pt",sans-serif}
+.board{width:1600px;height:1000px;overflow:hidden;position:relative;margin:0 0 30px}
+
+/* ---- tokens thème neutre ---- */
+.t-neutre{--bg:#08080E;--s1:#0F0F1A;--s2:#171726;--line:rgba(238,238,248,.10);
+  --line2:rgba(238,238,248,.20);--ink:#EEEEF8;--ink2:#9A9ABF;--ink3:#5E5E7D;
+  --ac:#E8C46A;--aci:#08080E;--tex:none;--disp:"Inter 18pt Black";--tr:-.035em;--cse:none;}
+.t-horreur{--bg:#0A0406;--s1:#140709;--s2:#1E0B0E;--line:rgba(233,223,214,.10);
+  --line2:rgba(233,223,214,.20);--ink:#E9DFD6;--ink2:#A08A82;--ink3:#6B5651;
+  --ac:#C2181C;--aci:#F6EDE8;--disp:"Inter 18pt Black";--tr:.16em;--cse:uppercase;
+  --tex:repeating-linear-gradient(180deg,rgba(255,255,255,.045) 0 1px,transparent 1px 4px);}
+.t-sf{--bg:#04070E;--s1:#080D18;--s2:#0D1524;--line:rgba(216,230,236,.10);
+  --line2:rgba(216,230,236,.20);--ink:#D8E6EC;--ink2:#7E96A3;--ink3:#4E6472;
+  --ac:#4FD8E8;--aci:#04070E;--disp:"Inter 18pt Black";--tr:.1em;--cse:uppercase;
+  --tex:repeating-linear-gradient(180deg,rgba(79,216,232,.07) 0 1px,transparent 1px 3px);}
+
+.stage{position:absolute;inset:0;background:var(--bg);color:var(--ink);}
+.tex{position:absolute;inset:0;background:var(--tex);pointer-events:none;z-index:6;}
+
+/* ---- barre de nav ---- */
+.nav{position:relative;z-index:5;display:flex;align-items:center;gap:30px;height:56px;
+  padding:0 40px;border-bottom:1px solid var(--line2);background:var(--bg);}
+.mark{font-family:"Inter 18pt Black";font-size:16px;letter-spacing:-.02em;color:var(--ink);white-space:nowrap}
+.mark em{font-style:normal;color:var(--ac)}
+.nlinks{display:flex;gap:24px;font-size:11px;font-weight:700;letter-spacing:.14em;color:var(--ink3);text-transform:uppercase}
+.nlinks .on{color:var(--ac)}
+.nright{margin-left:auto;display:flex;align-items:center;gap:16px}
+.chip{font-family:"DejaVu Sans Mono",monospace;font-size:10.5px;letter-spacing:.12em;color:var(--ink2)}
+.btn-ac{background:var(--ac);color:var(--aci);font-size:11px;font-weight:900;letter-spacing:.12em;padding:9px 16px}
+.btn-gh{border:1px solid var(--line2);color:var(--ink);font-size:11px;font-weight:700;letter-spacing:.12em;padding:9px 16px}
+.ava{width:30px;height:30px;background:var(--s2);border:1px solid var(--line2);display:flex;
+  align-items:center;justify-content:center;font-family:"Inter 18pt Black";font-size:12px;color:var(--ac)}
+
+/* ---- héros ---- */
+.hero{position:relative;height:452px;overflow:hidden}
+.wall{position:absolute;inset:0;display:grid;grid-template-columns:repeat(20,1fr);gap:3px;padding:3px;opacity:.6}
+.wall i{display:block;aspect-ratio:2/3;border-radius:1px}
+.veil{position:absolute;inset:0;background:linear-gradient(90deg,var(--bg) 3%,color-mix(in srgb,var(--bg) 90%,transparent) 40%,color-mix(in srgb,var(--bg) 18%,transparent) 100%)}
+.hc{position:absolute;left:40px;right:40px;top:56px;z-index:3}
+.kick{font-family:"DejaVu Sans Mono",monospace;font-size:11px;letter-spacing:.26em;color:var(--ink2);margin-bottom:22px}
+.big{font-family:var(--disp);font-size:74px;line-height:.88;letter-spacing:var(--tr);
+  text-transform:var(--cse);margin-bottom:22px;max-width:820px}
+.sub{font-family:"Apple Garamond",serif;font-size:21px;line-height:1.45;color:var(--ink2);max-width:46ch}
+
+/* ---- bande d'état ---- */
+.band{position:relative;z-index:5;display:flex;align-items:center;gap:26px;padding:17px 40px;
+  background:var(--ac);color:var(--aci)}
+.band .dot{width:9px;height:9px;border-radius:50%;background:var(--aci)}
+.band .t{font-family:"Inter 18pt Black";font-size:14px;letter-spacing:.02em}
+.band .t em{font-style:normal;font-family:"DejaVu Sans Mono",monospace;font-size:11.5px;
+  letter-spacing:.06em;opacity:.66;margin-left:16px;font-weight:400}
+.band .cta{margin-left:auto;background:var(--aci);color:var(--ac);font-size:11.5px;
+  font-weight:900;letter-spacing:.12em;padding:11px 20px}
+
+/* ---- 3 colonnes ---- */
+.cols{position:relative;z-index:5;display:grid;grid-template-columns:repeat(3,1fr);padding:0 40px}
+.cols>div{padding:30px 32px 26px 0;border-right:1px solid var(--line)}
+.cols>div+div{padding-left:32px}
+.cols>div:last-child{border-right:0}
+.cn{font-family:"DejaVu Sans Mono",monospace;font-size:11px;letter-spacing:.2em;color:var(--ac);margin-bottom:13px}
+.ch{font-family:"Inter 18pt Black";font-size:23px;letter-spacing:-.02em;margin-bottom:9px}
+.cp{font-family:"Apple Garamond",serif;font-size:16px;line-height:1.5;color:var(--ink2)}
+
+/* ---- pied ---- */
+.foot{position:relative;z-index:5;display:grid;grid-template-columns:1fr 360px;
+  border-top:1px solid var(--line);margin:8px 40px 0}
+.fl{padding:26px 40px 0 0}
+.fr{padding:26px 0 0 40px;border-left:1px solid var(--line)}
+.lab{font-family:"DejaVu Sans Mono",monospace;font-size:10.5px;letter-spacing:.2em;color:var(--ink3);margin-bottom:15px}
+.best{display:flex;gap:12px}
+.best .po{width:86px;aspect-ratio:2/3;border-radius:1px;position:relative;overflow:hidden}
+.best .po b{position:absolute;left:6px;right:6px;bottom:5px;font-size:9px;font-weight:700;
+  color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.95);line-height:1.1}
+.best .n{display:block;font-family:"DejaVu Sans Mono",monospace;font-size:12px;color:var(--ink);margin-top:8px}
+.rk .r{display:flex;align-items:baseline;gap:13px;padding:8px 0;border-bottom:1px solid var(--line)}
+.rk .r i{font-style:normal;font-family:"DejaVu Sans Mono",monospace;font-size:11px;color:var(--ink3);width:20px}
+.rk .r b{font-family:"Apple Garamond",serif;font-weight:400;font-size:17px;color:var(--ink)}
+.rk .r u{text-decoration:none;margin-left:auto;font-family:"DejaVu Sans Mono",monospace;font-size:11px;color:var(--ink2)}
+
+/* ---- héros marathon ---- */
+.h2{display:flex;height:452px;position:relative;overflow:hidden}
+.art{position:relative;width:880px;flex:none;overflow:hidden}
+.art .g{position:absolute;inset:0;background:repeating-linear-gradient(97deg,rgba(0,0,0,.3) 0 2px,transparent 2px 6px);opacity:.5}
+.art .f{position:absolute;inset:0;background:linear-gradient(90deg,transparent 50%,var(--bg) 100%)}
+.art .strip{position:absolute;left:0;right:0;bottom:0;display:flex;gap:3px;padding:3px;opacity:.5}
+.art .strip i{flex:1;height:44px;border-radius:1px}
+.art .c{position:absolute;left:40px;bottom:72px;z-index:3;right:120px}
+.aside{flex:1;padding:44px 40px 0 36px;position:relative;z-index:3}
+.ln{display:flex;align-items:baseline;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px;color:var(--ink2)}
+.ln b{color:var(--ink);font-weight:700}
+.ln u{text-decoration:none;margin-left:auto;font-family:"DejaVu Sans Mono",monospace;font-size:11px;color:var(--ink3)}
+.prog{font-family:"Inter 18pt Black";font-size:50px;letter-spacing:-.04em;line-height:1}
+.prog span{color:var(--ink3);font-size:26px}
+
+/* ---- page films ---- */
+.pg{position:relative;z-index:5;padding:30px 40px 0}
+.ptitle{font-family:var(--disp);font-size:46px;letter-spacing:var(--tr);text-transform:var(--cse);line-height:1}
+.psub{font-family:"DejaVu Sans Mono",monospace;font-size:11.5px;letter-spacing:.16em;color:var(--ink2);margin-top:10px}
+.kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);
+  border:1px solid var(--line);margin:24px 0 0}
+.kpi div{background:var(--bg);padding:16px 20px 14px}
+.kpi .v{font-family:"Inter 18pt Black";font-size:34px;letter-spacing:-.03em;color:var(--ac);line-height:1}
+.kpi .l{font-family:"DejaVu Sans Mono",monospace;font-size:10px;letter-spacing:.16em;color:var(--ink3);margin-top:9px;line-height:1}
+.bar{height:3px;background:var(--s2);margin-top:18px}
+.bar b{display:block;height:100%;background:var(--ac);width:38%}
+.filters{display:flex;gap:10px;align-items:center;margin:22px 0 20px}
+.fi{border:1px solid var(--line2);color:var(--ink2);font-size:12px;padding:10px 14px;font-weight:500}
+.fi.w{flex:1;max-width:340px;color:var(--ink3)}
+.fi.sel{border-color:var(--ac);color:var(--ac)}
+.grid{display:grid;grid-template-columns:repeat(8,1fr);gap:14px}
+.card{position:relative}
+.card .po{aspect-ratio:2/3;border-radius:1px;position:relative;overflow:hidden;border:1px solid var(--line)}
+.card .po b{position:absolute;left:7px;right:7px;bottom:6px;font-size:10px;font-weight:700;color:#fff;
+  text-shadow:0 1px 3px rgba(0,0,0,.95);line-height:1.12}
+.card .ck{position:absolute;top:6px;right:6px;width:19px;height:19px;background:var(--ac);color:var(--aci);
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900}
+.card .wk{position:absolute;top:0;left:0;right:0;background:var(--ac);color:var(--aci);font-size:8px;
+  font-weight:900;letter-spacing:.1em;text-align:center;padding:3px}
+.card .m{display:flex;justify-content:space-between;margin-top:8px;
+  font-family:"DejaVu Sans Mono",monospace;font-size:10px;color:var(--ink3)}
+.card .m em{font-style:normal;color:var(--ac)}
+
+/* ---- planche thèmes ---- */
+.tb{width:1600px;height:868px;background:#0C0C10;padding:28px 30px;position:relative}
+.tbh{display:flex;align-items:baseline;gap:16px;margin-bottom:20px}
+.tbh h1{font-family:"Inter 18pt Black";font-size:26px;letter-spacing:-.025em;color:#EEEEF8}
+.tbh p{font-family:"DejaVu Sans Mono",monospace;font-size:11px;letter-spacing:.14em;color:#5E5E7D}
+.tgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.tile{height:222px;position:relative;overflow:hidden;padding:16px;display:flex;flex-direction:column}
+.tile .tx{position:absolute;inset:0;pointer-events:none}
+.tile .gn{position:relative;font-size:23px;line-height:1.05;margin-bottom:6px}
+.tile .rf{position:relative;font-family:"DejaVu Sans Mono",monospace;font-size:9.5px;letter-spacing:.12em;opacity:.62}
+.tile .ic{position:relative;margin-top:auto;display:flex;align-items:center;gap:9px}
+.tile .mid{position:relative;margin-top:14px}
+.tile .mid .mh{font-size:15px;line-height:1.15;margin-bottom:5px}
+.tile .mid .mm{font-family:"DejaVu Sans Mono",monospace;font-size:9px;letter-spacing:.11em;opacity:.55}
+.tile .vb{position:relative;margin-top:10px;font-size:9.5px;font-weight:900;letter-spacing:.1em;
+  padding:7px 9px;text-align:center}
+.tile svg{width:22px;height:22px}
+.note{position:absolute;left:30px;right:30px;bottom:16px;font-family:"DejaVu Sans Mono",monospace;
+  font-size:11px;color:#5E5E7D;line-height:1.7}
+</style></head><body>
+
+<!-- ============ 1. ACCUEIL HORS SAISON ============ -->
+<div class="board t-neutre" id="b1"><div class="stage">
+  <div class="nav">
+    <span class="mark">CINÉ <em>MARATHON</em></span>
+    <div class="nlinks"><span class="on">ACCUEIL</span><span>FILMS</span><span>LA SEMAINE</span><span>CLASSEMENT</span><span>DUELS</span><span>FORUM</span><span>MARATHONIENS</span></div>
+    <div class="nright"><span class="chip">SAISON 02 · J-14</span><span class="btn-ac">SE CONNECTER</span></div>
+  </div>
+  <div class="hero">
+    <div class="wall" id="w1"></div><div class="veil"></div>
+    <div class="hc">
+      <div class="kick">LE MARATHON CINÉMA — SAISON 02</div>
+      <div class="big">466 FILMS.<br>DEUX SÉANCES<br>PAR SEMAINE.</div>
+      <div class="sub">Plus tout ce que tu regardes de ton côté. Un collectif qui traverse un catalogue entier, ensemble.</div>
+    </div>
+  </div>
+  <div class="band"><span class="dot"></span>
+    <span class="t">LA SAISON 02 OUVRE LE 1ᵉʳ AOÛT<em>J-14 · 22 MARATHONIENS INSCRITS · 26 FILMS AJOUTÉS</em></span>
+    <span class="cta">REJOINDRE LA SAISON 02</span></div>
+  <div class="cols">
+    <div><div class="cn">01 — LE PRINCIPE</div><div class="ch">Tu regardes</div><div class="cp">Deux séances collectives par semaine, et tout ce que tu veux à côté. Chaque film coché rapporte de l'expérience.</div></div>
+    <div><div class="cn">02 — LA SEMAINE</div><div class="ch">Un genre à la fois</div><div class="cp">Chaque semaine de la saison est dédiée à un genre. Le site entier change d'apparence avec lui, du fond jusqu'aux boutons.</div></div>
+    <div><div class="cn">03 — LE VIDÉOCLUB</div><div class="ch">L'étagère commune</div><div class="cp">Chaque film vu sort du rayon et s'use. Ton nom reste sur la boîte que tu as ouverte le premier.</div></div>
+  </div>
+  <div class="foot">
+    <div class="fl"><div class="lab">LES MIEUX NOTÉS DE LA SAISON 01</div>
+      <div class="best" id="bst1"></div></div>
+    <div class="fr"><div class="lab">PALMARÈS SAISON 01</div><div class="rk">
+      <div class="r"><i>01</i><b>Duffman</b><u>101 EXP</u></div>
+      <div class="r"><i>02</i><b>John</b><u>37 EXP</u></div>
+      <div class="r"><i>03</i><b>Dracaryn</b><u>24 EXP</u></div>
+    </div></div>
+  </div>
+</div></div>
+
+<!-- ============ 2. ACCUEIL MARATHON — THÈME HORREUR ============ -->
+<div class="board t-horreur" id="b2"><div class="stage">
+  <div class="tex"></div>
+  <div class="nav">
+    <span class="mark">CINÉ <em>MARATHON</em></span>
+    <div class="nlinks"><span class="on">ACCUEIL</span><span>FILMS</span><span>LA SEMAINE</span><span>CLASSEMENT</span><span>DUELS</span><span>FORUM</span><span>MARATHONIENS</span></div>
+    <div class="nright"><span class="chip">SEMAINE 01 / 04 — HORREUR</span><span class="ava">L</span></div>
+  </div>
+  <div class="h2">
+    <div class="art" style="background:linear-gradient(140deg,#8A1418 0%,#2A0508 52%,#0A0406 100%)">
+      <div class="g"></div><div class="strip" id="st2"></div><div class="f"></div>
+      <div class="c">
+        <div class="kick" style="color:#C2181C">SÉANCE COLLECTIVE — VENDREDI 21:00</div>
+        <div class="big" style="font-size:60px;letter-spacing:.06em">LES YEUX<br>SANS VISAGE</div>
+        <div class="sub" style="max-width:40ch">1960 · Georges Franju · Horreur · 1 h 30</div>
+      </div>
+    </div>
+    <div class="aside">
+      <div class="lab">CE QUI SE PASSE</div>
+      <div class="ln"><b>Marion</b><span>a noté Possession</span><u>9/10</u></div>
+      <div class="ln"><b>Duffman</b><span>a fini Shining</span><u>+10</u></div>
+      <div class="ln"><b>Duel</b><span>Alien / The Thing</span><u>J-3</u></div>
+      <div class="ln"><b>Clara</b><span>propose Hérédité</span><u>hier</u></div>
+      <div class="lab" style="margin-top:30px">TA PROGRESSION</div>
+      <div class="prog">47<span> / 466</span></div>
+      <div class="kick" style="margin-top:10px;margin-bottom:0">FILMS VUS — NIVEAU 6</div>
+    </div>
+  </div>
+  <div class="band"><span class="dot"></span>
+    <span class="t">SEMAINE 01 / 04 — HORREUR<em>SÉANCE DANS 02 J 14 H · 9 PRÉSENTS SUR 12 · 2ᵉ SÉANCE MERCREDI</em></span>
+    <span class="cta">SURVIVRE À CE FILM</span></div>
+  <div class="cols">
+    <div><div class="cn">LA SEMAINE</div><div class="ch">Horreur</div><div class="cp">Huit films au programme, deux séances collectives, et une réplique à débusquer quelque part sur le site.</div></div>
+    <div><div class="cn">DUEL EN COURS</div><div class="ch">Alien · The Thing</div><div class="cp">62 % pour Alien à trois jours de la clôture. Le vainqueur passe vendredi prochain.</div></div>
+    <div><div class="cn">VIDÉOCLUB</div><div class="ch">112 sous cellophane</div><div class="cp">Cent-douze boîtes que personne n'a jamais sorties du rayon. Quatre sont dans le rayon Horreur.</div></div>
+  </div>
+  <div class="foot">
+    <div class="fl"><div class="lab">AU PROGRAMME DE LA SEMAINE</div><div class="best" id="bst2"></div></div>
+    <div class="fr"><div class="lab">CLASSEMENT SAISON 02</div><div class="rk">
+      <div class="r"><i>01</i><b>Duffman</b><u>101 EXP</u></div>
+      <div class="r"><i>02</i><b>John</b><u>37 EXP</u></div>
+      <div class="r"><i>03</i><b>Dracaryn</b><u>24 EXP</u></div>
+    </div></div>
+  </div>
+</div></div>
+
+<!-- ============ 3. PAGE FILMS — THÈME SF ============ -->
+<div class="board t-sf" id="b3"><div class="stage">
+  <div class="tex"></div>
+  <div class="nav">
+    <span class="mark">CINÉ <em>MARATHON</em></span>
+    <div class="nlinks"><span>ACCUEIL</span><span class="on">FILMS</span><span>LA SEMAINE</span><span>CLASSEMENT</span><span>DUELS</span><span>FORUM</span><span>MARATHONIENS</span></div>
+    <div class="nright"><span class="chip">SEMAINE 02 / 04 — SF</span><span class="ava">L</span></div>
+  </div>
+  <div class="pg">
+    <div class="ptitle">FILMS</div>
+    <div class="psub">466 AU CATALOGUE · 47 VUS · 112 JAMAIS OUVERTS</div>
+    <div class="kpi">
+      <div><div class="v">47</div><div class="l">FILMS VUS</div></div>
+      <div><div class="v">38 %</div><div class="l">PROGRESSION SAISON</div></div>
+      <div><div class="v">466</div><div class="l">TOTAL CATALOGUE</div></div>
+      <div><div class="v">26</div><div class="l">AJOUTÉS CE MOIS-CI</div></div>
+    </div>
+    <div class="bar"><b></b></div>
+    <div class="filters">
+      <span class="fi w">Rechercher un titre, un réalisateur…</span>
+      <span class="fi sel">GENRE : SF</span><span class="fi">DÉCENNIE</span><span class="fi">RÉALISATEUR</span>
+      <span class="fi">JAMAIS VUS</span><span class="fi">TIRER AU SORT</span>
+    </div>
+    <div class="grid" id="g3"></div>
+  </div>
+</div></div>
+
+<!-- ============ 4. PLANCHE DES THÈMES ============ -->
+<div class="tb" id="b4">
+  <div class="tbh"><h1>Les treize thèmes + le neutre</h1>
+    <p>UN GENRE PAR SEMAINE · QUATRE PAR SAISON · ROTATION AUTOMATIQUE</p></div>
+  <div class="tgrid" id="tg"></div>
+  <div class="note">Chaque tuile montre l'accent, le traitement typographique, la texture et le verbe de l'action principale. Les polices de titrage définitives sont listées dans le prompt — cette planche n'a que deux familles disponibles, la variation porte donc ici sur la casse, la graisse et l'approche.</div>
+</div>
+
+<script>
+var POS=[['#C4452E','#2A1008'],['#2E5A78','#0A1620'],['#4B3A7A','#130C24'],['#1F6B4E','#07160F'],
+['#8A6A1E','#221806'],['#7A3020','#1A0704'],['#243B6B','#070C18'],['#5A5A62','#101014'],
+['#1B4A3A','#050F0B'],['#6B2148','#180512'],['#2F6F7A','#08191C'],['#7A6A2E','#1A170A'],
+['#3B2A6B','#0C0818'],['#8A3A1E','#200C06'],['#245A45','#07150F'],['#4A4A52','#0E0E12'],
+['#6B4A18','#160F05'],['#2A4F78','#080F1A'],['#93412C','#220D07'],['#35507A','#0B1220']];
+function h(i){var k=(i*2654435761)%4294967296;k=(k^(k>>>13))>>>0;return POS[k%POS.length];}
+function fill(el,n,tag){var o='';for(var i=0;i<n;i++){var p=h(i);
+  o+='<'+tag+' style="background:linear-gradient(158deg,'+p[0]+','+p[1]+')"></'+tag+'>';}el.innerHTML=o;}
+fill(document.getElementById('w1'),120,'i');
+fill(document.getElementById('st2'),18,'i');
+
+var BEST=[['Heat','9.4'],['Arrival','9.2'],['Ex Machina','9.0'],['Wall-E','8.9'],['Fargo','8.7']];
+var PROG=[['Possession','—'],['Shining','—'],['Alien','—'],['The Thing','—'],['Nosferatu','—']];
+function best(el,arr){var o='';for(var i=0;i<arr.length;i++){var p=h(i*3+1);
+  o+='<div><div class="po" style="background:linear-gradient(160deg,'+p[0]+','+p[1]+')"><b>'+arr[i][0]+'</b></div>'
+   +(arr[i][1]!=='—'?'<span class="n">'+arr[i][1]+'</span>':'')+'</div>';}el.innerHTML=o;}
+best(document.getElementById('bst1'),BEST);
+best(document.getElementById('bst2'),PROG);
+
+var FILMS=[['Blade Runner 2049',1,1,'9.4'],['Arrival',1,0,'8.9'],['Ex Machina',1,0,'8.1'],['Solaris',0,0,'—'],
+['Stalker',0,0,'—'],['Dark City',1,0,'7.2'],['Interstellar',1,0,'9.0'],['Gattaca',0,0,'—'],
+['Moon',0,0,'—'],['Primer',0,0,'—'],['Her',1,0,'8.4'],['Akira',1,0,'8.8'],
+['Metropolis',0,0,'—'],['THX 1138',0,0,'—'],['Bienvenue à Gattaca',0,0,'—'],['Contact',1,0,'7.9'],
+['Le Cinquième Élément',1,0,'8.0'],['Brazil',0,0,'—'],['Dune',1,0,'8.6'],['Alphaville',0,0,'—'],
+['Snowpiercer',1,0,'7.7'],['Premier Contact',0,0,'—'],['Upstream Color',0,0,'—'],['Annihilation',1,0,'7.5']];
+var g='';
+for(var i=0;i<FILMS.length;i++){var f=FILMS[i],p=h(i*5+2);
+  g+='<div class="card"><div class="po" style="background:linear-gradient(160deg,'+p[0]+','+p[1]+')">'
+   +(f[2]?'<div class="wk">FILM DE LA SEMAINE</div>':'')
+   +(f[1]?'<div class="ck">✓</div>':'')
+   +'<b>'+f[0]+'</b></div><div class="m"><span>'+(1960+i*2)+'</span><em>'+f[3]+'</em></div></div>';}
+document.getElementById('g3').innerHTML=g;
+
+var IC={
+ onde:'<path d="M12 12h.01M6 12a6 6 0 0 1 12 0M2 12a10 10 0 0 1 20 0"/>',
+ etoile:'<path d="m12 3 2.5 5.5L20 9.3l-4.2 4 1.1 5.7L12 16.2 7.1 19l1.1-5.7L4 9.3l5.5-.8z"/>',
+ boussole:'<circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/>',
+ sonnette:'<path d="M4 17h16M6 17a6 6 0 0 1 12 0M12 8V5"/>',
+ rose:'<path d="M12 21V11M12 11a4 4 0 1 0 0-6 4 4 0 0 0 0 6M12 16c-2 0-4-1-5-3"/>',
+ fenetre:'<rect x="5" y="3" width="14" height="18"/><path d="M12 3v18M5 12h14"/>',
+ anneau:'<circle cx="12" cy="14" r="6"/><path d="m9.5 7 2.5-4 2.5 4"/>',
+ plaque:'<rect x="6" y="4" width="12" height="16" rx="3"/><path d="M9 9h6M9 13h6"/>',
+ porte:'<path d="M7 21V5a2 2 0 0 1 2-2h7v18M4 21h16"/><circle cx="13.5" cy="12" r=".9"/>',
+ dossier:'<path d="M3 7h6l2 2h10v10H3z"/><path d="M7 13h8"/>',
+ orbite:'<ellipse cx="12" cy="12" rx="9" ry="4"/><circle cx="12" cy="12" r="2.4"/>',
+ spirale:'<path d="M12 12a3 3 0 1 1 3 3c-3 0-5-2-5-5s2-5 5-5 6 2.5 6 6"/>',
+ shrf:'<path d="m12 2.5 2.6 5.6 6.1.8-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6L3.3 8.9l6.1-.8z"/>',
+ or:'<rect x="3" y="4" width="18" height="16"/><path d="M3 9h18M3 15h18M8 4v16M16 4v16"/>'
+};
+var TH=[
+ ['NEUTRE','Hors saison','#E8C46A','#08080E','#EEEEF8','MARQUER COMME VU','or','none','900','-.03em','uppercase','20px'],
+ ['ACTION','Poursuite, poussière','#FF6B2B','#100805','#F3E6DD','ENCAISSER','onde','repeating-linear-gradient(96deg,rgba(255,107,43,.07) 0 2px,transparent 2px 8px)','900','-.04em','uppercase','23px'],
+ ['ANIMATION','Trame, couleur franche','#F5CD79','#041020','#E6EEF6','ALLUMER','etoile','radial-gradient(rgba(245,205,121,.12) 1px,transparent 1px) 0 0/7px 7px','900','-.02em','none','24px'],
+ ['AVENTURE','Papier, carte, cuir','#C17F3A','#0C0A05','#EDE0CC','EXPLORER','boussole','repeating-linear-gradient(126deg,rgba(193,127,58,.06) 0 3px,transparent 3px 11px)','400','.01em','none','25px'],
+ ['COMÉDIE','Pastel, rondeurs','#F2A8C2','#1B0F17','#F6E9EE','OUI, JE L’AI VU','sonnette','repeating-linear-gradient(45deg,rgba(242,168,194,.07) 0 3px,transparent 3px 12px)','900','-.01em','none','24px'],
+ ['CRIME','Velours, ombre lourde','#A05A28','#080504','#E8DCCB','RÉGLER L’AFFAIRE','rose','radial-gradient(70% 60% at 50% 0%,rgba(160,90,40,.14),transparent 70%)','400','.02em','none','25px'],
+ ['DRAME','Grain fin, lumière froide','#6E8FA8','#0A0C0F','#E2E7EC','NOTER DANS LE CARNET','fenetre','repeating-linear-gradient(180deg,rgba(255,255,255,.025) 0 1px,transparent 1px 5px)','400','0','none','25px'],
+ ['FANTAISIE','Poussière lumineuse','#9A7BE8','#0A0714','#E9E2F6','ACCOMPLIR','anneau','radial-gradient(rgba(154,123,232,.16) 1px,transparent 1px) 0 0/13px 13px','400','.03em','none','25px'],
+ ['GUERRE','Toile, tampon, kaki','#8A9A62','#0B0C08','#E4E6DA','RAPATRIER','plaque','repeating-linear-gradient(0deg,rgba(138,154,98,.07) 0 1px,transparent 1px 6px)','900','.1em','uppercase','21px'],
+ ['HORREUR','Scanlines, rouge sec','#C2181C','#0A0406','#E9DFD6','SURVIVRE','porte','repeating-linear-gradient(180deg,rgba(255,255,255,.05) 0 1px,transparent 1px 4px)','900','.16em','uppercase','20px'],
+ ['POLICIER','Lumière de store','#D9A441','#0A0A0C','#E8E4DC','CLASSER L’AFFAIRE','dossier','repeating-linear-gradient(108deg,rgba(217,164,65,.09) 0 4px,transparent 4px 16px)','900','.08em','uppercase','21px'],
+ ['SF','Scanlines, cyan','#4FD8E8','#04070E','#D8E6EC','ENREGISTRER','orbite','repeating-linear-gradient(180deg,rgba(79,216,232,.08) 0 1px,transparent 1px 3px)','900','.1em','uppercase','21px'],
+ ['THRILLER','Filé vertical, acier','#C4C9CE','#08090B','#E4E7EA','COCHER','spirale','repeating-linear-gradient(90deg,rgba(196,201,206,.05) 0 1px,transparent 1px 9px)','900','-.03em','uppercase','23px'],
+ ['WESTERN','Bois, sable, ocre','#D98A2B','#14100B','#EADFC9','ENCOCHER LA CROSSE','shrf','repeating-linear-gradient(126deg,rgba(217,138,43,.07) 0 2px,transparent 2px 9px)','400','.04em','none','25px']
+];
+var t='';
+for(var i=0;i<TH.length;i++){var x=TH[i];
+ var fam = (x[8]==='400') ? '"Apple Garamond",serif' : '"Inter 18pt Black",sans-serif';
+ t+='<div class="tile" style="background:'+x[3]+';color:'+x[4]+';border:1px solid '+x[2]+'33">'
+  +'<div class="tx" style="background:'+x[7]+'"></div>'
+  +'<div class="gn" style="color:'+x[2]+';font-family:'+fam+';font-size:'+x[11]+';letter-spacing:'+x[9]+';text-transform:'+x[10]+'">'+x[0]+'</div>'
+  +'<div class="rf">'+x[1].toUpperCase()+'</div>'
+  +'<div class="mid"><div class="mh" style="font-family:'+fam+';letter-spacing:'+x[9]+';text-transform:'+x[10]+'">Film de la semaine</div>'
+  +'<div class="mm">VENDREDI 21:00 · 2ᵉ SÉANCE MERCREDI</div></div>'
+  +'<div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="'+x[2]+'" stroke-width="1.5">'+IC[x[6]]+'</svg></div>'
+  +'<div class="vb" style="background:'+x[2]+';color:'+x[3]+'">'+x[5]+'</div>'
+  +'</div>';}
+document.getElementById('tg').innerHTML=t;
+</script>
+</body></html>

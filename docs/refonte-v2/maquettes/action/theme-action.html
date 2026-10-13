@@ -1,0 +1,1917 @@
+<title>Thème Action — Kit complet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600&family=JetBrains+Mono:wght@400;700&family=Saira+Condensed:ital,wght@0,700;0,900;1,700;1,900&display=swap">
+
+<style>
+  /* ===== chrome de la page de présentation ===== */
+  :root{
+    --ground:#101317;--ground2:#161B21;--ground3:#1E252D;
+    --rule:rgba(232,237,242,.10);--rule2:rgba(232,237,242,.20);
+    --ink:#E8EDF2;--ink2:#93A0AD;--ink3:#5E6B78;
+    --brass:#FF6B1F;--teal:#17A2C9;--alert:#C2201C;--good:#5FBF8B;
+    --display:"Bricolage Grotesque","Archivo",system-ui,sans-serif;
+    --body:"Newsreader",Georgia,serif;--util:"Archivo",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,monospace;
+  }
+  html{-webkit-text-size-adjust:100%}
+  body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;
+    line-height:1.7;margin:0;padding-inline:20px;padding-block:0}
+  .wrap{max-width:1080px;margin:0 auto}
+  .prose{max-width:66ch} p{margin:0 0 1.1em}
+  strong{font-weight:600;color:var(--ink)} em{font-style:italic}
+  .eyebrow{font-family:var(--util);font-size:11px;font-weight:700;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--brass);margin:0 0 14px}
+  h1.masthead{font-family:var(--display);font-weight:700;font-size:clamp(2.2rem,5.4vw,3.4rem);
+    line-height:1;letter-spacing:-.03em;margin:0 0 18px;text-wrap:balance}
+  h2{font-family:var(--display);font-weight:700;font-size:clamp(1.3rem,3vw,1.75rem);
+    line-height:1.16;letter-spacing:-.02em;margin:0 0 6px;text-wrap:balance}
+  h3{font-family:var(--util);font-weight:900;font-size:.82rem;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--brass);margin:0 0 10px}
+  section{padding-block:50px;border-top:1px solid var(--rule)}
+  section:first-of-type{border-top:0;padding-block:56px 38px}
+  .lede{font-size:1.14rem;line-height:1.62;color:var(--ink2)} .lede strong{color:var(--ink)}
+  .caveat{border:1px solid var(--rule2);padding:18px 20px;margin-top:26px;font-size:.96rem;color:var(--ink2)}
+  .caveat b{color:var(--brass)}
+  .cap{font-family:var(--util);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--ink3);margin-top:10px;margin-bottom:30px}
+  .ask li{margin-bottom:12px;color:var(--ink2)} .ask li b{color:var(--ink)}
+  footer{padding-block:44px 70px;border-top:1px solid var(--rule);font-family:var(--util);
+    font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)}
+  .pscroll{overflow-x:auto;border:1px solid var(--rule2)}
+  .panel{min-width:940px;height:500px;position:relative;overflow:hidden}
+
+  /* films de référence */
+  .refs{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:30px;border-top:1px solid var(--rule)}
+  .refs>div{padding:22px 24px 20px 0;border-right:1px solid var(--rule)}
+  .refs>div+div{padding-left:24px} .refs>div:last-child{border-right:0}
+  .refs h4{font-family:var(--util);font-weight:900;font-size:1.02rem;margin:0 0 3px;letter-spacing:-.01em}
+  .refs .yr{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--ink3);margin-bottom:12px}
+  .refs ul{margin:0;padding-left:15px;font-size:.95rem;color:var(--ink2);line-height:1.6}
+  .refs li{margin-bottom:6px} .refs li b{color:var(--ink);font-weight:600}
+
+  /* jetons */
+  .tok{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:1px;
+    background:var(--rule);border:1px solid var(--rule);margin-top:26px}
+  .tok div{background:var(--ground);padding:14px 16px 13px}
+  .tok .sw{height:40px;border-radius:2px;margin-bottom:10px;border:1px solid rgba(255,255,255,.1)}
+  .tok .nm{font-family:var(--util);font-weight:700;font-size:12px;letter-spacing:.06em}
+  .tok .hx{font-family:var(--mono);font-size:10.5px;color:var(--ink3);margin-top:3px}
+  .tok .us{font-size:.88rem;color:var(--ink2);margin-top:7px;line-height:1.45}
+
+  /* vocabulaire */
+  .tbl-s{overflow-x:auto;margin-top:26px}
+  table.vo{border-collapse:collapse;width:100%;min-width:640px;font-size:.95rem}
+  table.vo th{font-family:var(--util);font-size:10px;font-weight:700;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--ink3);text-align:left;padding:0 16px 10px 0;
+    border-bottom:1px solid var(--rule2)}
+  table.vo td{padding:9px 16px 9px 0;border-bottom:1px solid var(--rule);color:var(--ink2)}
+  table.vo td:first-child{color:var(--ink3);font-family:var(--mono);font-size:11.5px;white-space:nowrap}
+  table.vo td:nth-child(2){font-family:var(--util);font-weight:900;color:var(--brass);
+    letter-spacing:.05em;white-space:nowrap}
+  pre{background:var(--ground2);border:1px solid var(--rule);padding:18px 20px;overflow-x:auto;
+    font-family:var(--mono);font-size:12px;line-height:1.75;color:#BCC9D6;margin-top:24px}
+  pre .c{color:#5E6B78} pre .k{color:var(--brass)} pre .v{color:var(--teal)}
+
+  /* ==================================================================
+     THÈME ACTION — jetons
+     ================================================================== */
+  .AX{
+    --bg:#090C11; --s1:#0F141A; --s2:#161D25; --s3:#1E2731;
+    --line:rgba(232,237,242,.12); --line2:rgba(232,237,242,.26);
+    --ink:#E8EDF2; --dim:#8B99A7; --dim2:#5A6773;
+    --hot:#FF6B1F; --hoti:#0B0E12; --cold:#17A2C9; --blood:#C2201C; --ok:#5FBF8B;
+    --sodium:#FFA23D;
+    color:var(--ink);font-family:"Archivo",sans-serif;
+    background:
+      radial-gradient(52% 44% at 82% 6%,rgba(255,107,31,.14),transparent 62%),
+      radial-gradient(46% 40% at 8% 92%,rgba(23,162,201,.12),transparent 64%),
+      linear-gradient(180deg,#0B1016,#070A0E);
+    cursor:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30'%3E%3Cg stroke='%23FF6B1F' stroke-width='1.8' fill='none'%3E%3Ccircle cx='15' cy='15' r='9.5'/%3E%3Cpath d='M15 1v7M15 22v7M1 15h7M22 15h7'/%3E%3C/g%3E%3Ccircle cx='15' cy='15' r='1.5' fill='%23FF6B1F'/%3E%3C/svg%3E") 15 15, crosshair;
+  }
+  .AX *{box-sizing:border-box}
+  /* textures */
+  .AX .haze{position:absolute;inset:0;pointer-events:none;
+    background:repeating-linear-gradient(104deg,rgba(255,162,61,.035) 0 2px,transparent 2px 13px)}
+  .AX .grit{position:absolute;inset:0;pointer-events:none;opacity:.5;
+    background:radial-gradient(rgba(232,237,242,.05) .9px,transparent 1.1px) 0 0/4px 4px}
+  /* rivets */
+  .riv{position:relative}
+  .riv::before,.riv::after{content:"";position:absolute;width:6px;height:6px;border-radius:50%;
+    background:radial-gradient(circle at 34% 30%,#C6D0DA,#6A757F 58%,#232C34);top:7px}
+  .riv::before{left:7px} .riv::after{right:7px}
+  .riv>.rv{position:absolute;bottom:7px;width:6px;height:6px;border-radius:50%;
+    background:radial-gradient(circle at 34% 30%,#C6D0DA,#6A757F 58%,#232C34)}
+  .riv>.rv.l{left:7px} .riv>.rv.r{right:7px}
+  /* chrome */
+  .chrome{background:linear-gradient(176deg,#FFFFFF 0%,#A9B4BD 34%,#F2F5F7 48%,#7C8992 64%,#E4E9ED 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(3px 0 0 rgba(255,107,31,.45)) drop-shadow(0 2px 3px rgba(0,0,0,.7))}
+  /* verre brisé */
+  .crack{position:absolute;pointer-events:none;z-index:6}
+  .crack i{position:absolute;left:0;top:0;height:1px;transform-origin:0 50%;
+    background:linear-gradient(90deg,rgba(255,255,255,.7),rgba(255,255,255,.05))}
+  .crack .hub{position:absolute;left:-4px;top:-4px;width:9px;height:9px;border-radius:50%;
+    background:radial-gradient(circle,#fff,rgba(255,255,255,.1) 70%,transparent)}
+  /* primitives */
+  .a-nav{display:flex;align-items:center;gap:20px;padding:0 24px;height:46px;
+    border-bottom:2px solid var(--hot);background:rgba(9,12,17,.88);position:relative;z-index:5}
+  .a-mk{flex:none;font-family:"Saira Condensed",sans-serif;font-weight:900;font-size:19px;font-style:italic;
+    letter-spacing:.03em;text-transform:uppercase;white-space:nowrap}
+  .a-lk{display:flex;gap:11px;font-family:"Saira Condensed",sans-serif;font-weight:700;font-size:11px;
+    letter-spacing:.07em;text-transform:uppercase;color:#6E7C89;white-space:nowrap;min-width:0;
+    flex:0 1 auto}
+  .a-lk>span{white-space:nowrap}
+  .a-nav{white-space:nowrap}
+  .a-lk .on{color:var(--hot)}
+  .a-rt{margin-left:auto;padding-left:18px;flex:none;font-family:"JetBrains Mono",monospace;
+    font-size:10px;letter-spacing:.16em;color:#6E7C89;white-space:nowrap}
+  .a-scan{display:flex;align-items:center;gap:10px;padding:5px 24px;background:#060A0E;
+    border-bottom:1px solid var(--line);font-family:"JetBrains Mono",monospace;font-size:10px;
+    letter-spacing:.1em;color:#5E6B78;position:relative;z-index:5}
+  .a-scan b{color:var(--cold);font-weight:400}
+  .a-scan .led{width:6px;height:6px;border-radius:50%;background:var(--hot);flex:none}
+  /* rail d'étages */
+  .a-rail{position:absolute;left:0;top:76px;bottom:0;width:56px;z-index:5;
+    border-right:1px solid var(--line);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:4px;background:rgba(6,9,13,.6)}
+  .a-rail b{font-family:"JetBrains Mono",monospace;font-size:10px;color:#3D4954;font-weight:400}
+  .a-rail b.on{color:var(--hot);font-weight:700}
+  .a-rail .cap{font-family:"JetBrains Mono",monospace;font-size:8px;letter-spacing:.14em;
+    color:#3D4954;margin-top:10px;writing-mode:vertical-rl;transform:rotate(180deg)}
+  /* boutons */
+  .a-b1{display:inline-block;font-family:"Saira Condensed",sans-serif;font-weight:900;font-size:15px;
+    letter-spacing:.12em;text-transform:uppercase;background:var(--hot);color:var(--hoti);
+    padding:11px 24px;transform:skewX(-11deg);border:0;cursor:pointer}
+  .a-b1>span{display:block;transform:skewX(11deg)}
+  .a-b2{display:inline-block;font-family:"Saira Condensed",sans-serif;font-weight:700;font-size:15px;
+    letter-spacing:.12em;text-transform:uppercase;color:var(--ink);padding:11px 22px;
+    border:1px solid var(--line2);transform:skewX(-11deg)}
+  .a-b2>span{display:block;transform:skewX(11deg)}
+  .a-b3{display:inline-block;font-family:"Saira Condensed",sans-serif;font-weight:900;font-size:15px;
+    letter-spacing:.12em;text-transform:uppercase;color:var(--blood);padding:11px 22px;
+    border:1px solid rgba(194,32,28,.6);background:rgba(194,32,28,.12);transform:skewX(-11deg)}
+  .a-b3>span{display:block;transform:skewX(11deg)}
+  /* jauge */
+  .a-gauge{display:flex;gap:2px;height:11px}
+  .a-gauge i{flex:1;background:#1B232B;transform:skewX(-14deg)}
+  .a-gauge i.f{background:linear-gradient(180deg,var(--sodium),var(--hot))}
+  .a-gl{display:flex;justify-content:space-between;font-family:"JetBrains Mono",monospace;
+    font-size:9.5px;letter-spacing:.14em;color:#5E6B78;margin-bottom:6px}
+  .a-gl b{color:var(--hot);font-weight:400}
+  /* affiche */
+  .a-po{position:relative;overflow:hidden;filter:saturate(1.15) contrast(1.1)}
+  .a-po::after{content:"";position:absolute;inset:0;
+    background:linear-gradient(200deg,rgba(255,107,31,.17),transparent 48%,rgba(23,162,201,.19))}
+  .a-po b{position:absolute;left:6px;right:6px;bottom:5px;font-family:"Saira Condensed",sans-serif;
+    font-weight:700;font-size:11px;letter-spacing:.03em;text-transform:uppercase;color:#fff;
+    text-shadow:0 1px 3px rgba(0,0,0,.95);line-height:1.1;overflow-wrap:anywhere}
+  /* panneau rivé */
+  .a-pan{background:linear-gradient(176deg,rgba(22,29,37,.94),rgba(12,17,22,.94));
+    border:1px solid var(--line2);padding:18px 20px}
+  /* étiquettes */
+  .a-lb{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.2em;color:#5E6B78}
+  .a-hd{font-family:"Saira Condensed",sans-serif;font-weight:900;font-size:26px;font-style:italic;
+    text-transform:uppercase;letter-spacing:.01em;line-height:1}
+  .a-tag{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:9.5px;
+    letter-spacing:.12em;color:var(--cold);border:1px solid rgba(23,162,201,.5);padding:3px 7px}
+  .a-tag.h{color:var(--hot);border-color:rgba(255,107,31,.55)}
+
+  /* ---------- ÉCRAN A : ACCUEIL ---------- */
+  .SA .hero{position:absolute;left:56px;right:0;top:76px;height:266px;overflow:hidden}
+  .SA .bd{position:absolute;inset:0;
+    background:linear-gradient(112deg,#7A3A10 0%,#241207 42%,#0A1620 74%,#071019 100%)}
+  .SA .bdg{position:absolute;inset:0;background:
+    radial-gradient(40% 70% at 16% 84%,rgba(255,107,31,.4),transparent 62%),
+    radial-gradient(44% 70% at 88% 18%,rgba(23,162,201,.32),transparent 60%)}
+  .SA .bdb{position:absolute;inset:0;
+    background:repeating-linear-gradient(97deg,rgba(0,0,0,.32) 0 2px,transparent 2px 7px)}
+  .SA .fade{position:absolute;inset:0;background:linear-gradient(0deg,#090C11 2%,rgba(9,12,17,.4) 40%,transparent 72%)}
+  .SA .hc{position:absolute;left:26px;bottom:20px;right:300px;z-index:3}
+  .SA .big{font-family:"Saira Condensed",sans-serif;font-weight:900;font-style:italic;font-size:62px;
+    line-height:.86;text-transform:uppercase;letter-spacing:-.005em;margin-bottom:9px}
+  .SA .sub{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.18em;color:#A8B4BF}
+  .SA .timer{position:absolute;right:24px;bottom:20px;z-index:3;text-align:right}
+  .SA .timer .t{font-family:"JetBrains Mono",monospace;font-weight:700;font-size:38px;
+    color:var(--hot);line-height:1;letter-spacing:-.02em}
+  .SA .timer .l{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.2em;
+    color:#5E6B78;margin-top:6px}
+  .SA .body{position:absolute;left:56px;right:0;top:342px;bottom:0;display:grid;
+    grid-template-columns:minmax(0,1fr) 300px;z-index:4}
+  .SA .bl{padding:16px 22px;border-right:1px solid var(--line)}
+  .SA .br{padding:16px 20px}
+  .SA .row{display:flex;gap:10px;margin-top:11px}
+  .SA .row .a-po{width:72px;aspect-ratio:2/3}
+  .SA .row .a-po b{font-size:8.5px;letter-spacing:-.01em;left:5px;right:4px}
+  .SA .logl{display:flex;gap:9px;font-family:"JetBrains Mono",monospace;font-size:10.5px;
+    color:#8B99A7;padding:4px 0;border-bottom:1px solid rgba(232,237,242,.06)}
+  .SA .logl b{color:var(--ink);font-weight:400} .SA .logl .tm{color:var(--cold)}
+  .SA .logl .hot{color:var(--hot)}
+
+  /* ---------- ÉCRAN B : FILMS ---------- */
+  .SB .pg{position:absolute;left:56px;right:0;top:76px;bottom:0;padding:16px 22px;z-index:4;overflow:hidden}
+  .AX .ttl{font-family:"Saira Condensed",sans-serif;font-weight:900;font-style:italic;font-size:44px;
+    text-transform:uppercase;line-height:1.12;padding-top:.06em}
+  .SB .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:14px 0 12px}
+  .SB .kpi .v{font-family:"Saira Condensed",sans-serif;font-weight:900;font-size:30px;
+    color:var(--hot);line-height:1}
+  .SB .fl{display:flex;gap:8px;margin:12px 0 14px;flex-wrap:wrap}
+  .SB .fi{font-family:"Saira Condensed",sans-serif;font-weight:700;font-size:13px;letter-spacing:.1em;
+    text-transform:uppercase;color:#8B99A7;border:1px solid var(--line2);padding:7px 12px;transform:skewX(-11deg)}
+  .SB .fi>span{display:block;transform:skewX(11deg)}
+  .SB .fi.on{color:var(--hot);border-color:var(--hot);background:rgba(255,107,31,.1)}
+  .SB .fi.w{flex:1;max-width:260px;color:#5E6B78}
+  .SB .grid{display:grid;grid-template-columns:repeat(9,1fr);gap:11px}
+  .SB .cd .a-po{aspect-ratio:2/3;border:1px solid var(--line)}
+  .SB .cd .ck{position:absolute;top:4px;right:4px;width:17px;height:17px;background:var(--hot);
+    color:var(--hoti);display:flex;align-items:center;justify-content:center;font-size:11px;
+    font-weight:900;z-index:3}
+  .SB .cd .wk{position:absolute;top:0;left:0;right:0;background:var(--hot);color:var(--hoti);
+    font-family:"Saira Condensed",sans-serif;font-weight:900;font-size:8.5px;letter-spacing:.1em;
+    text-align:center;padding:2px;z-index:3}
+  .SB .cd .m{display:flex;justify-content:space-between;margin-top:5px;
+    font-family:"JetBrains Mono",monospace;font-size:9px;color:#5E6B78}
+  .SB .cd .m em{font-style:normal;color:var(--hot)}
+
+  /* ---------- ÉCRAN C : FICHE FILM (MODALE) ---------- */
+  .SC .dim{position:absolute;inset:0;background:rgba(4,6,9,.82);z-index:6}
+  .SC .mod{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:720px;z-index:7;
+    background:linear-gradient(176deg,#161D25,#0C1116);border:1px solid var(--line2);
+    box-shadow:0 30px 70px rgba(0,0,0,.8)}
+  .SC .mh{display:flex;align-items:center;gap:12px;padding:10px 18px;background:var(--hot);color:var(--hoti);
+    font-family:"Saira Condensed",sans-serif;font-weight:900;font-size:13px;letter-spacing:.14em;text-transform:uppercase}
+  .SC .mh .x{margin-left:auto;font-size:16px}
+  .SC .mb{display:grid;grid-template-columns:168px minmax(0,1fr);gap:20px;padding:20px}
+  .SC .mb .a-po{width:168px;aspect-ratio:2/3}
+  .SC h4{font-family:"Saira Condensed",sans-serif;font-weight:900;font-style:italic;font-size:32px;
+    text-transform:uppercase;line-height:1;margin:0 0 6px}
+  .SC .meta{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.14em;color:#8B99A7;margin-bottom:12px}
+  .SC .syn{font-family:"Newsreader",serif;font-size:14.5px;line-height:1.55;color:#A8B4BF;margin-bottom:14px}
+  .SC .stars{display:flex;gap:3px;margin-bottom:14px}
+  .SC .stars i{width:20px;height:20px;background:#1B232B;transform:skewX(-14deg)}
+  .SC .stars i.f{background:var(--hot)}
+  .SC .acts{display:flex;gap:9px;flex-wrap:wrap}
+  .SC .tabs{display:flex;gap:0;border-top:1px solid var(--line);margin-top:4px}
+  .SC .tabs span{flex:1;text-align:center;padding:9px 0;font-family:"Saira Condensed",sans-serif;
+    font-weight:700;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#5E6B78;
+    border-right:1px solid var(--line)}
+  .SC .tabs span:last-child{border-right:0}
+  .SC .tabs span.on{color:var(--hot);border-bottom:2px solid var(--hot)}
+
+  /* ---------- ÉCRAN D : DUEL ---------- */
+  .SD .wrapd{position:absolute;left:56px;right:0;top:76px;bottom:0;z-index:4;padding:18px 24px}
+  .SD .vs{display:grid;grid-template-columns:1fr 186px 1fr;align-items:center;margin-top:10px}
+  .SD .side{text-align:center}
+  .SD .side .a-po{width:150px;aspect-ratio:2/3;margin:0 auto 12px;border:2px solid var(--line2)}
+  .SD .side.win .a-po{border-color:var(--hot);box-shadow:0 0 0 4px rgba(255,107,31,.18)}
+  .SD .side h5{font-family:"Saira Condensed",sans-serif;font-weight:900;font-style:italic;font-size:24px;
+    text-transform:uppercase;margin:0 0 5px}
+  .SD .pct{font-family:"JetBrains Mono",monospace;font-weight:700;font-size:30px;color:var(--hot);line-height:1}
+  .SD .pct.c{color:var(--cold)}
+  .SD .mid{text-align:center;padding:0 6px}
+  .SD .mid .stake{border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+    padding:9px 0;margin-top:12px}
+  .SD .mid .stake .k{font-family:"JetBrains Mono",monospace;font-size:8.5px;letter-spacing:.2em;
+    color:#5E6B78;margin-bottom:3px}
+  .SD .mid .stake .v{font-family:"Saira Condensed",sans-serif;font-weight:900;font-style:italic;
+    font-size:15px;text-transform:uppercase;color:var(--ink);letter-spacing:.01em}
+  .SD .mid .stake+.stake{border-top:0;margin-top:0}
+  .SD .voters{display:flex;justify-content:center;gap:3px;margin-top:10px;flex-wrap:wrap}
+  .SD .voters u{width:17px;height:17px;background:#1B232B;border:1px solid var(--line2);
+    text-decoration:none;font-family:"JetBrains Mono",monospace;font-size:8px;color:#7E8C99;
+    display:flex;align-items:center;justify-content:center;transform:skewX(-11deg)}
+  .SD .voters u.h{border-color:var(--hot);color:var(--hot)}
+  .SD .voters u.c{border-color:var(--cold);color:var(--cold)}
+  .SD .feed{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 26px;margin-top:14px;
+    border-top:1px solid var(--line);padding-top:9px}
+  .SD .feed .fl{display:flex;gap:9px;font-family:"JetBrains Mono",monospace;font-size:10px;
+    color:#8B99A7;padding:3px 0}
+  .SD .feed .fl .tm{color:var(--cold)} .SD .feed .fl b{color:var(--ink);font-weight:400}
+  .SD .feed .fl em{font-style:normal;color:var(--hot)}
+  .SD .mid .x{font-family:"Saira Condensed",sans-serif;font-weight:900;font-style:italic;font-size:46px;
+    color:#2F3B46;line-height:1}
+  .SD .mid .t{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.16em;
+    color:var(--hot);margin-top:8px}
+  .SD .bars{margin-top:16px}
+  .SD .bar{height:16px;background:#141B22;position:relative;margin-bottom:9px;
+    clip-path:polygon(0 0,100% 0,calc(100% - 8px) 100%,0 100%)}
+  .SD .bar i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,var(--sodium),var(--hot))}
+  .SD .bar.c i{background:linear-gradient(90deg,#3FC6E8,var(--cold))}
+  .SD .bar b{position:absolute;left:10px;top:0;line-height:16px;font-family:"Saira Condensed",sans-serif;
+    font-weight:700;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:#0B0E12}
+
+  /* ---------- ÉCRAN E : CLASSEMENT ---------- */
+  .SE .pg{position:absolute;left:56px;right:0;top:76px;bottom:0;z-index:4;padding:16px 24px;overflow:hidden}
+  .SE .rows{margin-top:12px}
+  .SE .r{display:grid;grid-template-columns:52px 34px minmax(0,1fr) minmax(0,196px) 120px 96px 74px;gap:12px;
+    align-items:center;padding:9px 0;border-bottom:1px solid rgba(232,237,242,.07)}
+  .SE .r.me{background:rgba(255,107,31,.08);box-shadow:inset 3px 0 0 var(--hot);padding-left:10px;margin-left:-10px}
+  .SE .fl{font-family:"JetBrains Mono",monospace;font-size:10px;color:#5E6B78;letter-spacing:.1em}
+  .SE .lastf{display:flex;flex-direction:column;justify-content:center;min-width:0}
+  .SE .lastf b{font-family:"Saira Condensed",sans-serif;font-weight:700;font-size:12.5px;
+    letter-spacing:.04em;text-transform:uppercase;color:#A7B4C0;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis}
+  .SE .lastf em{font-style:normal;font-family:"JetBrains Mono",monospace;font-size:9px;
+    letter-spacing:.14em;color:#4E5A66;margin-top:2px}
+  .SE .r.me .fl{color:var(--hot)}
+  .SE .av{width:30px;height:30px;background:#1B232B;border:1px solid var(--line2);
+    display:flex;align-items:center;justify-content:center;font-family:"Saira Condensed",sans-serif;
+    font-weight:900;font-size:13px;color:var(--hot);transform:skewX(-11deg)}
+  .SE .av>span{display:block;transform:skewX(11deg)}
+  .SE .nm{font-family:"Saira Condensed",sans-serif;font-weight:700;font-size:17px;letter-spacing:.02em}
+  .SE .mini{display:flex;gap:1px;height:9px}
+  .SE .mini i{flex:1;background:#1B232B;transform:skewX(-14deg)}
+  .SE .mini i.f{background:var(--hot)}
+  .SE .ex{font-family:"JetBrains Mono",monospace;font-size:11px;color:#8B99A7;text-align:right}
+  .SE .hd{display:grid;grid-template-columns:52px 34px minmax(0,1fr) minmax(0,196px) 120px 96px 74px;gap:12px;
+    font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.18em;color:#4C5865;
+    padding-bottom:7px;border-bottom:1px solid var(--line2)}
+
+  /* ---------- ÉCRAN F : PROFIL ---------- */
+  .SF2 .pg{position:absolute;left:56px;right:0;top:76px;bottom:0;z-index:4;padding:16px 24px;
+    display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:22px}
+  .SF2 .twrap{display:flex;flex-direction:column;min-height:0}
+  .SF2 .tower{width:100%;flex:1;min-height:0;display:flex;flex-direction:column-reverse;gap:3px;justify-content:flex-start}
+  .SF2 .tower i{flex:1;min-height:13px;background:#1A222B;position:relative;
+    clip-path:polygon(0 0,100% 0,calc(100% - 10px) 100%,0 100%)}
+  .SF2 .tower i.f{background:linear-gradient(90deg,rgba(255,107,31,.85),rgba(255,162,61,.4))}
+  .SF2 .tower i.now{background:var(--hot);box-shadow:0 0 14px rgba(255,107,31,.7)}
+  .SF2 .tower i b{position:absolute;left:8px;top:0;line-height:13px;font-family:"JetBrains Mono",monospace;
+    font-size:8.5px;color:rgba(11,14,18,.8)}
+  .SF2 .idc{display:flex;gap:14px;align-items:center;margin-bottom:14px}
+  .SF2 .idc .av{width:62px;height:62px;background:#1B232B;border:1px solid var(--line2);
+    display:flex;align-items:center;justify-content:center;font-family:"Saira Condensed",sans-serif;
+    font-weight:900;font-size:26px;color:var(--hot);transform:skewX(-11deg)}
+  .SF2 .idc .av>span{display:block;transform:skewX(11deg)}
+  .SF2 .idc h4{font-family:"Saira Condensed",sans-serif;font-weight:900;font-style:italic;font-size:27px;
+    text-transform:uppercase;margin:0}
+  .SF2 .plates{display:grid;grid-template-columns:repeat(6,52px);gap:8px;margin-top:10px}
+  .SF2 .pl{height:34px;background:linear-gradient(176deg,#2B333D,#1A222A);
+    border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;
+    font-family:"JetBrains Mono",monospace;font-size:9px;color:#5E6B78}
+  .SF2 .pl.got{border-color:var(--hot);color:var(--hot);background:rgba(255,107,31,.1)}
+  .SF2 .st{display:flex;justify-content:space-between;font-family:"JetBrains Mono",monospace;
+    font-size:10.5px;color:#8B99A7;padding:5px 0;border-bottom:1px solid rgba(232,237,242,.07)}
+  .SF2 .st b{color:var(--ink);font-weight:400}
+
+  /* ---------- ÉCRAN G : FORUM ---------- */
+  .SG .pg{position:absolute;left:56px;right:0;top:76px;bottom:0;z-index:4;padding:16px 24px;overflow:hidden}
+  .SG .ch{display:grid;grid-template-columns:76px minmax(0,1fr) 120px 74px;gap:14px;align-items:center;
+    padding:11px 0;border-bottom:1px solid rgba(232,237,242,.07)}
+  .SG .fq{font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--cold);letter-spacing:.06em}
+  .SG .ch.live .fq{color:var(--hot)}
+  .SG .tt{font-family:"Saira Condensed",sans-serif;font-weight:700;font-size:17px}
+  .SG .ds{font-family:"JetBrains Mono",monospace;font-size:9.5px;color:#5E6B78;margin-top:2px}
+  .SG .lm{font-family:"Newsreader",Georgia,serif;font-size:13px;color:#7E8C99;margin-top:5px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .SG .lm b{color:#A7B4C0;font-weight:600;font-family:"Saira Condensed",sans-serif;
+    text-transform:uppercase;letter-spacing:.05em;font-size:11.5px;margin-right:6px}
+  .SG .bars{display:flex;gap:2px;align-items:flex-end;height:16px}
+  .SG .bars i{flex:1;background:var(--cold);opacity:.55}
+  .SG .ch.live .bars i{background:var(--hot);opacity:.85}
+  .SG .cnt{font-family:"JetBrains Mono",monospace;font-size:11px;color:#8B99A7;text-align:right}
+
+  /* ---------- COMPOSANTS ---------- */
+  .CP{padding:26px 26px 30px;position:relative}
+  .CP .cg{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:22px;position:relative;z-index:3}
+  .CP .cl{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.2em;color:#5E6B78;
+    margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid rgba(232,237,242,.1)}
+  .CP .stack{display:flex;flex-direction:column;gap:9px;align-items:flex-start}
+  .CP .fld{width:100%;background:#0D1319;border:1px solid var(--line2);padding:9px 11px;
+    font-family:"JetBrains Mono",monospace;font-size:11.5px;color:#5E6B78}
+  .CP .fld.on{border-color:var(--hot);color:var(--ink)}
+  .CP .toast,.SR .toast{display:flex;align-items:center;gap:10px;background:#111820;border-left:3px solid var(--hot);
+    padding:10px 13px;font-family:"Saira Condensed",sans-serif;font-weight:700;font-size:14px;
+    letter-spacing:.06em;text-transform:uppercase;width:100%;white-space:nowrap}
+  .CP .toast.err,.SR .toast.err{border-left-color:var(--blood)}
+  .CP .toast .g,.SR .toast .g{white-space:nowrap}
+  .CP .toast .g,.SR .toast .g{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--hot);font-weight:400}
+  .CP .empty{border:1px dashed var(--line2);padding:18px;text-align:center;width:100%}
+  .CP .empty .e1{font-family:"Saira Condensed",sans-serif;font-weight:900;font-size:16px;
+    text-transform:uppercase;color:#5E6B78}
+  .CP .empty .e2{font-family:"JetBrains Mono",monospace;font-size:10px;color:#3D4954;margin-top:5px}
+  .CP .pag{display:flex;gap:5px}
+  .CP .pag i{width:26px;height:26px;display:flex;align-items:center;justify-content:center;
+    border:1px solid var(--line2);font-family:"JetBrains Mono",monospace;font-size:11px;
+    color:#8B99A7;font-style:normal;transform:skewX(-11deg)}
+  .CP .pag i.on{background:var(--hot);color:var(--hoti);border-color:var(--hot)}
+  .CP .chips{display:flex;gap:6px;flex-wrap:wrap}
+
+  @media (prefers-reduced-motion:reduce){*{animation:none!important}}
+  @media (max-width:640px){body{font-size:16px} section{padding-block:40px}
+    .refs{grid-template-columns:1fr} .refs>div{border-right:0;border-bottom:1px solid var(--rule);padding-left:0!important}}
+
+  /* ---------- ÉCRAN H : L'OPÉRATION (la semaine) ---------- */
+  .SH .pg{position:absolute;left:56px;right:0;top:76px;bottom:0;z-index:4;padding:16px 24px;overflow:hidden;
+    display:grid;grid-template-columns:minmax(0,1fr) 236px;gap:22px}
+  .SH .plan{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-top:14px}
+  .SH .j{background:#10161C;border:1px solid var(--line);min-height:142px;padding:7px 7px 9px;position:relative}
+  .SH .j .d{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.16em;color:#5E6B78}
+  .SH .j .n{font-family:"Saira Condensed",sans-serif;font-weight:900;font-style:italic;font-size:20px;
+    line-height:1;color:#3A4652;margin-top:2px}
+  .SH .j.now{border-color:var(--line2);background:#141C24}
+  .SH .j.now .n{color:var(--ink)}
+  .SH .ev{margin-top:9px;padding:6px 7px;font-family:"JetBrains Mono",monospace;font-size:9px;
+    letter-spacing:.06em;line-height:1.45;clip-path:polygon(0 0,100% 0,calc(100% - 6px) 100%,0 100%)}
+  .SH .ev b{display:block;font-family:"Saira Condensed",sans-serif;font-weight:900;font-style:italic;
+    font-size:11.5px;letter-spacing:0;text-transform:uppercase;line-height:1.05;margin-top:2px;
+    overflow-wrap:anywhere}
+  .SH .ev.h{background:var(--hot);color:#2A1206} .SH .ev.h b{color:#0B0E12}
+  .SH .ev.c{background:rgba(23,162,201,.16);color:var(--cold);border-left:2px solid var(--cold)}
+  .SH .ev.c b{color:#BDE9F5}
+  .SH .ev.g{background:#1B232B;color:#8B99A7}
+  .SH .ph{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-top:16px}
+  .SH .ph>div{background:#10161C;border:1px solid var(--line);padding:9px 11px}
+  .SH .ph .k{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.18em;color:#5E6B78}
+  .SH .ph .v{font-family:"Saira Condensed",sans-serif;font-weight:900;font-style:italic;font-size:18px;
+    text-transform:uppercase;color:#3A4652;margin-top:3px}
+  .SH .ph>.on{border-color:var(--hot);background:rgba(255,107,31,.08)}
+  .SH .ph .on .v{color:var(--hot)} .SH .ph .ok .v{color:#8B99A7}
+  .SH .obj .o{display:grid;grid-template-columns:14px minmax(0,1fr) auto;gap:9px;align-items:baseline;
+    padding:7px 0;border-bottom:1px solid var(--line);font-family:"JetBrains Mono",monospace;font-size:10.5px;color:#A8B4BF}
+  .SH .obj .o i{width:10px;height:10px;border:1.5px solid var(--line2);transform:skewX(-11deg)}
+  .SH .obj .o.f i{background:var(--hot);border-color:var(--hot)}
+  .SH .obj .o.f span{color:#5E6B78;text-decoration:line-through}
+  .SH .obj .o b{color:var(--hot);font-weight:400}
+  .SH .res{display:flex;gap:7px;margin-top:9px}
+  .SH .res .a-po{width:52px;aspect-ratio:2/3}
+  .SH .res .a-po b{font-size:7px;left:4px;right:3px;bottom:4px;letter-spacing:-.01em}
+
+  /* ---------- ÉCRAN I : L'ÉQUIPE (les marathoniens) ---------- */
+  .SI .pg{position:absolute;left:56px;right:0;top:76px;bottom:0;z-index:4;padding:16px 24px;overflow:hidden}
+  .SI .flt{display:flex;gap:7px;margin-top:12px}
+  .SI .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}
+  .SI .bd{background:linear-gradient(176deg,#141B22,#0E1318);border:1px solid var(--line);padding:11px 12px 10px;
+    position:relative;display:grid;grid-template-columns:40px minmax(0,1fr);gap:11px;align-items:center}
+  .SI .bd.me{border-color:var(--hot);box-shadow:inset 3px 0 0 var(--hot)}
+  .SI .bd .av{width:40px;height:40px;background:#1B232B;border:1px solid var(--line2);display:flex;
+    align-items:center;justify-content:center;transform:skewX(-11deg);font-family:"Saira Condensed",sans-serif;
+    font-weight:900;font-style:italic;font-size:19px;color:var(--hot)}
+  .SI .bd .av>span{display:block;transform:skewX(11deg)}
+  .SI .bd .nm{font-family:"Saira Condensed",sans-serif;font-weight:900;font-style:italic;font-size:17px;
+    text-transform:uppercase;line-height:1;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .SI .bd .mt{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.12em;color:#5E6B78;margin-top:4px}
+  .SI .bd .st{display:flex;align-items:center;gap:6px;font-family:"JetBrains Mono",monospace;font-size:9px;
+    letter-spacing:.08em;color:#8B99A7;margin-top:5px}
+  .SI .bd .st i{width:6px;height:6px;border-radius:50%;background:#3A4652}
+  .SI .bd .st.on i{background:var(--hot);box-shadow:0 0 6px rgba(255,107,31,.8)}
+  .SI .bd .st.on{color:var(--hot)}
+  .SI .bd .la{font-family:"JetBrains Mono",monospace;font-size:9px;color:#5E6B78;margin-top:2px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .SI .bd .nm{padding-right:36px}
+  .SI .bd .et{position:absolute;right:9px;top:8px;font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--cold)}
+  .SI .pied{display:flex;justify-content:space-between;align-items:center;margin-top:14px;
+    font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.12em;color:#5E6B78}
+
+  /* barre : catégories et compte */
+  .a-lk i{font-style:normal;font-size:8px;margin-left:3px;opacity:.7}
+  .a-acc{display:flex;align-items:center;gap:8px;margin-left:14px;flex:none}
+  .a-acc i{font-style:normal;font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--hoti);
+    background:var(--hot);padding:1px 5px;transform:skewX(-11deg)}
+  .a-acc b{width:24px;height:24px;display:flex;align-items:center;justify-content:center;background:#1B232B;
+    border:1px solid var(--line2);transform:skewX(-11deg);font-family:"Saira Condensed",sans-serif;
+    font-weight:900;font-style:italic;font-size:13px;color:var(--hot)}
+  .AX .pgx{position:absolute;left:56px;right:0;top:76px;bottom:0;z-index:4;padding:16px 24px;overflow:hidden}
+  .AX .onglets{display:flex;gap:6px;margin-top:12px}
+  .AX .onglets span{font-family:"Saira Condensed",sans-serif;font-weight:700;font-size:13px;letter-spacing:.1em;
+    text-transform:uppercase;color:#6E7C89;padding:6px 14px;border:1px solid var(--line);transform:skewX(-11deg)}
+  .AX .onglets span.on{color:var(--hoti);background:var(--hot);border-color:var(--hot)}
+  .AX .onglets span em{font-style:normal;font-family:"JetBrains Mono",monospace;font-size:8.5px;color:var(--cold);margin-left:6px}
+  .AX .onglets span.on em{color:#3A1A08}
+  .AX .orig{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.06em;color:#4E5A66;margin-top:2px}
+
+  /* J : la navigation dépliée */
+  .SJ .menus{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:14px}
+  .SJ .mn{background:#0E1318;border:1px solid var(--line2);border-top:3px solid var(--hot)}
+  .SJ .mn .hd{font-family:"Saira Condensed",sans-serif;font-weight:900;font-style:italic;font-size:19px;
+    text-transform:uppercase;padding:10px 12px 8px;border-bottom:1px solid var(--line)}
+  .SJ .mn .hd small{display:block;font-family:"JetBrains Mono",monospace;font-style:normal;font-weight:400;
+    font-size:9px;letter-spacing:.14em;color:#5E6B78;margin-top:3px}
+  .SJ .it{padding:8px 12px;border-bottom:1px solid rgba(232,237,242,.06)}
+  .SJ .it b{font-family:"Saira Condensed",sans-serif;font-weight:700;font-size:14px;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--ink)}
+  .SJ .it .tg{font-family:"JetBrains Mono",monospace;font-size:8.5px;color:var(--cold);margin-left:6px}
+  .SJ .it.lock b{color:#4E5A66} .SJ .it.lock .tg{color:#5E6B78}
+  .SJ .it .bd{font-style:normal;font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--hoti);
+    background:var(--hot);padding:0 4px;margin-left:6px}
+  .SJ .hors{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px}
+  .SJ .hors>div{border:1px solid var(--line);padding:10px 12px;background:rgba(14,19,24,.7)}
+
+  /* K : les relevés (classement des films) */
+  .SK .t{margin-top:12px;border-top:1px solid var(--line2)}
+  .SK .r{display:grid;grid-template-columns:40px 26px minmax(0,1fr) 150px 70px 64px;gap:14px;align-items:center;
+    padding:4px 0;border-bottom:1px solid var(--line)}
+  .SK .r.h{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.16em;color:#5E6B78;padding:8px 0}
+  .SK .r .rk{font-family:"Saira Condensed",sans-serif;font-weight:900;font-style:italic;font-size:20px;color:#3A4652}
+  .SK .r:nth-child(2) .rk,.SK .r:nth-child(3) .rk,.SK .r:nth-child(4) .rk{color:var(--hot)}
+  .SK .r .a-po{width:26px;aspect-ratio:2/3}
+  .SK .r .a-po::after{display:none}
+  .SK .r .ti{font-family:"Saira Condensed",sans-serif;font-weight:900;font-style:italic;font-size:16px;
+    text-transform:uppercase;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .SK .r .ti small{display:block;font-family:"JetBrains Mono",monospace;font-style:normal;font-weight:400;
+    font-size:9px;letter-spacing:.1em;color:#5E6B78;margin-top:2px}
+  .SK .r .no{font-family:"JetBrains Mono",monospace;font-size:14px;color:var(--hot);text-align:right}
+  .SK .r .nb{font-family:"JetBrains Mono",monospace;font-size:10px;color:#8B99A7;text-align:right}
+
+  /* L : l'entraînement (rattrapages cinéma, par niveau) */
+  .SL .niv{display:grid;grid-template-columns:200px minmax(0,1fr);gap:18px;align-items:center;padding:12px 0;
+    border-bottom:1px solid var(--line)}
+  .SL .niv .nm{font-family:"Saira Condensed",sans-serif;font-weight:900;font-style:italic;font-size:24px;
+    text-transform:uppercase;line-height:1;color:var(--ink)}
+  .SL .niv .row{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px}
+  .SL .niv .a-po{aspect-ratio:2/3}
+  .SL .niv .a-po b{font-size:8px;left:4px;right:3px;bottom:4px;letter-spacing:-.01em}
+  .SL .niv .a-po .ok{position:absolute;right:3px;top:3px;z-index:2;background:var(--hot);color:var(--hoti);
+    font-size:9px;font-weight:900;padding:0 3px;font-family:"JetBrains Mono",monospace}
+  .SL .niv.lock .a-po{filter:grayscale(1) brightness(.45)}
+
+  /* M : repérages (watchlists) */
+  .SM .z{display:grid;grid-template-columns:250px minmax(0,1fr);gap:20px;margin-top:14px}
+  .SM .ls .l{padding:10px 12px;border:1px solid var(--line);margin-bottom:6px;background:#0E1318}
+  .SM .ls .l.on{border-color:var(--hot);box-shadow:inset 3px 0 0 var(--hot)}
+  .SM .ls .l b{font-family:"Saira Condensed",sans-serif;font-weight:900;font-style:italic;font-size:16px;
+    text-transform:uppercase;color:var(--ink)}
+  .SM .ls .l .m{display:flex;justify-content:space-between;font-family:"JetBrains Mono",monospace;font-size:9px;
+    letter-spacing:.1em;color:#5E6B78;margin-top:4px}
+  .SM .ls .l .m .pub{color:var(--cold)}
+  .SM .gr{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-top:10px}
+  .SM .gr .a-po{aspect-ratio:2/3}
+  .SM .gr .a-po b{font-size:9px}
+  .SM .gr .a-po .ok{position:absolute;right:3px;top:3px;z-index:2;background:var(--hot);color:var(--hoti);
+    font-size:9px;font-weight:900;padding:0 3px;font-family:"JetBrains Mono",monospace}
+  .SM .act{display:flex;gap:10px;align-items:center}
+
+  /* N : transmissions (messages) */
+  .SN .z{display:grid;grid-template-columns:260px minmax(0,1fr);gap:0;margin-top:12px;border:1px solid var(--line2);
+    height:calc(100% - 64px)}
+  .SN .cv{border-right:1px solid var(--line2);background:#0C1116}
+  .SN .cv .c{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;
+    border-bottom:1px solid var(--line)}
+  .SN .cv .c.on{background:#141C24;box-shadow:inset 3px 0 0 var(--hot)}
+  .SN .cv .c .av{width:30px;height:30px;background:#1B232B;border:1px solid var(--line2);display:flex;align-items:center;
+    justify-content:center;transform:skewX(-11deg);font-family:"Saira Condensed",sans-serif;font-weight:900;
+    font-style:italic;font-size:15px;color:var(--hot)}
+  .SN .cv .c b{font-family:"Saira Condensed",sans-serif;font-weight:700;font-size:14px;text-transform:uppercase;color:var(--ink)}
+  .SN .cv .c .x{font-family:"JetBrains Mono",monospace;font-size:9.5px;color:#5E6B78;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis}
+  .SN .cv .c .u{font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--hoti);background:var(--hot);padding:1px 5px}
+  .SN .th{display:flex;flex-direction:column;padding:12px 16px}
+  .SN .th .l{display:grid;grid-template-columns:60px 90px minmax(0,1fr);gap:10px;padding:6px 0;
+    font-family:"JetBrains Mono",monospace;font-size:11px;color:#A8B4BF;border-bottom:1px dashed rgba(232,237,242,.07)}
+  .SN .th .l .tm{color:var(--cold)} .SN .th .l .wh{color:var(--hot)} .SN .th .l.moi .wh{color:#8B99A7}
+  .SN .th .in{margin-top:auto;display:flex;gap:10px;align-items:center;border-top:1px solid var(--line2);padding-top:10px}
+  .SN .th .in .f{flex:1;border:1px solid var(--line2);padding:9px 12px;font-family:"JetBrains Mono",monospace;
+    font-size:11px;color:#5E6B78;background:#0C1116}
+
+  /* O : un canal (un sujet du forum) */
+  .SO .ps{margin-top:12px;border-top:1px solid var(--line2)}
+  .SO .p{display:grid;grid-template-columns:44px minmax(0,1fr);gap:14px;padding:12px 0;border-bottom:1px solid var(--line)}
+  .SO .p .av{width:40px;height:40px;background:#1B232B;border:1px solid var(--line2);display:flex;align-items:center;
+    justify-content:center;transform:skewX(-11deg);font-family:"Saira Condensed",sans-serif;font-weight:900;
+    font-style:italic;font-size:18px;color:var(--hot)}
+  .SO .p .h{display:flex;gap:10px;align-items:baseline;font-family:"JetBrains Mono",monospace;font-size:9.5px;
+    letter-spacing:.1em;color:#5E6B78}
+  .SO .p .h b{font-family:"Saira Condensed",sans-serif;font-weight:900;font-style:italic;font-size:15px;
+    letter-spacing:.02em;color:var(--ink);text-transform:uppercase}
+  .SO .p .h .sg{margin-left:auto;color:#5E6B78;text-decoration:underline;text-transform:none;letter-spacing:0}
+  .SO .p .tx{font-family:"Newsreader",Georgia,serif;font-size:14px;line-height:1.55;color:#C6D0DA;margin-top:4px}
+  .SO .rp{display:flex;gap:10px;align-items:center;margin-top:12px}
+  .SO .rp .f{flex:1;border:1px solid var(--line2);padding:10px 12px;font-family:"JetBrains Mono",monospace;
+    font-size:11px;color:#5E6B78;background:#0C1116}
+
+  /* P : dossiers classifiés (la galerie d'easter eggs) */
+  .SP .fam{margin-top:12px}
+  .SP .fam .fh{display:flex;align-items:baseline;gap:10px;font-family:"JetBrains Mono",monospace;font-size:9.5px;
+    letter-spacing:.16em;color:#5E6B78;border-bottom:1px solid var(--line);padding-bottom:5px}
+  .SP .fam .fh b{font-family:"Saira Condensed",sans-serif;font-weight:900;font-style:italic;font-size:15px;
+    letter-spacing:.04em;color:var(--ink)}
+  .SP .fam .fh .nw{color:var(--hot)}
+  .SP .cds{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:7px}
+  .SP .cd{border:1px solid var(--line);background:#0E1318;padding:7px 8px;min-height:44px}
+  .SP .cd b{display:block;font-family:"Saira Condensed",sans-serif;font-weight:700;font-size:12.5px;
+    text-transform:uppercase;color:var(--ink);line-height:1.1}
+  .SP .cd.ok{border-color:rgba(255,107,31,.5)}
+  .SP .cd.ok::before{content:"DÉCLASSIFIÉ";display:block;font-family:"JetBrains Mono",monospace;font-size:7.5px;
+    letter-spacing:.14em;color:var(--hot);margin-bottom:3px}
+  .SP .cd.no b{height:10px;background:#1E2731;margin-top:14px}
+  .SP .cd.no::before{content:"CLASSIFIÉ";display:block;font-family:"JetBrains Mono",monospace;font-size:7.5px;
+    letter-spacing:.14em;color:#4E5A66}
+
+  /* Q : prendre le poste (connexion) */
+  .SQ .z{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:30px;margin-top:10px}
+  .SQ .fd{margin-top:12px}
+  .SQ .fd label{display:block;font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.16em;color:#5E6B78;margin-bottom:5px}
+  .SQ .fd .f{border:1px solid var(--line2);padding:11px 13px;font-family:"JetBrains Mono",monospace;font-size:12px;
+    color:#8B99A7;background:#0C1116}
+  .SQ .fd .f.on{border-color:var(--hot);color:var(--ink)}
+  .SQ .cpt{border:1px solid var(--line2);background:#0C1116;padding:18px 18px 16px;text-align:center}
+  .SQ .cpt .n{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}
+  .SQ .cpt .n div{background:#141B22;border:1px solid var(--line);padding:10px 0 7px}
+  .SQ .cpt .n b{display:block;font-family:"JetBrains Mono",monospace;font-weight:700;font-size:28px;color:var(--hot);line-height:1}
+  .SQ .cpt .n span{font-family:"JetBrains Mono",monospace;font-size:8.5px;letter-spacing:.16em;color:#5E6B78}
+  .SQ .lg{margin-top:14px;font-family:"JetBrains Mono",monospace;font-size:9.5px;color:#5E6B78;text-align:center}
+  .SQ .lg u{color:#8B99A7}
+  .SL .niv .ds{font-family:"Newsreader",Georgia,serif;font-size:12px;line-height:1.4;color:#8B99A7;margin-top:6px}
+  .SL .niv .ct{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.16em;color:#5E6B78;margin-top:8px}
+  .SL .niv .ct b{font-size:16px;color:var(--hot);font-weight:700;letter-spacing:0}
+  .SN .th .hd{display:flex;align-items:baseline;gap:10px;padding:2px 0 10px;border-bottom:1px solid var(--line2);margin-bottom:4px}
+  .SN .th .hd b{font-family:"Saira Condensed",sans-serif;font-weight:900;font-style:italic;font-size:17px;text-transform:uppercase;color:var(--ink)}
+  .SN .th .hd span{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.14em;color:#5E6B78}
+  .SN .th .hd .bq{margin-left:auto;color:#8B99A7;text-decoration:underline;letter-spacing:0;font-size:10px}
+  .SO .p .h .me{color:var(--hot);letter-spacing:.06em}
+  .SP .int{font-family:"Newsreader",Georgia,serif;font-size:13px;color:#8B99A7;margin-top:4px}
+  .SP .cd{position:relative;min-height:66px;padding:7px 8px 18px}
+  .SP .cd::before{display:none!important}
+  .SP .cd i{display:block;font-style:normal;font-family:"JetBrains Mono",monospace;font-size:7.5px;letter-spacing:.14em;color:#5E6B78}
+  .SP .cd.ok i{color:var(--hot)}
+  .SP .cd b{height:auto!important;background:none!important;margin-top:3px!important;font-size:12px;line-height:1.1}
+  .SP .cd.no b{color:#5E6B78}
+  .SP .cd em{display:block;font-style:normal;font-family:"JetBrains Mono",monospace;font-size:8px;line-height:1.3;color:#8B99A7;margin-top:3px}
+  .SP .cd.no em{color:#46525E}
+  .SP .cd u{position:absolute;left:8px;bottom:5px;text-decoration:none;font-family:"JetBrains Mono",monospace;font-size:8px;color:#5E6B78}
+  .SQ .solo{position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;padding:26px 30px;z-index:2}
+  .SQ .card{border:1px solid var(--line2);background:#0C1116;padding:16px 18px 18px;margin-top:8px}
+  .SQ .dsc{display:inline-block;margin-top:8px;padding:7px 14px;border:1px solid var(--line2);font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.14em;color:#AAB4BE}
+  .SQ .lk{font-family:"JetBrains Mono",monospace;font-size:10px;color:#8B99A7;text-decoration:underline}
+  .SQ .warn{border:1px solid rgba(255,107,31,.45);background:rgba(255,107,31,.07);padding:10px 12px;font-family:"Newsreader",Georgia,serif;font-size:12.5px;line-height:1.45;color:#C6D0DA}
+  .SQ .warn b{display:block;font-family:"Saira Condensed",sans-serif;font-style:italic;font-weight:900;font-size:14px;letter-spacing:.04em;color:var(--hot);margin-bottom:3px}
+  .SQ .warn em{color:var(--hot);font-style:normal}
+  .SQ .cpt{margin-top:8px}
+  .SQ .cpt .n b{font-size:24px}
+  .SR .grid{position:absolute;left:0;right:0;top:92px;bottom:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;padding:16px 22px;z-index:2}
+  .SR .bx{border:1px solid var(--line2);background:#0C1116;padding:12px 14px;overflow:hidden}
+  .SR .bn{margin-top:8px;border-left:3px solid var(--hot);padding:8px 10px;background:#111820}
+  .SR .bn b,.SR .st b{display:block;font-family:"Saira Condensed",sans-serif;font-style:italic;font-weight:900;font-size:15px;text-transform:uppercase;color:var(--ink)}
+  .SR p{font-family:"Newsreader",Georgia,serif;font-size:12px;line-height:1.45;color:#AAB4BE;margin:4px 0 0}
+  .SR p em{color:var(--ink);font-style:normal}
+  .SR .bt{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
+  .SR .bt .a-b1,.SR .bt .a-b2,.SR .st .a-b2{font-size:11px;padding:6px 12px}
+  .SR .st{margin-top:7px;padding:7px 10px;border:1px solid var(--line);display:block}
+  .SR .st .a-b2{margin-top:6px;display:inline-block}
+  .SR .st.w{border-color:rgba(56,189,248,.35)} .SR .st.g{border-color:rgba(95,191,139,.4)} .SR .st.r{border-color:rgba(194,32,28,.45)}
+  .SR .tm{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-family:"JetBrains Mono",monospace;font-size:8px;letter-spacing:.1em;color:#5E6B78}
+  .SR .tm b{font-size:18px;color:var(--hot)}
+  .SR .toast{margin-top:8px}
+  .SR .ld{margin-top:10px;font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.16em;color:var(--cold)}
+  .SR .ld i{display:block;height:3px;margin-top:6px;background:linear-gradient(90deg,var(--hot) 0 42%,#1B232B 42%)}
+  .SR .vd{margin-top:14px;font-family:"Saira Condensed",sans-serif;font-style:italic;font-weight:900;font-size:16px;color:#5E6B78}
+  .SR .vd small{display:block;font-family:"Newsreader",Georgia,serif;font-style:normal;font-weight:400;font-size:11.5px;color:#8B99A7}
+  .SR .tg{display:flex;justify-content:space-between;align-items:center;margin-top:14px;font-family:"JetBrains Mono",monospace;font-size:10px;color:#AAB4BE}
+  .SR .tg i{width:34px;height:16px;background:#1B232B;border:1px solid var(--line2);position:relative}
+  .SR .tg i::after{content:"";position:absolute;left:2px;top:2px;width:10px;height:10px;background:#5E6B78}
+  .SR .po2{display:flex;gap:10px;align-items:flex-end;margin-top:10px}
+  .SR .po2 .a-po{width:74px;aspect-ratio:2/3}
+  .SR .p18{position:absolute;left:0;right:0;top:0;z-index:3;background:#B00000;color:#fff;font:900 8px/1 system-ui,sans-serif;letter-spacing:1px;text-align:center;padding:4px 0}
+  .SR .p18.v{background:#6A00B8;color:#F0C0FF}
+  .SR .fab{margin-left:auto;background:#5865F2;color:#fff;font:600 11px/1 system-ui,sans-serif;padding:10px 14px;clip-path:polygon(8% 0,100% 0,92% 100%,0 100%)}
+  .SR .nt{font-size:11px;color:#8B99A7;margin-top:10px}
+  .eggs{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:14px}
+  .egg{border:1px solid rgba(255,107,31,.35);background:#0E1318;padding:16px 18px}
+  .egg .k{font-family:"JetBrains Mono",monospace;font-size:10px;color:#5E6B78}
+  .egg h3{font-family:"Saira Condensed",sans-serif;font-style:italic;font-weight:900;font-size:24px;text-transform:uppercase;color:#FF6B1F;margin:4px 0 6px}
+  .egg p{font-size:13.5px;line-height:1.55;color:#C6D0DA;margin:6px 0 0}
+  .egg p b{color:#F2F5F7}
+  .SQ .a-b1,.SQ .a-b2{font-size:12px;padding:9px 16px;white-space:nowrap}
+  .SQ .card .ttl{font-size:27px!important;white-space:nowrap}
+  .SR .grid{grid-template-rows:auto auto;align-content:start}
+  .sgn{margin-top:10px;font-family:"JetBrains Mono",monospace;font-size:10px;color:#8B99A7;text-decoration:underline}
+  .SV .rad{position:absolute;left:110px;bottom:30px;width:330px;z-index:6;padding:16px 18px;background:linear-gradient(180deg,#1A2027,#0F1318);border:1px solid var(--line2);
+    box-shadow:0 20px 50px rgba(0,0,0,.9),inset 0 1px 0 rgba(255,255,255,.05);clip-path:polygon(0 0,94% 0,100% 8%,100% 100%,6% 100%,0 92%)}
+  .SV .ant{position:absolute;right:26px;top:-2px;width:4px;height:16px;background:#2A333D}
+  .SV .lcd{background:#1C0E05;border:1px solid rgba(255,107,31,.45);padding:8px 12px;box-shadow:inset 0 0 18px rgba(255,107,31,.2)}
+  .SV .lcd b{display:block;font-family:"JetBrains Mono",monospace;font-size:22px;color:var(--hot);text-shadow:0 0 8px rgba(255,107,31,.7)}
+  .SV .lcd span{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.16em;color:rgba(255,107,31,.7)}
+  .SV .rc{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+  .SV .rc div{display:flex;flex-direction:column;align-items:center;gap:7px}
+  .SV .rc span{font-family:"JetBrains Mono",monospace;font-size:8.5px;letter-spacing:.16em;color:#8B99A7;text-transform:uppercase}
+  .SV .rc em{font-style:normal;font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--hot)}
+  .SV .sw{position:relative;width:20px;height:34px;border-radius:3px;background:#0B0E12;border:1px solid var(--line2)}
+  .SV .sw u{position:absolute;left:3px;right:3px;height:13px;bottom:3px;background:#5E6B78}
+  .SV .sw.on u{top:3px;bottom:auto;background:var(--hot);box-shadow:0 0 8px rgba(255,107,31,.7)}
+  .SV .kn{position:relative;width:36px;height:36px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#3A4652,#12171C);border:1px solid var(--line2)}
+  .SV .kn u{position:absolute;left:50%;top:3px;width:3px;height:11px;margin-left:-1.5px;background:var(--hot)}
+  .SV .rp{margin-top:12px;padding-top:8px;border-top:1px solid var(--line);font-family:"JetBrains Mono",monospace;font-size:9.5px;color:#8B99A7}
+  .SV .rmini{position:absolute;left:460px;bottom:30px;z-index:6;width:50px;height:50px;background:#12171C;border:1px solid var(--line2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+    font-family:"JetBrains Mono",monospace;font-size:7.5px;letter-spacing:.14em;color:#8B99A7}
+  .SV .rmini .led,.SV .rmini .led{width:6px;height:6px;border-radius:50%;background:var(--hot);box-shadow:0 0 8px 2px rgba(255,107,31,.7)}
+  .SV .rnotes{position:absolute;left:540px;right:30px;bottom:30px;z-index:6;display:grid;gap:12px}
+  .SV .rnotes div{border-top:1px solid var(--line2);padding-top:7px;font-family:"Newsreader",Georgia,serif;font-size:13px;line-height:1.45;color:#AAB4BE}
+  .SV .rnotes b{display:block;font-family:"JetBrains Mono",monospace;font-weight:400;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--hot)}
+  /* Vidéoclub : objets neutres, identiques dans les quatre kits */
+  .lk .vc::before,.a-lk .vc::before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:#E8C46A;box-shadow:0 0 6px 1px rgba(232,196,106,.8);margin-right:6px;vertical-align:2px}
+  .vcn{position:relative;width:100%;aspect-ratio:4/3;overflow:hidden;background:linear-gradient(180deg,#07070D 0%,#0E0E18 62%,#1B1B24 62.2%,#23232D 100%);border:1px solid rgba(255,255,255,.14);font-family:"Segoe UI",system-ui,sans-serif}
+  .vcn .fac{position:absolute;left:6%;right:6%;top:16%;bottom:38%;background:#15151F;border:2px solid #2A2A36}
+  .vcn .sign{position:absolute;left:0;right:0;top:5%;text-align:center;font-weight:800;font-size:25px;letter-spacing:.16em;color:#F6E2A8;text-shadow:0 0 6px #E8C46A,0 0 18px rgba(232,196,106,.8),0 0 40px rgba(232,196,106,.45)}
+  .vcn .win{position:absolute;top:26%;bottom:40%;width:27%;background:linear-gradient(180deg,#1E2230,#10121A);border:2px solid #2E2E3A;display:flex;gap:6%;align-items:flex-end;justify-content:center;padding:0 5% 5%}
+  .vcn .win.l{left:9%} .vcn .win.r{right:9%}
+  .vcn .win i{display:block;width:40%;aspect-ratio:2/3;border:1px solid rgba(255,255,255,.18)}
+  .vcn .door{position:absolute;left:41%;width:18%;top:30%;bottom:38%;background:radial-gradient(90% 70% at 50% 60%,#F3D48A,#B5822E 60%,#5A3D12);border:3px solid #2E2E3A;border-bottom:0;
+    box-shadow:0 0 40px rgba(232,196,106,.45)}
+  .vcn .door span{position:absolute;left:12%;right:12%;top:18%;background:#F1ECE0;color:#141418;font-size:7px;font-weight:800;letter-spacing:.08em;text-align:center;padding:3px 2px;line-height:1.25}
+  .vcn .glow{position:absolute;left:30%;right:30%;top:62%;height:14%;background:radial-gradient(50% 60% at 50% 0,rgba(232,196,106,.35),transparent 70%)}
+  .vcn .tag{position:absolute;left:8px;bottom:8px;font:600 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;text-transform:uppercase;color:#9A9AB8;background:rgba(8,8,14,.8);padding:5px 7px;border:1px solid rgba(255,255,255,.1)}
+  .vcx{display:flex;gap:7px;align-items:flex-end}
+  .vcx i{position:relative;display:block;width:44px;aspect-ratio:120/170;border:1px solid rgba(255,255,255,.2);box-shadow:inset 0 0 0 3px rgba(0,0,0,.35)}
+  .vcx i.w2{filter:saturate(.7) brightness(.92)} .vcx i.w3{filter:saturate(.5) sepia(.2);transform:rotate(-2deg)}
+  .vcx i.loue{background:repeating-linear-gradient(135deg,rgba(255,255,255,.05) 0 5px,transparent 5px 10px)!important;border:1.5px dashed rgba(255,255,255,.28);box-shadow:none}
+  .vcx i.loue::after{content:"LOUÉ";position:absolute;left:50%;top:38%;transform:translateX(-50%) rotate(-10deg);border:1.5px solid #C8261E;color:#E0453C;font:800 7px/1 "Segoe UI",sans-serif;letter-spacing:.08em;padding:2px 3px;background:rgba(8,8,12,.7)}
+  .vcx i b{position:absolute;right:-5px;top:-5px;width:15px;height:15px;border-radius:50%;background:#F1ECE0;color:#1B1B1B;font:700 7.5px/15px "Segoe UI",sans-serif;text-align:center}
+  .SX .vcgrid{position:absolute;left:110px;right:34px;top:124px;display:grid;grid-template-columns:1.2fr 1fr;gap:40px;align-items:start}
+  .SX .vcblk{border-left:3px solid var(--hot);padding:4px 0 0 22px}
+  .SX .ttl{font-family:"Saira Condensed",sans-serif;font-weight:900;font-style:italic;font-size:54px;line-height:.95;margin-top:8px}
+  .SX .cnt{display:flex;align-items:baseline;gap:12px;margin-top:14px}
+  .SX .cnt b{font-family:"JetBrains Mono",monospace;font-size:44px;font-weight:600;color:var(--hot);text-shadow:0 0 18px rgba(255,107,31,.45)}
+  .SX .cnt span{font-family:"Saira Condensed",sans-serif;font-weight:700;font-size:16px;letter-spacing:.08em;color:#E8EDF2}
+  .SX .lst{display:flex;flex-direction:column;gap:5px;margin:10px 0 18px;font-family:"JetBrains Mono",monospace;font-size:12px;color:#AAB4BE}
+  .SX .lst b{color:#E8EDF2;font-weight:600}
+  .SX .vcnotes{position:absolute;left:110px;right:34px;bottom:26px;display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+  .SX .vcnotes div{border-top:1px solid var(--line2);padding-top:8px;font-family:"Newsreader",Georgia,serif;font-size:13px;line-height:1.45;color:#AAB4BE}
+  .SX .vcnotes b{display:block;font-family:"JetBrains Mono",monospace;font-weight:400;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--hot)}
+</style>
+
+<div class="wrap">
+
+<section>
+  <p class="eyebrow">Thème Action — kit complet · 19 septembre 2026</p>
+  <h1 class="masthead">Action.</h1>
+  <p class="lede prose">Trois films, trois couches. <strong>Heat</strong> donne la structure : froid, précis, professionnel. <strong>Die Hard</strong> donne l'architecture verticale : la tour, les étages, le verre brisé. <strong>Mad Max</strong> donne la surface : chrome, chaleur, orange et cyan. Et voilà le kit entier — jetons, vocabulaire, composants, et tous les écrans du site habillés, de l'accueil à la radio.</p>
+  <div class="caveat">
+    <b>Guerre, noté pour plus tard :</b> champ de bataille, impacts, sang, blindé. On le garde pour la saison suivante avec Aventure, Crime, Fantaisie, Policier, SF, Thriller et Western. On ne travaille maintenant que sur <b>Action, Comédie, Drame et Horreur</b>.
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Le monde</p>
+  <h2>Ce que chaque film apporte</h2>
+  <div class="refs">
+    <div>
+      <h4>Die Hard</h4><div class="yr">1988 — JOHN McTIERNAN</div>
+      <ul>
+        <li><b>La tour.</b> Ton niveau devient un <b>étage</b>. Le rail de gauche est l'indicateur d'ascenseur : tu montes.</li>
+        <li><b>Le verre brisé.</b> Des fêlures partent d'un point d'impact sur l'écran d'accueil et sur les erreurs.</li>
+        <li><b>Le coffre.</b> La modale de fiche film s'ouvre comme un sas, en-tête orange plein.</li>
+        <li><b>La radio.</b> Le bandeau d'activité en haut est une fréquence qui grésille.</li>
+      </ul>
+    </div>
+    <div>
+      <h4>Mad Max: Fury Road</h4><div class="yr">2015 — GEORGE MILLER</div>
+      <ul>
+        <li><b>Le chrome.</b> Les titres sont en métal poli avec une frange orange, jamais en couleur plate.</li>
+        <li><b>L'étalonnage orange et cyan.</b> Toutes les affiches reçoivent le même filtre : chaud d'un côté, froid de l'autre.</li>
+        <li><b>Le biseau.</b> Boutons, jauges et compteurs sont coupés en biais — rien n'est à l'équerre.</li>
+        <li><b>La poussière.</b> Une trame chaude à 3 % sur toute la page.</li>
+      </ul>
+    </div>
+    <div>
+      <h4>Heat</h4><div class="yr">1995 — MICHAEL MANN</div>
+      <ul>
+        <li><b>La nuit froide.</b> Le fond est un bleu-gris de béton, pas un noir. Le cyan vient de là.</li>
+        <li><b>Le chrono.</b> Le compte à rebours de séance est un vrai timer monospace, gros et net.</li>
+        <li><b>La précision.</b> Aucun ornement. Des filets d'un pixel, des chiffres alignés, zéro arrondi.</li>
+        <li><b>Le scanner.</b> Le fil d'activité est un journal radio horodaté, pas une liste de notifications.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Jetons</p>
+  <h2>La palette</h2>
+  <p class="prose">Deux accents qui s'opposent, jamais mélangés : <strong>l'orange sodium pour tout ce qui agit</strong>, <strong>le cyan pour tout ce qui informe</strong>. Le rouge est réservé au danger réel — supprimer, quitter, perdre. Le fond n'est pas noir : c'est un bleu de béton nocturne.</p>
+  <div class="tok">
+    <div><div class="sw" style="background:#090C11"></div><div class="nm">FOND</div><div class="hx">#090C11</div>
+      <div class="us">Béton de nuit. Jamais du noir pur — le noir tue le cyan.</div></div>
+    <div><div class="sw" style="background:#161D25"></div><div class="nm">SURFACE</div><div class="hx">#161D25</div>
+      <div class="us">Panneaux, modales, champs. Toujours avec un filet d'un pixel.</div></div>
+    <div><div class="sw" style="background:#FF6B1F"></div><div class="nm">ORANGE SODIUM</div><div class="hx">#FF6B1F</div>
+      <div class="us">Tout ce qui agit : boutons, jauges, étage actif, film de la semaine.</div></div>
+    <div><div class="sw" style="background:#FFA23D"></div><div class="nm">ORANGE CLAIR</div><div class="hx">#FFA23D</div>
+      <div class="us">Uniquement en dégradé, au départ des jauges.</div></div>
+    <div><div class="sw" style="background:#17A2C9"></div><div class="nm">CYAN</div><div class="hx">#17A2C9</div>
+      <div class="us">Tout ce qui informe : horaires, fréquences, données froides.</div></div>
+    <div><div class="sw" style="background:#C2201C"></div><div class="nm">ROUGE</div><div class="hx">#C2201C</div>
+      <div class="us">Danger réel seulement. Supprimer, quitter, erreur.</div></div>
+    <div><div class="sw" style="background:#E8EDF2"></div><div class="nm">TEXTE</div><div class="hx">#E8EDF2</div>
+      <div class="us">Légèrement bleuté, jamais blanc pur.</div></div>
+    <div><div class="sw" style="background:linear-gradient(176deg,#FFF,#A9B4BD 34%,#F2F5F7 48%,#7C8992 64%,#E4E9ED)"></div>
+      <div class="nm">CHROME</div><div class="hx">dégradé 5 arrêts</div>
+      <div class="us">Réservé aux titres de page et au nom du site. Nulle part ailleurs.</div></div>
+  </div>
+
+  <h3 style="margin-top:36px">Typographie</h3>
+  <p class="prose"><strong>Saira Condensed 900 italique</strong> pour tous les titres et les boutons — c'est la vitesse. <strong>JetBrains Mono</strong> pour chaque chiffre, horaire et donnée — c'est la précision de Heat. <strong>Newsreader</strong> uniquement pour les synopsis et les textes longs. Aucune troisième option.</p>
+
+  <h3 style="margin-top:30px">Formes et matières</h3>
+  <p class="prose">Rayon zéro partout. Les boutons, jauges, compteurs et pastilles sont <strong>biseautés à -11°</strong> — c'est la signature de forme du thème, on la reconnaît en une demi-seconde. Les panneaux importants portent <strong>quatre rivets</strong> aux angles. Deux textures se superposent : une trame chaude en diagonale à 3 %, et un grain fin à 5 %.</p>
+  <p class="prose"><strong>Curseur :</strong> réticule orange de 30 px. <strong>Mouvement :</strong> 120 ms, courbe sèche, aucun rebond. Le bouton principal produit une secousse de 2 px au clic.</p>
+</section>
+
+<section>
+  <p class="eyebrow">Vocabulaire</p>
+  <h2>Chaque libellé du site, réécrit</h2>
+  <p class="prose">C'est le levier le moins cher et celui dont tes marathoniens parleront entre eux. La trouvaille du thème : <strong>le niveau devient un étage</strong>. Tu ne montes plus de niveau, tu montes dans la tour.</p>
+  <div class="tbl-s">
+  <table class="vo">
+    <thead><tr><th>Élément du site</th><th>Libellé Action</th><th>Pourquoi</th></tr></thead>
+    <tbody>
+      <tr><td>Marquer comme vu</td><td>ENCAISSER</td><td>Le verbe principal. Court, physique, ça se dit.</td></tr>
+      <tr><td>Niveau 6</td><td>ÉTAGE 06</td><td>La tour de Die Hard. Le rail de gauche montre où tu es.</td></tr>
+      <tr><td>Films</td><td>L'ARSENAL</td><td>Le catalogue devient un stock.</td></tr>
+      <tr><td>La semaine</td><td>L'OPÉRATION</td><td>Une semaine = un coup monté, avec son heure H.</td></tr>
+      <tr><td>Classement</td><td>TABLEAU DE CHASSE</td><td>Plus parlant qu'un podium.</td></tr>
+      <tr><td>Duels</td><td>FACE-À-FACE</td><td>Deux films, un seul sort vivant.</td></tr>
+      <tr><td>Forum</td><td>FRÉQUENCES</td><td>Chaque sujet est un canal radio qu'on écoute.</td></tr>
+      <tr><td>Marathoniens</td><td>L'ÉQUIPE</td><td>Heat : une bande de professionnels.</td></tr>
+      <tr><td>Profil</td><td>FICHE D'OPÉRATEUR</td><td>Avec matricule, étage et plaques.</td></tr>
+      <tr><td>Watchlist</td><td>REPÉRAGES</td><td>Ce que tu as repéré avant de passer à l'action.</td></tr>
+      <tr><td>Rattrapages cinéma</td><td>L'ENTRAÎNEMENT</td><td>Court et sans reproche.</td></tr>
+      <tr><td>Badges</td><td>PLAQUES</td><td>Des plaques métalliques, pas des médailles.</td></tr>
+      <tr><td>EXP</td><td>EXP (jauge de pression)</td><td>L'unité ne change pas, sa représentation si.</td></tr>
+      <tr><td>Notes / avis</td><td>RELEVÉS</td><td>Froid, factuel, à la Heat.</td></tr>
+      <tr><td>Se connecter</td><td>PRENDRE LE POSTE</td><td>On entre en service.</td></tr>
+      <tr><td>Déconnexion</td><td>QUITTER LE TOIT</td><td>Die Hard, évidemment.</td></tr>
+      <tr><td>Séance collective</td><td>HEURE H</td><td>Le timer prend tout son sens.</td></tr>
+      <tr><td>Aucun résultat</td><td>RIEN SUR LE RADAR</td><td>Un état vide qui reste dans le monde.</td></tr>
+        <tr><td>Classements films</td><td>LES RELEVÉS</td><td>Le classement des films, par note moyenne pondérée.</td></tr>
+        <tr><td>Pires films (Le Rageux)</td><td>LA CASSE</td><td>Là où finissent les films qui ont tout raté.</td></tr>
+        <tr><td>Watchlists publiques</td><td>REPÉRAGES DE L'UNITÉ</td><td>Les listes des autres, avec leurs coups de cœur.</td></tr>
+        <tr><td>Messages</td><td>TRANSMISSIONS</td><td>Un canal privé entre deux opérateurs.</td></tr>
+        <tr><td>Easter eggs</td><td>DOSSIERS CLASSIFIÉS</td><td>Trouvé = déclassifié.</td></tr>
+        <tr><td>Administration</td><td>PC SÉCURITÉ</td><td>Le nom change, l'écran admin reste neutre.</td></tr>
+        <tr><td>Séance du duel (mercredi)</td><td>SÉANCE DU FACE-À-FACE</td><td>Le film vainqueur, regardé ensemble.</td></tr>
+        <tr><td>Mot de passe oublié, Inscription, Bloquer, Supprimer, Signaler une erreur, 18+</td><td>inchangés</td><td>Sécurité et modération : jamais de jeu de mots.</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Composants</p>
+  <h2>La bibliothèque</h2>
+  <p class="prose">Tout ce qui se répète sur le site, habillé une fois pour toutes. Le biseau à -11° et le rivet sont les deux constantes.</p>
+  <div class="pscroll"><div class="panel AX CP" style="height:auto;min-height:440px">
+    <div class="haze"></div><div class="grit"></div>
+    <div class="cg">
+      <div>
+        <div class="cl">BOUTONS</div>
+        <div class="stack">
+          <span class="a-b1"><span>ENCAISSER</span></span>
+          <span class="a-b2"><span>VOIR LA FICHE</span></span>
+          <span class="a-b3"><span>QUITTER LE TOIT</span></span>
+          <span class="a-b1" style="opacity:.35"><span>ENCAISSÉ</span></span>
+        </div>
+      </div>
+      <div>
+        <div class="cl">CHAMPS</div>
+        <div class="stack">
+          <div class="fld">RECHERCHER UN TITRE, UN RÉALISATEUR…</div>
+          <div class="fld on">HEAT</div>
+          <div class="fld" style="height:56px">RELEVÉ — 300 SIGNES MAX</div>
+        </div>
+      </div>
+      <div>
+        <div class="cl">ÉTIQUETTES</div>
+        <div class="chips">
+          <span class="a-tag h">FILM DE LA SEMAINE</span><span class="a-tag">1995</span>
+          <span class="a-tag">POLICIER</span><span class="a-tag h">+10 EXP</span>
+          <span class="a-tag" style="color:#5FBF8B;border-color:rgba(95,191,139,.5)">ENCAISSÉ</span>
+        </div>
+        <div class="cl" style="margin-top:22px">PAGINATION</div>
+        <div class="pag"><i>‹</i><i class="on">1</i><i>2</i><i>3</i><i>…</i><i>8</i><i>›</i></div>
+      </div>
+      <div>
+        <div class="cl">JAUGE DE PRESSION</div>
+        <div class="a-gl"><span>ÉTAGE 06 — EXP</span><b>3 940 / 5 000</b></div>
+        <div class="a-gauge"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i>
+          <i class="f"></i><i class="f"></i><i class="f"></i><i></i><i></i><i></i><i></i></div>
+        <div class="cl" style="margin-top:22px">PROGRESSION SAISON</div>
+        <div class="a-gauge"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i>
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      </div>
+      <div>
+        <div class="cl">NOTIFICATIONS</div>
+        <div class="stack">
+          <div class="toast">ENCAISSÉ — HEAT<span class="g">+10 EXP</span></div>
+          <div class="toast err">TIR MANQUÉ<span class="g" style="color:#C2201C">RELEVÉ NON ENREGISTRÉ</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="cl">ÉTAT VIDE</div>
+        <div class="empty"><div class="e1">RIEN SUR LE RADAR</div>
+          <div class="e2">AUCUN FILM NE CORRESPOND À CES FILTRES</div></div>
+        <div class="cl" style="margin-top:20px">PANNEAU RIVÉ</div>
+        <div class="a-pan riv" style="padding:16px 20px"><span class="rv l"></span><span class="rv r"></span>
+          <div class="a-lb">DUEL EN COURS</div>
+          <div class="a-hd" style="font-size:20px;margin-top:6px">ALIEN · THE THING</div></div>
+      </div>
+    </div>
+  </div></div>
+  <p class="cap">Composants — thème Action</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 01</p>
+  <h2>Accueil</h2>
+  <p class="prose">Le rail d'étages à gauche, présent sur toute la navigation. Le bandeau de fréquence radio en haut. Le visuel de l'opération avec le titre en chrome, le chrono à droite, et les fêlures de verre qui partent d'un impact. Sous le héros, le journal radio à gauche, l'état de l'opération à droite.</p>
+  <div class="pscroll"><div class="panel AX SA" style="height:664px">
+    <div class="haze"></div>
+    <div class="a-nav"><span class="a-mk chrome">CINÉ MARATHON</span>
+      <span class="a-lk"><span class="on">ACCUEIL</span><span class="vc">VIDÉOCLUB</span><span>OPÉRATIONS <i>▾</i></span><span>ARMURERIE <i>▾</i></span><span>UNITÉ <i>▾</i></span><span>CLASSIFIÉ <i>▾</i></span></span>
+      <span class="a-rt">SEMAINE 01 / 04 — ACTION</span><span class="a-acc"><i>2</i><b>L</b></span></div>
+    <div class="a-scan"><span class="led"></span><span>FRÉQUENCE 04</span>
+      <b>21:14</b><span>DUFFMAN A ENCAISSÉ HEAT · +10 EXP</span>
+      <span style="margin-left:auto">09 / 12 EN POSITION</span></div>
+    <div class="a-rail"><b>12</b><b>11</b><b>10</b><b>09</b><b>08</b><b>07</b><b class="on">▸06</b>
+      <b>05</b><b>04</b><b>03</b><b>02</b><b>01</b><span class="cap">ÉTAGE</span></div>
+    <div class="hero">
+      <div class="bd"></div><div class="bdg"></div><div class="bdb"></div><div class="fade"></div>
+      <div class="hc">
+        <div class="a-lb" style="margin-bottom:10px">HEURE H — VENDREDI 20:30 · FACE-À-FACE MERCREDI 20:30</div>
+        <div class="big chrome">HEAT</div>
+        <div class="sub">1995 · MICHAEL MANN · 2 H 50 · 09 / 12 EN POSITION</div>
+        <div style="margin-top:14px"><span class="a-b1"><span>ENCAISSER</span></span>
+          <span class="a-b2" style="margin-left:7px"><span>VOIR LA FICHE</span></span></div>
+      </div>
+      <div class="timer"><div class="t">02:14:37</div><div class="l">AVANT L'HEURE H</div></div>
+      <div class="crack" style="left:600px;top:66px">
+        <span class="hub"></span>
+        <i style="width:160px;transform:rotate(18deg)"></i><i style="width:110px;transform:rotate(64deg)"></i>
+        <i style="width:132px;transform:rotate(128deg)"></i><i style="width:92px;transform:rotate(196deg)"></i>
+        <i style="width:146px;transform:rotate(252deg)"></i><i style="width:80px;transform:rotate(312deg)"></i></div>
+    </div>
+    <div class="body">
+      <div class="bl">
+        <div class="a-lb">JOURNAL — FRÉQUENCE 04</div>
+        <div style="margin-top:9px">
+          <div class="logl"><span class="tm">21:02</span><span>Unité en place. <b>9 présents sur 12</b>.</span></div>
+          <div class="logl"><span class="tm">21:14</span><span class="hot">Duffman a encaissé <b>Heat</b> — +10 EXP</span></div>
+          <div class="logl"><span class="tm">21:31</span><span>Face-à-face ouvert : <b>Alien</b> contre <b>The Thing</b></span></div>
+          <div class="logl"><span class="tm">23:43</span><span>HazroF a déposé un relevé sur <b>Se7en</b> — 9/10</span></div>
+        </div>
+        <div class="a-lb" style="margin-top:14px">REPÉRAGES — 4 EN COURS</div>
+        <div class="row">
+          <div class="a-po" id="p1"><b>Die Hard</b></div><div class="a-po" id="p2"><b>Fury Road</b></div>
+          <div class="a-po" id="p3"><b>Collateral</b></div><div class="a-po" id="p4"><b>Le Samouraï</b></div>
+          <div class="a-po" id="p5"><b>Point Break</b></div></div>
+      </div>
+      <div class="br">
+        <div class="a-gl"><span>ÉTAGE 06 — EXP</span><b>3 940 / 5 000</b></div>
+        <div class="a-gauge"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i>
+          <i class="f"></i><i class="f"></i><i class="f"></i><i></i><i></i><i></i><i></i></div>
+        <div class="a-lb" style="margin-top:16px">FACE-À-FACE — J-3</div>
+        <div style="display:flex;gap:9px;align-items:center;margin-top:9px">
+          <div class="a-po" id="p6" style="width:44px;aspect-ratio:2/3"></div>
+          <span style="font-family:'Saira Condensed';font-weight:900;font-style:italic;color:#2F3B46">VS</span>
+          <div class="a-po" id="p7" style="width:44px;aspect-ratio:2/3"></div>
+          <div style="margin-left:auto;text-align:right">
+            <div style="font-family:'JetBrains Mono';font-weight:700;font-size:19px;color:var(--hot)">62%</div>
+            <div class="a-lb">ALIEN</div></div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+  <p class="cap">Accueil — marathon en cours</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 02</p>
+  <h2>L'Arsenal</h2>
+  <p class="prose">La grille garde exactement sa structure actuelle — tu m'as demandé de ne pas y toucher. Ce qui change : les chiffres sont en jauges biseautées et d'une seule couleur, les filtres sont des pastilles en biseau, et chaque affiche reçoit l'étalonnage orange et cyan. Le nombre de colonnes suit la largeur, comme aujourd'hui.</p>
+  <div class="pscroll"><div class="panel AX SB" style="height:806px">
+    <div class="haze"></div>
+    <div class="a-nav"><span class="a-mk chrome">CINÉ MARATHON</span>
+      <span class="a-lk"><span>ACCUEIL</span><span class="vc">VIDÉOCLUB</span><span>OPÉRATIONS <i>▾</i></span><span class="on">ARMURERIE <i>▾</i></span><span>UNITÉ <i>▾</i></span><span>CLASSIFIÉ <i>▾</i></span></span>
+      <span class="a-rt">SEMAINE 01 / 04 — ACTION</span><span class="a-acc"><i>2</i><b>L</b></span></div>
+    <div class="a-scan"><span class="led"></span><span>FRÉQUENCE 04</span><b>21:14</b>
+      <span>466 UNITÉS AU STOCK · 47 ENCAISSÉES · 112 JAMAIS SORTIES</span></div>
+    <div class="a-rail"><b>12</b><b>11</b><b>10</b><b>09</b><b>08</b><b>07</b><b class="on">▸06</b>
+      <b>05</b><b>04</b><b>03</b><b>02</b><b>01</b><span class="cap">ÉTAGE</span></div>
+    <div class="pg">
+      <div class="ttl chrome">L'ARSENAL</div>
+      <div class="kpi">
+        <div><div class="a-gl"><span>ENCAISSÉS</span><b>47</b></div>
+          <div class="a-gauge"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i><i></i><i></i><i></i></div></div>
+        <div><div class="a-gl"><span>PROGRESSION</span><b>38 %</b></div>
+          <div class="a-gauge"><i class="f"></i><i class="f"></i><i class="f"></i><i></i><i></i><i></i><i></i><i></i></div></div>
+        <div><div class="a-gl"><span>AU STOCK</span><b>466</b></div>
+          <div class="a-gauge"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i></div></div>
+        <div><div class="a-gl"><span>JAMAIS SORTIES</span><b>112</b></div>
+          <div class="a-gauge"><i class="f"></i><i class="f"></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+      </div>
+      <div class="fl">
+        <span class="fi w"><span>RECHERCHER UN TITRE…</span></span>
+        <span class="fi on"><span>GENRE : ACTION</span></span><span class="fi"><span>DÉCENNIE</span></span>
+        <span class="fi"><span>RÉALISATEUR</span></span><span class="fi"><span>JAMAIS SORTIES</span></span>
+        <span class="fi"><span>TIRER AU SORT</span></span>
+      </div>
+      <div class="grid" id="grid"></div>
+    </div>
+  </div></div>
+  <p class="cap">Arsenal — la grille de films, structure inchangée</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 03</p>
+  <h2>La fiche film</h2>
+  <p class="prose">La modale s'ouvre comme un sas : en-tête orange plein, panneau rivé, la note en dix segments biseautés au lieu d'étoiles, et les onglets Infos / Où regarder / Fréquence en bas. Le fond de page reste visible et assombri.</p>
+  <div class="pscroll"><div class="panel AX SC" style="height:500px">
+    <div class="haze"></div>
+    <div class="a-nav"><span class="a-mk chrome">CINÉ MARATHON</span>
+      <span class="a-lk"><span>ACCUEIL</span><span class="vc">VIDÉOCLUB</span><span>OPÉRATIONS <i>▾</i></span><span class="on">ARMURERIE <i>▾</i></span><span>UNITÉ <i>▾</i></span><span>CLASSIFIÉ <i>▾</i></span></span>
+      <span class="a-rt">SEMAINE 01 / 04 — ACTION</span><span class="a-acc"><i>2</i><b>L</b></span></div>
+    <div class="a-rail"><b>12</b><b>11</b><b>10</b><b>09</b><b>08</b><b>07</b><b class="on">▸06</b>
+      <b>05</b><b>04</b><b>03</b><b>02</b><b>01</b><span class="cap">ÉTAGE</span></div>
+    <div class="dim"></div>
+    <div class="mod riv"><span class="rv l"></span><span class="rv r"></span>
+      <div class="mh"><span>DOSSIER 047 — ARSENAL</span><span class="x">✕</span></div>
+      <div class="mb">
+        <div class="a-po" id="mp"><b>Heat</b></div>
+        <div>
+          <h4 class="chrome">HEAT</h4>
+          <div class="meta">1995 · MICHAEL MANN · 2 H 50 · POLICIER / ACTION</div>
+          <div class="syn">Un braqueur méthodique et un flic obsessionnel se tournent autour dans un Los Angeles de nuit. Quarante minutes de préparation pour six minutes de fusillade qui ont redéfini le genre.</div>
+          <div class="a-lb" style="margin-bottom:6px">TON RELEVÉ — 9 / 10</div>
+          <div class="stars"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i>
+            <i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i></div>
+          <div class="acts"><span class="a-b1"><span>ENCAISSER · +10 EXP</span></span>
+            <span class="a-b2"><span>AJOUTER AUX REPÉRAGES</span></span></div>
+          <div class="sgn">⚠ Signaler une erreur</div>
+        </div>
+      </div>
+      <div class="tabs"><span class="on">INFOS</span><span>OÙ REGARDER</span><span>FRÉQUENCE · 12 MESSAGES</span></div>
+    </div>
+  </div></div>
+  <p class="cap">Fiche film — modale</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 04</p>
+  <h2>Le face-à-face</h2>
+  <p class="prose">Les deux films se regardent. Les barres de vote sont des compteurs d'impact biseautés, le gagnant provisoire porte un halo orange, et le chrono de clôture est en monospace. C'est la page la plus proche du langage du genre.</p>
+  <div class="pscroll"><div class="panel AX SD" style="height:672px">
+    <div class="haze"></div>
+    <div class="a-nav"><span class="a-mk chrome">CINÉ MARATHON</span>
+      <span class="a-lk"><span>ACCUEIL</span><span class="vc">VIDÉOCLUB</span><span class="on">OPÉRATIONS <i>▾</i></span><span>ARMURERIE <i>▾</i></span><span>UNITÉ <i>▾</i></span><span>CLASSIFIÉ <i>▾</i></span></span>
+      <span class="a-rt">SEMAINE 01 / 04 — ACTION</span><span class="a-acc"><i>2</i><b>L</b></span></div>
+    <div class="a-scan"><span class="led"></span><span>FRÉQUENCE 04</span><b>CLÔTURE</b>
+      <span>CLÔTURE MERCREDI 20:00 — LE VAINQUEUR PASSE À 20:30 · +15 EXP</span>
+      <span style="margin-left:auto">J-3 · 14 VOTES</span></div>
+    <div class="a-rail"><b>12</b><b>11</b><b>10</b><b>09</b><b>08</b><b>07</b><b class="on">▸06</b>
+      <b>05</b><b>04</b><b>03</b><b>02</b><b>01</b><span class="cap">ÉTAGE</span></div>
+    <div class="wrapd">
+      <div class="a-lb">FACE-À-FACE 07 — OUVERT DEPUIS 4 JOURS</div>
+      <div class="vs">
+        <div class="side win"><div class="a-po" id="d1"></div><h5 class="chrome">ALIEN</h5>
+          <div class="pct">62 %</div><div class="a-lb" style="margin-top:4px">9 VOIX</div></div>
+        <div class="mid"><div class="x">VS</div><div class="t">J-3 · 02:14:37</div>
+          <div class="stake"><div class="k">MISE EN JEU</div><div class="v">Séance de vendredi</div></div>
+          <div class="stake"><div class="k">PARTICIPATION</div><div class="v">14 / 22 opérateurs</div></div>
+          <div class="voters"><u class="h">D</u><u class="h">J</u><u class="h">L</u><u class="h">H</u>
+            <u class="h">S</u><u class="h">M</u><u class="h">R</u><u class="h">T</u><u class="h">V</u>
+            <u class="c">C</u><u class="c">A</u><u class="c">P</u><u class="c">N</u><u class="c">B</u>
+            <u></u><u></u><u></u><u></u><u></u><u></u><u></u><u></u></div>
+        </div>
+        <div class="side"><div class="a-po" id="d2"></div><h5 class="chrome">THE THING</h5>
+          <div class="pct c">38 %</div><div class="a-lb" style="margin-top:4px">5 VOIX</div></div>
+      </div>
+      <div class="bars">
+        <div class="bar"><i style="width:62%"></i><b>ALIEN — 1979 — RIDLEY SCOTT</b></div>
+        <div class="bar c"><i style="width:38%"></i><b>THE THING — 1982 — JOHN CARPENTER</b></div>
+      </div>
+      <div style="margin-top:13px"><span class="a-b1"><span>VOTER ALIEN</span></span>
+        <span class="a-b2" style="margin-left:7px"><span>VOTER THE THING</span></span></div>
+      <div class="feed">
+        <div>
+          <div class="fl"><span class="tm">23:41</span><b>Duffman</b><span>a voté</span><em>Alien</em></div>
+          <div class="fl"><span class="tm">22:08</span><b>Clara</b><span>a voté</span><em>The Thing</em></div>
+          <div class="fl"><span class="tm">19:55</span><b>HazroF</b><span>a voté</span><em>Alien</em></div>
+        </div>
+        <div>
+          <div class="fl"><span class="tm">18:30</span><b>John</b><span>a ouvert le canal 02.1</span></div>
+          <div class="fl"><span class="tm">17:12</span><b>Seradalem</b><span>a voté</span><em>Alien</em></div>
+          <div class="fl"><span class="tm">16:04</span><b>Dracaryn</b><span>a voté</span><em>The Thing</em></div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+  <p class="cap">Face-à-face — le duel</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 05</p>
+  <h2>Le tableau de chasse</h2>
+  <p class="prose">Le classement n'est plus un podium, c'est un relevé. Chaque ligne porte l'étage du joueur, sa jauge de pression et son total. Ta ligne est marquée par un filet orange à gauche — aucune couleur criarde, juste une marque.</p>
+  <div class="pscroll"><div class="panel AX SE" style="height:566px">
+    <div class="haze"></div>
+    <div class="a-nav"><span class="a-mk chrome">CINÉ MARATHON</span>
+      <span class="a-lk"><span>ACCUEIL</span><span class="vc">VIDÉOCLUB</span><span>OPÉRATIONS <i>▾</i></span><span>ARMURERIE <i>▾</i></span><span>UNITÉ <i>▾</i></span><span>CLASSIFIÉ <i>▾</i></span></span>
+      <span class="a-rt">SEMAINE 01 / 04 — ACTION</span><span class="a-acc"><i>2</i><b>L</b></span></div>
+    <div class="a-rail"><b>12</b><b>11</b><b>10</b><b>09</b><b>08</b><b>07</b><b class="on">▸06</b>
+      <b>05</b><b>04</b><b>03</b><b>02</b><b>01</b><span class="cap">ÉTAGE</span></div>
+    <div class="pg">
+      <div class="ttl chrome" style="font-size:38px">TABLEAU DE CHASSE</div>
+      <div class="a-lb" style="margin-top:8px">SAISON 02 — 22 OPÉRATEURS EN SERVICE</div>
+      <div class="rows">
+        <div class="hd"><span>RANG</span><span></span><span>OPÉRATEUR</span><span>DERNIER ENCAISSÉ</span><span>PRESSION</span><span>ENCAISSÉS</span><span>EXP</span></div>
+        <div class="r"><span class="fl">01 · ÉT.09</span><span class="av"><span>D</span></span>
+          <span class="nm">Duffman</span>
+          <span class="lastf"><b>Heat</b><em>il y a 2 h</em></span>
+          <span class="mini"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i></span>
+          <span class="ex">101 FILMS</span><span class="ex">8 820</span></div>
+        <div class="r"><span class="fl">02 · ÉT.07</span><span class="av"><span>J</span></span>
+          <span class="nm">John</span>
+          <span class="lastf"><b>Ronin</b><em>hier</em></span>
+          <span class="mini"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i><i></i><i></i></span>
+          <span class="ex">37 FILMS</span><span class="ex">5 105</span></div>
+        <div class="r me"><span class="fl">03 · ÉT.06</span><span class="av"><span>L</span></span>
+          <span class="nm">The Legendre</span>
+          <span class="lastf"><b>Collateral</b><em>il y a 3 h</em></span>
+          <span class="mini"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i><i></i><i></i></span>
+          <span class="ex">47 FILMS</span><span class="ex">3 940</span></div>
+        <div class="r"><span class="fl">04 · ÉT.05</span><span class="av"><span>D</span></span>
+          <span class="nm">Dracaryn</span>
+          <span class="lastf"><b>The Raid</b><em>il y a 2 j</em></span>
+          <span class="mini"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i><i></i><i></i><i></i></span>
+          <span class="ex">24 FILMS</span><span class="ex">3 120</span></div>
+        <div class="r"><span class="fl">05 · ÉT.04</span><span class="av"><span>H</span></span>
+          <span class="nm">HazroF</span>
+          <span class="lastf"><b>Oldboy</b><em>il y a 4 j</em></span>
+          <span class="mini"><i class="f"></i><i class="f"></i><i class="f"></i><i></i><i></i><i></i><i></i><i></i></span>
+          <span class="ex">23 FILMS</span><span class="ex">2 870</span></div>
+        <div class="r"><span class="fl">06 · ÉT.03</span><span class="av"><span>S</span></span>
+          <span class="nm">Seradalem</span>
+          <span class="lastf"><b>Drive</b><em>il y a 6 j</em></span>
+          <span class="mini"><i class="f"></i><i class="f"></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          <span class="ex">9 FILMS</span><span class="ex">2 410</span></div>
+      </div>
+    </div>
+  </div></div>
+  <p class="cap">Tableau de chasse — le classement</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 06</p>
+  <h2>La fiche d'opérateur</h2>
+  <p class="prose">Le profil devient une fiche de service, et la progression devient <strong>la tour elle-même</strong> : douze étages empilés, ceux que tu as franchis en orange, celui où tu es en pleine lumière. C'est la meilleure idée du thème, et elle ne coûte qu'une colonne de div.</p>
+  <div class="pscroll"><div class="panel AX SF2" style="height:534px">
+    <div class="haze"></div>
+    <div class="a-nav"><span class="a-mk chrome">CINÉ MARATHON</span>
+      <span class="a-lk"><span>ACCUEIL</span><span class="vc">VIDÉOCLUB</span><span>OPÉRATIONS <i>▾</i></span><span>ARMURERIE <i>▾</i></span><span>UNITÉ <i>▾</i></span><span>CLASSIFIÉ <i>▾</i></span></span>
+      <span class="a-rt">FICHE D'OPÉRATEUR</span><span class="a-acc"><i>2</i><b>L</b></span></div>
+    <div class="a-rail"><b>12</b><b>11</b><b>10</b><b>09</b><b>08</b><b>07</b><b class="on">▸06</b>
+      <b>05</b><b>04</b><b>03</b><b>02</b><b>01</b><span class="cap">ÉTAGE</span></div>
+    <div class="pg">
+      <div>
+        <div class="idc"><span class="av"><span>L</span></span>
+          <div><h4 class="chrome">THE LEGENDRE</h4>
+            <div class="a-lb" style="margin-top:5px">MATRICULE 047-S2 · EN SERVICE DEPUIS LE 14.03.2026</div></div></div>
+        <div class="a-gl"><span>PRESSION — ÉTAGE 06</span><b>3 940 / 5 000</b></div>
+        <div class="a-gauge"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i>
+          <i class="f"></i><i class="f"></i><i class="f"></i><i></i><i></i><i></i><i></i></div>
+        <div class="a-lb" style="margin-top:18px">PLAQUES — 3 SUR 12</div>
+        <div class="plates">
+          <span class="pl got">01</span><span class="pl got">02</span><span class="pl got">03</span>
+          <span class="pl">04</span><span class="pl">05</span><span class="pl">06</span>
+          <span class="pl">07</span><span class="pl">08</span><span class="pl">09</span>
+          <span class="pl">10</span><span class="pl">11</span><span class="pl">12</span></div>
+        <div class="a-lb" style="margin-top:18px">RELEVÉS</div>
+        <div style="margin-top:7px">
+          <div class="st"><span>ENCAISSÉS CETTE SAISON</span><b>47 / 466</b></div>
+          <div class="st"><span>NOTE MOYENNE DONNÉE</span><b>7.8</b></div>
+          <div class="st"><span>FACE-À-FACE GAGNÉS</span><b>06</b></div>
+          <div class="st"><span>PREMIER SUR</span><b>04 FILMS</b></div>
+        </div>
+      </div>
+      <div class="twrap">
+        <div class="a-lb" style="margin-bottom:9px">LA TOUR — ÉTAGE 06 / 12</div>
+        <div class="tower" id="tower"></div>
+      </div>
+    </div>
+  </div></div>
+  <p class="cap">Fiche d'opérateur — le profil</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 07</p>
+  <h2>Les fréquences</h2>
+  <p class="prose">Le forum devient un scanner. Chaque sujet est un canal avec sa fréquence, son niveau de trafic en barres, et son nombre de transmissions. Le canal actif est en orange, les autres en cyan. Tu n'ouvres plus un sujet, tu te cales sur une fréquence.</p>
+  <div class="pscroll"><div class="panel AX SG" style="height:726px">
+    <div class="haze"></div>
+    <div class="a-nav"><span class="a-mk chrome">CINÉ MARATHON</span>
+      <span class="a-lk"><span>ACCUEIL</span><span class="vc">VIDÉOCLUB</span><span>OPÉRATIONS <i>▾</i></span><span>ARMURERIE <i>▾</i></span><span>UNITÉ <i>▾</i></span><span>CLASSIFIÉ <i>▾</i></span></span>
+      <span class="a-rt">SEMAINE 01 / 04 — ACTION</span><span class="a-acc"><i>2</i><b>L</b></span></div>
+    <div class="a-rail"><b>12</b><b>11</b><b>10</b><b>09</b><b>08</b><b>07</b><b class="on">▸06</b>
+      <b>05</b><b>04</b><b>03</b><b>02</b><b>01</b><span class="cap">ÉTAGE</span></div>
+    <div class="pg">
+      <div class="ttl chrome" style="font-size:38px">FRÉQUENCES</div>
+      <div class="a-lb" style="margin-top:8px">7 CANAUX OUVERTS — 1 EN DIRECT</div>
+      <div style="margin-top:12px">
+        <div class="ch live"><span class="fq">04.7 MHz</span>
+          <div><div class="tt">Heat — la fusillade du centre-ville</div><div class="ds">OUVERT PAR DUFFMAN · IL Y A 2 H</div><div class="lm"><b>Duffman</b>Quarante minutes de préparation pour six minutes de feu. Personne ne fait ça aujourd'hui.</div></div>
+          <span class="bars" id="b1"></span><span class="cnt">12 TRANSM.</span></div>
+        <div class="ch"><span class="fq">02.1 MHz</span>
+          <div><div class="tt">Face-à-face 07 : Alien ou The Thing</div><div class="ds">OUVERT PAR CLARA · HIER</div><div class="lm"><b>Clara</b>Carpenter gagne sur la paranoïa, Scott sur le décor. Je reste sur Carpenter.</div></div>
+          <span class="bars" id="b2"></span><span class="cnt">31 TRANSM.</span></div>
+        <div class="ch"><span class="fq">09.3 MHz</span>
+          <div><div class="tt">Propositions pour la saison 03</div><div class="ds">OUVERT PAR HAZROF · IL Y A 3 J</div><div class="lm"><b>HazroF</b>J'ai trois westerns à mettre au stock si personne s'y oppose.</div></div>
+          <span class="bars" id="b3"></span><span class="cnt">47 TRANSM.</span></div>
+        <div class="ch"><span class="fq">01.5 MHz</span>
+          <div><div class="tt">Où regarder les films du stock légalement</div><div class="ds">ÉPINGLÉ · PERMANENT</div><div class="lm"><b>John</b>Mise à jour : quatre plateformes en plus, la liste est à jour au 12/09.</div></div>
+          <span class="bars" id="b4"></span><span class="cnt">08 TRANSM.</span></div>
+        <div class="ch"><span class="fq">06.2 MHz</span>
+          <div><div class="tt">Les 112 jamais sorties — on s'organise ?</div><div class="ds">OUVERT PAR JOHN · IL Y A 5 J</div><div class="lm"><b>Seradalem</b>Si on en prend deux chacun d'ici décembre, il n'en reste plus une seule.</div></div>
+          <span class="bars" id="b5"></span><span class="cnt">19 TRANSM.</span></div>
+      </div>
+      <div style="margin-top:14px"><span class="a-b1"><span>OUVRIR UN CANAL</span></span></div>
+    </div>
+  </div></div>
+  <p class="cap">Fréquences — le forum</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 08</p>
+  <h2>L'opération — la page Semaine</h2>
+  <p class="prose">La semaine devient un plan d'opération sur sept jours. Les deux séances collectives sont les deux heures H, en orange plein. La clôture du face-à-face est une information, donc en cyan. En dessous, les quatre phases de la saison, et à droite les objectifs de la semaine avec ce qu'ils rapportent. C'est la page que je n'avais pas dessinée et qui existe bien sur ton site.</p>
+  <div class="pscroll"><div class="panel AX SH" style="height:560px">
+    <div class="haze"></div>
+    <div class="a-nav"><span class="a-mk chrome">CINÉ MARATHON</span>
+      <span class="a-lk"><span>ACCUEIL</span><span class="vc">VIDÉOCLUB</span><span class="on">OPÉRATIONS <i>▾</i></span><span>ARMURERIE <i>▾</i></span><span>UNITÉ <i>▾</i></span><span>CLASSIFIÉ <i>▾</i></span></span>
+      <span class="a-rt">SEMAINE 01 / 04 — ACTION</span><span class="a-acc"><i>2</i><b>L</b></span></div>
+    <div class="a-scan"><span class="led"></span><span>FRÉQUENCE 04</span><b>BRIEFING</b>
+      <span>HEURE H DANS 02 J 14 H — 09 OPÉRATEURS SUR 22 PRÊTS</span></div>
+    <div class="a-rail"><b>12</b><b>11</b><b>10</b><b>09</b><b>08</b><b>07</b><b class="on">▸06</b>
+      <b>05</b><b>04</b><b>03</b><b>02</b><b>01</b><span class="cap">ÉTAGE</span></div>
+    <div class="pg">
+      <div>
+        <div class="ttl chrome" style="font-size:38px">L'OPÉRATION</div>
+        <div class="a-lb" style="margin-top:6px">SEMAINE 01 / 04 — ACTION · DU LUNDI 14 AU DIMANCHE 20 SEPTEMBRE</div>
+        <div class="plan">
+          <div class="j"><div class="d">LUN</div><div class="n">14</div>
+            <div class="ev c">00:00<b>Thème</b>action</div></div>
+          <div class="j"><div class="d">MAR</div><div class="n">15</div></div>
+          <div class="j now"><div class="d">MER</div><div class="n">16</div>
+            <div class="ev h">20:30 · FACE-À-FACE<b>Le vainqueur</b>Alien ou The Thing · +15</div></div>
+          <div class="j"><div class="d">JEU</div><div class="n">17</div></div>
+          <div class="j"><div class="d">VEN</div><div class="n">18</div>
+            <div class="ev h">20:30 · HEURE H<b>Heat</b>+10 EXP</div></div>
+          <div class="j"><div class="d">SAM</div><div class="n">19</div></div>
+          <div class="j"><div class="d">DIM</div><div class="n">20</div>
+            <div class="ev c">20:30<b>Bonus</b>fin des 48 h</div></div>
+        </div>
+        <div class="a-lb" style="margin-top:18px">LES QUATRE PHASES DE LA SAISON</div>
+        <div class="ph">
+          <div class="on"><div class="k">PHASE 01</div><div class="v">Action</div></div>
+          <div><div class="k">PHASE 02</div><div class="v">Comédie</div></div>
+          <div><div class="k">PHASE 03</div><div class="v">Western</div></div>
+          <div><div class="k">PHASE 04</div><div class="v">Horreur</div></div>
+        </div>
+      </div>
+      <div class="obj">
+        <div class="a-lb" style="margin-bottom:6px">OBJECTIFS DE LA SEMAINE</div>
+        <div class="o f"><i></i><span>Voter au face-à-face</span><b>+2</b></div>
+        <div class="o"><i></i><span>Encaisser le vainqueur : Alien ou The Thing</span><b>+15</b></div>
+        <div class="o"><i></i><span>Encaisser Heat, film de la semaine</span><b>+10</b></div>
+        <div class="o"><i></i><span>Bonus 48 h : le film de la semaine dernière</span><b>+15</b></div>
+        <div class="o"><i></i><span>Chaque autre film encaissé</span><b>+5</b></div>
+        <div class="a-lb" style="margin-top:16px">EN RÉSERVE CETTE SEMAINE</div>
+        <div class="res">
+          <div class="a-po" id="op1"><b>Ronin</b></div>
+          <div class="a-po" id="op2"><b>Sicario</b></div>
+          <div class="a-po" id="op3"><b>The Raid</b></div>
+          <div class="a-po" id="op4"><b>Speed</b></div>
+        </div>
+        <div style="margin-top:16px"><span class="a-b1"><span>Voir l'arsenal</span></span></div>
+      </div>
+    </div>
+  </div></div>
+  <p class="cap">L'opération — la semaine</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 09</p>
+  <h2>L'équipe — la page Marathoniens</h2>
+  <p class="prose">Les joueurs de la saison, en badges d'accès : matricule, étage, et un voyant qui dit qui est en position cette semaine. Ton badge est marqué d'un filet orange, comme ta ligne au tableau de chasse — la même marque partout dans le thème.</p>
+  <div class="pscroll"><div class="panel AX SI" style="height:560px">
+    <div class="haze"></div>
+    <div class="a-nav"><span class="a-mk chrome">CINÉ MARATHON</span>
+      <span class="a-lk"><span>ACCUEIL</span><span class="vc">VIDÉOCLUB</span><span>OPÉRATIONS <i>▾</i></span><span>ARMURERIE <i>▾</i></span><span>UNITÉ <i>▾</i></span><span>CLASSIFIÉ <i>▾</i></span></span>
+      <span class="a-rt">SAISON 02 — 22 OPÉRATEURS</span><span class="a-acc"><i>2</i><b>L</b></span></div>
+    <div class="a-scan"><span class="led"></span><span>FRÉQUENCE 04</span><b>APPEL</b>
+      <span>14 OPÉRATEURS EN POSITION CETTE SEMAINE — 08 HORS LIGNE</span></div>
+    <div class="a-rail"><b>12</b><b>11</b><b>10</b><b>09</b><b>08</b><b>07</b><b class="on">▸06</b>
+      <b>05</b><b>04</b><b>03</b><b>02</b><b>01</b><span class="cap">ÉTAGE</span></div>
+    <div class="pg">
+      <div class="ttl chrome" style="font-size:38px">L'ÉQUIPE</div>
+      <div class="flt"><span class="a-b2" style="padding:6px 14px"><span>TOUS · 22</span></span>
+        <span class="a-b2" style="padding:6px 14px;opacity:.6"><span>EN POSITION · 14</span></span>
+        <span class="a-b2" style="padding:6px 14px;opacity:.6"><span>PAR ÉTAGE</span></span></div>
+      <div class="grid">
+          <div class="bd"><span class="et">ÉT.09</span>
+          <div class="av"><span>D</span></div>
+          <div><div class="nm">Duffman</div><div class="mt">MATRICULE 047-S1</div>
+            <div class="st on"><i></i>EN POSITION</div><div class="la">Heat · il y a 2 h</div></div></div>
+          <div class="bd"><span class="et">ÉT.07</span>
+          <div class="av"><span>J</span></div>
+          <div><div class="nm">John</div><div class="mt">MATRICULE 012-S1</div>
+            <div class="st on"><i></i>EN POSITION</div><div class="la">Ronin · hier</div></div></div>
+          <div class="bd me"><span class="et">ÉT.06</span>
+          <div class="av"><span>L</span></div>
+          <div><div class="nm">The Legendre</div><div class="mt">MATRICULE 047-S2</div>
+            <div class="st on"><i></i>EN POSITION</div><div class="la">Collateral · il y a 3 h</div></div></div>
+          <div class="bd"><span class="et">ÉT.05</span>
+          <div class="av"><span>D</span></div>
+          <div><div class="nm">Dracaryn</div><div class="mt">MATRICULE 031-S2</div>
+            <div class="st"><i></i>HORS LIGNE</div><div class="la">The Raid · il y a 2 j</div></div></div>
+          <div class="bd"><span class="et">ÉT.04</span>
+          <div class="av"><span>H</span></div>
+          <div><div class="nm">HazroF</div><div class="mt">MATRICULE 019-S1</div>
+            <div class="st on"><i></i>EN POSITION</div><div class="la">Oldboy · il y a 4 j</div></div></div>
+          <div class="bd"><span class="et">ÉT.03</span>
+          <div class="av"><span>S</span></div>
+          <div><div class="nm">Seradalem</div><div class="mt">MATRICULE 058-S2</div>
+            <div class="st"><i></i>HORS LIGNE</div><div class="la">Drive · il y a 6 j</div></div></div>
+          <div class="bd"><span class="et">ÉT.03</span>
+          <div class="av"><span>C</span></div>
+          <div><div class="nm">Clara</div><div class="mt">MATRICULE 022-S1</div>
+            <div class="st on"><i></i>EN POSITION</div><div class="la">Heat · hier</div></div></div>
+          <div class="bd"><span class="et">ÉT.02</span>
+          <div class="av"><span>M</span></div>
+          <div><div class="nm">Milo</div><div class="mt">MATRICULE 063-S2</div>
+            <div class="st"><i></i>HORS LIGNE</div><div class="la">Speed · il y a 9 j</div></div></div>
+          <div class="bd"><span class="et">ÉT.02</span>
+          <div class="av"><span>R</span></div>
+          <div><div class="nm">Rémi</div><div class="mt">MATRICULE 071-S2</div>
+            <div class="st"><i></i>HORS LIGNE</div><div class="la">aucune capture</div></div></div>
+          <div class="bd"><span class="et">ÉT.01</span>
+          <div class="av"><span>T</span></div>
+          <div><div class="nm">Tom</div><div class="mt">MATRICULE 044-S1</div>
+            <div class="st on"><i></i>EN POSITION</div><div class="la">Predator · il y a 1 h</div></div></div>
+          <div class="bd"><span class="et">ÉT.01</span>
+          <div class="av"><span>V</span></div>
+          <div><div class="nm">Vanessa</div><div class="mt">MATRICULE 066-S2</div>
+            <div class="st"><i></i>HORS LIGNE</div><div class="la">John Wick · il y a 5 j</div></div></div>
+          <div class="bd"><span class="et">ÉT.01</span>
+          <div class="av"><span>N</span></div>
+          <div><div class="nm">Nadia</div><div class="mt">MATRICULE 069-S2</div>
+            <div class="st"><i></i>HORS LIGNE</div><div class="la">aucune capture</div></div></div>
+      </div>
+      <div class="pied"><span>DIX AUTRES BADGES — PAGE SUIVANTE</span><span style="color:var(--cold)">RECRUTEMENT FERMÉ JUSQU'À LA SAISON 03</span></div>
+    </div>
+  </div></div>
+  <p class="cap">L'équipe — les marathoniens</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 10</p>
+  <h2>La navigation — les quatre catégories du site</h2>
+  <p class="prose">Ton site range ses quinze entrées en quatre catégories dans la barre latérale : Évènement collectif, Films, Social et Secret. Elles sont toutes là, dans le même ordre, sous forme de menus dans la barre du haut. Sous chaque entrée, en petit, le nom et l'adresse d'origine — c'est la table de correspondance pour Claude Code. Les entrées grisées n'apparaissent qu'une fois débloquées par leur easter egg, exactement comme aujourd'hui.</p>
+  <div class="pscroll"><div class="panel AX SJ" style="height:690px">
+    <div class="haze"></div>
+    <div class="a-nav"><span class="a-mk chrome">CINÉ MARATHON</span>
+      <span class="a-lk"><span>ACCUEIL</span><span class="vc">VIDÉOCLUB</span><span>OPÉRATIONS <i>▾</i></span><span class="on">ARMURERIE <i>▾</i></span><span>UNITÉ <i>▾</i></span><span>CLASSIFIÉ <i>▾</i></span></span>
+      <span class="a-rt">SEMAINE 01 / 04 — ACTION</span><span class="a-acc"><i>2</i><b>L</b></span></div>
+    <div class="a-scan"><span class="led"></span><span>FRÉQUENCE 04</span><b>CARTE</b><span>ACCUEIL · QUATRE CATÉGORIES · LE COMPTE À DROITE</span></div>
+    <div class="a-rail"><b>12</b><b>11</b><b>10</b><b>09</b><b>08</b><b>07</b><b class="on">▸06</b>
+      <b>05</b><b>04</b><b>03</b><b>02</b><b>01</b><span class="cap">ÉTAGE</span></div>
+    <div class="pgx">
+      <div class="menus">
+        <div class="mn"><div class="hd">Opérations<small>ÉVÈNEMENT COLLECTIF</small></div>
+          <div class="it"><b>L'opération</b><div class="orig">Films de la semaine · /semaine</div></div>
+          <div class="it"><b>Face-à-face</b><div class="orig">Duels · /duels</div></div></div>
+        <div class="mn"><div class="hd">Armurerie<small>FILMS</small></div>
+          <div class="it"><b>L'arsenal</b><div class="orig">Liste de films · /films</div></div>
+          <div class="it"><b>Les relevés</b><div class="orig">Classements films · /notes</div></div>
+          <div class="it"><b>La casse</b><span class="tg">LE RAGEUX</span><div class="orig">Pires films · /notes?tab=pires</div></div>
+          <div class="it"><b>L'entraînement</b><div class="orig">Rattrapages cinéma · /rattrapage</div></div>
+          <div class="it"><b>Repérages</b><div class="orig">Mes watchlists · /watchlist</div></div></div>
+        <div class="mn"><div class="hd">Unité<small>SOCIAL</small></div>
+          <div class="it"><b>Fréquences</b><div class="orig">Forum · /forum</div></div>
+          <div class="it"><b>L'équipe</b><div class="orig">Marathoniens · /marathoniens</div></div>
+          <div class="it"><b>Tableau de chasse</b><div class="orig">Classement joueurs · /classement</div></div>
+          <div class="it"><b>Transmissions</b><i class="bd">2</i><div class="orig">Messages · /messages</div></div></div>
+        <div class="mn"><div class="hd">Classifié<small>SECRET</small></div>
+          <div class="it"><b>Mon Alien</b><span class="tg">LE FACEHUGGER</span><div class="orig">/tamagotchi</div></div>
+          <div class="it lock"><b>La revanche de Clippy</b><span class="tg">VERROUILLÉ</span><div class="orig">/clippy-revanche · boîte de Pandore</div></div>
+          <div class="it"><b>Dossiers classifiés</b><div class="orig">Easter eggs · /easter-eggs</div></div></div>
+      </div>
+      <div class="hors">
+        <div><div class="a-lb">LE COMPTE — MENU À DROITE</div>
+          <div class="it" style="padding:6px 0"><b style="font-family:'Saira Condensed';font-weight:700;font-size:14px;text-transform:uppercase">Fiche d'opérateur</b><div class="orig">Mon profil · /profil</div></div>
+          <div class="it" style="padding:6px 0"><b style="font-family:'Saira Condensed';font-weight:700;font-size:14px;text-transform:uppercase">Quitter le toit</b><div class="orig">Déconnexion</div></div></div>
+        <div><div class="a-lb">RÉSERVÉ AUX ADMINS</div>
+          <div class="it" style="padding:6px 0"><b style="font-family:'Saira Condensed';font-weight:700;font-size:14px;text-transform:uppercase">PC sécurité</b><div class="orig">Administration · /admin — reste en thème neutre</div></div></div>
+        <div><div class="a-lb">PIED DE PAGE — TEXTE LITTÉRAL</div>
+          <div class="orig" style="font-size:10px;color:#8B99A7;margin-top:6px;line-height:1.8">Mentions légales · /mentions-legales<br>Politique de confidentialité · /confidentialite</div></div>
+      </div>
+    </div>
+  </div></div>
+  <p class="cap">La navigation — l'arbre complet</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 11</p>
+  <h2>Les relevés — la page Classements films</h2>
+  <p class="prose">Le classement des films par note moyenne pondérée (ta page utilise la formule d'IMDb : un film noté par deux personnes ne passe pas devant un film noté par quinze). Deux onglets seulement, comme aujourd'hui : <em>Meilleurs relevés</em>, et <em>La casse</em> — les pires films, visible seulement pour ceux qui ont débloqué Le Rageux. La note se lit en dix barres, la même jauge que partout ailleurs dans le thème. <strong>Défaut trouvé dans ton code</strong> : la page ne lit que la saison 1 (<code>.eq('saison', 1)</code> en dur). En saison 2, le classement ignore tous les nouveaux films.</p>
+  <div class="pscroll"><div class="panel AX SK" style="height:700px">
+    <div class="haze"></div>
+    <div class="a-nav"><span class="a-mk chrome">CINÉ MARATHON</span>
+      <span class="a-lk"><span>ACCUEIL</span><span class="vc">VIDÉOCLUB</span><span>OPÉRATIONS <i>▾</i></span><span class="on">ARMURERIE <i>▾</i></span><span>UNITÉ <i>▾</i></span><span>CLASSIFIÉ <i>▾</i></span></span>
+      <span class="a-rt">SEMAINE 01 / 04 — ACTION</span><span class="a-acc"><i>2</i><b>L</b></span></div>
+    <div class="a-scan"><span class="led"></span><span>FRÉQUENCE 04</span><b>RELEVÉS</b><span>CLASSEMENT DES FILMS SELON LES NOTES DE L'ÉQUIPE — SAISON 02</span></div>
+    <div class="a-rail"><b>12</b><b>11</b><b>10</b><b>09</b><b>08</b><b>07</b><b class="on">▸06</b>
+      <b>05</b><b>04</b><b>03</b><b>02</b><b>01</b><span class="cap">ÉTAGE</span></div>
+    <div class="pgx">
+      <div class="ttl chrome" style="font-size:36px">LES RELEVÉS</div>
+      <div class="onglets"><span class="on">Meilleurs relevés</span><span>La casse<em>LE RAGEUX</em></span></div>
+      <div class="a-lb" style="margin-top:10px">24 FILMS RELEVÉS · CLASSEMENT PONDÉRÉ PAR LE NOMBRE DE VOTANTS</div>
+      <div class="t">
+        <div class="r h"><span>RANG</span><span></span><span>FILM</span><span>RELEVÉ MOYEN</span><span style="text-align:right">NOTE</span><span style="text-align:right">RELEVÉS</span></div>
+        <div class="r"><span class="rk">01</span><div class="a-po" id="nx1"><b></b></div>
+          <span class="ti">Heat<small>1995 · MICHAEL MANN</small></span><div class="a-gauge"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class=""></i></div>
+          <span class="no">9.1</span><span class="nb">14</span></div>
+        <div class="r"><span class="rk">02</span><div class="a-po" id="nx2"><b></b></div>
+          <span class="ti">Die Hard<small>1988 · JOHN MCTIERNAN</small></span><div class="a-gauge"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class=""></i></div>
+          <span class="no">8.9</span><span class="nb">17</span></div>
+        <div class="r"><span class="rk">03</span><div class="a-po" id="nx3"><b></b></div>
+          <span class="ti">Fury Road<small>2015 · GEORGE MILLER</small></span><div class="a-gauge"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class=""></i></div>
+          <span class="no">8.8</span><span class="nb">12</span></div>
+        <div class="r"><span class="rk">04</span><div class="a-po" id="nx4"><b></b></div>
+          <span class="ti">Terminator 2<small>1991 · JAMES CAMERON</small></span><div class="a-gauge"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class=""></i></div>
+          <span class="no">8.6</span><span class="nb">15</span></div>
+        <div class="r"><span class="rk">05</span><div class="a-po" id="nx5"><b></b></div>
+          <span class="ti">The Raid<small>2011 · GARETH EVANS</small></span><div class="a-gauge"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class=""></i><i class=""></i></div>
+          <span class="no">8.4</span><span class="nb">9</span></div>
+        <div class="r"><span class="rk">06</span><div class="a-po" id="nx6"><b></b></div>
+          <span class="ti">Oldboy<small>2003 · PARK CHAN-WOOK</small></span><div class="a-gauge"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class=""></i><i class=""></i></div>
+          <span class="no">8.3</span><span class="nb">8</span></div>
+        <div class="r"><span class="rk">07</span><div class="a-po" id="nx7"><b></b></div>
+          <span class="ti">Collateral<small>2004 · MICHAEL MANN</small></span><div class="a-gauge"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class=""></i><i class=""></i></div>
+          <span class="no">8.1</span><span class="nb">11</span></div>
+        <div class="r"><span class="rk">08</span><div class="a-po" id="nx8"><b></b></div>
+          <span class="ti">Hard Boiled<small>1992 · JOHN WOO</small></span><div class="a-gauge"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class=""></i><i class=""></i></div>
+          <span class="no">7.9</span><span class="nb">6</span></div>
+      </div>
+    </div>
+  </div></div>
+  <p class="cap">Les relevés — les classements de films</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 12</p>
+  <h2>L'entraînement — la page Rattrapages cinéma</h2>
+  <p class="prose">Sur ton site, les rattrapages sont trois listes de classiques que tu remplis dans l'admin, rangées par niveau — Débutant, Intermédiaire, Confirmé — avec leur description et le nombre de films. C'est tout : <strong>la page ne suit pas ce que chacun a vu</strong>, pas de progression, pas de niveau verrouillé. Le thème renomme les trois niveaux en grades, il ne touche pas à la liste : ce sont les mêmes classiques dans tous les thèmes. Les titres ci-dessous sont des exemples, pas ta vraie liste.</p>
+  <div class="pscroll"><div class="panel AX SL" style="height:640px">
+    <div class="haze"></div>
+    <div class="a-nav"><span class="a-mk chrome">CINÉ MARATHON</span>
+      <span class="a-lk"><span>ACCUEIL</span><span class="vc">VIDÉOCLUB</span><span>OPÉRATIONS <i>▾</i></span><span class="on">ARMURERIE <i>▾</i></span><span>UNITÉ <i>▾</i></span><span>CLASSIFIÉ <i>▾</i></span></span>
+      <span class="a-rt">SEMAINE 01 / 04 — ACTION</span><span class="a-acc"><i>2</i><b>L</b></span></div>
+    <div class="a-scan"><span class="led"></span><span>FRÉQUENCE 04</span><b>ENTRAÎNEMENT</b><span>DES LISTES DE FILMS ESSENTIELS À VOIR, CLASSÉES PAR NIVEAU DE CULTURE CINÉ</span></div>
+    <div class="a-rail"><b>12</b><b>11</b><b>10</b><b>09</b><b>08</b><b>07</b><b class="on">▸06</b>
+      <b>05</b><b>04</b><b>03</b><b>02</b><b>01</b><span class="cap">ÉTAGE</span></div>
+    <div class="pgx">
+      <div class="ttl chrome" style="font-size:36px">L'ENTRAÎNEMENT</div>
+      <div style="margin-top:4px">
+      <div class="niv">
+        <div><div class="a-lb">NIVEAU — DÉBUTANT</div><div class="nm" style="margin-top:4px">Recrue</div>
+          <div class="ds">Les incontournables absolus — films que tout cinéphile doit avoir vu au moins une fois.</div><div class="ct"><b>08</b> FILMS</div></div>
+        <div class="row"><div class="a-po" id="nx9"><b>Le Parrain</b></div><div class="a-po" id="nx10"><b>Pulp Fiction</b></div><div class="a-po" id="nx11"><b>Retour vers le futur</b></div><div class="a-po" id="nx12"><b>Les Dents de la mer</b></div><div class="a-po" id="nx13"><b>Alien</b></div><div class="a-po" id="nx14"><b>Matrix</b></div><div class="a-po" id="nx15"><b>Star Wars</b></div><div class="a-po" id="nx16"><b>Les Affranchis</b></div></div>
+      </div>
+      <div class="niv">
+        <div><div class="a-lb">NIVEAU — INTERMÉDIAIRE</div><div class="nm" style="margin-top:4px">Opérateur</div>
+          <div class="ds">Des œuvres importantes moins connues du grand public — pour aller plus loin.</div><div class="ct"><b>08</b> FILMS</div></div>
+        <div class="row"><div class="a-po" id="nx17"><b>Heat</b></div><div class="a-po" id="nx18"><b>Le Samouraï</b></div><div class="a-po" id="nx19"><b>Oldboy</b></div><div class="a-po" id="nx20"><b>Chinatown</b></div><div class="a-po" id="nx21"><b>Le Salaire de la peur</b></div><div class="a-po" id="nx22"><b>Memories of Murder</b></div><div class="a-po" id="nx23"><b>Brazil</b></div><div class="a-po" id="nx24"><b>Il était une fois en Amérique</b></div></div>
+      </div>
+      <div class="niv">
+        <div><div class="a-lb">NIVEAU — CONFIRMÉ</div><div class="nm" style="margin-top:4px">Vétéran</div>
+          <div class="ds">Films rares, art & essai, cinéma du monde — pour les vrais connaisseurs.</div><div class="ct"><b>08</b> FILMS</div></div>
+        <div class="row"><div class="a-po" id="nx25"><b>Stalker</b></div><div class="a-po" id="nx26"><b>Voyage à Tokyo</b></div><div class="a-po" id="nx27"><b>In the Mood for Love</b></div><div class="a-po" id="nx28"><b>Andreï Roublev</b></div><div class="a-po" id="nx29"><b>La Jetée</b></div><div class="a-po" id="nx30"><b>Les Harmonies Werckmeister</b></div><div class="a-po" id="nx31"><b>Close-Up</b></div><div class="a-po" id="nx32"><b>Jeanne Dielman</b></div></div>
+      </div>
+      </div>
+    </div>
+  </div></div>
+  <p class="cap">L'entraînement — les rattrapages cinéma</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 13</p>
+  <h2>Repérages — les pages Mes watchlists et Watchlists publiques</h2>
+  <p class="prose">Tes listes à gauche : on peut en avoir plusieurs, les renommer, les rendre publiques ou privées, les supprimer. La liste ouverte à droite, avec les films déjà encaissés marqués. Le deuxième onglet, <em>Repérages de l'unité</em>, c'est la page des watchlists publiques des autres, avec les coups de cœur.</p>
+  <div class="pscroll"><div class="panel AX SM" style="height:560px">
+    <div class="haze"></div>
+    <div class="a-nav"><span class="a-mk chrome">CINÉ MARATHON</span>
+      <span class="a-lk"><span>ACCUEIL</span><span class="vc">VIDÉOCLUB</span><span>OPÉRATIONS <i>▾</i></span><span class="on">ARMURERIE <i>▾</i></span><span>UNITÉ <i>▾</i></span><span>CLASSIFIÉ <i>▾</i></span></span>
+      <span class="a-rt">SEMAINE 01 / 04 — ACTION</span><span class="a-acc"><i>2</i><b>L</b></span></div>
+    <div class="a-scan"><span class="led"></span><span>FRÉQUENCE 04</span><b>REPÉRAGES</b><span>03 LISTES — 01 PUBLIQUE</span></div>
+    <div class="a-rail"><b>12</b><b>11</b><b>10</b><b>09</b><b>08</b><b>07</b><b class="on">▸06</b>
+      <b>05</b><b>04</b><b>03</b><b>02</b><b>01</b><span class="cap">ÉTAGE</span></div>
+    <div class="pgx">
+      <div class="ttl chrome" style="font-size:36px">REPÉRAGES</div>
+      <div class="onglets"><span class="on">Mes repérages</span><span>Repérages de l'unité<em>14 LISTES</em></span></div>
+      <div class="z">
+        <div class="ls">
+          <div class="l on"><b>Soirée Michael Mann</b><div class="m"><span>06 FILMS · 02 ENCAISSÉS</span><span class="pub">PUBLIQUE</span></div></div>
+          <div class="l"><b>À voir avant Noël</b><div class="m"><span>11 FILMS · 04 ENCAISSÉS</span><span>PRIVÉE</span></div></div>
+          <div class="l"><b>Pour convaincre HazroF</b><div class="m"><span>03 FILMS · 00 ENCAISSÉ</span><span>PRIVÉE</span></div></div>
+          <div style="margin-top:10px"><span class="a-b2" style="padding:7px 14px;font-size:13px"><span>+ Nouvelle liste</span></span></div>
+        </div>
+        <div>
+          <div class="act"><div class="a-hd" style="font-size:22px">Soirée Michael Mann</div>
+            <span class="a-tag" style="margin-left:auto">RENOMMER</span><span class="a-tag">RENDRE PRIVÉE</span>
+            <span class="a-tag" style="color:var(--blood);border-color:rgba(194,32,28,.5)">SUPPRIMER</span></div>
+          <div class="gr"><div class="a-po" id="nx33"><span class="ok">✓</span><b>Heat</b></div><div class="a-po" id="nx34"><span class="ok">✓</span><b>Collateral</b></div><div class="a-po" id="nx35"><b>Thief</b></div><div class="a-po" id="nx36"><b>Miami Vice</b></div><div class="a-po" id="nx37"><b>Le Sixième Sens</b></div><div class="a-po" id="nx38"><b>Public Enemies</b></div></div>
+          <div class="a-lb" style="margin-top:12px">02 COUPS DE CŒUR DE L'UNITÉ SUR CETTE LISTE — DUFFMAN, CLARA</div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+  <p class="cap">Repérages — les watchlists</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 14</p>
+  <h2>Transmissions — la page Messages</h2>
+  <p class="prose">Les messages privés entre joueurs. La pastille orange dans la barre et sur l'avatar compte les non lus, comme aujourd'hui dans la barre latérale. La conversation se lit comme un journal radio : heure, émetteur, message.</p>
+  <div class="pscroll"><div class="panel AX SN" style="height:540px">
+    <div class="haze"></div>
+    <div class="a-nav"><span class="a-mk chrome">CINÉ MARATHON</span>
+      <span class="a-lk"><span>ACCUEIL</span><span class="vc">VIDÉOCLUB</span><span>OPÉRATIONS <i>▾</i></span><span>ARMURERIE <i>▾</i></span><span>UNITÉ <i>▾</i></span><span>CLASSIFIÉ <i>▾</i></span></span>
+      <span class="a-rt">TRANSMISSIONS — 02 NON LUES</span><span class="a-acc"><i>2</i><b>L</b></span></div>
+    <div class="a-scan"><span class="led"></span><span>FRÉQUENCE 04</span><b>CANAL PRIVÉ</b><span>LES MESSAGES NE SONT LUS QUE PAR LES DEUX OPÉRATEURS</span></div>
+    <div class="a-rail"><b>12</b><b>11</b><b>10</b><b>09</b><b>08</b><b>07</b><b class="on">▸06</b>
+      <b>05</b><b>04</b><b>03</b><b>02</b><b>01</b><span class="cap">ÉTAGE</span></div>
+    <div class="pgx">
+      <div class="ttl chrome" style="font-size:36px">TRANSMISSIONS</div>
+      <div class="z">
+        <div class="cv">
+          <div class="c on"><span class="av">D</span><div><b>Duffman</b><div class="x">Tu prends Heat vendredi ?</div></div><span class="u">2</span></div>
+          <div class="c"><span class="av">C</span><div><b>Clara</b><div class="x">Merci pour la liste Mann</div></div><span></span></div>
+          <div class="c"><span class="av">H</span><div><b>HazroF</b><div class="x">Ok pour le face-à-face</div></div><span></span></div>
+          <div class="c"><span class="av">J</span><div><b>John</b><div class="x">Tu as vu Sicario ?</div></div><span></span></div>
+        </div>
+        <div class="th">
+          <div class="hd"><b>Duffman</b><span>ÉTAGE 09 · CANAL PRIVÉ</span><span class="bq">Bloquer</span></div>
+          <div class="l"><span class="tm">20:41</span><span class="wh">DUFFMAN</span><span>Tu prends Heat vendredi ou tu l'as déjà encaissé ?</span></div>
+          <div class="l moi"><span class="tm">20:44</span><span class="wh">THE LEGENDRE</span><span>Déjà vu deux fois. Je viens quand même pour la fusillade.</span></div>
+          <div class="l"><span class="tm">20:45</span><span class="wh">DUFFMAN</span><span>Alors tu votes Alien au face-à-face, on a besoin de toi.</span></div>
+          <div class="l"><span class="tm">20:46</span><span class="wh">DUFFMAN</span><span>Et ramène HazroF.</span></div>
+          <div class="in"><div class="f">TRANSMETTRE UN MESSAGE…</div><span class="a-b1" style="padding:9px 18px;font-size:13px"><span>Émettre</span></span></div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+  <p class="cap">Transmissions — les messages</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 15</p>
+  <h2>Un canal — la page d'un sujet du forum</h2>
+  <p class="prose">L'intérieur d'un sujet : le fil de messages et la réponse. Chaque message porte l'avatar, l'étage et l'heure. Tes propres messages sont marqués <em>(toi)</em> et tu peux les supprimer ; le créateur du sujet et l'admin voient en plus <em>Modifier</em> et <em>Supprimer le topic</em>. Ces boutons restent en toutes lettres. <strong>Il n'y a pas de bouton « signaler » sur le forum aujourd'hui</strong> — je l'avais dessiné, c'était faux. Le seul signalement du site est « Signaler une erreur » sur une fiche film.</p>
+  <div class="pscroll"><div class="panel AX SO" style="height:540px">
+    <div class="haze"></div>
+    <div class="a-nav"><span class="a-mk chrome">CINÉ MARATHON</span>
+      <span class="a-lk"><span>ACCUEIL</span><span class="vc">VIDÉOCLUB</span><span>OPÉRATIONS <i>▾</i></span><span>ARMURERIE <i>▾</i></span><span class="on">UNITÉ <i>▾</i></span><span>CLASSIFIÉ <i>▾</i></span></span>
+      <span class="a-rt">FRÉQUENCES — CANAL 04.7</span><span class="a-acc"><i>2</i><b>L</b></span></div>
+    <div class="a-scan"><span class="led"></span><span>FRÉQUENCE 04</span><b>EN DIRECT</b><span>04.7 MHZ — 12 TRANSMISSIONS — OUVERT PAR DUFFMAN IL Y A 2 H</span></div>
+    <div class="a-rail"><b>12</b><b>11</b><b>10</b><b>09</b><b>08</b><b>07</b><b class="on">▸06</b>
+      <b>05</b><b>04</b><b>03</b><b>02</b><b>01</b><span class="cap">ÉTAGE</span></div>
+    <div class="pgx">
+      <div class="a-lb">← FRÉQUENCES · 04.7 MHZ</div>
+      <div class="a-hd" style="font-size:28px;margin-top:6px">Heat — la fusillade du centre-ville</div>
+      <div class="ps">
+        <div class="p"><span class="av">D</span><div><div class="h"><b>Duffman</b><span>ÉT.09 · 18:02</span></div>
+          <div class="tx">Quarante minutes de préparation pour six minutes de feu. Et le son : Mann a enregistré les vrais coups de feu dans la rue, ça s'entend.</div></div></div>
+        <div class="p"><span class="av">C</span><div><div class="h"><b>Clara</b><span>ÉT.03 · 18:20</span></div>
+          <div class="tx">Le vrai sommet c'est le café entre De Niro et Pacino. Deux minutes, deux types assis, et c'est plus tendu que la fusillade.</div></div></div>
+        <div class="p"><span class="av">L</span><div><div class="h"><b>The Legendre</b><span class="me">(toi)</span><span>ÉT.06 · 19:05</span><span class="sg">Supprimer</span></div>
+          <div class="tx">D'accord avec Clara. La fusillade, on la montre. Le café, on s'en souvient.</div></div></div>
+      </div>
+      <div class="rp"><div class="f">RÉPONDRE SUR 04.7…</div><span class="a-b1" style="padding:9px 18px;font-size:13px"><span>Émettre</span></span></div>
+    </div>
+  </div></div>
+  <p class="cap">Un canal — un sujet du forum</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 16</p>
+  <h2>Dossiers classifiés — la page Easter eggs</h2>
+  <p class="prose">Ta page actuelle est une seule liste : un œuf trouvé montre son nom, sa condition et la date ; un œuf pas trouvé montre « ??? (#numéro) » et « Pas encore découvert », mais garde sa famille et le nombre de joueurs qui l'ont trouvé. Je garde exactement ça, rangé par familles — Clavier, Forum, Horaire, Films, Succès, dans l'ordre de ton code, numéros compris. <strong>La sixième famille est nouvelle</strong> : les œufs du thème, trouvables seulement pendant la semaine du thème. Une famille de thème apparaît dans la galerie dès la première semaine de son thème, puis y reste : le total grandit avec la saison — 27 en semaine 01 (Action), 30 en semaine 02 (Comédie), 33 en semaine 03 (Western). Les numéros continuent ceux de ton code : #26 et #27 pour Action.</p>
+  <div class="pscroll"><div class="panel AX SP" style="height:1080px">
+    <div class="haze"></div>
+    <div class="a-nav"><span class="a-mk chrome">CINÉ MARATHON</span>
+      <span class="a-lk"><span>ACCUEIL</span><span class="vc">VIDÉOCLUB</span><span>OPÉRATIONS <i>▾</i></span><span>ARMURERIE <i>▾</i></span><span>UNITÉ <i>▾</i></span><span class="on">CLASSIFIÉ <i>▾</i></span></span>
+      <span class="a-rt">SEMAINE 01 / 04 — ACTION</span><span class="a-acc"><i>2</i><b>L</b></span></div>
+    <div class="a-scan"><span class="led"></span><span>FRÉQUENCE 04</span><b>ARCHIVES</b><span>13 DOSSIERS DÉCLASSIFIÉS SUR 27</span></div>
+    <div class="a-rail"><b>12</b><b>11</b><b>10</b><b>09</b><b>08</b><b>07</b><b class="on">▸06</b>
+      <b>05</b><b>04</b><b>03</b><b>02</b><b>01</b><span class="cap">ÉTAGE</span></div>
+    <div class="pgx">
+      <div class="ttl chrome" style="font-size:36px">DOSSIERS CLASSIFIÉS</div>
+      <div class="int">Des dossiers sont cachés dans le bâtiment. Trouve-les tous pour les déclassifier. Certains nécessitent du courage.</div>
+      <div class="a-gl" style="margin-top:8px"><span>13 DÉCLASSIFIÉS</span><b>14 RESTANTS</b></div>
+      <div class="a-gauge"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="fam"><div class="fh"><b>Clavier</b><span>5 / 14</span></div><div class="cds"><div class="cd ok"><i>DÉCLASSIFIÉ</i><b>La Pilule Rouge</b><em>Taper « red pill » au clavier</em><u>9 joueurs</u></div><div class="cd ok"><i>DÉCLASSIFIÉ</i><b>Why So Serious?</b><em>Entrer le code Konami</em><u>4 joueurs</u></div><div class="cd no"><i>CLASSIFIÉ</i><b>??? #03</b><em>Pas encore découvert</em><u>7 joueurs</u></div><div class="cd ok"><i>DÉCLASSIFIÉ</i><b>Je suis désolé, Dave</b><em>Taper « open the door »</em><u>6 joueurs</u></div><div class="cd no"><i>CLASSIFIÉ</i><b>??? #05</b><em>Pas encore découvert</em><u>5 joueurs</u></div><div class="cd ok"><i>DÉCLASSIFIÉ</i><b>Shaken, Not Stirred</b><em>Taper « bond » — gun barrel</em><u>8 joueurs</u></div><div class="cd no"><i>CLASSIFIÉ</i><b>??? #07</b><em>Pas encore découvert</em><u>3 joueurs</u></div><div class="cd ok"><i>DÉCLASSIFIÉ</i><b>Oh mon Dieu !</b><em>Taper « kill kenny »</em><u>6 joueurs</u></div><div class="cd no"><i>CLASSIFIÉ</i><b>??? #09</b><em>Pas encore découvert</em><u>5 joueurs</u></div><div class="cd no"><i>CLASSIFIÉ</i><b>??? #10</b><em>Pas encore découvert</em><u>2 joueurs</u></div><div class="cd no"><i>CLASSIFIÉ</i><b>??? #11</b><em>Pas encore découvert</em><u>3 joueurs</u></div><div class="cd no"><i>CLASSIFIÉ</i><b>??? #12</b><em>Pas encore découvert</em><u>4 joueurs</u></div><div class="cd no"><i>CLASSIFIÉ</i><b>??? #20</b><em>Pas encore découvert</em><u>2 joueurs</u></div><div class="cd no"><i>CLASSIFIÉ</i><b>??? #21</b><em>Pas encore découvert</em><u>1 joueur</u></div></div></div>
+      <div class="fam"><div class="fh"><b>Forum</b><span>2 / 2</span></div><div class="cds"><div class="cd ok"><i>DÉCLASSIFIÉ</i><b>Le Facehugger</b><em>Écrire « alien » dans le forum</em><u>7 joueurs</u></div><div class="cd ok"><i>DÉCLASSIFIÉ</i><b>Le Rageux</b><em>Un mot bien senti dans le forum</em><u>6 joueurs</u></div></div></div>
+      <div class="fam"><div class="fh"><b>Horaire</b><span>1 / 2</span></div><div class="cds"><div class="cd ok"><i>DÉCLASSIFIÉ</i><b>TARS en ligne</b><em>Visiter le site à 14 h 07</em><u>2 joueurs</u></div><div class="cd no"><i>CLASSIFIÉ</i><b>??? #15</b><em>Pas encore découvert</em><u>5 joueurs</u></div></div></div>
+      <div class="fam"><div class="fh"><b>Films</b><span>0 / 3</span></div><div class="cds"><div class="cd no"><i>CLASSIFIÉ</i><b>??? #17</b><em>Pas encore découvert</em><u>4 joueurs</u></div><div class="cd no"><i>CLASSIFIÉ</i><b>??? #18</b><em>Pas encore découvert</em><u>1 joueur</u></div><div class="cd no"><i>CLASSIFIÉ</i><b>??? #19</b><em>Pas encore découvert</em><u>3 joueurs</u></div></div></div>
+      <div class="fam"><div class="fh"><b>Succès</b><span>4 / 4</span></div><div class="cds"><div class="cd ok"><i>DÉCLASSIFIÉ</i><b>Cinéphile Confirmé</b><em>5 films marqués vus</em><u>12 joueurs</u></div><div class="cd ok"><i>DÉCLASSIFIÉ</i><b>Critique en Herbe</b><em>3 films notés</em><u>11 joueurs</u></div><div class="cd ok"><i>DÉCLASSIFIÉ</i><b>Premier Duel</b><em>1 vote en duel</em><u>12 joueurs</u></div><div class="cd ok"><i>DÉCLASSIFIÉ</i><b>Curateur</b><em>1 film ajouté</em><u>10 joueurs</u></div></div></div>
+      <div class="fam"><div class="fh"><b style="color:var(--hot)">Thème — Action</b><span>1 / 2</span> <span class="nw">NOUVELLE FAMILLE · SEULEMENT PENDANT LA SEMAINE ACTION</span></div><div class="cds"><div class="cd no"><i>CLASSIFIÉ</i><b>??? #26</b><em>Pas encore découvert</em><u>0 joueur</u></div><div class="cd ok"><i>DÉCLASSIFIÉ</i><b>Nakatomi Plaza</b><em>Taper « nakatomi »</em><u>3 joueurs</u></div></div></div>
+    </div>
+  </div></div>
+  <p class="cap">Dossiers classifiés — les easter eggs</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 17</p>
+  <h2>Prendre le poste — les pages Connexion, Inscription et Mot de passe oublié</h2>
+  <p class="prose">Ta page de connexion est une page à part : pas de menu, pas de barre latérale. De haut en bas : le compte à rebours <em>seulement avant le début de saison</em> (il disparaît une fois le marathon lancé), le bouton « Rejoindre le Discord », puis la carte avec deux onglets, Connexion et Inscription. Pendant une saison en cours, l'onglet Inscription prévient : « Le marathon est déjà en cours ! Tu participeras à la saison suivante. » Le titre de la page est habillé ; <strong>les onglets, les champs, les boutons et « Mot de passe oublié ? » restent littéraux</strong> — c'est un formulaire de sécurité. <strong>Défaut trouvé dans ton code</strong> : le mot de passe minimum est de 4 caractères (inscription et réinitialisation). C'est trop faible, passe à 8 au moins.</p>
+  <div class="pscroll"><div class="panel AX SQ" style="height:560px">
+    <div class="haze"></div>
+    <div class="solo">
+      <div class="col">
+        <div class="a-lb">ÉTAT 1 — SAISON EN COURS · CONNEXION</div>
+        <div class="dsc">REJOINDRE LE DISCORD</div>
+        <div class="card">
+          <div class="ttl chrome" style="font-size:32px">PRENDRE LE POSTE</div>
+          <div class="a-lb" style="margin-top:2px">SAISON 2 · 2026</div>
+          <div class="onglets"><span class="on">Connexion</span><span>Inscription</span></div>
+          <div class="fd"><label>EMAIL</label><div class="f on">legendre@exemple.fr</div></div>
+          <div class="fd"><label>MOT DE PASSE</label><div class="f">••••••••••</div></div>
+          <div style="display:flex;align-items:center;gap:16px;margin-top:14px">
+            <span class="a-b1"><span>Se connecter</span></span>
+            <span class="lk">Mot de passe oublié ?</span></div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="a-lb">ÉTAT 2 — SAISON EN COURS · INSCRIPTION</div>
+        <div class="card">
+          <div class="warn"><b>L'OPÉRATION EST DÉJÀ LANCÉE</b>Le marathon est déjà en cours ! Tu participeras à la <em>Saison 3</em>.</div>
+          <div class="fd"><label>PSEUDO</label><div class="f">CinéPhile42</div></div>
+          <div class="fd"><label>EMAIL</label><div class="f">&nbsp;</div></div>
+          <div class="fd"><label>MOT DE PASSE</label><div class="f">&nbsp;</div></div>
+          <div style="margin-top:14px"><span class="a-b1"><span>Rejoindre le marathon</span></span></div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="a-lb">ÉTAT 3 — AVANT LA SAISON · LE COMPTE À REBOURS</div>
+        <div class="cpt"><div class="a-lb">HEURE H DU MARATHON</div>
+          <div class="n"><div><b>03</b><span>JOURS</span></div><div><b>14</b><span>HEURES</span></div><div><b>22</b><span>MIN</span></div><div><b>07</b><span>SEC</span></div></div></div>
+        <div class="a-lb" style="margin-top:18px">RÉINITIALISATION — /AUTH/RESET</div>
+        <div class="card">
+          <div class="a-hd" style="font-size:20px">Code d'accès perdu</div>
+          <div class="fd"><label>NOUVEAU MOT DE PASSE</label><div class="f">&nbsp;</div></div>
+          <div style="margin-top:12px"><span class="a-b2"><span>Valider</span></span></div>
+        </div>
+        <div class="lg"><u>Mentions légales</u> · <u>Politique de confidentialité</u></div>
+      </div>
+    </div>
+  </div></div>
+  <p class="cap">Prendre le poste — connexion, inscription, réinitialisation</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 18</p>
+  <h2>Les messages du système — bannières, fenêtres, notifications</h2>
+  <p class="prose">Tout ce qui s'affiche <em>par-dessus</em> les pages et que j'avais oublié : la bannière de bienvenue (premier passage), la bannière pour rejoindre une saison en cours avec ses quatre états, la fenêtre de 24 h pour cocher les films vus avant de rejoindre, les notifications, l'écran de chargement, le bouton Discord flottant et les bandeaux 18+ sur les affiches. Règle : le titre prend la voix du thème, <strong>la phrase qui explique reste celle de ton code</strong>, et les états « refusé », « 18+ », « Signalement envoyé » ne sont jamais habillés.</p>
+  <div class="pscroll"><div class="panel AX SR" style="height:790px">
+    <div class="haze"></div>
+    <div class="a-nav"><span class="a-mk chrome">CINÉ MARATHON</span>
+      <span class="a-lk"><span class="on">ACCUEIL</span><span class="vc">VIDÉOCLUB</span><span>OPÉRATIONS <i>▾</i></span><span>ARMURERIE <i>▾</i></span><span>UNITÉ <i>▾</i></span><span>CLASSIFIÉ <i>▾</i></span></span>
+      <span class="a-rt">SEMAINE 01 / 04 — ACTION</span><span class="a-acc"><i>2</i><b>L</b></span></div>
+    <div class="a-scan"><span class="led"></span><span>FRÉQUENCE 04</span><b>SYSTÈME</b><span>CE QUI APPARAÎT PAR-DESSUS LES PAGES</span></div>
+    <div class="grid">
+      <div class="bx"><div class="a-lb">BIENVENUE — PREMIER PASSAGE</div>
+        <div class="bn"><b>Bienvenue dans l'unité</b><p>Avant de commencer, consulte les règles du jeu ci-dessous pour tout comprendre en 2 minutes.</p>
+          <div class="bt"><span class="a-b1"><span>Voir les règles</span></span><span class="a-b2"><span>Je connais déjà</span></span></div></div></div>
+      <div class="bx"><div class="a-lb">REJOINDRE UNE SAISON EN COURS — 4 ÉTATS</div>
+        <div class="st"><b>Rejoindre l'opération en cours</b><span class="a-b2"><span>Envoyer la demande</span></span></div>
+        <div class="st w"><b>En attente du feu vert</b><p>Ton inscription en cours de saison a bien été envoyée à l'admin. Tu recevras une réponse prochainement.</p></div>
+        <div class="st g"><b>Accrédité — Saison 3</b><p>Tu es inscrit pour la prochaine saison. Tu pourras participer pleinement dès son lancement.</p></div>
+        <div class="st r"><p>Ta précédente demande a été refusée — tu peux en envoyer une nouvelle.</p></div></div>
+      <div class="bx"><div class="a-lb">FEU VERT — LA FENÊTRE DE 24 H</div>
+        <div class="bn"><b>Bienvenue dans le Marathon !</b><p>Tu as une fenêtre de 24 h pour cocher les films déjà vus avant de rejoindre le marathon.</p>
+          <div class="tm"><span>TEMPS RESTANT POUR COCHER TES FILMS PRÉ-MARATHON</span><b>23:41:07</b></div>
+          <p>Va sur la page Films, ouvre un film que tu as déjà vu, et clique sur <em>« J'ai vu ce film (pré-marathon) »</em>.</p>
+          <div class="bt"><span class="a-b1"><span>Compris — Allons cocher mes films !</span></span></div></div></div>
+      <div class="bx"><div class="a-lb">NOTIFICATIONS</div><div class="stack">
+        <div class="toast">ENCAISSÉ — HEAT<span class="g">+10 EXP</span></div>
+        <div class="toast">Signalement envoyé à l'admin<span class="g">✓</span></div>
+        <div class="toast err">Limite journalière atteinte !<span class="g" style="color:#C2201C">✕</span></div>
+        <div class="toast">Déjà dans tes watchlists !<span class="g">!</span></div></div></div>
+      <div class="bx"><div class="a-lb">CHARGEMENT · VIDE · RÉGLAGE</div>
+        <div class="ld"><span>ACQUISITION DU SIGNAL</span><i></i></div>
+        <div class="vd">RIEN SUR LE RADAR<small>Ouvre un film et note-le pour démarrer le classement.</small></div>
+        <div class="tg"><span>Activer les notifications</span><i></i></div></div>
+      <div class="bx"><div class="a-lb">SUR LES AFFICHES · FLOTTANT</div>
+        <div class="po2"><div class="a-po" id="sr1"><span class="p18">18+</span><b>—</b></div><div class="a-po" id="sr2"><span class="p18 v">18+ ÉTRANGE</span><b>—</b></div>
+          <div class="fab">Discord</div></div>
+        <p class="nt">Les bandeaux 18+ gardent leur rouge et leur violet dans tous les thèmes. Le bouton Discord garde sa couleur de marque ; le thème ne change que sa forme.</p></div>
+    </div>
+  </div></div>
+  <p class="cap">Les messages du système</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 19</p>
+  <h2>La radio — musique, volume, œufs du thème</h2>
+  <p class="prose">Une vieille radio, présente dans les quatre thèmes, chacun avec son habillage. En Action, c'est la radio de l'unité : un boîtier tactique noir, un écran de fréquence orange, des interrupteurs à levier. Elle règle trois choses pour le joueur : la musique de fond (éteinte par défaut — les navigateurs bloquent le son tant qu'on n'a pas cliqué sur la page), le volume, et les œufs du thème (couper les œufs coupe aussi leurs effets : la voiture, la mouche, le ballon…). La piste du thème, « Heure H », est à produire : pas de musique de film, elles sont protégées.</p>
+  <div class="pscroll"><div class="panel AX SV" style="height:560px">
+    <div class="haze"></div>
+    <div class="a-nav"><span class="a-mk chrome">CINÉ MARATHON</span>
+      <span class="a-lk"><span class="on">ACCUEIL</span><span class="vc">VIDÉOCLUB</span><span>OPÉRATIONS <i>▾</i></span><span>ARMURERIE <i>▾</i></span><span>UNITÉ <i>▾</i></span><span>CLASSIFIÉ <i>▾</i></span></span>
+      <span class="a-rt">SEMAINE 01 / 04 — ACTION</span><span class="a-acc"><i>2</i><b>L</b></span></div>
+    <div class="a-scan"><span class="led"></span><span>FRÉQUENCE 04</span><b>RADIO</b><span>LA MUSIQUE DE L'UNITÉ · RÉGLAGES DU JOUEUR</span></div>
+    <div class="rad">
+      <div class="ant"></div>
+      <div class="lcd"><b>FRÉQ 04.7</b><span>CANAL MUSIQUE · « HEURE H »</span></div>
+      <div class="rc">
+          <div><span>Musique</span><i class="sw on"><u></u></i><em>marche</em></div>
+          <div><span>Volume</span><i class="kn" style="transform:rotate(40deg)"><u></u></i><em>4 / 10</em></div>
+          <div><span>Œufs du thème</span><i class="sw on"><u></u></i><em>actifs</em></div></div>
+      <div class="rp">Piste : musique originale, à produire</div>
+    </div>
+    <div class="rmini"><span class="led"></span>RADIO</div>
+    <div class="rnotes">
+        <div><b>Fermée</b>Un petit poste en bas à gauche, sa diode allumée si la musique joue. Le bouton Discord reste en bas à droite.</div>
+        <div><b>Ouverte</b>Trois réglages : la musique, le volume, les œufs du thème. Gardés sur le compte, et dans le navigateur pour les visiteurs.</div>
+        <div><b>Au téléphone</b>Pas de poste flottant : la barre du bas est déjà pleine. La radio passe dans le tiroir « Menu ».</div></div>
+  </div></div>
+  <p class="cap">La radio — la radio de l'unité</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 20</p>
+  <h2>Le vidéoclub — l'entrée dans la barre et le bloc d'accueil</h2>
+  <p class="prose">Le vidéoclub a sa section dans chaque thème, en deux endroits. Une entrée à part dans la barre du haut, juste après l'accueil et hors des quatre menus : elle garde son nom, « Vidéoclub », et un petit point de néon doré, le même dans les quatre thèmes. Et un bloc sur la page d'accueil, qui parle la langue du thème : en Action, c'est le dépôt vidéo du secteur B, et les boîtes que personne n'a rendues sont des bandes toujours dehors. Derrière la porte, rien ne change : le vidéoclub reste en thème neutre, toutes les semaines. Les chiffres viennent des vraies données : les boîtes « louées » sont les films que personne n'a encore vus, et le dernier retour est le dernier film marqué vu, avant ou pendant le marathon.</p>
+  <div class="pscroll"><div class="panel AX SX" style="height:600px">
+    <div class="haze"></div>
+    <div class="a-nav"><span class="a-mk chrome">CINÉ MARATHON</span>
+      <span class="a-lk"><span>ACCUEIL</span><span class="vc on">VIDÉOCLUB</span><span>OPÉRATIONS <i>▾</i></span><span>ARMURERIE <i>▾</i></span><span>UNITÉ <i>▾</i></span><span>CLASSIFIÉ <i>▾</i></span></span>
+      <span class="a-rt">SEMAINE 01 / 04 — ACTION</span><span class="a-acc"><i>2</i><b>L</b></span></div>
+    <div class="a-scan"><span class="led"></span><span>FRÉQUENCE 04</span><b>DÉPÔT</b><span>LE BLOC DE L'ACCUEIL · LA PORTE DU VIDÉOCLUB</span></div>
+    <div class="a-rail"><b>12</b><b>11</b><b>10</b><b>09</b><b>08</b><b>07</b><b class="on">▸06</b>
+      <b>05</b><b>04</b><b>03</b><b>02</b><b>01</b><span class="cap">ÉTAGE</span></div>
+    <div class="vcgrid">
+      <div class="vcblk">
+        <div class="a-lb">DÉPÔT VIDÉO — SECTEUR B</div>
+        <div class="ttl chrome">DÉPÔT VIDÉO</div>
+        <div class="cnt"><b>112</b><span>BANDES TOUJOURS DEHORS</span></div>
+        <div class="lst"><span class="a-lb">DERNIÈRE RESTITUTION</span><span>DUFFMAN, <b>HEAT</b> · 21:14</span></div>
+        <div class="vcx"><i class="w3" style="background:linear-gradient(160deg,#7a1f24,#1a0506)"><b>24</b></i><i class="w2" style="background:linear-gradient(160deg,#1c2947,#070b16)"><b>15</b></i><i class="loue"></i><i class="" style="background:linear-gradient(160deg,#2b4527,#0a1208)"><b>4</b></i><i class="loue"></i><i class="w2" style="background:linear-gradient(160deg,#9a4419,#200b03)"><b>11</b></i></div>
+        <div style="margin-top:18px"><span class="a-b1"><span>ENTRER DANS LE DÉPÔT</span></span></div>
+      </div>
+      <div class="vcside"><div class="vcn"><div class="fac"></div><div class="sign">VIDÉOCLUB</div>
+          <div class="win l"><i style="background:linear-gradient(160deg,#6f1d22,#1a0506)"></i><i style="background:linear-gradient(160deg,#0f3a5f,#06111c)"></i></div>
+          <div class="door"><span>OUVERT<br>24 H / 24</span></div>
+          <div class="win r"><i style="background:linear-gradient(160deg,#c79a2a,#2a1f06)"></i><i style="background:linear-gradient(160deg,#3a2150,#0e0714)"></i></div>
+          <div class="glow"></div><span class="tag">Derrière la porte · thème neutre</span></div></div>
+    </div>
+    <div class="vcnotes">
+          <div><b>Barre du haut</b>« Vidéoclub », après l'accueil. Le point doré le distingue des quatre menus.</div>
+          <div><b>Accueil</b>Ce bloc, sous le héros. Visiteur non connecté : titre et bouton seulement.</div>
+          <div><b>Téléphone</b>Le vidéoclub passe dans le tiroir « Menu », le bloc reste sur l'accueil.</div></div>
+  </div></div>
+  <p class="cap">Le vidéoclub — le dépôt vidéo du secteur B</p>
+</section>
+
+<section>
+  <p class="eyebrow">Les œufs du thème</p>
+  <h2>Deux secrets qui n'existent que pendant la semaine Action</h2>
+  <p class="prose">Ils entrent dans la nouvelle famille « Thème — Action » de la page Easter eggs. Même mécanique que tes vingt-cinq œufs actuels : une ligne dans <code>discovered_eggs</code>, une carte dans la galerie, un interrupteur dans l'admin pour les couper. Hors de la semaine Action, ils ne se déclenchent pas mais leur carte reste visible.</p>
+  <div class="eggs">
+    <div class="egg"><div class="k">theme-action-voiture</div><h3>La voiture</h3>
+      <p><b>Déclencheur.</b> Pendant la semaine Action, sur ordinateur, le curseur est une voiture vue de dessus. Lancée <em>très vite</em> contre un bord de la page ou contre le titre « Ciné Marathon », elle se crashe et explose. À vitesse normale, elle freine et rien ne se passe.</p>
+      <p><b>Effet.</b> Explosion de 0,6 s à l'endroit du choc, puis la voiture réapparaît au centre après 1,5 s. Le premier crash débloque l'œuf.</p>
+      <p><b>Réglages à faire en test.</b> Le seuil de vitesse — je ne peux pas te donner le bon chiffre sans essayer sur une vraie souris : pars autour de 2 000 px/s mesurés sur les 80 dernières millisecondes, et ajuste. Au-dessus des champs de texte, le curseur redevient normal.</p>
+      <p><b>Limites.</b> Impossible sur téléphone (pas de curseur) : la carte indique « sur ordinateur uniquement ». Si un œuf prend le curseur — le viseur de Predator, par exemple — la voiture disparaît le temps de l'œuf. Avec « réduire les animations » activé, pas d'explosion animée : une image fixe de carcasse.</p></div>
+    <div class="egg"><div class="k">theme-action-nakatomi</div><h3>Nakatomi Plaza</h3>
+      <p><b>Déclencheur.</b> Taper « nakatomi » au clavier, hors d'un champ de saisie, pendant la semaine Action — comme tes œufs Clavier actuels.</p>
+      <p><b>Effet.</b> La colonne des étages s'emballe et grimpe tout en haut de la tour, les vitres se fissurent sur toute la page, une seconde de silence, puis tout se remet en place. 3 secondes en tout, aucun clic bloqué.</p>
+      <p><b>Limites.</b> Marche sur téléphone avec un clavier physique seulement ; sinon, déclenchement de secours : toucher cinq fois la colonne des étages. Avec « réduire les animations », les fissures apparaissent sans mouvement.</p></div>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Le son</p>
+  <h2>Quatre pistes à produire</h2>
+  <p class="prose">Tout est à fabriquer, rien à extraire — on a déjà eu cette conversation. Avec ton oreille de monteur, c'est une soirée de travail.</p>
+  <div class="tbl-s">
+  <table class="vo">
+    <thead><tr><th>Déclencheur</th><th>Son</th><th>Comment</th></tr></thead>
+    <tbody>
+      <tr><td>Encaisser un film</td><td>DOUILLE</td><td>Une douille en laiton qui tombe sur du béton. Foley, une prise, 400 ms.</td></tr>
+      <tr><td>Notification</td><td>SQUELCH</td><td>Le grésillement court d'une radio qui s'ouvre. Banque libre de droits.</td></tr>
+      <tr><td>Changement de page</td><td>V8</td><td>Un coup d'accélérateur très bref, coupé net. Suno ou banque moteur.</td></tr>
+      <tr><td>Montée d'étage</td><td>ASCENSEUR</td><td>Le « ding » d'arrivée. Foley ou banque, 600 ms.</td></tr>
+      <tr><td>Ambiance de la semaine</td><td>MORCEAU</td><td>Un instrumental tendu, cuivres et percussions sèches, généré sous Suno. 2 min bouclables.</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Pour Claude Code</p>
+  <h2>Le bloc de jetons, prêt à coller</h2>
+  <pre><span class="c">/* app/themes/action.css — appliqué via &lt;html data-theme="action"&gt; */</span>
+[data-theme="action"] {
+  <span class="c">/* surfaces */</span>
+  <span class="k">--bg</span>:        <span class="v">#090C11</span>;   <span class="c">/* béton de nuit, jamais noir pur */</span>
+  <span class="k">--s1</span>:        <span class="v">#0F141A</span>;
+  <span class="k">--s2</span>:        <span class="v">#161D25</span>;
+  <span class="k">--s3</span>:        <span class="v">#1E2731</span>;
+  <span class="k">--line</span>:      <span class="v">rgba(232,237,242,.12)</span>;
+  <span class="k">--line2</span>:     <span class="v">rgba(232,237,242,.26)</span>;
+
+  <span class="c">/* texte */</span>
+  <span class="k">--ink</span>:       <span class="v">#E8EDF2</span>;
+  <span class="k">--ink2</span>:      <span class="v">#8B99A7</span>;
+  <span class="k">--ink3</span>:      <span class="v">#5A6773</span>;
+
+  <span class="c">/* accents — orange = agir, cyan = informer */</span>
+  <span class="k">--accent</span>:    <span class="v">#FF6B1F</span>;
+  <span class="k">--accent-2</span>:  <span class="v">#FFA23D</span>;
+  <span class="k">--accent-ink</span>:<span class="v">#0B0E12</span>;
+  <span class="k">--cold</span>:      <span class="v">#17A2C9</span>;
+  <span class="k">--bad</span>:       <span class="v">#C2201C</span>;
+  <span class="k">--ok</span>:        <span class="v">#5FBF8B</span>;
+
+  <span class="c">/* typographie */</span>
+  <span class="k">--font-display</span>: <span class="v">"Saira Condensed", sans-serif</span>;
+  <span class="k">--disp-weight</span>:  <span class="v">900</span>;
+  <span class="k">--disp-style</span>:   <span class="v">italic</span>;
+  <span class="k">--disp-case</span>:    <span class="v">uppercase</span>;
+  <span class="k">--disp-track</span>:   <span class="v">-.005em</span>;
+  <span class="k">--font-data</span>:    <span class="v">"JetBrains Mono", monospace</span>;
+  <span class="k">--font-body</span>:    <span class="v">"Newsreader", serif</span>;
+
+  <span class="c">/* formes — le biseau est la signature */</span>
+  <span class="k">--radius</span>:    <span class="v">0</span>;
+  <span class="k">--skew</span>:      <span class="v">-11deg</span>;
+
+  <span class="c">/* textures */</span>
+  <span class="k">--tex</span>:       <span class="v">repeating-linear-gradient(104deg,rgba(255,162,61,.035) 0 2px,transparent 2px 13px)</span>;
+  <span class="k">--grit</span>:      <span class="v">radial-gradient(rgba(232,237,242,.05) .9px,transparent 1.1px) 0 0/4px 4px</span>;
+
+  <span class="c">/* curseur et mouvement */</span>
+  <span class="k">--cursor</span>:    <span class="v">url("/cursors/action-reticle.svg") 15 15, crosshair</span>;
+  <span class="k">--ease</span>:      <span class="v">cubic-bezier(.2,.8,.2,1)</span>;
+  <span class="k">--dur</span>:       <span class="v">120ms</span>;
+}</pre>
+  <div class="caveat">
+    <b>Trois règles à faire respecter dans le code :</b> l'orange ne sert qu'aux actions et le cyan qu'aux informations — jamais l'inverse, sinon le thème s'effondre. Le chrome est réservé aux titres de page et au nom du site, nulle part ailleurs. Et le biseau de -11° s'applique à tout élément cliquable, sans exception : c'est lui qu'on reconnaît avant la couleur.
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">État du kit</p>
+  <h2>Ce qui a changé, ce qui reste</h2>
+  <p class="prose">Ce kit a été repris le 21 septembre à partir du code du site (dossier <code>cm-next</code>). Il couvre maintenant les quatre catégories de la barre latérale et leurs quinze entrées, la connexion, les messages du système la galerie des easter eggs, la radio et l'entrée du vidéoclub : écrans 00 à 20. L'inventaire du Marathon liste, route par route, le nom de chaque page dans chaque thème.</p>
+  <p class="prose"><strong>Corrigé depuis la version validée</strong> : les récompenses d'EXP (celles du code : +5, +10, +15, +2 ; rien pour le forum ni les notes), les horaires (séances mercredi et vendredi 20 h 30, clôture du duel mercredi 20 h), le bouton « signaler » du forum qui n'existe pas, la page Rattrapages qui n'a pas de suivi « vu », les onglets inventés des relevés, l'étiquette −18 ans sur Heat, et une page de connexion qui a désormais sa vraie forme.</p>
+  <p class="prose"><strong>Tranché depuis</strong> : la barre du haut remplace la barre latérale sur ordinateur (phase 3.2 du prompt), et le vidéoclub y a son entrée à part. <strong>Encore ouvert</strong> : les maquettes téléphone ; la page 404, qui n'existe pas encore dans le code.</p>
+</section>
+
+<footer>Ciné Marathon — thème Action · 19 septembre 2026</footer>
+</div>
+
+<script>
+(function(){
+  var POS=[['#D2541C','#2C0D04'],['#2A6994','#06141F'],['#B07C12','#241803'],['#9E3413','#1C0502'],
+  ['#1E3F86','#040A1A'],['#4E5560','#0C0F14'],['#157A68','#031512'],['#BD4A1B','#270A04'],
+  ['#2F6BA8','#07121F'],['#8A5C0E','#1A1002'],['#1786A0','#03181D'],['#9E1F16','#1B0302'],
+  ['#C87014','#280F03'],['#1B4E7C','#050F1A']];
+  function hp(i){var k=(i*2654435761)%4294967296;k=(k^(k>>>13))>>>0;return POS[k%POS.length];}
+  function g(i){var p=hp(i);return 'linear-gradient(158deg,'+p[0]+','+p[1]+')';}
+  function set(id,i){var el=document.getElementById(id);if(el)el.style.background=g(i);}
+  for(var i=1;i<=7;i++) set('p'+i,i*3);
+  set('mp',5); set('d1',8); set('d2',13);
+  ['sr1','sr2'].forEach(function(id,k){set(id,k*5+2);});
+  ['op1','op2','op3','op4'].forEach(function(id,k){set(id,k*4+3);});
+  ["nx1","nx2","nx3","nx4","nx5","nx6","nx7","nx8","nx9","nx10","nx11","nx12","nx13","nx14","nx15","nx16","nx17","nx18","nx19","nx20","nx21","nx22","nx23","nx24","nx25","nx26","nx27","nx28","nx29","nx30","nx31","nx32","nx33","nx34","nx35","nx36","nx37","nx38"].forEach(function(id,k){set(id,k*7+5);});
+
+  var FILMS=[['Heat',1,1,1995,9.0],['Die Hard',1,0,1988,8.7],['Fury Road',1,0,2015,8.9],
+  ['Point Break',0,0,1991,0],['Collateral',1,0,2004,7.8],['Le Samouraï',0,0,1967,0],
+  ['Ronin',0,0,1998,0],['The Raid',1,0,2011,8.2],['Oldboy',1,0,2003,8.4],['Drive',1,0,2011,7.9],
+  ['Sicario',0,0,2015,0],['John Wick',1,0,2014,7.6],['Predator',0,0,1987,0],
+  ['Terminator 2',1,0,1991,9.1],['Speed',0,0,1994,0],['Rambo',0,0,1982,0],
+  ['Ong-Bak',0,0,2003,0],['Ip Man',1,0,2008,7.4],['Casino Royale',0,0,2006,0],
+  ['Skyfall',1,0,2012,7.2],['Bullitt',0,0,1968,0],['French Connection',0,0,1971,0],
+  ['Mission: Impossible',1,0,1996,7.5],['Face/Off',0,0,1997,0],['Bad Boys',0,0,1995,0],
+  ['Equilibrium',0,0,2002,0],['Hard Boiled',1,0,1992,8.6]];
+  var gr=document.getElementById('grid');
+  if(gr){var o='';for(var i=0;i<FILMS.length;i++){var f=FILMS[i];
+    o+='<div class="cd"><div class="a-po" style="background:'+g(i*5+2)+'">'
+      +(f[2]?'<div class="wk">OPÉRATION</div>':'')+(f[1]?'<div class="ck">✓</div>':'')
+      +'<b>'+f[0]+'</b></div><div class="m"><span>'+f[3]+'</span><em>'+(f[4]?f[4].toFixed(1):'--')+'</em></div></div>';}
+    gr.innerHTML=o;}
+
+  var tw=document.getElementById('tower');
+  if(tw){var o='';for(var i=1;i<=12;i++){
+    var cls = i<6?'f':(i===6?'now':'');
+    o+='<i class="'+cls+'"><b>ÉTAGE '+(i<10?'0':'')+i+'</b></i>';}
+    tw.innerHTML=o;}
+
+  ['b1','b2','b3','b4','b5'].forEach(function(id,k){
+    var el=document.getElementById(id); if(!el) return; var o='';
+    for(var i=0;i<12;i++){var h=3+Math.abs(Math.sin(i*0.8+k)*Math.cos(i*0.4+k))*13;
+      o+='<i style="height:'+h.toFixed(1)+'px"></i>';}
+    el.innerHTML=o;});
+})();
+</script>

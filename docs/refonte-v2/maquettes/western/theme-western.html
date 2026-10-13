@@ -1,0 +1,2047 @@
+<title>Thème Western — Le kit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rye&family=Alfa+Slab+One&family=Bitter:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap">
+
+<style>
+  /* ===== chrome de la page de présentation ===== */
+  :root{
+    --ground:#16110C;--ground2:#1F1811;--ground3:#2B2118;
+    --rule:rgba(227,207,164,.12);--rule2:rgba(227,207,164,.24);
+    --ink:#E3CFA4;--ink2:#AD9770;--ink3:#7B6849;
+    --brass:#C08A2E;--teal:#7C8A92;--alert:#8E2216;--good:#8A8A4A;
+    --display:"Alfa Slab One",Georgia,serif;
+    --body:"Bitter",Georgia,serif;
+    --util:"Bitter",Georgia,serif;
+    --mono:"Courier Prime",ui-monospace,monospace;
+  }
+  html{-webkit-text-size-adjust:100%}
+  body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:16.5px;
+    line-height:1.72;margin:0;padding-inline:20px;padding-block:0}
+  .wrap{max-width:1080px;margin:0 auto}
+  .prose{max-width:66ch} p{margin:0 0 1.1em}
+  strong{font-weight:700;color:var(--ink)} em{font-style:italic}
+  .eyebrow{font-family:var(--util);font-size:11px;font-weight:700;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--brass);margin:0 0 14px}
+  h1.masthead{font-family:"Rye",Georgia,serif;font-weight:400;font-size:clamp(2rem,4.8vw,3.1rem);
+    line-height:1.04;letter-spacing:.005em;margin:0 0 18px;text-wrap:balance}
+  h2{font-family:var(--display);font-weight:400;font-size:clamp(1.25rem,2.8vw,1.68rem);
+    line-height:1.2;letter-spacing:-.005em;margin:0 0 6px;text-wrap:balance}
+  h3{font-family:var(--util);font-weight:700;font-size:.82rem;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--brass);margin:0 0 10px}
+  section{padding-block:50px;border-top:1px solid var(--rule)}
+  section:first-of-type{border-top:0;padding-block:56px 38px}
+  .lede{font-size:1.1rem;line-height:1.64;color:var(--ink2)} .lede strong{color:var(--ink)}
+  .caveat{border:1px solid var(--rule2);padding:18px 20px;margin-top:26px;font-size:.95rem;color:var(--ink2)}
+  .caveat b{color:var(--brass)}
+  .cap{font-family:var(--util);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--ink3);margin-top:10px;margin-bottom:30px}
+  .ask li{margin-bottom:12px;color:var(--ink2)} .ask li b{color:var(--ink)}
+  footer{padding-block:44px 70px;border-top:1px solid var(--rule);font-family:var(--util);
+    font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3)}
+  .pscroll{overflow-x:auto;border:1px solid var(--rule2)}
+  .panel{min-width:940px;height:500px;position:relative;overflow:hidden}
+
+  .refs{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:30px;border-top:1px solid var(--rule)}
+  .refs>div{padding:22px 20px 20px 0;border-right:1px solid var(--rule)}
+  .refs>div+div{padding-left:20px} .refs>div:last-child{border-right:0}
+  .refs h4{font-family:var(--display);font-weight:400;font-size:1rem;margin:0 0 4px;letter-spacing:0}
+  .refs .yr{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--ink3);margin-bottom:12px}
+  .refs ul{margin:0;padding-left:15px;font-size:.92rem;color:var(--ink2);line-height:1.6}
+  .refs li{margin-bottom:6px} .refs li b{color:var(--ink);font-weight:700}
+
+  .tok{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:1px;
+    background:var(--rule);border:1px solid var(--rule);margin-top:26px}
+  .tok div{background:var(--ground);padding:14px 16px 13px}
+  .tok .sw{height:40px;margin-bottom:10px;border:1px solid rgba(255,255,255,.1)}
+  .tok .nm{font-family:var(--util);font-weight:700;font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+  .tok .hx{font-family:var(--mono);font-size:11px;color:var(--ink3);margin-top:3px}
+  .tok .us{font-size:.87rem;color:var(--ink2);margin-top:7px;line-height:1.45}
+
+  .tbl-s{overflow-x:auto;margin-top:26px}
+  table.vo{border-collapse:collapse;width:100%;min-width:660px;font-size:.93rem}
+  table.vo th{font-family:var(--util);font-size:10px;font-weight:700;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--ink3);text-align:left;padding:0 16px 10px 0;
+    border-bottom:1px solid var(--rule2)}
+  table.vo td{padding:9px 16px 9px 0;border-bottom:1px solid var(--rule);color:var(--ink2)}
+  table.vo td:first-child{color:var(--ink3);font-family:var(--mono);font-size:12px;white-space:nowrap}
+  table.vo td:nth-child(2){font-family:var(--util);font-weight:700;color:var(--brass);
+    letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+  pre{background:var(--ground2);border:1px solid var(--rule);padding:18px 20px;overflow-x:auto;
+    font-family:var(--mono);font-size:12.5px;line-height:1.7;color:#C6B48C;margin-top:24px}
+  pre .c{color:#7B6849} pre .k{color:var(--brass)} pre .v{color:#9BA8AE}
+
+  /* ==================================================================
+     THÈME WESTERN — spaghetti
+     ================================================================== */
+  .WS{
+    --nuit:#1A1410; --ombre:#2B1E14; --bois:#3A2A1B; --bois2:#4A361F;
+    --terre:#6B4A28; --sable:#C9A96B; --sable2:#A88B52; --poussiere:#E3CFA4;
+    --papier:#D8C295; --papier2:#C2A877; --ciel:#C8BFA2; --ciel2:#9E9C88;
+    --sang:#8E2216; --sang2:#B93222; --laiton:#C08A2E; --laiton2:#E6BE6C;
+    --acier:#6E7A82; --acier2:#9BA8AE;
+    --trait:rgba(227,207,164,.17); --trait2:rgba(227,207,164,.32);
+    color:var(--poussiere);font-family:"Bitter",Georgia,serif;
+    background:linear-gradient(180deg,#D8CBA8 0%,#C9B98F 34%,#B79E6A 49.6%,#8A6A3C 50%,#6B4F2A 74%,#4A3620 100%);
+    cursor:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='26'%3E%3Cg fill='%232B1E14' stroke='%23C08A2E' stroke-width='1' stroke-linejoin='round'%3E%3Cpath d='M2 7h17v4H2z'/%3E%3Ccircle cx='15' cy='12' r='4.6'/%3E%3Cpath d='M17 14l4 8h-5l-2-6z'/%3E%3Cpath d='M9 11l-2 5h3l1-5z'/%3E%3C/g%3E%3Ccircle cx='15' cy='12' r='1.6' fill='%23C08A2E'/%3E%3C/svg%3E") 2 7, pointer;
+  }
+  .WS *{box-sizing:border-box}
+
+  /* ---------- l'horizon ---------- */
+  .WS .horizon{position:absolute;left:0;right:0;top:46px;height:196px;z-index:1;overflow:hidden;
+    background:linear-gradient(180deg,#7A5C2E 0%,#A87F3A 22%,#C9A050 52%,#D9B468 78%,#B98F44 100%);
+    box-shadow:inset 0 -2px 0 rgba(43,28,12,.7)}
+  .WS .soleil{position:absolute;left:50%;top:34px;width:132px;height:132px;margin-left:-66px;
+    border-radius:50%;background:radial-gradient(circle,#FFF8DC 17%,#FBE39C 33%,rgba(250,215,140,0) 68%)}
+  .WS .mesa{position:absolute;bottom:0;background:linear-gradient(180deg,#5A3A18,#31200D)}
+  .WS .sol{position:absolute;left:0;right:0;top:242px;bottom:0;z-index:1;
+    background:
+      repeating-linear-gradient(178deg,rgba(28,18,10,.09) 0 2px,transparent 2px 13px),
+      repeating-linear-gradient(183deg,rgba(255,234,190,.05) 0 1px,transparent 1px 21px),
+      linear-gradient(180deg,#8A6A34,#5E4522 44%,#33240F 100%)}
+  .WS .vent{position:absolute;left:0;right:0;top:222px;height:46px;z-index:2;pointer-events:none;
+    background:repeating-linear-gradient(94deg,rgba(240,226,180,.1) 0 70px,transparent 70px 300px);
+    filter:blur(9px);
+    -webkit-mask-image:linear-gradient(90deg,transparent,#000 30%,#000 70%,transparent);
+    mask-image:linear-gradient(90deg,transparent,#000 30%,#000 70%,transparent)}
+
+  /* ---------- le trou de balle ---------- */
+  .WS .imp{position:absolute;pointer-events:none;z-index:8;width:17px;height:17px;border-radius:50%;
+    background:radial-gradient(circle at 46% 42%,#0D0906 0 38%,#241810 52%,rgba(36,24,16,0) 72%);
+    box-shadow:0 0 0 1px rgba(255,238,200,.16), 0 1px 2px rgba(0,0,0,.7)}
+  .WS .imp::before,.WS .imp::after{content:"";position:absolute;left:50%;top:50%;
+    width:22px;height:1.4px;margin:-.7px 0 0 -11px;background:rgba(20,12,7,.55)}
+  .WS .imp::before{transform:rotate(28deg)} .WS .imp::after{transform:rotate(-64deg)}
+  .WS .imp.g{width:25px;height:25px}
+  .WS .imp.p{width:11px;height:11px}
+  .WS .imp.p::before,.WS .imp.p::after{width:14px;margin-left:-7px}
+
+  /* ---------- le bois ---------- */
+  .WS .planches{position:absolute;inset:0;
+    background:
+      repeating-linear-gradient(180deg,
+        rgba(0,0,0,.34) 0 1px, rgba(74,54,31,.0) 1px 4px,
+        rgba(255,230,180,.035) 4px 5px, rgba(0,0,0,.0) 5px 29px,
+        rgba(0,0,0,.28) 29px 30px),
+      repeating-linear-gradient(91deg,rgba(0,0,0,.16) 0 2px,transparent 2px 9px),
+      linear-gradient(176deg,#4A361F,#2F2214)}
+
+  /* ---------- l'avis de recherche ---------- */
+  .w-av{position:relative;background:linear-gradient(174deg,#E2CFA2,#C6AC78 62%,#B79A64);
+    color:#2B1E14;padding:10px 12px 12px;text-align:center;
+    box-shadow:0 5px 14px -7px rgba(0,0,0,.9);
+    clip-path:polygon(0% 1.6%,4% 0%,12% 1.4%,26% .2%,44% 1.6%,62% .3%,79% 1.5%,93% .4%,100% 1.8%,
+      99% 16%,100% 38%,98.8% 62%,100% 84%,99% 98.4%,88% 100%,71% 98.6%,53% 100%,34% 98.5%,17% 99.8%,5% 98.6%,0% 97%,
+      1.2% 76%,0% 52%,1.4% 30%)}
+  .w-av .hd{font-family:"Rye",Georgia,serif;font-size:19px;line-height:1;letter-spacing:.04em;
+    color:#3A2A18}
+  .w-av .mo{font-family:"Bitter",Georgia,serif;font-weight:700;font-size:8px;letter-spacing:.3em;
+    text-transform:uppercase;color:#6B4A28;margin-top:3px;
+    border-top:1.5px solid rgba(43,30,20,.5);border-bottom:1.5px solid rgba(43,30,20,.5);padding:2px 0}
+  .w-av .vis{margin-top:7px;aspect-ratio:1/1;position:relative;overflow:hidden;
+    border:1.5px solid rgba(43,30,20,.55);filter:sepia(.35) contrast(1.08)}
+  .w-av .vis::after{content:"";position:absolute;inset:0;
+    background:linear-gradient(176deg,rgba(32,20,10,.9),rgba(18,11,5,.96));
+    clip-path:polygon(36% 22%,64% 22%,68% 42%,86% 42%,84% 48%,63% 48%,62% 58%,
+      78% 70%,84% 100%,16% 100%,22% 70%,38% 58%,37% 48%,16% 48%,14% 42%,32% 42%)}
+  .w-av:nth-child(3n) .vis::after{clip-path:polygon(34% 18%,66% 18%,70% 40%,92% 41%,90% 47%,64% 47%,
+      63% 58%,80% 70%,87% 100%,13% 100%,20% 70%,37% 58%,36% 47%,10% 47%,8% 41%,30% 40%)}
+  .w-av:nth-child(4n) .vis::after{clip-path:polygon(39% 26%,61% 26%,64% 43%,80% 43%,79% 48%,62% 48%,
+      61% 58%,76% 71%,82% 100%,18% 100%,24% 71%,39% 58%,38% 48%,21% 48%,20% 43%,36% 43%)}
+  .w-av .nm{font-family:"Alfa Slab One",Georgia,serif;font-size:15px;line-height:1.04;margin-top:7px;
+    text-transform:uppercase;color:#2B1E14;overflow-wrap:anywhere}
+  .w-av .pr{font-family:"Rye",Georgia,serif;font-size:17px;color:#8E2216;margin-top:4px;line-height:1}
+  .w-av .ss{font-family:"Courier Prime",monospace;font-size:8.5px;letter-spacing:.14em;
+    text-transform:uppercase;color:#6B4A28;margin-top:4px}
+  .w-av .clou{position:absolute;width:8px;height:8px;border-radius:50%;
+    background:radial-gradient(circle at 34% 30%,#E8DCBA,#8A7448 56%,#3A2E1A);
+    box-shadow:0 1px 2px rgba(0,0,0,.8)}
+  .w-av .clou.a{left:7px;top:6px} .w-av .clou.b{right:7px;top:6px}
+  .w-av .clou.c{left:7px;bottom:6px} .w-av .clou.d{right:7px;bottom:6px}
+  .w-av .cap{position:absolute;left:-14%;top:38%;width:128%;text-align:center;z-index:5;
+    font-family:"Rye",Georgia,serif;font-size:24px;letter-spacing:.1em;color:rgba(158,28,16,.9);
+    transform:rotate(-15deg);text-shadow:0 1px 0 rgba(255,240,210,.45);
+    border-top:2.5px solid rgba(158,28,16,.62);border-bottom:2.5px solid rgba(158,28,16,.62);
+    padding:1px 0}
+  .SB .mur .w-av .cap{font-size:16px;border-width:2px}
+
+  /* ---------- le bouton : la plaque de shérif / la cartouche ---------- */
+  .w-b1{display:inline-flex;align-items:center;gap:9px;background:linear-gradient(180deg,#A82A1B,#75190F);
+    color:#F2E0BA;border:1.5px solid #4A1009;padding:9px 18px 8px;
+    font-family:"Bitter",Georgia,serif;font-weight:700;font-size:13.5px;letter-spacing:.14em;
+    text-transform:uppercase;box-shadow:inset 0 1px 0 rgba(255,220,180,.24),0 3px 7px -3px rgba(0,0,0,.8);
+    clip-path:polygon(0 0,100% 0,100% 62%,97% 100%,3% 100%,0 62%)}
+  .w-b1 .d{font-family:"Rye",Georgia,serif;font-size:12px;color:#F0C88A;letter-spacing:0}
+  .w-b2{display:inline-block;padding:8px 16px 7px;background:transparent;color:var(--poussiere);
+    border:1.5px solid var(--trait2);font-family:"Bitter",Georgia,serif;font-weight:600;
+    font-size:12.5px;letter-spacing:.14em;text-transform:uppercase}
+  .w-b3{display:inline-block;padding:7px 14px 6px;background:rgba(192,138,46,.16);
+    border:1.5px solid var(--laiton);color:#E7C078;font-family:"Bitter",Georgia,serif;font-weight:700;
+    font-size:11.5px;letter-spacing:.14em;text-transform:uppercase}
+
+  /* ---------- les dix balles : la note ---------- */
+  .w-balles{display:flex;gap:3px;align-items:flex-end}
+  .w-balles i{width:7px;height:17px;border-radius:3px 3px 1px 1px;background:#2E2417;
+    border:1px solid rgba(227,207,164,.2)}
+  .w-balles i.f{background:linear-gradient(180deg,#E6BE6C 0 34%,#C08A2E 34%,#8A6118);
+    border-color:#6B4A12}
+
+  /* ---------- étiquettes ---------- */
+  .w-l{font-family:"Courier Prime",monospace;font-size:10px;letter-spacing:.2em;
+    text-transform:uppercase;color:#9E8A63}
+  .w-h{font-family:"Rye",Georgia,serif;line-height:1.06;letter-spacing:.02em;color:var(--poussiere);
+    text-shadow:2px 2px 0 rgba(20,12,7,.75)}
+  .w-n{font-family:"Alfa Slab One",Georgia,serif;text-transform:uppercase;line-height:1;
+    color:var(--poussiere)}
+  .w-etq{display:inline-block;font-family:"Bitter",Georgia,serif;font-weight:700;font-size:9.5px;
+    letter-spacing:.14em;text-transform:uppercase;padding:2.5px 8px;margin:0 5px 6px 0;
+    border:1px solid currentColor}
+  .w-m{font-family:"Courier Prime",monospace;font-size:11.5px;line-height:1.5;color:#C3AB7E}
+
+  /* ---------- l'étoile de shérif ---------- */
+  .w-star{display:inline-block;width:15px;height:15px;background:var(--laiton);
+    clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
+  .w-star.v{background:#4A3E28}
+
+  /* ---------- la barre du haut : la devanture ---------- */
+  .WS .devant{position:absolute;left:0;right:0;top:0;height:46px;z-index:7;display:flex;
+    align-items:center;gap:0;padding:0 18px;
+    background:linear-gradient(180deg,#4A361F,#2F2214);
+    border-bottom:3px solid #17100A;box-shadow:0 5px 14px -6px rgba(0,0,0,.9)}
+  .WS .devant .ens{font-family:"Rye",Georgia,serif;font-size:15px;color:#E6C77E;white-space:nowrap;
+    padding-right:20px;flex:none;text-shadow:1px 1px 0 rgba(20,12,7,.9)}
+  .WS .devant .lk{display:flex;gap:13px;font-family:"Bitter",Georgia,serif;font-weight:700;
+    font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:#9E8A63;
+    white-space:nowrap;min-width:0;flex:0 1 auto}
+  .WS .devant .lk span{white-space:nowrap}
+  .WS .devant .lk .on{color:#E6C77E}
+  .WS .devant .ter{margin-left:auto;padding-left:18px;flex:none;font-family:"Courier Prime",monospace;
+    font-size:10px;letter-spacing:.14em;color:#9E8A63;white-space:nowrap}
+
+  /* ---------- la zone de contenu ---------- */
+  .WS .scene{position:absolute;left:0;right:0;top:46px;bottom:0;z-index:4;overflow:hidden}
+  .WS .scene>.inner{position:absolute;inset:0;padding:18px 24px;overflow:hidden}
+
+  /* ---------- ÉCRAN A : LE CONTRAT ---------- */
+  .SA .une{display:grid;grid-template-columns:212px minmax(0,1fr) 224px;gap:26px;align-items:start}
+  .SA .bloc{background:rgba(26,20,16,.74);border:1px solid var(--trait);padding:14px 16px;
+    backdrop-filter:blur(1px)}
+  .SA .ttl{font-family:"Rye",Georgia,serif;font-size:37px;line-height:1.06;color:var(--poussiere);
+    margin:6px 0 0;text-shadow:3px 3px 0 rgba(20,12,7,.85)}
+  .SA .meta{font-family:"Courier Prime",monospace;font-size:11.5px;letter-spacing:.05em;
+    color:#C3AB7E;margin-top:12px;line-height:1.8}
+  .SA .meta b{color:var(--laiton2);font-weight:400}
+  .SA .syn{font-family:"Bitter",Georgia,serif;font-size:13.5px;line-height:1.6;color:#C3AB7E;
+    margin-top:11px;max-width:50ch}
+  .SA .acts{display:flex;align-items:center;gap:15px;margin-top:18px}
+  .SA .prime{text-align:center;background:rgba(26,20,16,.86);border:2px solid var(--laiton);
+    padding:12px 14px 13px}
+  .SA .prime .k{font-family:"Courier Prime",monospace;font-size:9px;letter-spacing:.2em;
+    text-transform:uppercase;color:#9E8A63}
+  .SA .prime .v{font-family:"Rye",Georgia,serif;font-size:30px;color:var(--laiton2);line-height:1.05;
+    margin-top:3px;text-shadow:2px 2px 0 rgba(20,12,7,.8)}
+  .SA .dates{margin-top:13px;background:rgba(26,20,16,.82);border:1px solid var(--trait);padding:11px 13px}
+  .SA .dates .r{display:flex;justify-content:space-between;gap:9px;padding:4px 0;
+    border-bottom:1px dotted var(--trait);font-family:"Courier Prime",monospace;font-size:10.5px;
+    color:#C3AB7E}
+  .SA .dates .r:last-child{border-bottom:0}
+  .SA .dates .r b{color:var(--poussiere);font-weight:400;text-align:right}
+  .SA .dates .r.now b{color:var(--sang2)}
+  .SA .bas{display:grid;grid-template-columns:minmax(0,1fr) 262px;gap:26px;margin-top:18px;
+    border-top:1px solid var(--trait);padding-top:14px}
+  .SA .tel{font-family:"Courier Prime",monospace;font-size:11.5px;line-height:1.85;color:#C3AB7E}
+  .SA .tel .li{display:flex;gap:9px;padding:2px 0}
+  .SA .tel .hh{color:var(--acier2)} .SA .tel b{color:var(--poussiere);font-weight:400}
+  .SA .tel em{font-style:normal;color:var(--laiton2)}
+  .SA .mini{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:9px}
+  .SA .mini .w-av{padding:5px 5px 6px}
+  .SA .mini .w-av .hd{font-size:8px} .SA .mini .w-av .mo{display:none}
+  .SA .mini .w-av .nm{font-size:8px;margin-top:4px} .SA .mini .w-av .pr{font-size:9px}
+  .SA .mini .w-av .ss{display:none} .SA .mini .w-av .clou{width:5px;height:5px}
+
+  /* ---------- ÉCRAN B : LES AVIS DE RECHERCHE ---------- */
+  .SB .ttl{font-family:"Rye",Georgia,serif;font-size:31px;line-height:1.06;color:var(--poussiere);
+    margin:0;text-shadow:3px 3px 0 rgba(20,12,7,.85)}
+  .SB .compt{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:12px;
+    border-top:1px solid var(--trait2);border-bottom:1px solid var(--trait2);
+    background:rgba(26,20,16,.7)}
+  .SB .compt div{padding:8px 12px;border-right:1px dotted var(--trait)}
+  .SB .compt div:last-child{border-right:0}
+  .SB .compt .k{font-family:"Courier Prime",monospace;font-size:9.5px;letter-spacing:.16em;
+    text-transform:uppercase;color:#9E8A63}
+  .SB .compt .v{font-family:"Alfa Slab One",Georgia,serif;font-size:21px;line-height:1.1;
+    color:var(--poussiere);margin-top:2px}
+  .SB .compt .v.o{color:var(--sang2)}
+  .SB .filt{display:flex;gap:7px;margin-top:13px;align-items:center}
+  .SB .filt span{padding:6px 12px;border:1px solid var(--trait2);background:rgba(26,20,16,.62);
+    font-family:"Bitter",Georgia,serif;font-weight:700;font-size:11px;letter-spacing:.12em;
+    text-transform:uppercase;color:#9E8A63;white-space:nowrap}
+  .SB .filt span.on{background:var(--laiton);border-color:var(--laiton2);color:#2B1E14}
+  .SB .filt span.ch{flex:1;text-align:left;color:#8A7856;font-family:"Courier Prime",monospace;
+    letter-spacing:.08em;text-transform:none;font-weight:400}
+  .SB .mur{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:13px 11px;margin-top:14px;
+    padding:14px 12px;position:relative;border:1px solid rgba(0,0,0,.5)}
+  .SB .mur .w-av:nth-child(3n){transform:rotate(-1.1deg)}
+  .SB .mur .w-av:nth-child(4n){transform:rotate(.9deg)}
+  .SB .mur .w-av:nth-child(5n){transform:rotate(-.5deg)}
+  .SB .mur .w-av .hd{font-size:9px} .SB .mur .w-av .mo{font-size:6px;letter-spacing:.18em}
+  .SB .mur .w-av .nm{font-size:9.5px} .SB .mur .w-av .pr{font-size:11px}
+  .SB .mur .w-av .ss{font-size:7px;letter-spacing:.1em}
+  .SB .mur .w-av .cap{font-size:14px}
+  .SB .mur .w-av .clou{width:6px;height:6px}
+
+  /* ---------- ÉCRAN C : LE DOSSIER ---------- */
+  .SC .voile{position:absolute;inset:0;z-index:8;background:rgba(15,10,7,.74)}
+  .SC .dos{position:absolute;z-index:9;left:50%;top:76px;transform:translateX(-50%);width:760px;
+    background:linear-gradient(176deg,#3E2E1D,#281D12);border:2px solid #17100A;
+    box-shadow:0 24px 50px -18px rgba(0,0,0,.98)}
+  .SC .dh{display:flex;align-items:center;gap:12px;padding:9px 18px;background:rgba(0,0,0,.4);
+    border-bottom:1px solid var(--trait)}
+  .SC .dh .n{font-family:"Courier Prime",monospace;font-weight:700;font-size:11px;letter-spacing:.2em;
+    text-transform:uppercase;color:#C3AB7E}
+  .SC .dh .x{margin-left:auto;font-family:"Bitter",serif;font-weight:700;font-size:15px;color:#C3AB7E}
+  .SC .db{display:grid;grid-template-columns:186px minmax(0,1fr);gap:22px;padding:20px 22px 18px}
+  .SC h4{font-family:"Rye",Georgia,serif;font-size:27px;line-height:1.08;color:var(--poussiere);
+    margin:0;text-shadow:2px 2px 0 rgba(20,12,7,.8)}
+  .SC .fait{font-family:"Courier Prime",monospace;font-size:11px;color:#C3AB7E;margin-top:10px;
+    line-height:1.85}
+  .SC .fait b{color:var(--laiton2);font-weight:400}
+  .SC .syn{font-family:"Bitter",Georgia,serif;font-size:13.5px;line-height:1.6;color:#C3AB7E;margin-top:10px}
+  .SC .verd{margin-top:12px;border-top:1px solid var(--trait);padding-top:10px;
+    display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  .SC .vl{border-left:2px solid var(--trait2);padding-left:10px}
+  .SC .vl .q{font-family:"Bitter",Georgia,serif;font-style:italic;font-size:12px;line-height:1.45;
+    color:#C3AB7E}
+  .SC .vl .w{font-family:"Courier Prime",monospace;font-size:9px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--laiton2);margin-top:5px}
+  .SC .dacts{display:flex;align-items:center;gap:14px;margin-top:15px}
+  .SC .dpied{display:flex;border-top:1px solid var(--trait);background:rgba(0,0,0,.34)}
+  .SC .dpied span{flex:1;text-align:center;padding:10px 0;font-family:"Bitter",Georgia,serif;
+    font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8A7856;
+    border-right:1px solid var(--trait)}
+  .SC .dpied span:last-child{border-right:0}
+  .SC .dpied span.on{color:var(--laiton2);box-shadow:inset 0 -3px 0 var(--laiton)}
+
+  /* ---------- ÉCRAN D : LE DUEL ---------- */
+  .SD .midi{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:6px}
+  .SD .horloge{width:66px;height:66px;border-radius:50%;border:3px solid var(--laiton);
+    background:radial-gradient(circle at 42% 34%,#E2CFA2,#B79A64);position:relative;flex:none;
+    box-shadow:0 4px 10px -4px rgba(0,0,0,.9)}
+  .SD .horloge i{position:absolute;left:50%;bottom:50%;width:2.6px;background:#2B1E14;
+    transform-origin:50% 100%;border-radius:2px}
+  .SD .horloge i.h{height:19px;margin-left:-1.3px;transform:rotate(0deg)}
+  .SD .horloge i.m{height:26px;margin-left:-1.3px;transform:rotate(0deg)}
+  .SD .horloge b{position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px 0 0 -3px;
+    border-radius:50%;background:#2B1E14}
+  .SD .duo{display:grid;grid-template-columns:1fr 264px 1fr;gap:18px;align-items:start;margin-top:14px}
+  .SD .cote{text-align:center}
+  .SD .cote .w-av{width:176px;margin:0 auto}
+  .SD .cote .sc{font-family:"Rye",Georgia,serif;font-size:27px;line-height:1;margin-top:11px;
+    color:var(--sang2);text-shadow:2px 2px 0 rgba(20,12,7,.8)}
+  .SD .cote.b .sc{color:var(--acier2)}
+  .SD .cote .vo{font-family:"Courier Prime",monospace;font-size:9.5px;letter-spacing:.14em;
+    text-transform:uppercase;color:#9E8A63;margin-top:4px}
+  .SD .crosse{background:linear-gradient(176deg,#5A3A1E,#33200F);border:2px solid #17100A;
+    padding:14px 16px 15px;box-shadow:0 8px 20px -10px rgba(0,0,0,.95)}
+  .SD .crosse .k{font-family:"Courier Prime",monospace;font-size:9px;letter-spacing:.18em;
+    text-transform:uppercase;color:#A8946C;text-align:center}
+  .SD .enc{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-top:10px}
+  .SD .enc i{width:7px;height:19px;background:linear-gradient(180deg,#23160B,#3E2A15);
+    border-left:1px solid rgba(0,0,0,.7);border-right:1px solid rgba(232,220,186,.18)}
+  .SD .enc i.r{background:linear-gradient(180deg,#6B1810,#3A0C07);border-right-color:rgba(232,120,90,.3)}
+  .SD .enc i.a{background:linear-gradient(180deg,#414C52,#22292D);border-right-color:rgba(155,168,174,.3)}
+  .SD .crosse hr{border:0;border-top:1px solid rgba(232,220,186,.18);margin:12px 0}
+  .SD .crosse .tt{text-align:center;font-family:"Bitter",Georgia,serif;font-style:italic;
+    font-size:12.5px;color:#C3AB7E;line-height:1.4}
+  .SD .bas{margin-top:auto;display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:18px;
+    align-items:center;border-top:1px solid var(--trait);padding-top:12px}
+  .SD .sig .p{display:block;font-family:"Courier Prime",monospace;font-size:9px;letter-spacing:.14em;
+    text-transform:uppercase;color:#8A7856;margin-bottom:3px}
+  .SD .sig .n{font-family:"Bitter",Georgia,serif;font-size:12.5px;color:#C3AB7E;line-height:1.4}
+
+  /* ---------- ÉCRAN E : LE MUR DES PRIMES ---------- */
+  .SE .mur{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px 12px;
+    padding:16px 14px;position:relative;border:1px solid rgba(0,0,0,.5);margin-top:12px}
+  .SE .mur .w-av:nth-child(2n){transform:rotate(-1deg)}
+  .SE .mur .w-av:nth-child(3n){transform:rotate(1.2deg)}
+  .SE .mur .un{grid-column:span 2;grid-row:span 2}
+  .SE .mur .un .hd{font-size:26px} .SE .mur .un .mo{font-size:9px}
+  .SE .mur .un .nm{font-size:23px} .SE .mur .un .pr{font-size:28px}
+  .SE .mur .un .ss{font-size:9.5px}
+  .SE .mur .deux .hd{font-size:13px} .SE .mur .deux .nm{font-size:13px}
+  .SE .mur .deux .pr{font-size:15px}
+  .w-av.moi::before{content:"";position:absolute;inset:4px;border:2.5px solid var(--sang);
+    pointer-events:none;z-index:4}
+  .w-av.moi .nm{color:#7A1A10}
+  .SE .tete{display:flex;align-items:flex-end;gap:16px}
+  .SE .pied{display:flex;justify-content:space-between;align-items:center;margin-top:12px;
+    font-family:"Courier Prime",monospace;font-size:10px;letter-spacing:.12em;
+    text-transform:uppercase;color:#9E8A63}
+
+  /* ---------- ÉCRAN F : TON AVIS DE RECHERCHE ---------- */
+  .SF .zone{display:grid;grid-template-columns:300px minmax(0,1fr);gap:28px;align-items:start}
+  .SF .moi .w-av{transform:rotate(-1.4deg)}
+  .SF .moi .w-av .hd{font-size:25px} .SF .moi .w-av .nm{font-size:22px}
+  .SF .moi .w-av .pr{font-size:27px} .SF .moi .w-av .mo{font-size:9px}
+  .SF .forfaits{margin-top:15px;background:rgba(26,20,16,.82);border:1px solid var(--trait);padding:12px 14px}
+  .SF .forfaits .l{display:flex;gap:9px;align-items:baseline;padding:3px 0;
+    font-family:"Courier Prime",monospace;font-size:10.5px;color:#C3AB7E}
+  .SF .forfaits .l .d{margin-left:auto;color:#8A7856;white-space:nowrap}
+  .SF .crosse2{margin-top:14px;background:linear-gradient(176deg,#5A3A1E,#33200F);
+    border:2px solid #17100A;padding:12px 14px}
+  .SF .crosse2 .enc{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+  .SF .crosse2 .enc i{width:8px;height:20px;background:linear-gradient(180deg,#23160B,#3E2A15);
+    border-left:1px solid rgba(0,0,0,.7);border-right:1px solid rgba(232,220,186,.2)}
+  .SF .crosse2 .enc i.f{background:linear-gradient(180deg,#8A6118,#4A3210);
+    border-right-color:rgba(230,190,108,.45)}
+  .SF .primes{border-left:1px solid var(--trait2);padding-left:24px}
+  .SF .primes .g{display:grid;grid-template-columns:28px minmax(0,1fr) 108px;gap:12px;
+    align-items:baseline;padding:4.5px 0;border-bottom:1px dotted var(--trait)}
+  .SF .primes .g .n{font-family:"Courier Prime",monospace;font-size:10px;color:#8A7856}
+  .SF .primes .g .t{font-family:"Bitter",Georgia,serif;font-weight:600;font-size:12.5px;
+    color:#8A7856;text-transform:uppercase;letter-spacing:.06em}
+  .SF .primes .g .s{font-family:"Rye",Georgia,serif;font-size:12px;color:#8A7856;text-align:right}
+  .SF .primes .g.ok .t{color:#C3AB7E} .SF .primes .g.ok .s{color:#A8946C}
+  .SF .primes .g.now{background:rgba(142,34,22,.2)}
+  .SF .primes .g.now .t{color:var(--poussiere)} .SF .primes .g.now .n{color:var(--sang2)}
+  .SF .primes .g.now .s{color:var(--laiton2)}
+  .SF .rel{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:16px;
+    border-top:1px solid var(--trait2);padding-top:12px}
+  .SF .rel .k{font-family:"Courier Prime",monospace;font-size:9px;letter-spacing:.16em;
+    text-transform:uppercase;color:#8A7856}
+  .SF .rel .v{font-family:"Alfa Slab One",Georgia,serif;font-size:19px;color:var(--poussiere);margin-top:3px}
+
+  /* ---------- ÉCRAN G : LE SALOON ---------- */
+  .SG .salle{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:14px}
+  .SG .table{background:linear-gradient(176deg,rgba(58,42,27,.92),rgba(31,23,15,.95));
+    border:1px solid var(--trait);border-top:3px solid var(--terre);padding:13px 15px 14px;
+    position:relative;box-shadow:0 6px 16px -8px rgba(0,0,0,.9);display:flex;flex-direction:column}
+  .SG .table .no{position:absolute;right:11px;top:9px;font-family:"Courier Prime",monospace;
+    font-size:9px;color:#8A7856}
+  .SG .table .sj{font-family:"Alfa Slab One",Georgia,serif;font-size:14px;line-height:1.18;
+    text-transform:uppercase;color:var(--poussiere);margin-top:4px;min-height:50px}
+  .SG .table .qui{font-family:"Courier Prime",monospace;font-size:9px;letter-spacing:.1em;
+    text-transform:uppercase;color:#8A7856;margin-top:8px}
+  .SG .table .der{font-family:"Bitter",Georgia,serif;font-style:italic;font-size:12.5px;
+    line-height:1.42;color:#C3AB7E;margin-top:8px;min-height:54px}
+  .SG .table .pied{display:flex;align-items:center;gap:9px;margin-top:auto;padding-top:10px;
+    border-top:1px solid var(--trait);font-family:"Courier Prime",monospace;font-size:9.5px;color:#8A7856}
+  .SG .table .pied b{margin-left:auto;color:#C3AB7E;font-weight:400}
+  .SG .jetons{display:flex;gap:3px}
+  .SG .jetons i{width:11px;height:11px;border-radius:50%;background:#5A3A1E;
+    border:1.5px dashed rgba(232,220,186,.35)}
+  .SG .jetons i.r{background:#8E2216} .SG .jetons i.a{background:#41505A}
+  .SG .jetons i.o{background:var(--laiton)}
+  .SG .pied2{display:flex;align-items:center;gap:20px;margin-top:16px}
+
+  /* ---------- BIBLIOTHÈQUE DE COMPOSANTS ---------- */
+  .CP .g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:26px;padding:22px 24px}
+  .CP .bl{margin-bottom:22px}
+  .CP .bl>.w-l{display:block;border-bottom:1px solid var(--trait);padding-bottom:5px;margin-bottom:13px}
+  .CP .stack{display:flex;flex-direction:column;align-items:flex-start;gap:13px}
+  .CP .champ{background:rgba(0,0,0,.42);border:1px solid var(--trait2);padding:9px 12px;
+    font-family:"Courier Prime",monospace;font-size:12px;color:#8A7856;width:100%}
+  .CP .champ.on{border-color:var(--laiton);color:var(--poussiere);
+    box-shadow:0 0 0 2px rgba(192,138,46,.2)}
+  .CP .note{display:flex;gap:11px;background:rgba(26,20,16,.8);border-left:3px solid var(--laiton);
+    border-top:1px solid var(--trait);border-right:1px solid var(--trait);
+    border-bottom:1px solid var(--trait);padding:9px 12px;width:100%;align-items:baseline}
+  .CP .note .t{font-family:"Bitter",Georgia,serif;font-weight:700;font-size:12px;letter-spacing:.08em;
+    text-transform:uppercase;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .CP .note .d{font-family:"Courier Prime",monospace;font-size:9px;color:#A8946C;margin-left:auto;
+    white-space:nowrap;flex:none}
+  .CP .note.err{border-left-color:var(--sang2)}
+  .CP .vide{border:1px dashed var(--trait2);padding:18px;text-align:center;width:100%;
+    background:rgba(26,20,16,.55);position:relative}
+  .CP .vide .a{font-family:"Rye",Georgia,serif;font-size:15px;color:#8A7856}
+  .CP .vide .b{font-family:"Bitter",Georgia,serif;font-style:italic;font-size:12px;
+    color:#8A7856;margin-top:6px}
+  .CP .pag{display:flex;gap:5px;align-items:center}
+  .CP .pag span{width:27px;height:27px;border:1px solid var(--trait2);background:rgba(0,0,0,.35);
+    display:flex;align-items:center;justify-content:center;font-family:"Courier Prime",monospace;
+    font-size:11px;color:#A8946C}
+  .CP .pag span.on{background:var(--sang);border-color:#4A1009;color:#F2E0BA;font-weight:700}
+  .CP .jauge{height:13px;background:rgba(0,0,0,.45);border:1px solid var(--trait);display:flex;
+    gap:2px;padding:2px}
+  .CP .jauge i{flex:1;background:rgba(227,207,164,.09)}
+  .CP .jauge i.f{background:linear-gradient(180deg,#E6BE6C,#8A6118)}
+  .CP .jauge i.f.r{background:linear-gradient(180deg,#B93222,#6B1810)}
+  .CP .starrow{display:flex;gap:6px;margin-top:4px}
+
+  /* ---------- ÉCRAN H : LE TERRITOIRE (la semaine) ---------- */
+  .SH .zone{display:grid;grid-template-columns:minmax(0,1fr) 248px;gap:24px;margin-top:12px}
+  .SH .carte{position:relative;height:258px;border:2px solid #17100A;overflow:hidden;
+    background:
+      radial-gradient(60% 50% at 30% 40%,rgba(255,240,200,.16),transparent 70%),
+      repeating-linear-gradient(15deg,rgba(90,60,30,.07) 0 2px,transparent 2px 17px),
+      linear-gradient(170deg,#D9C394,#C2A56C 60%,#A8874E);
+    box-shadow:inset 0 0 40px rgba(74,48,20,.55)}
+  .SH .carte svg{position:absolute;inset:0;width:100%;height:100%}
+  .SH .ville{position:absolute;text-align:center;transform:translate(-50%,-9px)}
+  .SH .ville .pt{width:15px;height:15px;border-radius:50%;margin:0 auto;border:2.5px solid #3A2A18;background:#D9C394}
+  .SH .ville .nm{font-family:"Rye",Georgia,serif;font-size:14px;color:#2B1E14;margin-top:4px;white-space:nowrap}
+  .SH .ville .gr{font-family:"Courier Prime",monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;
+    color:#5E4225;margin-top:2px;white-space:nowrap}
+  .SH .ville.fait .pt{background:#3A2A18}
+  .SH .ville.ici .pt{width:21px;height:21px;background:var(--sang);border-color:#4A1009;
+    box-shadow:0 0 0 5px rgba(142,34,22,.24)}
+  .SH .ville.ici .nm{color:#7A1A10;font-size:16px}
+  .SH .rose{position:absolute;right:14px;bottom:10px;font-family:"Rye",Georgia,serif;font-size:13px;color:#5E4225}
+  .SH .dili{margin-top:14px;background:rgba(26,20,16,.84);border:1px solid var(--trait)}
+  .SH .dili .hd{display:grid;grid-template-columns:90px 70px minmax(0,1fr) 90px;gap:12px;padding:7px 12px;
+    border-bottom:1px solid var(--trait);font-family:"Courier Prime",monospace;font-size:9px;letter-spacing:.16em;
+    text-transform:uppercase;color:#8A7856}
+  .SH .dili .r{display:grid;grid-template-columns:90px 70px minmax(0,1fr) 90px;gap:12px;padding:8px 12px;
+    border-bottom:1px dotted var(--trait);align-items:baseline;font-family:"Courier Prime",monospace;font-size:11px;color:#C3AB7E}
+  .SH .dili .r b{font-family:"Alfa Slab One",Georgia,serif;font-weight:400;font-size:14px;color:var(--poussiere);
+    text-transform:uppercase}
+  .SH .dili .r .st{color:#8A7856;text-align:right}
+  .SH .dili .r.now .st{color:var(--sang2)} .SH .dili .r.now b{color:var(--laiton2)}
+  .SH .ordres{background:rgba(26,20,16,.84);border:1px solid var(--trait);padding:12px 14px}
+  .SH .ordres .o{display:grid;grid-template-columns:14px minmax(0,1fr) auto;gap:9px;align-items:baseline;
+    padding:6px 0;border-bottom:1px dotted var(--trait);font-family:"Courier Prime",monospace;font-size:10.5px;color:#C3AB7E}
+  .SH .ordres .o i{width:10px;height:10px;border:1.5px solid var(--laiton);transform:rotate(45deg)}
+  .SH .ordres .o.f i{background:var(--laiton)}
+  .SH .ordres .o.f span{color:#7B6849;text-decoration:line-through}
+  .SH .ordres .o b{color:var(--laiton2);font-weight:400}
+
+  /* ---------- ÉCRAN I : LA BANDE (les marathoniens) ---------- */
+  .SI .photo{margin-top:14px;padding:16px 18px 14px;
+    background:linear-gradient(176deg,#D8C295,#BFA273);border:10px solid #2B1E14;
+    box-shadow:0 12px 28px -12px rgba(0,0,0,.95),inset 0 0 30px rgba(74,48,20,.5)}
+  .SI .photo .leg{font-family:"Rye",Georgia,serif;font-size:15px;color:#3A2A18;text-align:center}
+  .SI .photo .sub{font-family:"Courier Prime",monospace;font-size:9px;letter-spacing:.2em;text-transform:uppercase;
+    color:#6B4A28;text-align:center;margin-top:3px}
+  .SI .rang{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px 10px;margin-top:14px}
+  .SI .tin{text-align:center}
+  .SI .tin .ov{width:74px;height:94px;margin:0 auto;border-radius:50%;padding:3px;
+    background:linear-gradient(160deg,#8A6A3C,#3A2A18);box-shadow:0 3px 7px -3px rgba(0,0,0,.8)}
+  .SI .tin .ph{width:100%;height:100%;border-radius:50%;position:relative;overflow:hidden;
+    background:radial-gradient(70% 60% at 50% 36%,#B08A58,#4A3218);filter:sepia(.5)}
+  .SI .tin .ph::after{content:"";position:absolute;inset:0;background:linear-gradient(176deg,rgba(32,20,10,.92),rgba(18,11,5,.97));
+    clip-path:polygon(36% 22%,64% 22%,68% 42%,86% 42%,84% 48%,63% 48%,62% 58%,78% 70%,84% 100%,16% 100%,22% 70%,38% 58%,37% 48%,16% 48%,14% 42%,32% 42%)}
+  .SI .tin .nm{font-family:"Alfa Slab One",Georgia,serif;font-size:12px;text-transform:uppercase;color:#2B1E14;
+    margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .SI .tin .pr{font-family:"Rye",Georgia,serif;font-size:12px;color:#8E2216;margin-top:1px}
+  .SI .tin .ss{font-family:"Courier Prime",monospace;font-size:8px;letter-spacing:.08em;text-transform:uppercase;
+    color:#6B4A28;margin-top:2px}
+  .SI .tin.moi .ov{background:linear-gradient(160deg,#B93222,#6B1810);box-shadow:0 0 0 2px #8E2216,0 3px 7px -3px rgba(0,0,0,.8)}
+  .SI .tin.moi .nm{color:#7A1A10}
+  .SI .tin.abs .ov{opacity:.5}
+  .SI .pied{display:flex;justify-content:space-between;align-items:center;margin-top:12px;
+    font-family:"Courier Prime",monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#9E8A63}
+  .WS .devant .lk i{font-style:normal;font-size:8px;opacity:.7}
+  .WS .devant .acc{flex:none;margin-left:12px;position:relative;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;
+    border-radius:50%;border:1.5px solid var(--laiton);background:#2F2214;font-family:"Rye",Georgia,serif;font-size:13px;color:#E6C77E}
+  .WS .devant .acc i{position:absolute;right:-7px;top:-5px;font-style:normal;font-family:"Bitter",Georgia,serif;font-weight:700;font-size:8.5px;
+    background:var(--sang2);color:#F2E0BA;padding:1px 4px;border-radius:7px}
+  .WS .sgn{margin-top:9px;font-family:"Courier Prime",monospace;font-size:10.5px;color:#A8946C;text-decoration:underline}
+  /* ====== écrans 10 à 18 ====== */
+  .WS .tete2{display:flex;align-items:flex-end;gap:16px;margin-bottom:10px}
+  .WS .tete2 .w-l{padding-bottom:4px}
+  .WS .ong{display:flex;gap:6px;margin:2px 0 10px}
+  .WS .ong span{font-family:"Bitter",Georgia,serif;font-weight:700;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;
+    padding:6px 13px;border:1.5px solid var(--trait2);color:#C3AB7E;background:rgba(26,20,16,.6)}
+  .WS .ong span.on{background:linear-gradient(180deg,#A82A1B,#75190F);color:#F2E0BA;border-color:#4A1009}
+  .WS .ong em{font-style:normal;font-family:"Courier Prime",monospace;font-size:8.5px;letter-spacing:.1em;color:var(--laiton2);margin-left:6px}
+  .WS .w-etq.rg{color:#D4513C}
+  .WS .clou{position:absolute;width:8px;height:8px;border-radius:50%;background:radial-gradient(circle at 34% 30%,#E8DCBA,#8A7448 56%,#3A2E1A);box-shadow:0 1px 2px rgba(0,0,0,.8)}
+  .WS .clou.a{left:7px;top:6px} .WS .clou.b{right:7px;top:6px}
+  .WS .pc{position:relative}
+  .WS .pc .vis{aspect-ratio:1/1;border:1.5px solid rgba(43,30,20,.7);filter:sepia(.35) contrast(1.08)}
+  .WS .pc b{display:block;font-family:"Alfa Slab One",Georgia,serif;font-weight:400;font-size:8.5px;line-height:1.15;text-transform:uppercase;color:var(--poussiere);margin-top:4px}
+  .WS .pc.pris .vis{position:relative}
+  .WS .pc.pris::after{content:"CAPTURÉ";position:absolute;left:-6%;top:30%;width:112%;text-align:center;font-family:"Rye",Georgia,serif;font-size:15px;
+    color:rgba(185,50,34,.95);transform:rotate(-15deg);border:2px solid rgba(185,50,34,.8);padding:1px 0;background:rgba(216,194,149,.25)}
+  .SJ .cols{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+  .SJ .col{position:relative;background:linear-gradient(174deg,#E2CFA2,#C6AC78 62%,#B79A64);color:#2B1E14;padding:14px 12px 10px;box-shadow:0 6px 16px -7px rgba(0,0,0,.9)}
+  .SJ .col:nth-child(2n){transform:rotate(.6deg)} .SJ .col:nth-child(3){transform:rotate(-.5deg)}
+  .SJ .hd{text-align:center;border-bottom:1.5px solid rgba(43,30,20,.4);padding-bottom:7px;margin-bottom:4px}
+  .SJ .hd b{display:block;font-family:"Rye",Georgia,serif;font-weight:400;font-size:19px;color:#3A2A18}
+  .SJ .hd span{font-family:"Courier Prime",monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:#6B4A28}
+  .SJ .it{padding:6px 2px;border-bottom:1px dashed rgba(43,30,20,.25)}
+  .SJ .it b{display:block;font-family:"Alfa Slab One",Georgia,serif;font-weight:400;font-size:12.5px;text-transform:uppercase;color:#2B1E14}
+  .SJ .it b em{font-style:normal;font-family:"Bitter",Georgia,serif;font-weight:700;font-size:8px;letter-spacing:.12em;color:#8E2216;margin-left:6px;vertical-align:1px}
+  .SJ .it span{font-family:"Courier Prime",monospace;font-size:9.5px;color:#5A4024}
+  .SJ .it.off b{color:#7A6446}
+  .SJ .bas3{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:12px;margin-top:14px}
+  .SJ .bx{border:1px solid var(--trait2);background:rgba(26,20,16,.82);padding:9px 12px}
+  .SJ .bx .it{border-bottom-color:var(--trait)}
+  .SJ .bx .it b{color:var(--poussiere)} .SJ .bx .it span{color:#A8946C}
+  .SJ .lit{font-family:"Courier Prime",monospace;font-size:10.5px;line-height:1.7;color:#C3AB7E;margin-top:6px}
+  .SK .tb{border-top:1px solid var(--trait2);background:rgba(26,20,16,.72)}
+  .SK .r{display:grid;grid-template-columns:36px 28px minmax(0,1fr) 110px 44px 60px;gap:12px;align-items:center;padding:4px 10px;border-bottom:1px solid var(--trait)}
+  .SK .r.h{font-family:"Courier Prime",monospace;font-size:9px;letter-spacing:.14em;color:#9E8A63;padding:6px 10px}
+  .SK .r .rk{font-family:"Rye",Georgia,serif;font-size:17px;color:#7A6446}
+  .SK .r:nth-child(2) .rk,.SK .r:nth-child(3) .rk,.SK .r:nth-child(4) .rk{color:var(--laiton2)}
+  .SK .r .vis{width:28px;aspect-ratio:1/1;border:1px solid rgba(227,207,164,.3);filter:sepia(.35)}
+  .SK .r .ti{font-family:"Alfa Slab One",Georgia,serif;font-size:13.5px;text-transform:uppercase;color:var(--poussiere);line-height:1.1}
+  .SK .r .ti small{display:block;font-family:"Courier Prime",monospace;font-size:9px;color:#9E8A63;letter-spacing:.1em}
+  .SK .r .w-balles i{width:6px;height:14px}
+  .SK .r .no{font-family:"Rye",Georgia,serif;font-size:16px;color:var(--laiton2);text-align:right}
+  .SK .r .nb{font-family:"Courier Prime",monospace;font-size:9.5px;color:#9E8A63;text-align:right}
+  .SL .niv{display:grid;grid-template-columns:200px minmax(0,1fr);gap:16px;align-items:center;padding:10px 12px;margin-bottom:8px;background:rgba(26,20,16,.72);border:1px solid var(--trait)}
+  .SL .niv .nm{font-family:"Rye",Georgia,serif;font-size:22px;color:var(--laiton2);margin-top:2px}
+  .SL .niv .ds{font-family:"Bitter",Georgia,serif;font-size:11.5px;line-height:1.35;color:#C3AB7E;margin-top:4px}
+  .SL .niv .ct{font-family:"Courier Prime",monospace;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:#9E8A63;margin-top:5px}
+  .SL .niv .ct b{font-size:15px;color:var(--laiton2);letter-spacing:0}
+  .SL .mi{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px}
+  .SM .z{display:grid;grid-template-columns:240px minmax(0,1fr);gap:18px}
+  .SM .ls .l{padding:8px 11px;border:1px solid var(--trait);margin-bottom:6px;background:rgba(26,20,16,.82)}
+  .SM .ls .l.on{border-color:var(--laiton);box-shadow:inset 3px 0 0 var(--sang2)}
+  .SM .ls .l b{font-family:"Alfa Slab One",Georgia,serif;font-weight:400;font-size:13px;text-transform:uppercase;color:var(--poussiere)}
+  .SM .ls .l .m{display:flex;justify-content:space-between;font-family:"Courier Prime",monospace;font-size:8.5px;letter-spacing:.08em;color:#9E8A63;margin-top:3px}
+  .SM .ls .l .m .pub{color:var(--laiton2)}
+  .SM .act{display:flex;gap:8px;align-items:center}
+  .SM .act .w-h{margin-right:auto}
+  .SM .act .w-etq{margin:0;color:#C3AB7E}
+  .SM .gr{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-top:10px;padding:12px;background:rgba(26,20,16,.72)}
+  .SM .gr .pc b{font-size:9px}
+  .SN .pm{display:grid;grid-template-columns:240px minmax(0,1fr);border:1px solid var(--trait2);background:rgba(26,20,16,.84);height:370px}
+  .SN .cv{border-right:1px solid var(--trait2)}
+  .SN .c{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:9px;align-items:center;padding:9px 11px;border-bottom:1px solid var(--trait)}
+  .SN .c.on{background:rgba(142,34,22,.22);box-shadow:inset 3px 0 0 var(--sang2)}
+  .SN .av,.SO .av{display:flex;align-items:center;justify-content:center;border-radius:50%;border:1.5px solid var(--laiton);background:#2F2214;font-family:"Rye",Georgia,serif;color:#E6C77E}
+  .SN .c .av{width:28px;height:28px;font-size:12px}
+  .SN .c b{font-family:"Alfa Slab One",Georgia,serif;font-weight:400;font-size:12px;text-transform:uppercase;color:var(--poussiere)}
+  .SN .c .x{font-family:"Courier Prime",monospace;font-size:9.5px;color:#9E8A63;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .SN .c .u{font-family:"Bitter",Georgia,serif;font-weight:700;font-size:9px;background:var(--sang2);color:#F2E0BA;border-radius:8px;padding:1px 6px}
+  .SN .th{display:flex;flex-direction:column;padding:10px 14px}
+  .SN .th .hd{display:flex;align-items:baseline;gap:10px;padding-bottom:8px;border-bottom:1px solid var(--trait)}
+  .SN .th .hd b{font-family:"Rye",Georgia,serif;font-size:17px;color:#E6C77E}
+  .SN .th .hd span{font-family:"Courier Prime",monospace;font-size:9px;letter-spacing:.12em;color:#9E8A63}
+  .SN .th .hd .bq{margin-left:auto;text-decoration:underline;letter-spacing:0;font-size:10.5px;color:#C3AB7E}
+  .SN .lt{max-width:76%;margin-top:8px;padding:7px 11px 8px;background:linear-gradient(174deg,#E2CFA2,#C6AC78);color:#2B1E14;
+    font-family:"Bitter",Georgia,serif;font-size:13px;line-height:1.35;box-shadow:0 3px 8px rgba(0,0,0,.55)}
+  .SN .lt i{display:block;font-style:normal;font-family:"Courier Prime",monospace;font-size:8.5px;color:#6B4A28;margin-top:2px}
+  .SN .lt.moi{margin-left:auto;background:linear-gradient(174deg,#D8C295,#B79A64)}
+  .SN .in,.SO .rp{margin-top:auto;display:flex;gap:10px;align-items:center;padding-top:10px}
+  .SN .in .f,.SO .rp .f{flex:1;border:1px solid var(--trait2);padding:9px 12px;font-family:"Courier Prime",monospace;font-size:11px;color:#9E8A63;background:rgba(0,0,0,.3)}
+  .SO .ps{margin-top:10px;background:rgba(26,20,16,.82);border:1px solid var(--trait);padding:0 14px}
+  .SO .p{display:grid;grid-template-columns:40px minmax(0,1fr);gap:12px;padding:10px 0;border-bottom:1px solid var(--trait)}
+  .SO .p:last-child{border-bottom:0}
+  .SO .p .av{width:36px;height:36px;font-size:15px}
+  .SO .p .h{display:flex;gap:10px;align-items:baseline;font-family:"Courier Prime",monospace;font-size:9.5px;letter-spacing:.1em;color:#9E8A63}
+  .SO .p .h b{font-family:"Alfa Slab One",Georgia,serif;font-weight:400;font-size:13.5px;text-transform:uppercase;color:var(--poussiere)}
+  .SO .p .h .me{color:var(--laiton2)}
+  .SO .p .h .sg{margin-left:auto;text-decoration:underline;letter-spacing:0;color:#C3AB7E}
+  .SO .p .tx{font-family:"Bitter",Georgia,serif;font-size:13.5px;line-height:1.5;color:var(--poussiere);margin-top:3px}
+  .SO .rp{margin-top:12px}
+  .SP .int{font-family:"Bitter",Georgia,serif;font-style:italic;font-size:13px;color:#C3AB7E}
+  .SP .jg{display:flex;align-items:center;gap:12px;margin:8px 0 4px;font-family:"Courier Prime",monospace;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:#9E8A63}
+  .SP .jg i{flex:1;height:6px;background:rgba(227,207,164,.12);border:1px solid var(--laiton)}
+  .SP .jg i b{display:block;height:100%;background:linear-gradient(90deg,var(--sang2),var(--laiton2))}
+  .SP .fam{margin-top:9px}
+  .SP .fh{display:flex;align-items:baseline;gap:10px;font-family:"Courier Prime",monospace;font-size:9.5px;letter-spacing:.12em;color:#9E8A63;border-bottom:1px solid var(--trait);padding-bottom:3px}
+  .SP .fh b{font-family:"Rye",Georgia,serif;font-weight:400;font-size:15px;letter-spacing:0;color:var(--laiton2)}
+  .SP .fh .nw{text-transform:uppercase} .SP .fh .nw.on{color:#D4513C}
+  .SP .cds{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px;margin-top:6px}
+  .SP .cd{position:relative;min-height:66px;padding:6px 8px 17px;border:1px dashed rgba(227,207,164,.18);background:rgba(26,20,16,.7)}
+  .SP .cd.ok{border:0;background:linear-gradient(174deg,#E2CFA2,#C6AC78 62%,#B79A64);color:#2B1E14;box-shadow:0 4px 10px -5px rgba(0,0,0,.9)}
+  .SP .cd i{display:block;font-style:normal;font-family:"Bitter",Georgia,serif;font-weight:700;font-size:7.5px;letter-spacing:.16em;text-transform:uppercase;color:#7A6446}
+  .SP .cd.ok i{color:#8E2216}
+  .SP .cd b{display:block;font-family:"Alfa Slab One",Georgia,serif;font-weight:400;font-size:11px;line-height:1.12;text-transform:uppercase;color:#7A6446;margin-top:3px}
+  .SP .cd.ok b{color:#2B1E14}
+  .SP .cd em{display:block;font-style:normal;font-family:"Courier Prime",monospace;font-size:8.5px;line-height:1.25;color:#6E5A3E;margin-top:2px}
+  .SP .cd.ok em{color:#4A3620}
+  .SP .cd u{position:absolute;left:8px;bottom:4px;text-decoration:none;font-family:"Courier Prime",monospace;font-size:8.5px;color:#7A6446}
+  .SP .cd.ok u{color:#6B4A28}
+  .SQ .solo{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:6px}
+  .SQ .solo>div>.w-l{display:inline-block;white-space:nowrap;color:#2E1E0C;background:rgba(216,194,149,.78);padding:2px 7px}
+  .SQ .card{background:rgba(26,20,16,.9);border:1.5px solid var(--laiton);padding:12px 14px 14px;margin-top:6px}
+  .SQ .dsc{display:inline-block;margin-top:6px;padding:5px 12px;border:1px solid rgba(46,30,12,.6);font-family:"Bitter",Georgia,serif;font-weight:700;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#2E1E0C}
+  .SQ .fd{margin-top:8px}
+  .SQ .fd label{display:block;font-family:"Courier Prime",monospace;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:#9E8A63;margin-bottom:3px}
+  .SQ .fd .f{border:1px solid var(--trait2);padding:8px 10px;font-family:"Courier Prime",monospace;font-size:11.5px;color:#C3AB7E;background:rgba(0,0,0,.3)}
+  .SQ .fd .f.on{border-color:var(--laiton2);color:var(--poussiere)}
+  .SQ .bt{display:flex;align-items:center;gap:12px;margin-top:11px}
+  .SQ .w-b1{font-size:11.5px;padding:8px 14px;white-space:nowrap}
+  .SQ .w-b2{font-size:11px;padding:6px 13px}
+  .SQ .lkk{font-family:"Courier Prime",monospace;font-size:10px;color:#C3AB7E;text-decoration:underline}
+  .SQ .warn{border:1px solid rgba(185,50,34,.6);background:rgba(142,34,22,.16);padding:8px 10px;font-family:"Bitter",Georgia,serif;font-size:12.5px;line-height:1.4;color:var(--poussiere)}
+  .SQ .warn b{display:block;font-family:"Rye",Georgia,serif;font-weight:400;font-size:14px;color:#E6C77E}
+  .SQ .warn em{font-style:normal;color:var(--laiton2)}
+  .SQ .cpt{margin-top:6px;background:rgba(26,20,16,.9);border:1.5px solid var(--laiton);padding:10px;text-align:center}
+  .SQ .cpt .n{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:6px}
+  .SQ .cpt .n div{font-family:"Courier Prime",monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:.1em;color:#9E8A63;border:1px solid var(--trait);padding:6px 0}
+  .SQ .cpt .n b{display:block;font-family:"Rye",Georgia,serif;font-weight:400;font-size:22px;color:var(--laiton2);letter-spacing:0}
+  .SQ .lg{margin-top:10px;font-family:"Courier Prime",monospace;font-size:9.5px;color:#E3CFA4;text-align:center}
+  .SR .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-content:start}
+  .SR .bx{border:1px solid var(--trait2);background:rgba(26,20,16,.86);padding:9px 11px}
+  .SR .bn{margin-top:6px;border-left:3px solid var(--sang2);padding:6px 9px;background:rgba(142,34,22,.12)}
+  .SR .bn b,.SR .st b{display:block;font-family:"Rye",Georgia,serif;font-weight:400;font-size:14px;color:#E6C77E}
+  .SR p{font-family:"Bitter",Georgia,serif;font-size:11.5px;line-height:1.4;color:#C3AB7E;margin:3px 0 0}
+  .SR p em{font-style:normal;color:var(--poussiere)}
+  .SR .bt{display:flex;flex-wrap:wrap;gap:7px;margin-top:7px}
+  .SR .w-b1{font-size:10.5px;padding:6px 11px}
+  .SR .w-b2{font-size:10.5px;padding:5px 11px}
+  .SR .st{margin-top:6px;padding:5px 9px;border:1px solid var(--trait)}
+  .SR .st .w-b2{margin-top:5px}
+  .SR .st.w{border-color:rgba(230,190,108,.45)} .SR .st.g{border-color:rgba(140,170,110,.5)} .SR .st.r{border-color:rgba(185,50,34,.6)}
+  .SR .tm{display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-family:"Courier Prime",monospace;font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:#9E8A63}
+  .SR .tm b{font-family:"Rye",Georgia,serif;font-weight:400;font-size:18px;color:var(--laiton2);letter-spacing:0}
+  .SR .tg2{display:flex;justify-content:space-between;gap:8px;margin-top:7px;padding:7px 10px;background:linear-gradient(174deg,#E2CFA2,#C6AC78);color:#2B1E14;
+    font-family:"Bitter",Georgia,serif;font-weight:700;font-size:11px;letter-spacing:.06em;text-transform:uppercase;box-shadow:0 3px 8px rgba(0,0,0,.5)}
+  .SR .tg2 b{font-family:"Courier Prime",monospace;font-size:10px;color:#8E2216;white-space:nowrap}
+  .SR .tg2.er{background:linear-gradient(174deg,#D9B3A2,#B98A74)}
+  .SR .bar{display:flex;align-items:center;gap:10px;margin-top:9px;font-family:"Courier Prime",monospace;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--laiton2)}
+  .SR .ch{display:flex;gap:3px}
+  .SR .ch i{width:9px;height:9px;border-radius:50%;border:1px solid var(--laiton);background:transparent}
+  .SR .ch i.f{background:var(--laiton2)}
+  .SR .vd{margin-top:12px;font-family:"Rye",Georgia,serif;font-size:16px;color:#C3AB7E}
+  .SR .vd small{display:block;font-family:"Bitter",Georgia,serif;font-size:11px;color:#A8946C}
+  .SR .tgl{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-family:"Courier Prime",monospace;font-size:10px;color:#C3AB7E}
+  .SR .tgl i{width:32px;height:16px;border-radius:8px;border:1px solid var(--laiton);position:relative}
+  .SR .tgl i::after{content:"";position:absolute;left:2px;top:2px;width:10px;height:10px;border-radius:50%;background:#9E8A63}
+  .SR .po2{display:flex;gap:10px;align-items:flex-end;margin-top:8px}
+  .SR .po2 .pc{width:66px}
+  .SR .p18{position:absolute;left:0;right:0;top:0;z-index:4;background:#B00000;color:#fff;font:900 7.5px/1 system-ui,sans-serif;letter-spacing:1px;text-align:center;padding:4px 0}
+  .SR .p18.v{background:#6A00B8;color:#F0C0FF}
+  .SR .fab{margin-left:auto;background:#5865F2;color:#fff;font:600 11px/1 system-ui,sans-serif;padding:9px 13px;border-radius:4px}
+  .SR .nt{font-size:10.5px;margin-top:8px}
+  .eggs{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:14px}
+  .egg{border:1px solid rgba(192,138,46,.45);background:#221910;padding:14px 16px}
+  .egg .k{font-family:"Courier Prime",monospace;font-size:10px;color:#9E8A63}
+  .egg h3{font-family:"Rye",Georgia,serif;font-weight:400;font-size:21px;color:#E6BE6C;margin:4px 0 6px}
+  .egg p{font-size:13px;line-height:1.55;color:#E3CFA4;margin:6px 0 0}
+  .egg p b{color:#F2E0BA}
+  .SM .act .w-etq.rg{color:#D4513C}
+  .SK .r .ti{line-height:1.25} .SK .r .ti small{margin-top:2px}
+  .SV .dome{position:absolute;left:30px;bottom:30px;width:320px;padding:0 20px 16px;background:linear-gradient(180deg,#6B4A28,#3A2A1B);border:2px solid #17100A;border-radius:150px 150px 8px 8px;
+    box-shadow:0 22px 50px rgba(0,0,0,.9),inset 0 2px 0 rgba(255,230,180,.15)}
+  .SV .arc{height:110px;margin:18px 30px 0;border-radius:110px 110px 4px 4px;background:repeating-linear-gradient(90deg,#2B1E14 0 5px,#4A361F 5px 9px);border:2px solid #C08A2E}
+  .SV .cad{position:relative;display:flex;justify-content:space-between;margin-top:12px;padding:8px 12px;background:linear-gradient(180deg,#E6BE6C,#C08A2E);border:1px solid #6B4A12;
+    font-family:"Courier Prime",monospace;font-size:10px;color:#2B1E14}
+  .SV .cad i{position:absolute;left:52%;top:3px;bottom:3px;width:2px;background:#8E2216}
+  .SV .rc{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+  .SV .rc div{display:flex;flex-direction:column;align-items:center;gap:6px}
+  .SV .rc span{font-family:"Bitter",Georgia,serif;font-weight:700;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#E6C77E}
+  .SV .rc em{font-style:normal;font-family:"Courier Prime",monospace;font-size:10px;color:#E3CFA4}
+  .SV .sw{position:relative;width:14px;height:34px;border-radius:7px;background:#1A1410;border:1px solid #C08A2E}
+  .SV .sw u{position:absolute;left:1px;right:1px;height:14px;top:2px;border-radius:6px;background:linear-gradient(180deg,#E6BE6C,#8A6118)}
+  .SV .kn{position:relative;width:36px;height:36px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#E6BE6C,#6B4A12);border:1px solid #17100A}
+  .SV .kn u{position:absolute;left:50%;top:3px;width:3px;height:10px;margin-left:-1.5px;background:#2B1E14}
+  .SV .rp{margin-top:10px;font-family:"Courier Prime",monospace;font-size:10.5px;color:#C3AB7E}
+  .SV .rmini{position:absolute;left:370px;bottom:30px;width:54px;height:54px;border-radius:26px 26px 4px 4px;background:#3A2A1B;border:1px solid #C08A2E;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+    font-family:"Bitter",Georgia,serif;font-weight:700;font-size:7px;letter-spacing:.1em;color:#E6C77E}
+  .SV .rmini .led{width:6px;height:6px;border-radius:50%;background:#E6BE6C;box-shadow:0 0 8px 2px rgba(230,190,108,.8)}
+  .SV .rnotes{position:absolute;left:450px;right:30px;bottom:30px;display:grid;gap:12px}
+  .SV .rnotes div{border-top:1px solid var(--trait2);padding-top:7px;font-family:"Bitter",Georgia,serif;font-size:13px;line-height:1.45;color:#E3CFA4;background:rgba(26,20,16,.6);padding:8px 10px}
+  .SV .rnotes b{display:block;font-family:"Courier Prime",monospace;font-weight:400;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:#E6BE6C}
+  /* Vidéoclub : objets neutres, identiques dans les quatre kits */
+  .lk .vc::before,.a-lk .vc::before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:#E8C46A;box-shadow:0 0 6px 1px rgba(232,196,106,.8);margin-right:6px;vertical-align:2px}
+  .vcn{position:relative;width:100%;aspect-ratio:4/3;overflow:hidden;background:linear-gradient(180deg,#07070D 0%,#0E0E18 62%,#1B1B24 62.2%,#23232D 100%);border:1px solid rgba(255,255,255,.14);font-family:"Segoe UI",system-ui,sans-serif}
+  .vcn .fac{position:absolute;left:6%;right:6%;top:16%;bottom:38%;background:#15151F;border:2px solid #2A2A36}
+  .vcn .sign{position:absolute;left:0;right:0;top:5%;text-align:center;font-weight:800;font-size:25px;letter-spacing:.16em;color:#F6E2A8;text-shadow:0 0 6px #E8C46A,0 0 18px rgba(232,196,106,.8),0 0 40px rgba(232,196,106,.45)}
+  .vcn .win{position:absolute;top:26%;bottom:40%;width:27%;background:linear-gradient(180deg,#1E2230,#10121A);border:2px solid #2E2E3A;display:flex;gap:6%;align-items:flex-end;justify-content:center;padding:0 5% 5%}
+  .vcn .win.l{left:9%} .vcn .win.r{right:9%}
+  .vcn .win i{display:block;width:40%;aspect-ratio:2/3;border:1px solid rgba(255,255,255,.18)}
+  .vcn .door{position:absolute;left:41%;width:18%;top:30%;bottom:38%;background:radial-gradient(90% 70% at 50% 60%,#F3D48A,#B5822E 60%,#5A3D12);border:3px solid #2E2E3A;border-bottom:0;
+    box-shadow:0 0 40px rgba(232,196,106,.45)}
+  .vcn .door span{position:absolute;left:12%;right:12%;top:18%;background:#F1ECE0;color:#141418;font-size:7px;font-weight:800;letter-spacing:.08em;text-align:center;padding:3px 2px;line-height:1.25}
+  .vcn .glow{position:absolute;left:30%;right:30%;top:62%;height:14%;background:radial-gradient(50% 60% at 50% 0,rgba(232,196,106,.35),transparent 70%)}
+  .vcn .tag{position:absolute;left:8px;bottom:8px;font:600 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;text-transform:uppercase;color:#9A9AB8;background:rgba(8,8,14,.8);padding:5px 7px;border:1px solid rgba(255,255,255,.1)}
+  .vcx{display:flex;gap:7px;align-items:flex-end}
+  .vcx i{position:relative;display:block;width:44px;aspect-ratio:120/170;border:1px solid rgba(255,255,255,.2);box-shadow:inset 0 0 0 3px rgba(0,0,0,.35)}
+  .vcx i.w2{filter:saturate(.7) brightness(.92)} .vcx i.w3{filter:saturate(.5) sepia(.2);transform:rotate(-2deg)}
+  .vcx i.loue{background:repeating-linear-gradient(135deg,rgba(255,255,255,.05) 0 5px,transparent 5px 10px)!important;border:1.5px dashed rgba(255,255,255,.28);box-shadow:none}
+  .vcx i.loue::after{content:"LOUÉ";position:absolute;left:50%;top:38%;transform:translateX(-50%) rotate(-10deg);border:1.5px solid #C8261E;color:#E0453C;font:800 7px/1 "Segoe UI",sans-serif;letter-spacing:.08em;padding:2px 3px;background:rgba(8,8,12,.7)}
+  .vcx i b{position:absolute;right:-5px;top:-5px;width:15px;height:15px;border-radius:50%;background:#F1ECE0;color:#1B1B1B;font:700 7.5px/15px "Segoe UI",sans-serif;text-align:center}
+  .SX .vcgrid{position:relative;display:grid;grid-template-columns:1.2fr 1fr;gap:40px;align-items:start}
+  .SX .vcblk{background:rgba(26,20,16,.72);border:2px solid #17100A;box-shadow:inset 0 0 0 1px rgba(192,138,46,.35);padding:18px 22px 22px}
+  .SX .ttl{font-family:"Rye",Georgia,serif;font-size:42px;line-height:1;color:#E6C77E;text-shadow:0 2px 0 #17100A}
+  .SX .cnt{display:flex;align-items:baseline;gap:10px;margin-top:14px;font-family:"Bitter",Georgia,serif;font-weight:700;font-size:15px;letter-spacing:.06em;text-transform:uppercase;color:#E3CFA4}
+  .SX .cnt b{font-family:"Rye",Georgia,serif;font-weight:400;font-size:46px;letter-spacing:0;color:#E6BE6C}
+  .SX .lst{margin:8px 0 18px;font-family:"Courier Prime",monospace;font-size:12.5px;line-height:1.5;color:#C3AB7E}
+  .SX .lst b{color:#E3CFA4}
+  .SX .vcnotes{position:relative;margin-top:26px;display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+  .SX .vcnotes div{background:rgba(26,20,16,.6);border-top:1px solid var(--trait2);padding:8px 10px;font-family:"Bitter",Georgia,serif;font-size:13px;line-height:1.45;color:#E3CFA4}
+  .SX .vcnotes b{display:block;font-family:"Courier Prime",monospace;font-weight:400;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:#E6BE6C}
+</style>
+
+<div class="wrap">
+
+<section>
+  <p class="eyebrow">Thème Western — kit complet · 20 septembre 2026</p>
+  <h1 class="masthead">Western.</h1>
+  <p class="lede prose">Spaghetti, pas John Ford : <strong>ocre, sueur, gros plans et silences</strong>. Tu as donné les codes — trous de balle, colts, désert, avis de recherche — et ils sont tous là, mais accrochés à une seule idée qui tient tout le thème : <strong>chaque film a une prime sur sa tête, et toi aussi</strong>. Ton profil est un avis de recherche, ton niveau est le montant de ta prime, le classement est le mur du shérif, et ton compteur de badges est une crosse de revolver entaillée.</p>
+  <div class="caveat">
+    <b>Mes trois films de référence, à corriger si tu veux :</b> Le Bon, la Brute et le Truand (1966), Il était une fois dans l'Ouest (1968) et Pour une poignée de dollars (1964). Tu ne me les as pas donnés cette fois, alors j'ai pris le canon Leone-Morricone. Si tu préfères Django, Keoma ou Il était une fois la révolution, dis-le et je réajuste — c'est une heure de travail, pas une refonte.
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Le monde</p>
+  <h2>Ce que chaque film apporte</h2>
+  <div class="refs">
+    <div>
+      <h4>Le Bon, la Brute et le Truand</h4>
+      <div class="yr">1966 — SERGIO LEONE</div>
+      <ul>
+        <li><b>La prime.</b> Tuco vaut 2 000 dollars et son avis de recherche change de montant au fil du film. C'est le niveau du joueur.</li>
+        <li><b>Le gros plan.</b> Survoler une affiche dans le mur recadre brutalement sur un détail pendant une demi-seconde. Puis ça revient.</li>
+        <li><b>Le cimetière.</b> Les films jamais vus ne sont pas « non vus », ils sont <b>en cavale</b>. Il y en a 112.</li>
+      </ul>
+    </div>
+    <div>
+      <h4>Il était une fois dans l'Ouest</h4>
+      <div class="yr">1968 — SERGIO LEONE</div>
+      <ul>
+        <li><b>La lenteur.</b> Toutes les transitions durent 500 ms. Sauf le clic, qui est instantané. C'est ce contraste qui fait le thème.</li>
+        <li><b>L'horizon.</b> Une ligne de séparation franche traverse le fond de chaque page : ciel brûlé en haut, terre en bas.</li>
+        <li><b>La mouche.</b> Rarement, une mouche traverse l'écran très lentement et se pose. Cliquer dessus la fait juste changer de place. Trois fois, et c'est un œuf (#31).</li>
+      </ul>
+    </div>
+    <div>
+      <h4>Pour une poignée de dollars</h4>
+      <div class="yr">1964 — SERGIO LEONE</div>
+      <ul>
+        <li><b>L'homme sans nom.</b> Le site ne te dit jamais « content de te revoir ». Les deux accueils qui existent annoncent au lieu de saluer.</li>
+        <li><b>Le fabricant de cercueils.</b> Les compteurs sont formulés en négatif : 112 en cavale, pas 354 capturés.</li>
+        <li><b>Le poncho.</b> Palette entièrement chaude, une seule couleur froide dans tout le thème : l'acier des armes, réservé à l'information.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Jetons</p>
+  <h2>La palette</h2>
+  <p class="prose">Tout est chaud sauf une couleur. <strong>Le sang pour ce qui agit</strong>, <strong>le laiton pour ce qui est acquis</strong>, <strong>l'acier — la seule teinte froide du thème — pour ce qui informe</strong>. Le fond n'est pas une couleur mais un dégradé avec une ligne d'horizon franche à mi-hauteur : c'est elle qui rend le thème reconnaissable avant même qu'on lise un mot.</p>
+  <div class="tok">
+    <div><div class="sw" style="background:#E3CFA4"></div><div class="nm">Poussière</div><div class="hx">#E3CFA4</div><div class="us">Le texte principal. Le blanc du thème, qui n'est pas blanc.</div></div>
+    <div><div class="sw" style="background:#D8C295"></div><div class="nm">Papier</div><div class="hx">#D8C295</div><div class="us">Les avis de recherche. Jauni, pas crème.</div></div>
+    <div><div class="sw" style="background:#C9A96B"></div><div class="nm">Sable</div><div class="hx">#C9A96B</div><div class="us">Le sol, les fonds clairs.</div></div>
+    <div><div class="sw" style="background:#6B4A28"></div><div class="nm">Terre</div><div class="hx">#6B4A28</div><div class="us">Les séparations, le haut des tables du saloon.</div></div>
+    <div><div class="sw" style="background:#3A2A1B"></div><div class="nm">Bois</div><div class="hx">#3A2A1B</div><div class="us">Les planches, la devanture, les dossiers.</div></div>
+    <div><div class="sw" style="background:#1A1410"></div><div class="nm">Nuit</div><div class="hx">#1A1410</div><div class="us">Le fond des blocs. Jamais #000.</div></div>
+    <div><div class="sw" style="background:#8E2216"></div><div class="nm">Sang</div><div class="hx">#8E2216</div><div class="us">L'action, et elle seule. Capturer, voter, supprimer.</div></div>
+    <div><div class="sw" style="background:#B93222"></div><div class="nm">Sang vif</div><div class="hx">#B93222</div><div class="us">Les survols, les chiffres qui comptent.</div></div>
+    <div><div class="sw" style="background:#C08A2E"></div><div class="nm">Laiton</div><div class="hx">#C08A2E</div><div class="us">Les cartouches, l'étoile, ce qui est acquis.</div></div>
+    <div><div class="sw" style="background:#E6BE6C"></div><div class="nm">Laiton clair</div><div class="hx">#E6BE6C</div><div class="us">Les primes, l'enseigne, les entailles pleines.</div></div>
+    <div><div class="sw" style="background:#6E7A82"></div><div class="nm">Acier</div><div class="hx">#6E7A82</div><div class="us">La seule couleur froide. Dates, compteurs, horaires.</div></div>
+    <div><div class="sw" style="background:#0D0906"></div><div class="nm">L'impact</div><div class="hx">#0D0906</div><div class="us">Le cœur du trou de balle. Rien d'autre n'a droit à ce noir.</div></div>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Les gags</p>
+  <h2>Ce que le thème fait</h2>
+  <p class="prose">Les trous de balle, tu les as demandés, alors ils ne sont pas décoratifs : ils sont <strong>la conséquence des actions</strong>. Un trou de balle qui ne veut rien dire, c'est de la saleté sur l'écran.</p>
+  <div class="tbl-s">
+    <table class="vo">
+      <tr><th>Nom</th><th>Où</th><th>Ce qui se passe</th></tr>
+      <tr><td>L'impact</td><td>ACTIONS DESTRUCTIVES</td><td>Retirer un film, annuler un vote, fermer une table : un vrai trou de balle apparaît à l'endroit exact du clic et reste là jusqu'à ce qu'on quitte la page. Le fond noir du trou est la seule occurrence de #0D0906 du thème.</td></tr>
+      <tr><td>Le 404</td><td>PAGE INTROUVABLE</td><td>La page est criblée. Une quinzaine d'impacts, un peu de jour au travers, et une seule ligne : « Y'a plus personne ici. »</td></tr>
+      <tr><td>L'heure du duel</td><td>ÉCRAN DE DUEL</td><td>L'horloge compte jusqu'à la vraie clôture, mercredi 20 h. Au moment où le résultat tombe, l'écran blanchit pendant 60 ms et l'affiche du perdant se retrouve trouée. Le résultat s'affiche après, pas avant. J'avais écrit « midi pile » : ton duel ne ferme pas à midi.</td></tr>
+      <tr><td>Le gros plan</td><td>MUR DES AVIS</td><td>Survoler une affiche recadre dessus en 500 ms, jusqu'à ne plus montrer qu'un détail. En sortant, ça repart aussi lentement. Leone au complet.</td></tr>
+      <tr><td>La mouche</td><td>PARTOUT, RAREMENT</td><td>Une fois toutes les quelques minutes, une mouche traverse l'écran très lentement et se pose quelque part. Elle ne fait rien. On ne peut pas la tuer.</td></tr>
+      <tr><td>Le vent</td><td>FOND</td><td>Une traînée de poussière dérive de gauche à droite sur la ligne d'horizon, en boucle de 40 secondes, à 12 % d'opacité.</td></tr>
+      <tr><td>Le silence</td><td>ACCUEIL</td><td>Le site ne te remercie jamais et ne te félicite jamais. Il annonce, c'est tout. Les deux accueils qui existent dans ton code — la bannière du premier passage et la fenêtre des 24 h — restent, parce qu'ils servent, mais ils annoncent au lieu de saluer (voir l'écran 18).</td></tr>
+    </table>
+  </div>
+  <div class="caveat">
+    <b>La règle du mouvement, et c'est elle qui fera ou défera le thème :</b> tout ce qui n'est pas un clic dure 500 ms avec une courbe très plate. Le clic, lui, est à 0 ms — aucune transition, le changement est déjà fait. Personne ne dégaine deux fois. Si Claude Code met les mêmes 200 ms partout, on perd tout le thème et il ne reste que des couleurs marron.
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Vocabulaire</p>
+  <h2>Comment le site s'appelle lui-même</h2>
+  <div class="tbl-s">
+    <table class="vo">
+      <tr><th>Sur le site aujourd'hui</th><th>En thème Western</th><th>D'où ça vient</th></tr>
+      <tr><td>Film de la semaine</td><td>Le contrat</td><td>La grosse prime du moment, affichée sur la devanture.</td></tr>
+      <tr><td>Marquer comme vu</td><td>Capturer</td><td>L'affiche reçoit un tampon CAPTURÉ de travers.</td></tr>
+      <tr><td>Liste des films</td><td>Les avis de recherche</td><td>466 affiches clouées au mur du bureau.</td></tr>
+      <tr><td>Genre de la semaine</td><td>Le territoire</td><td>Territoire 03 sur 04. Chaque semaine, un comté différent.</td></tr>
+      <tr><td>Classement</td><td>Le mur des primes</td><td>La plus grosse prime occupe quatre fois la place des autres.</td></tr>
+      <tr><td>Duel</td><td>Le duel</td><td>Le seul mot que le western possède vraiment. Mercredi, 20 heures.</td></tr>
+      <tr><td>Forum</td><td>Le saloon</td><td>Une table par sujet, avec les jetons de mise.</td></tr>
+      <tr><td>Un sujet</td><td>Une table</td><td>Table 04. On s'assoit, on parle, on repart.</td></tr>
+      <tr><td>Profil</td><td>Ton avis de recherche</td><td>Ta gueule, ta prime, et la liste de tes forfaits.</td></tr>
+      <tr><td>Niveau</td><td>La prime</td><td>Douze montants, de 50 à 50 000 dollars.</td></tr>
+      <tr><td>Points d'expérience</td><td>Les dollars</td><td>On ne gagne pas de l'XP, on encaisse.</td></tr>
+      <tr><td>Badge obtenu</td><td>Une entaille</td><td>Gravée dans la crosse. Vingt-quatre possibles.</td></tr>
+      <tr><td>Note donnée</td><td>Les dix balles</td><td>Dix cartouches alignées, pleines ou vides. Toujours sur dix.</td></tr>
+      <tr><td>Jamais vu</td><td>En cavale</td><td>112 films courent toujours.</td></tr>
+      <tr><td>Erreur</td><td>Raté</td><td>« Raté. Le coup n'est pas parti. »</td></tr>
+      <tr><td>Chargement</td><td>On charge</td><td>Six chambres qui se remplissent une par une.</td></tr>
+      <tr><td>État vide</td><td>Rien à l'horizon</td><td>Le désert, et un vautour qui ne bouge pas.</td></tr>
+      <tr><td>L'équipe</td><td>La bande</td><td>Vingt-deux hors-la-loi.</td></tr>
+      <tr><td>Administration</td><td>Le bureau du shérif</td><td>Là où on décide des primes.</td></tr>
+      <tr><td>Classements films</td><td>Le carnet de tir</td><td>Chaque film, sa moyenne en balles, classée.</td></tr>
+      <tr><td>Pires films (Le Rageux)</td><td>Le cimetière</td><td>Là où on enterre ceux qui ont raté leur coup.</td></tr>
+      <tr><td>Rattrapages cinéma</td><td>L'école de tir</td><td>Blanc-bec, cow-boy, pistolero.</td></tr>
+      <tr><td>Mes watchlists</td><td>Mes cibles</td><td>Ceux que tu comptes aller chercher.</td></tr>
+      <tr><td>Watchlists publiques</td><td>Les cibles de la ville</td><td>Les listes des autres, avec leurs coups de cœur.</td></tr>
+      <tr><td>Messages</td><td>Le courrier</td><td>La lettre qui arrive par la diligence.</td></tr>
+      <tr><td>Easter eggs</td><td>Le butin</td><td>Ce que la bande a planqué.</td></tr>
+      <tr><td>Se connecter / Déconnexion</td><td>Pousser les portes / Quitter la ville</td><td>Le titre seulement. Les champs et les boutons restent littéraux.</td></tr>
+      <tr><td>Mot de passe oublié, Inscription, Bloquer, Supprimer, Signaler une erreur, 18+</td><td>inchangés</td><td>Sécurité et modération : jamais de jeu de mots. Et jamais le mot « coffre » ailleurs que sur le bouton de Clippy.</td></tr>
+    </table>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Les primes</p>
+  <h2>Les douze montants</h2>
+  <p class="prose">L'équivalent des étages en Action et des emplois en Comédie. Ici la progression est <strong>écrite en gros sur ton propre avis de recherche</strong> et visible par tout le monde sur le mur des primes : plus ta prime est grosse, plus ton affiche est grande.</p>
+  <div class="tbl-s">
+    <table class="vo">
+      <tr><th>Rang</th><th>Prime</th><th>Ce qu'on te reproche</th></tr>
+      <tr><td>01</td><td>50 $</td><td>Chapardeur de poules</td></tr>
+      <tr><td>02</td><td>150 $</td><td>Tricheur au poker</td></tr>
+      <tr><td>03</td><td>400 $</td><td>Voleur de chevaux</td></tr>
+      <tr><td>04</td><td>800 $</td><td>Trouble à l'ordre du saloon</td></tr>
+      <tr><td>05</td><td>1 500 $</td><td>Braqueur de diligence</td></tr>
+      <tr><td>06</td><td>2 500 $</td><td>Déserteur</td></tr>
+      <tr><td>07</td><td>4 000 $</td><td>Pilleur de banque</td></tr>
+      <tr><td>08</td><td>7 000 $</td><td>Chef de bande</td></tr>
+      <tr><td>09</td><td>12 000 $</td><td>Attaque de train</td></tr>
+      <tr><td>10</td><td>20 000 $</td><td>Mort ou vif, de préférence mort</td></tr>
+      <tr><td>11</td><td>32 000 $</td><td>Recherché dans quatre territoires</td></tr>
+      <tr><td>12</td><td>50 000 $</td><td>Légende — on ne sait même plus pourquoi</td></tr>
+    </table>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Composants</p>
+  <h2>La boîte à outils</h2>
+  <div class="pscroll"><div class="panel WS CP" style="height:auto;min-height:440px">
+    <div class="planches"></div>
+    <div class="g4" style="position:relative;z-index:2">
+      <div>
+        <div class="bl"><span class="w-l">Boutons</span>
+          <div class="stack">
+            <span class="w-b1">Capturer <span class="d">+ 10 $</span></span>
+            <span class="w-b2">Lire le dossier</span>
+            <span class="w-b3">Mettre une prime</span>
+            <span class="w-b2" style="opacity:.55;text-decoration:line-through">Capturé le 12/09</span>
+          </div>
+        </div>
+        <div class="bl"><span class="w-l">Notifications</span>
+          <div class="stack">
+            <div class="note"><span class="t">Capturé — Le Bon, la Brute</span><span class="d">+ 10 $</span></div>
+            <div class="note err"><span class="t">Raté</span><span class="d">LE COUP N'EST PAS PARTI</span></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="bl"><span class="w-l">Champs</span>
+          <div class="stack">
+            <div class="champ">Fouiller les avis de recherche…</div>
+            <div class="champ on">Il était une fois dans l'Ouest</div>
+          </div>
+        </div>
+        <div class="bl"><span class="w-l">Les dix balles — la note</span>
+          <div class="w-balles" style="margin-bottom:9px"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i></div>
+          <div class="w-l">9 SUR 10 — RELEVÉ DE LA BANDE</div>
+        </div>
+        <div class="bl"><span class="w-l">Rien à l'horizon</span>
+          <div class="vide"><span class="imp p" style="right:22px;top:14px"></span>
+            <div class="a">Rien à l'horizon</div><div class="b">Aucun avis ne correspond. Le vautour attend.</div></div>
+        </div>
+      </div>
+      <div>
+        <div class="bl"><span class="w-l">Étiquettes</span>
+          <div>
+            <span class="w-etq" style="color:#B93222">Le contrat</span>
+            <span class="w-etq" style="color:#E6BE6C">1966</span>
+            <span class="w-etq" style="color:#9BA8AE">2 h 58</span>
+            <span class="w-etq" style="color:#C3AB7E">Capturé</span>
+            <span class="w-etq" style="color:#8A7856">En cavale</span>
+          </div>
+        </div>
+        <div class="bl"><span class="w-l">Pagination</span>
+          <div class="pag"><span>‹</span><span class="on">1</span><span>2</span><span>3</span><span>…</span><span>8</span><span>›</span></div>
+        </div>
+        <div class="bl"><span class="w-l">Les trous de balle</span>
+          <div style="position:relative;height:56px;border:1px solid rgba(227,207,164,.24);
+            background:rgba(0,0,0,.3)">
+            <span class="imp g" style="left:18px;top:14px"></span>
+            <span class="imp" style="left:62px;top:28px"></span>
+            <span class="imp p" style="left:96px;top:12px"></span>
+            <span class="imp" style="left:126px;top:30px"></span>
+          </div>
+          <div class="w-l" style="margin-top:7px">GROS · MOYEN · PETIT</div>
+        </div>
+      </div>
+      <div>
+        <div class="bl"><span class="w-l">La prime — jauge</span>
+          <div style="display:flex;justify-content:space-between;font-family:'Courier Prime',monospace;
+            font-size:10px;color:#A8946C;margin-bottom:6px"><span>PRIME 06 — 2 500 $</span><span style="color:#E6BE6C">3 940 / 5 000</span></div>
+          <div class="jauge"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i><i></i><i></i><i></i></div>
+          <div style="display:flex;justify-content:space-between;font-family:'Courier Prime',monospace;
+            font-size:10px;color:#A8946C;margin:13px 0 6px"><span>SAISON 2026</span><span>TERRITOIRE 03 / 04</span></div>
+          <div class="jauge"><i class="f r"></i><i class="f r"></i><i class="f r"></i><i class="f r"></i><i class="f r"></i><i class="f r"></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="bl"><span class="w-l">Les entailles — badges</span>
+          <div class="starrow"><i class="w-star"></i><i class="w-star"></i><i class="w-star"></i><i class="w-star"></i>
+            <i class="w-star"></i><i class="w-star"></i><i class="w-star"></i><i class="w-star v"></i>
+            <i class="w-star v"></i><i class="w-star v"></i></div>
+          <div class="w-l" style="margin-top:8px">07 ENTAILLES SUR 24</div>
+        </div>
+        <div class="bl"><span class="w-l">Avis de recherche</span>
+          <div class="w-av" style="max-width:130px">
+            <span class="clou a"></span><span class="clou b"></span>
+            <span class="clou c"></span><span class="clou d"></span>
+            <div class="hd">WANTED</div>
+            <div class="mo">Mort ou vif</div>
+            <div class="vis" id="cv"></div>
+            <div class="nm">Tuco</div>
+            <div class="pr">2 000 $</div>
+            <div class="ss">Vu pour la dernière fois à El Paso</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+  <p class="cap">La boîte à outils complète</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 01</p>
+  <h2>Le contrat</h2>
+  <p class="prose">L'horizon traverse le fond, le soleil est au zénith, la devanture en bois barre le haut. Le film de la semaine est un avis de recherche cloué sur une planche, avec sa prime en gros. À droite, les deux séances et la jauge de ta propre prime. En bas, le télégraphe : qui a capturé quoi.</p>
+  <div class="pscroll"><div class="panel WS SA" style="height:664px">
+    <div class="horizon"><div class="soleil"></div>
+      <div class="mesa" style="left:52px;width:150px;height:62px;clip-path:polygon(0 100%,7% 22%,86% 14%,100% 100%)"></div>
+      <div class="mesa" style="right:96px;width:210px;height:44px;clip-path:polygon(0 100%,12% 34%,62% 26%,88% 40%,100% 100%)"></div>
+    </div>
+    <div class="sol"></div>
+    <div class="vent"></div>
+    <div class="scene">
+      <div class="inner">
+        <div class="une">
+          <div>
+            <div class="w-av">
+              <span class="clou a"></span><span class="clou b"></span>
+              <span class="clou c"></span><span class="clou d"></span>
+              <div class="hd">WANTED</div>
+              <div class="mo">Mort ou vif</div>
+              <div class="vis" id="a0"></div>
+              <div class="nm">Le Bon, la Brute<br>et le Truand</div>
+              <div class="pr">10 $</div>
+              <div class="ss">Vendredi 20 h 30 — séance de la bande</div>
+            </div>
+          </div>
+          <div class="bloc">
+            <span class="w-l" style="color:#C8AF80">Le contrat de la semaine — territoire 03 / 04</span>
+            <div class="ttl">Le Bon, la Brute<br>et le Truand</div>
+            <div class="meta">DE <b>SERGIO LEONE</b> · 1966 · 2 H 58 · WESTERN<br>
+              AVEC <b>CLINT EASTWOOD</b>, <b>LEE VAN CLEEF</b>, <b>ELI WALLACH</b><br>
+              09 DE LA BANDE SUR 22 L'ONT DÉJÀ CAPTURÉ</div>
+            <div class="syn">Trois hommes cherchent la même caisse d'or enterrée dans un cimetière du Nouveau-Mexique, et aucun des trois ne peut y arriver sans les deux autres. Deux heures cinquante-huit dont seize minutes de dialogue.</div>
+            <div class="acts"><span class="w-b1">Capturer <span class="d">+ 10 $</span></span>
+              <span class="w-b2">Lire le dossier</span></div>
+            <div class="w-m" style="margin-top:14px;color:#A8946C">Au bout du compte, il n'y a que deux sortes<br>de gens : ceux qui ont vu ce film, et les autres.</div>
+          </div>
+          <div>
+            <div class="prime">
+              <div class="k">Ta prime — rang 06</div>
+              <div class="v">2 500 $</div>
+              <div class="w-l" style="margin-top:6px;color:#8A7856">DÉSERTEUR · 3 940 / 5 000 $ ENCAISSÉS</div>
+            </div>
+            <div class="dates">
+              <div class="w-l" style="margin-bottom:6px">Les séances</div>
+              <div class="r now"><span>VEN. 20:30</span><b>LE BON, LA BRUTE</b></div>
+              <div class="r"><span>MER. 20:30</span><b>DJANGO</b></div>
+              <div class="r"><span>EN SOLO</span><b>TOUS LES AVIS</b></div>
+            </div>
+            <div style="margin-top:13px">
+              <span class="w-l">Toujours en cavale</span>
+              <div class="mini">
+                <div class="w-av"><span class="clou a"></span><span class="clou b"></span>
+                  <div class="hd">WANTED</div><div class="vis" id="a1"></div>
+                  <div class="nm">Django</div><div class="pr">15 $</div></div>
+                <div class="w-av"><span class="clou a"></span><span class="clou b"></span>
+                  <div class="hd">WANTED</div><div class="vis" id="a2"></div>
+                  <div class="nm">Keoma</div><div class="pr">5 $</div></div>
+                <div class="w-av"><span class="clou a"></span><span class="clou b"></span>
+                  <div class="hd">WANTED</div><div class="vis" id="a3"></div>
+                  <div class="nm">El Topo</div><div class="pr">5 $</div></div>
+                <div class="w-av"><span class="clou a"></span><span class="clou b"></span>
+                  <div class="hd">WANTED</div><div class="vis" id="a4"></div>
+                  <div class="nm">Le Grand Silence</div><div class="pr">5 $</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bas">
+          <div>
+            <span class="w-l">Le télégraphe</span>
+            <div class="tel" style="margin-top:6px">
+              <div class="li"><span class="hh">21:02</span><b>Duffman</b><span>a capturé</span><em>Il était une fois dans l'Ouest</em><span>— 5 $</span></div>
+              <div class="li"><span class="hh">21:14</span><b>John</b><span>a ouvert un duel :</span><em>Django contre Le Grand Silence</em></div>
+              <div class="li"><span class="hh">22:30</span><b>HazroF</b><span>passe à</span><em>800 $</em><span>— trouble au saloon</span></div>
+              <div class="li"><span class="hh">23:41</span><b>Clara</b><span>a chargé six balles sur</span><em>Pour une poignée de dollars</em></div>
+            </div>
+          </div>
+          <div>
+            <span class="w-l">Les grosses primes</span>
+            <div style="margin-top:8px;font-family:'Courier Prime',monospace;font-size:11px;color:#A8946C;line-height:1.95">
+              <div style="display:flex;justify-content:space-between"><span>01 · DUFFMAN</span><b style="color:#E3CFA4;font-weight:400">12 000 $</b></div>
+              <div style="display:flex;justify-content:space-between"><span>02 · JOHN</span><b style="color:#E3CFA4;font-weight:400">4 000 $</b></div>
+              <div style="display:flex;justify-content:space-between;color:#E6BE6C"><span>03 · THE LEGENDRE</span><b style="font-weight:400">2 500 $</b></div>
+              <div style="display:flex;justify-content:space-between"><span>04 · DRACARYN</span><b style="color:#E3CFA4;font-weight:400">1 500 $</b></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="devant"><span class="ens">Ciné Marathon</span>
+      <span class="lk"><span class="on">Le contrat</span><span class="vc">Vidéoclub</span><span>La chevauchée <i>▾</i></span><span>Les avis <i>▾</i></span><span>La ville <i>▾</i></span><span>La planque <i>▾</i></span></span>
+      <span class="ter">TERRITOIRE 03 / 04 — WESTERN</span><span class="acc"><i>2</i>L</span></div>
+    <span class="imp g" style="left:372px;top:62px"></span>
+    <span class="imp" style="left:344px;top:96px"></span>
+    <span class="imp p" style="left:398px;top:100px"></span>
+  </div></div>
+  <p class="cap">Le contrat — l'accueil</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 02</p>
+  <h2>Les avis de recherche</h2>
+  <p class="prose">La grille de films devient le mur du bureau du shérif : 466 affiches clouées, aucune parfaitement droite. Celles qui sont capturées portent le tampon en travers. Les autres courent toujours. Survoler une affiche recadre dessus en une demi-seconde — c'est là que le thème se sent.</p>
+  <div class="pscroll"><div class="panel WS SB" style="height:1196px">
+    <div class="planches"></div>
+    <div class="scene">
+      <div class="inner">
+        <div class="ttl">Les avis de recherche</div>
+        <div class="compt">
+          <div><div class="k">Avis au mur</div><div class="v">466</div></div>
+          <div><div class="k">Capturés</div><div class="v">47</div></div>
+          <div><div class="k">Toujours en cavale</div><div class="v o">112</div></div>
+          <div><div class="k">Primes encaissées</div><div class="v">11 750 $</div></div>
+        </div>
+        <div class="filt">
+          <span class="ch">Fouiller les avis de recherche…</span>
+          <span class="on">Territoire : western</span><span>Décennie</span><span>Réalisateur</span>
+          <span>En cavale</span><span>Au hasard</span>
+        </div>
+        <div class="mur" id="mur">
+          <span class="imp g" style="right:34px;top:26px"></span>
+          <span class="imp p" style="left:120px;bottom:22px"></span>
+        </div>
+      </div>
+    </div>
+    <div class="devant"><span class="ens">Ciné Marathon</span>
+      <span class="lk"><span>Le contrat</span><span class="vc">Vidéoclub</span><span>La chevauchée <i>▾</i></span><span class="on">Les avis <i>▾</i></span><span>La ville <i>▾</i></span><span>La planque <i>▾</i></span></span>
+      <span class="ter">466 AVIS · 112 EN CAVALE</span><span class="acc"><i>2</i>L</span></div>
+  </div></div>
+  <p class="cap">Les avis de recherche — la grille conservée</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 03</p>
+  <h2>Le dossier</h2>
+  <p class="prose">L'affiche décrochée du mur et posée sur le bureau, avec le dossier à côté : les faits reprochés, la dernière apparition, la note en dix balles et les verdicts de la bande. C'est le seul écran du thème où l'on prend le temps de lire.</p>
+  <div class="pscroll"><div class="panel WS SC" style="height:630px">
+    <div class="planches"></div>
+    <div class="voile"></div>
+    <div class="dos">
+      <div class="dh"><span class="n">Dossier n° 047 — bureau du shérif</span><span class="x">✕</span></div>
+      <div class="db">
+        <div>
+          <div class="w-av">
+            <span class="clou a"></span><span class="clou b"></span>
+            <span class="clou c"></span><span class="clou d"></span>
+            <div class="hd">WANTED</div>
+            <div class="mo">Mort ou vif</div>
+            <div class="vis" id="m0"></div>
+            <div class="nm">Le Bon, la Brute<br>et le Truand</div>
+            <div class="pr">10 $</div>
+            <div class="ss">Capturé par 09 de la bande</div>
+            <div class="cap">CAPTURÉ</div>
+          </div>
+        </div>
+        <div>
+          <h4>Le Bon, la Brute et le Truand</h4>
+          <div class="fait">FAITS REPROCHÉS — <b>WESTERN, 2 H 58, 1966</b><br>
+            COMMANDITAIRE — <b>SERGIO LEONE</b><br>
+            COMPLICES — <b>CLINT EASTWOOD</b>, <b>LEE VAN CLEEF</b>, <b>ELI WALLACH</b><br>
+            DERNIÈRE APPARITION — <b>UN CIMETIÈRE DU NOUVEAU-MEXIQUE</b></div>
+          <div class="syn">Trois hommes cherchent la même caisse d'or enterrée dans un cimetière, et aucun des trois ne peut y arriver sans les deux autres. Le dernier quart d'heure ne contient pas une seule réplique.</div>
+          <div style="margin-top:13px;display:flex;align-items:center;gap:14px">
+            <span class="w-l">Relevé de la bande</span>
+            <div class="w-balles"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i></div>
+            <span class="w-l" style="color:#E6BE6C">9 / 10 SUR 09 RELEVÉS</span>
+          </div>
+          <div class="verd">
+            <div class="vl"><div class="q">« Le meilleur générique de l'histoire, et le film tient la promesse pendant trois heures. »</div>
+              <div class="w">Duffman — 12 000 $</div></div>
+            <div class="vl"><div class="q">« Trop long d'une demi-heure. Le triello rattrape tout. »</div>
+              <div class="w">Clara — 400 $</div></div>
+            <div class="vl"><div class="q">« Wallach vole le film à Eastwood et personne n'en parle jamais. »</div>
+              <div class="w">HazroF — 800 $</div></div>
+          </div>
+          <div class="dacts"><span class="w-b1">Capturer <span class="d">+ 10 $</span></span>
+            <span class="w-b2">Remettre en cavale</span></div>
+          <div class="sgn">⚠ Signaler une erreur</div>
+        </div>
+      </div>
+      <div class="dpied"><span class="on">Le dossier</span><span>Où le trouver</span><span>Table 04 · 12 messages</span></div>
+    </div>
+    <div class="devant"><span class="ens">Ciné Marathon</span>
+      <span class="lk"><span>Le contrat</span><span class="vc">Vidéoclub</span><span>La chevauchée <i>▾</i></span><span class="on">Les avis <i>▾</i></span><span>La ville <i>▾</i></span><span>La planque <i>▾</i></span></span>
+      <span class="ter">DOSSIER N° 047</span><span class="acc"><i>2</i>L</span></div>
+  </div></div>
+  <p class="cap">Le dossier — la fiche film</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 04</p>
+  <h2>Le duel</h2>
+  <p class="prose">Deux affiches, une horloge qui tourne vraiment, et entre les deux la crosse du revolver où les voix sont gravées en entailles — rouges d'un côté, acier de l'autre. À l'heure de la clôture — mercredi 20 h, l'heure réelle de ton code, pas midi — l'écran blanchit soixante millisecondes et l'affiche du perdant se retrouve trouée. Le résultat s'affiche après. <strong>Défaut trouvé dans ton code</strong> : le cron de clôture tourne une seule fois, à 18 h UTC, et vérifie qu'il est au moins 20 h à Paris. L'été, ça tombe juste. L'hiver (18 h UTC = 19 h à Paris), la vérification échoue et <strong>les duels ne se ferment plus du tout d'octobre à mars</strong>. Correction : <code>"0 18,19 * * 3"</code> dans vercel.json. Et en cas d'égalité, le film 1 gagne toujours (<code>v1 >= v2</code>).</p>
+  <div class="pscroll"><div class="panel WS SD" style="height:610px">
+    <div class="horizon"><div class="soleil"></div>
+      <div class="mesa" style="left:28px;width:190px;height:54px;clip-path:polygon(0 100%,9% 26%,88% 18%,100% 100%)"></div>
+      <div class="mesa" style="right:52px;width:168px;height:48px;clip-path:polygon(0 100%,14% 30%,70% 22%,100% 100%)"></div>
+    </div>
+    <div class="sol"></div>
+    <div class="vent"></div>
+    <div class="scene">
+      <div class="inner" style="display:flex;flex-direction:column">
+        <div style="text-align:center">
+          <span class="w-l" style="color:#2E1E0C;text-shadow:0 1px 0 rgba(255,240,200,.3)">Duel n° 07 — le perdant retourne en cavale</span>
+          <div class="midi">
+            <div class="horloge"><i class="h" style="transform:rotate(355deg)"></i>
+              <i class="m" style="transform:rotate(300deg)"></i><b></b></div>
+            <div style="text-align:left">
+              <div class="w-h" style="font-size:25px;color:#241708;text-shadow:0 1px 0 rgba(255,240,200,.35)">L'heure approche</div>
+              <div class="w-l" style="margin-top:4px;color:#3E2A12">14 VOIX SUR 22 · CLÔTURE MERCREDI 20 H</div>
+            </div>
+          </div>
+        </div>
+        <div class="duo">
+          <div class="cote a">
+            <div class="w-av"><span class="clou a"></span><span class="clou b"></span>
+              <span class="clou c"></span><span class="clou d"></span>
+              <div class="hd">WANTED</div><div class="mo">Mort ou vif</div>
+              <div class="vis" id="d1"></div>
+              <div class="nm">Django</div><div class="pr">15 $</div>
+              <div class="ss">1966 · Sergio Corbucci</div></div>
+            <div class="sc">09 VOIX</div><div class="vo">64 % — mène le duel</div>
+          </div>
+          <div class="crosse">
+            <div class="k">Les voix gravées dans la crosse</div>
+            <div class="enc" id="enc"></div>
+            <hr>
+            <div class="tt">Celui qui tombe repart en cavale.<br>On le reverra la saison prochaine.</div>
+            <hr>
+            <div class="k" style="color:#C3AB7E">08 de la bande n'ont pas encore tiré</div>
+          </div>
+          <div class="cote b">
+            <div class="w-av"><span class="clou a"></span><span class="clou b"></span>
+              <span class="clou c"></span><span class="clou d"></span>
+              <div class="hd">WANTED</div><div class="mo">Mort ou vif</div>
+              <div class="vis" id="d2"></div>
+              <div class="nm">Le Grand Silence</div><div class="pr">15 $</div>
+              <div class="ss">1968 · Sergio Corbucci</div></div>
+            <div class="sc">05 VOIX</div><div class="vo">36 % — sur la défensive</div>
+          </div>
+        </div>
+        <div class="bas">
+          <span class="w-b1">Tirer sur Django <span class="d">09</span></span>
+          <span class="w-b3">Tirer sur Le Grand Silence &nbsp;05</span>
+          <div class="sig">
+            <span class="p">Ont tiré</span>
+            <span class="n">Duffman, Clara, HazroF, Seradalem, John, Dracaryn…</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="devant"><span class="ens">Ciné Marathon</span>
+      <span class="lk"><span>Le contrat</span><span class="vc">Vidéoclub</span><span class="on">La chevauchée <i>▾</i></span><span>Les avis <i>▾</i></span><span>La ville <i>▾</i></span><span>La planque <i>▾</i></span></span>
+      <span class="ter">L'HEURE APPROCHE</span><span class="acc"><i>2</i>L</span></div>
+  </div></div>
+  <p class="cap">Le duel — mercredi, 20 heures</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 05</p>
+  <h2>Le mur des primes</h2>
+  <p class="prose">Le classement est le mur du bureau du shérif : tout le monde y est, mais la plus grosse prime occupe quatre fois la place des autres. Ton rang n'est pas un chiffre dans une colonne, c'est la taille de ton affiche. La tienne est cerclée de rouge.</p>
+  <div class="pscroll"><div class="panel WS SE" style="height:664px">
+    <div class="planches"></div>
+    <div class="scene">
+      <div class="inner">
+        <div class="tete">
+          <div class="w-h" style="font-size:28px">Le mur des primes</div>
+          <span class="w-l" style="padding-bottom:5px">SAISON 2026 — 22 HORS-LA-LOI RECHERCHÉS</span>
+        </div>
+        <div class="mur">
+          <span class="imp" style="right:26px;top:18px"></span>
+          <span class="imp p" style="left:18px;bottom:20px"></span>
+          <div class="w-av un"><span class="clou a"></span><span class="clou b"></span>
+            <span class="clou c"></span><span class="clou d"></span>
+            <div class="hd">WANTED</div><div class="mo">Mort ou vif</div>
+            <div class="vis" id="p1"></div>
+            <div class="nm">Duffman</div><div class="pr">12 000 $</div>
+            <div class="ss">101 captures · attaque de train</div></div>
+          <div class="w-av deux"><span class="clou a"></span><span class="clou b"></span>
+            <div class="hd">WANTED</div><div class="vis" id="p2"></div>
+            <div class="nm">John</div><div class="pr">4 000 $</div>
+            <div class="ss">Pilleur de banque</div></div>
+          <div class="w-av deux moi"><span class="clou a"></span><span class="clou b"></span>
+            <div class="hd">WANTED</div><div class="vis" id="p3"></div>
+            <div class="nm">The Legendre</div><div class="pr">2 500 $</div>
+            <div class="ss">Déserteur</div></div>
+          <div class="w-av deux"><span class="clou a"></span><span class="clou b"></span>
+            <div class="hd">WANTED</div><div class="vis" id="p4"></div>
+            <div class="nm">Dracaryn</div><div class="pr">1 500 $</div>
+            <div class="ss">Braqueur de diligence</div></div>
+          <div class="w-av deux"><span class="clou a"></span><span class="clou b"></span>
+            <div class="hd">WANTED</div><div class="vis" id="p5"></div>
+            <div class="nm">HazroF</div><div class="pr">800 $</div>
+            <div class="ss">Trouble au saloon</div></div>
+          <div class="w-av deux"><span class="clou a"></span><span class="clou b"></span>
+            <div class="hd">WANTED</div><div class="vis" id="p6"></div>
+            <div class="nm">Seradalem</div><div class="pr">400 $</div>
+            <div class="ss">Voleur de chevaux</div></div>
+          <div class="w-av deux"><span class="clou a"></span><span class="clou b"></span>
+            <div class="hd">WANTED</div><div class="vis" id="p7"></div>
+            <div class="nm">Clara</div><div class="pr">400 $</div>
+            <div class="ss">Voleur de chevaux</div></div>
+          <div class="w-av deux"><span class="clou a"></span><span class="clou b"></span>
+            <div class="hd">WANTED</div><div class="vis" id="p8"></div>
+            <div class="nm">Milo</div><div class="pr">150 $</div>
+            <div class="ss">Tricheur au poker</div></div>
+        </div>
+        <div class="pied"><span>Quatorze autres avis au fond du tiroir</span>
+          <span style="color:#E6BE6C">Total des primes en circulation : 23 150 $</span></div>
+      </div>
+    </div>
+    <div class="devant"><span class="ens">Ciné Marathon</span>
+      <span class="lk"><span>Le contrat</span><span class="vc">Vidéoclub</span><span>La chevauchée <i>▾</i></span><span>Les avis <i>▾</i></span><span class="on">La ville <i>▾</i></span><span>La planque <i>▾</i></span></span>
+      <span class="ter">SAISON 2026</span><span class="acc"><i>2</i>L</span></div>
+  </div></div>
+  <p class="cap">Le mur des primes — le classement</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 06</p>
+  <h2>Ton avis de recherche</h2>
+  <p class="prose">Ton profil est ta propre affiche : ta gueule, ta prime, et la liste des faits qu'on te reproche — ce sont tes badges, reformulés en forfaits. La crosse en dessous porte tes entailles, une par badge. À droite, les douze montants, avec la date à laquelle tu as franchi chacun.</p>
+  <div class="pscroll"><div class="panel WS SF" style="height:776px">
+    <div class="planches"></div>
+    <div class="scene">
+      <div class="inner">
+        <div class="zone">
+          <div class="moi">
+            <div class="w-av">
+              <span class="clou a"></span><span class="clou b"></span>
+              <span class="clou c"></span><span class="clou d"></span>
+              <span class="imp p" style="right:16px;top:34%"></span>
+              <div class="hd">WANTED</div>
+              <div class="mo">Mort ou vif</div>
+              <div class="vis" id="f0"></div>
+              <div class="nm">The Legendre</div>
+              <div class="pr">2 500 $</div>
+              <div class="ss">Déserteur — recherché depuis le 14.03.2026</div>
+            </div>
+            <div class="crosse2">
+              <div class="w-l" style="color:#C3AB7E">Les entailles — 07 sur 24</div>
+              <div class="enc"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i>
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            </div>
+          </div>
+          <div class="primes">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">
+              <span class="w-l">Les douze montants</span>
+              <span class="w-l" style="color:#E6BE6C">3 940 / 5 000 $ POUR LE RANG 07</span>
+            </div>
+            <div class="g ok"><span class="n">01</span><span class="t">Chapardeur de poules</span><span class="s">50 $</span></div>
+            <div class="g ok"><span class="n">02</span><span class="t">Tricheur au poker</span><span class="s">150 $</span></div>
+            <div class="g ok"><span class="n">03</span><span class="t">Voleur de chevaux</span><span class="s">400 $</span></div>
+            <div class="g ok"><span class="n">04</span><span class="t">Trouble au saloon</span><span class="s">800 $</span></div>
+            <div class="g ok"><span class="n">05</span><span class="t">Braqueur de diligence</span><span class="s">1 500 $</span></div>
+            <div class="g now"><span class="n">06</span><span class="t">Déserteur</span><span class="s">2 500 $</span></div>
+            <div class="g"><span class="n">07</span><span class="t">Pilleur de banque</span><span class="s">4 000 $</span></div>
+            <div class="g"><span class="n">08</span><span class="t">Chef de bande</span><span class="s">7 000 $</span></div>
+            <div class="g"><span class="n">09</span><span class="t">Attaque de train</span><span class="s">12 000 $</span></div>
+            <div class="g"><span class="n">10</span><span class="t">De préférence mort</span><span class="s">20 000 $</span></div>
+            <div class="g"><span class="n">11</span><span class="t">Quatre territoires</span><span class="s">32 000 $</span></div>
+            <div class="g"><span class="n">12</span><span class="t">Légende</span><span class="s">50 000 $</span></div>
+            <div class="rel">
+              <div><div class="k">Captures</div><div class="v">47 / 466</div></div>
+              <div><div class="k">Relevé moyen</div><div class="v">7,8</div></div>
+              <div><div class="k">Duels gagnés</div><div class="v">06</div></div>
+              <div><div class="k">Premier sur</div><div class="v">04</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="forfaits" style="max-width:300px">
+          <div class="w-l" style="margin-bottom:6px;color:#C3AB7E">Faits reprochés</div>
+          <div class="l"><span>A capturé 47 avis</span><span class="d">14.03 → 19.09</span></div>
+          <div class="l"><span>Premier sur quatre affaires</span><span class="d">4 × 100 $</span></div>
+          <div class="l"><span>A remporté six duels</span><span class="d">6 × 150 $</span></div>
+          <div class="l"><span>N'a jamais raté un vendredi</span><span class="d">prime doublée</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="devant"><span class="ens">Ciné Marathon</span>
+      <span class="lk"><span>Le contrat</span><span class="vc">Vidéoclub</span><span>La chevauchée <i>▾</i></span><span>Les avis <i>▾</i></span><span>La ville <i>▾</i></span><span>La planque <i>▾</i></span></span>
+      <span class="ter">AVIS N° 047 — THE LEGENDRE</span><span class="acc"><i>2</i>L</span></div>
+  </div></div>
+  <p class="cap">Ton avis de recherche — le profil</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 07</p>
+  <h2>Le saloon</h2>
+  <p class="prose">Le forum est une salle de saloon : une table par sujet, avec la mise au milieu. Les jetons comptent les messages — rouges pour ceux qui ont parlé, acier pour ceux qui écoutent. Une table sans jetons depuis trois jours est une table qu'on a désertée.</p>
+  <div class="pscroll"><div class="panel WS SG" style="height:586px">
+    <div class="planches"></div>
+    <div class="scene">
+      <div class="inner">
+        <div class="tete" style="display:flex;align-items:flex-end;gap:16px">
+          <div class="w-h" style="font-size:28px">Le saloon</div>
+          <span class="w-l" style="padding-bottom:5px">07 TABLES — 03 ENCORE OCCUPÉES</span>
+        </div>
+        <div class="salle">
+          <div class="table"><span class="no">TABLE 04</span>
+            <div class="sj">Le triello du cimetière, plan par plan</div>
+            <div class="qui">OUVERTE PAR DUFFMAN · IL Y A 2 H</div>
+            <div class="der">« Leone coupe vingt fois en quatre minutes et on ne le voit jamais. »</div>
+            <div class="pied"><span class="jetons"><i class="r"></i><i class="r"></i><i class="r"></i><i class="o"></i></span><span>EN COURS</span><b>12</b></div></div>
+          <div class="table"><span class="no">TABLE 02</span>
+            <div class="sj">Duel 07 : Django ou Le Grand Silence</div>
+            <div class="qui">OUVERTE PAR CLARA · HIER</div>
+            <div class="der">« Le Grand Silence a la meilleure fin du genre. Ça ne se discute même pas. »</div>
+            <div class="pied"><span class="jetons"><i class="r"></i><i class="a"></i><i class="r"></i><i class="a"></i></span><span>EN COURS</span><b>31</b></div></div>
+          <div class="table"><span class="no">TABLE 09</span>
+            <div class="sj">Le territoire de la saison prochaine</div>
+            <div class="qui">OUVERTE PAR HAZROF · IL Y A 3 J</div>
+            <div class="der">« Trois westerns de plus et on aura fait le tour de Corbucci. »</div>
+            <div class="pied"><span class="jetons"><i class="o"></i><i class="r"></i><i class="a"></i><i></i></span><span>EN COURS</span><b>47</b></div></div>
+          <div class="table"><span class="no">TABLE 01</span>
+            <div class="sj">Où voir les avis légalement</div>
+            <div class="qui">TABLE PERMANENTE · TENUE PAR LE SHÉRIF</div>
+            <div class="der">« Liste à jour au 12/09. Quatre plateformes de plus. »</div>
+            <div class="pied"><span class="jetons"><i></i><i></i><i></i><i></i></span><span>DÉSERTÉE</span><b>08</b></div></div>
+          <div class="table"><span class="no">TABLE 06</span>
+            <div class="sj">Les 112 films toujours en cavale</div>
+            <div class="qui">OUVERTE PAR JOHN · IL Y A 5 J</div>
+            <div class="der">« Deux chacun d'ici décembre et il n'en reste plus un seul debout. »</div>
+            <div class="pied"><span class="jetons"><i></i><i></i><i class="a"></i><i></i></span><span>DÉSERTÉE</span><b>19</b></div></div>
+          <div class="table"><span class="no">TABLE 11</span>
+            <div class="sj">Morricone, sifflet ou guimbarde ?</div>
+            <div class="qui">OUVERTE PAR SERADALEM · IL Y A 4 J</div>
+            <div class="der">« La guimbarde, et je ne reviendrai pas là-dessus. »</div>
+            <div class="pied"><span class="jetons"><i></i><i class="r"></i><i></i><i></i></span><span>DÉSERTÉE</span><b>23</b></div></div>
+        </div>
+        <div class="pied2">
+          <span class="w-b1">Ouvrir une table</span>
+          <span class="w-m" style="color:#A8946C">Le saloon ne ferme jamais.<br>Le barman, lui, ne répond plus depuis 1968.</span>
+        </div>
+      </div>
+    </div>
+    <div class="devant"><span class="ens">Ciné Marathon</span>
+      <span class="lk"><span>Le contrat</span><span class="vc">Vidéoclub</span><span>La chevauchée <i>▾</i></span><span>Les avis <i>▾</i></span><span>La ville <i>▾</i></span><span>La planque <i>▾</i></span></span>
+      <span class="ter">07 TABLES</span><span class="acc"><i>2</i>L</span></div>
+    <span class="imp p" style="left:64px;bottom:40px"></span>
+  </div></div>
+  <p class="cap">Le saloon — le forum</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 08</p>
+  <h2>Le territoire — la page Semaine</h2>
+  <p class="prose">La saison est une piste qui traverse quatre territoires, un par semaine, et la carte montre où la bande en est. Les deux séances collectives sont les deux départs de la diligence de la semaine, avec leur horaire. À droite, les ordres du shérif : ce qu'il faut faire cette semaine et ce que ça rapporte.</p>
+  <div class="pscroll"><div class="panel WS SH" style="height:572px">
+    <div class="planches"></div>
+    <div class="scene">
+      <div class="inner">
+        <div style="display:flex;align-items:flex-end;gap:16px">
+          <div class="w-h" style="font-size:28px">Le territoire</div>
+          <span class="w-l" style="padding-bottom:5px">TERRITOIRE 03 / 04 — WESTERN · DU 28 SEPTEMBRE AU 4 OCTOBRE</span>
+        </div>
+        <div class="zone">
+          <div>
+            <div class="carte">
+              <svg viewBox="0 0 640 258" preserveAspectRatio="none">
+                <path d="M70 176 C 150 120, 190 206, 262 150 S 380 70, 438 120 S 540 198, 590 92"
+                  fill="none" stroke="#5E4225" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round"/>
+                <path d="M70 176 C 150 120, 190 206, 262 150 S 380 70, 438 104"
+                  fill="none" stroke="#8E2216" stroke-width="3.5" stroke-linecap="round" opacity=".75"/>
+              </svg>
+              <div class="ville fait" style="left:11%;top:68%"><div class="pt"></div><div class="nm">Fort Action</div><div class="gr">Semaine 01 · traversé</div></div>
+              <div class="ville fait" style="left:41%;top:58%"><div class="pt"></div><div class="nm">Comédie Gulch</div><div class="gr">Semaine 02 · traversé</div></div>
+              <div class="ville ici" style="left:68.5%;top:42%"><div class="pt"></div><div class="nm">Western City</div><div class="gr">Semaine 03 · la bande est ici</div></div>
+              <div class="ville" style="left:91%;top:32%"><div class="pt"></div><div class="nm">Horreur Creek</div><div class="gr">Semaine 04</div></div>
+              <div class="rose">N ✦</div>
+            </div>
+            <div class="dili">
+              <div class="hd"><span>Départ</span><span>Heure</span><span>Destination</span><span style="text-align:right">État</span></div>
+              <div class="r"><span>MER. 30/09</span><span>20:30</span><b>Django — vainqueur du duel</b><span class="st">ARRIVÉE</span></div>
+              <div class="r now"><span>VEN. 02/10</span><span>20:30</span><b>Le Bon, la Brute et le Truand</b><span class="st">À QUAI</span></div>
+              <div class="r"><span>DIM. 04/10</span><span>20:30</span><b>Fin de la prime de 48 h</b><span class="st">EN ROUTE</span></div>
+            </div>
+          </div>
+          <div>
+            <div class="ordres">
+              <div class="w-l" style="margin-bottom:6px;color:#C3AB7E">Les ordres du shérif</div>
+              <div class="o f"><i></i><span>Tirer au duel</span><b>+2 $</b></div>
+              <div class="o f"><i></i><span>Capturer Django, vainqueur du duel</span><b>+15 $</b></div>
+              <div class="o"><i></i><span>Capturer Le Bon, la Brute — le contrat</span><b>+10 $</b></div>
+              <div class="o"><i></i><span>Prime de 48 h : Le Dîner de cons</span><b>+15 $</b></div>
+              <div class="o"><i></i><span>Chaque autre capture</span><b>+5 $</b></div>
+            </div>
+            <div class="prime" style="margin-top:14px;text-align:center;background:rgba(26,20,16,.86);border:2px solid var(--laiton);padding:11px 12px">
+              <div class="w-l">Ta prime cette semaine</div>
+              <div style="font-family:Rye,Georgia,serif;font-size:26px;color:var(--laiton2);margin-top:3px">2 500 $</div>
+              <div class="w-l" style="margin-top:4px;color:#8A7856">3 940 / 5 000 $ ENCAISSÉS</div>
+            </div>
+            <div style="margin-top:14px"><span class="w-b1">Voir les avis <span class="d">466</span></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="devant"><span class="ens">Ciné Marathon</span>
+      <span class="lk"><span>Le contrat</span><span class="vc">Vidéoclub</span><span class="on">La chevauchée <i>▾</i></span><span>Les avis <i>▾</i></span><span>La ville <i>▾</i></span><span>La planque <i>▾</i></span></span>
+      <span class="ter">TERRITOIRE 03 / 04</span><span class="acc"><i>2</i>L</span></div>
+  </div></div>
+  <p class="cap">Le territoire — la semaine</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 09</p>
+  <h2>La bande — la page Marathoniens</h2>
+  <p class="prose">Les joueurs de la saison posent pour la photo de groupe, comme les bandes du vieil Ouest devant le studio du photographe. Chaque portrait porte la prime de son propriétaire. Ceux qui ne sont pas venus cette semaine sont pâlis sur le tirage. Ton médaillon est cerclé de rouge — la même marque que sur le mur des primes.</p>
+  <div class="pscroll"><div class="panel WS SI" style="height:612px">
+    <div class="planches"></div>
+    <div class="scene">
+      <div class="inner">
+        <div style="display:flex;align-items:flex-end;gap:16px">
+          <div class="w-h" style="font-size:28px">La bande</div>
+          <span class="w-l" style="padding-bottom:5px">SAISON 2026 — 22 HORS-LA-LOI, 14 EN SELLE CETTE SEMAINE</span>
+        </div>
+        <div class="photo">
+          <div class="leg">La bande du Ciné Marathon</div>
+          <div class="sub">Tirage d'époque — Western City, territoire 03</div>
+          <div class="rang">
+              <div class="tin">
+              <div class="ov"><div class="ph"></div></div>
+              <div class="nm">Duffman</div><div class="pr">12 000 $</div><div class="ss">Attaque de train</div></div>
+              <div class="tin">
+              <div class="ov"><div class="ph"></div></div>
+              <div class="nm">John</div><div class="pr">4 000 $</div><div class="ss">Pilleur de banque</div></div>
+              <div class="tin moi">
+              <div class="ov"><div class="ph"></div></div>
+              <div class="nm">The Legendre</div><div class="pr">2 500 $</div><div class="ss">Déserteur</div></div>
+              <div class="tin abs">
+              <div class="ov"><div class="ph"></div></div>
+              <div class="nm">Dracaryn</div><div class="pr">1 500 $</div><div class="ss">Absent cette semaine</div></div>
+              <div class="tin">
+              <div class="ov"><div class="ph"></div></div>
+              <div class="nm">HazroF</div><div class="pr">800 $</div><div class="ss">Trouble au saloon</div></div>
+              <div class="tin">
+              <div class="ov"><div class="ph"></div></div>
+              <div class="nm">Seradalem</div><div class="pr">400 $</div><div class="ss">Voleur de chevaux</div></div>
+              <div class="tin">
+              <div class="ov"><div class="ph"></div></div>
+              <div class="nm">Clara</div><div class="pr">400 $</div><div class="ss">Voleur de chevaux</div></div>
+              <div class="tin abs">
+              <div class="ov"><div class="ph"></div></div>
+              <div class="nm">Milo</div><div class="pr">150 $</div><div class="ss">Absent cette semaine</div></div>
+              <div class="tin">
+              <div class="ov"><div class="ph"></div></div>
+              <div class="nm">Rémi</div><div class="pr">150 $</div><div class="ss">Tricheur au poker</div></div>
+              <div class="tin">
+              <div class="ov"><div class="ph"></div></div>
+              <div class="nm">Tom</div><div class="pr">50 $</div><div class="ss">Chapardeur</div></div>
+              <div class="tin abs">
+              <div class="ov"><div class="ph"></div></div>
+              <div class="nm">Vanessa</div><div class="pr">50 $</div><div class="ss">Absent cette semaine</div></div>
+              <div class="tin abs">
+              <div class="ov"><div class="ph"></div></div>
+              <div class="nm">Nadia</div><div class="pr">50 $</div><div class="ss">Absent cette semaine</div></div>
+          </div>
+        </div>
+        <div class="pied"><span>Dix autres portraits au dos du tirage</span>
+          <span style="color:#E6BE6C">La bande ne recrute qu'en début de saison</span></div>
+      </div>
+    </div>
+    <div class="devant"><span class="ens">Ciné Marathon</span>
+      <span class="lk"><span>Le contrat</span><span class="vc">Vidéoclub</span><span>La chevauchée <i>▾</i></span><span>Les avis <i>▾</i></span><span class="on">La ville <i>▾</i></span><span>La planque <i>▾</i></span></span>
+      <span class="ter">22 HORS-LA-LOI</span><span class="acc"><i>2</i>L</span></div>
+  </div></div>
+  <p class="cap">La bande — les marathoniens</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 10</p>
+  <h2>La navigation — les quatre catégories du site</h2>
+  <p class="prose">Les quatre catégories de ta barre latérale — Évènement collectif, Films, Social, Secret — et leurs quinze entrées, sans en perdre une. En Western, ce sont les quatre coins de la ville : la chevauchée, les avis, la ville, la planque. Les entrées conditionnelles le restent (Le cimetière après Le Rageux, Mon Alien après Le Facehugger, La revanche de Clippy après la boîte de Pandore). Sur téléphone, le tiroir du menu reprend les mêmes catégories ; le bouton « Coffre » de Clippy garde son nom, et c'est pour ça qu'aucune page Western ne s'appelle « coffre ».</p>
+  <div class="pscroll"><div class="panel WS SJ" style="height:720px">
+    <div class="planches"></div>
+    <div class="scene">
+      <div class="inner">
+        <div class="tete2"><div class="w-h" style="font-size:30px">Les quatre coins de la ville</div><span class="w-l">quatre catégories · quinze entrées · ton avis de recherche à droite</span></div>
+        <div class="cols"><div class="col"><span class="clou a"></span><span class="clou b"></span><div class="hd"><b>La chevauchée</b><span>Évènement collectif</span></div><div class="it"><b>Le territoire</b><span>Films de la semaine · /semaine</span></div><div class="it"><b>Le duel</b><span>Duels · /duels</span></div></div><div class="col"><span class="clou a"></span><span class="clou b"></span><div class="hd"><b>Les avis</b><span>Films</span></div><div class="it"><b>Les avis de recherche</b><span>Liste de films · /films</span></div><div class="it"><b>Le carnet de tir</b><span>Classements films · /notes</span></div><div class="it"><b>Le cimetière<em>LE RAGEUX</em></b><span>Pires films · /notes?tab=pires</span></div><div class="it"><b>L'école de tir</b><span>Rattrapages cinéma · /rattrapage</span></div><div class="it"><b>Mes cibles<em>CONNECTÉ</em></b><span>Mes watchlists · /watchlist</span></div></div><div class="col"><span class="clou a"></span><span class="clou b"></span><div class="hd"><b>La ville</b><span>Social</span></div><div class="it"><b>Le saloon</b><span>Forum · /forum</span></div><div class="it"><b>La bande</b><span>Marathoniens · /marathoniens</span></div><div class="it"><b>Le mur des primes</b><span>Classement joueurs · /classement</span></div><div class="it"><b>Le courrier<em>2</em></b><span>Messages · /messages</span></div></div><div class="col"><span class="clou a"></span><span class="clou b"></span><div class="hd"><b>La planque</b><span>Secret</span></div><div class="it"><b>Mon Alien<em>LE FACEHUGGER</em></b><span>/tamagotchi</span></div><div class="it off"><b>La revanche de Clippy<em>VERROUILLÉ</em></b><span>/clippy-revanche · boîte de Pandore</span></div><div class="it"><b>Le butin</b><span>Easter eggs · /easter-eggs</span></div></div></div>
+        <div class="bas3">
+          <div class="bx"><span class="w-l">Ton compte — le menu à droite</span><div class="it"><b>Ton avis de recherche</b><span>Mon profil · /profil</span></div><div class="it"><b>Quitter la ville</b><span>Déconnexion</span></div></div>
+          <div class="bx"><span class="w-l">Réservé à l'admin</span><div class="it"><b>Le bureau du shérif</b><span>Administration · /admin — reste en thème neutre</span></div></div>
+          <div class="bx"><span class="w-l">Pied de page — texte littéral</span><div class="lit">Mentions légales · /mentions-legales<br>Politique de confidentialité · /confidentialite</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="devant"><span class="ens">Ciné Marathon</span>
+      <span class="lk"><span>Le contrat</span><span class="vc">Vidéoclub</span><span>La chevauchée <i>▾</i></span><span>Les avis <i>▾</i></span><span>La ville <i>▾</i></span><span>La planque <i>▾</i></span></span>
+      <span class="ter">TERRITOIRE 03 / 04</span><span class="acc"><i>2</i>L</span></div>
+    
+  </div></div>
+  <p class="cap">La navigation — les quatre coins de la ville</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 11</p>
+  <h2>Le carnet de tir — la page Classements films</h2>
+  <p class="prose">Le classement des films par note moyenne pondérée (formule d'IMDb), comme aujourd'hui. Deux onglets : <em>Le carnet de tir</em>, et <em>Le cimetière</em> — les pires films, visible seulement après Le Rageux. La note sur 10 se lit en dix balles, la même règle que partout dans le thème. <strong>Défaut dans ton code</strong> : la page ne lit que la saison 1 (<code>.eq('saison', 1)</code>).</p>
+  <div class="pscroll"><div class="panel WS SK" style="height:580px">
+    <div class="planches"></div>
+    <div class="scene">
+      <div class="inner">
+        <div class="tete2"><div class="w-h" style="font-size:30px">Le carnet de tir</div><span class="w-l">24 films tirés · classement pondéré par le nombre de tireurs</span></div>
+        <div class="ong"><span class="on">Le carnet de tir</span><span>Le cimetière<em>LE RAGEUX</em></span></div>
+        <div class="tb"><div class="r h"><span>N°</span><span></span><span>FILM</span><span>LES DIX BALLES</span><span>NOTE</span><span>TIRS</span></div><div class="r"><span class="rk">01</span><div class="vis" id="wx1"></div><span class="ti">Le Bon, la Brute et le Truand<small>1966 · LEONE</small></span><div class="w-balles"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i></div><span class="no">9,2</span><span class="nb">17 tirs</span></div><div class="r"><span class="rk">02</span><div class="vis" id="wx2"></div><span class="ti">Il était une fois dans l'Ouest<small>1968 · LEONE</small></span><div class="w-balles"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i></div><span class="no">9,1</span><span class="nb">14 tirs</span></div><div class="r"><span class="rk">03</span><div class="vis" id="wx3"></div><span class="ti">Et pour quelques dollars de plus<small>1965 · LEONE</small></span><div class="w-balles"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i></div><span class="no">8,7</span><span class="nb">12 tirs</span></div><div class="r"><span class="rk">04</span><div class="vis" id="wx4"></div><span class="ti">Impitoyable<small>1992 · EASTWOOD</small></span><div class="w-balles"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i></div><span class="no">8,6</span><span class="nb">11 tirs</span></div><div class="r"><span class="rk">05</span><div class="vis" id="wx5"></div><span class="ti">Le Grand Silence<small>1968 · CORBUCCI</small></span><div class="w-balles"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i><i></i></div><span class="no">8,4</span><span class="nb">8 tirs</span></div><div class="r"><span class="rk">06</span><div class="vis" id="wx6"></div><span class="ti">Django<small>1966 · CORBUCCI</small></span><div class="w-balles"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i><i></i></div><span class="no">8,1</span><span class="nb">15 tirs</span></div><div class="r"><span class="rk">07</span><div class="vis" id="wx7"></div><span class="ti">La Horde sauvage<small>1969 · PECKINPAH</small></span><div class="w-balles"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i><i></i></div><span class="no">8,0</span><span class="nb">9 tirs</span></div><div class="r"><span class="rk">08</span><div class="vis" id="wx8"></div><span class="ti">Mon nom est Personne<small>1973 · VALERII</small></span><div class="w-balles"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i><i></i></div><span class="no">7,8</span><span class="nb">7 tirs</span></div></div>
+      </div>
+    </div>
+    <div class="devant"><span class="ens">Ciné Marathon</span>
+      <span class="lk"><span>Le contrat</span><span class="vc">Vidéoclub</span><span>La chevauchée <i>▾</i></span><span class="on">Les avis <i>▾</i></span><span>La ville <i>▾</i></span><span>La planque <i>▾</i></span></span>
+      <span class="ter">TERRITOIRE 03 / 04</span><span class="acc"><i>2</i>L</span></div>
+    <span class="imp p" style="right:30px;top:120px"></span>
+  </div></div>
+  <p class="cap">Le carnet de tir — les classements de films</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 12</p>
+  <h2>L'école de tir — la page Rattrapages cinéma</h2>
+  <p class="prose">Les trois listes de classiques de ton admin — Débutant, Intermédiaire, Confirmé — avec leur description et leur nombre de films. Pas de suivi de ce que chacun a vu : la page actuelle n'en a pas, je n'en invente pas. Les niveaux deviennent des grades de tireur ; la liste reste la même dans tous les thèmes. Titres d'exemple.</p>
+  <div class="pscroll"><div class="panel WS SL" style="height:680px">
+    <div class="planches"></div>
+    <div class="scene">
+      <div class="inner">
+        <div class="tete2"><div class="w-h" style="font-size:30px">L'école de tir</div><span class="w-l">des listes de films essentiels à voir, classées par niveau de culture ciné</span></div>
+        <div class="nivs"><div class="niv"><div><span class="w-l">Niveau — Débutant</span><div class="nm">Blanc-bec</div><div class="ds">Les incontournables absolus — films que tout cinéphile doit avoir vu au moins une fois.</div><div class="ct"><b>08</b> films</div></div><div class="mi"><div class="pc"><div class="vis" id="wx9"></div><b>Le Parrain</b></div><div class="pc"><div class="vis" id="wx10"></div><b>Pulp Fiction</b></div><div class="pc"><div class="vis" id="wx11"></div><b>Retour vers le futur</b></div><div class="pc"><div class="vis" id="wx12"></div><b>Les Dents de la mer</b></div><div class="pc"><div class="vis" id="wx13"></div><b>Alien</b></div><div class="pc"><div class="vis" id="wx14"></div><b>Matrix</b></div><div class="pc"><div class="vis" id="wx15"></div><b>Star Wars</b></div><div class="pc"><div class="vis" id="wx16"></div><b>Les Affranchis</b></div></div></div><div class="niv"><div><span class="w-l">Niveau — Intermédiaire</span><div class="nm">Cow-boy</div><div class="ds">Des œuvres importantes moins connues du grand public — pour aller plus loin.</div><div class="ct"><b>08</b> films</div></div><div class="mi"><div class="pc"><div class="vis" id="wx17"></div><b>Heat</b></div><div class="pc"><div class="vis" id="wx18"></div><b>Le Samouraï</b></div><div class="pc"><div class="vis" id="wx19"></div><b>Oldboy</b></div><div class="pc"><div class="vis" id="wx20"></div><b>Chinatown</b></div><div class="pc"><div class="vis" id="wx21"></div><b>Le Salaire de la peur</b></div><div class="pc"><div class="vis" id="wx22"></div><b>Memories of Murder</b></div><div class="pc"><div class="vis" id="wx23"></div><b>Brazil</b></div><div class="pc"><div class="vis" id="wx24"></div><b>Il était une fois en Amérique</b></div></div></div><div class="niv"><div><span class="w-l">Niveau — Confirmé</span><div class="nm">Pistolero</div><div class="ds">Films rares, art & essai, cinéma du monde — pour les vrais connaisseurs.</div><div class="ct"><b>08</b> films</div></div><div class="mi"><div class="pc"><div class="vis" id="wx25"></div><b>Stalker</b></div><div class="pc"><div class="vis" id="wx26"></div><b>Voyage à Tokyo</b></div><div class="pc"><div class="vis" id="wx27"></div><b>In the Mood for Love</b></div><div class="pc"><div class="vis" id="wx28"></div><b>Andreï Roublev</b></div><div class="pc"><div class="vis" id="wx29"></div><b>La Jetée</b></div><div class="pc"><div class="vis" id="wx30"></div><b>Les Harmonies Werckmeister</b></div><div class="pc"><div class="vis" id="wx31"></div><b>Close-Up</b></div><div class="pc"><div class="vis" id="wx32"></div><b>Jeanne Dielman</b></div></div></div></div>
+      </div>
+    </div>
+    <div class="devant"><span class="ens">Ciné Marathon</span>
+      <span class="lk"><span>Le contrat</span><span class="vc">Vidéoclub</span><span>La chevauchée <i>▾</i></span><span class="on">Les avis <i>▾</i></span><span>La ville <i>▾</i></span><span>La planque <i>▾</i></span></span>
+      <span class="ter">TERRITOIRE 03 / 04</span><span class="acc"><i>2</i>L</span></div>
+    
+  </div></div>
+  <p class="cap">L'école de tir — les rattrapages cinéma</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 13</p>
+  <h2>Mes cibles — les pages Mes watchlists et Watchlists publiques</h2>
+  <p class="prose">Plusieurs listes, publiques ou privées, qu'on renomme ou supprime, avec « Marquer comme vu » dedans ; le deuxième onglet montre les listes publiques des autres, les populaires d'abord, avec leurs coups de cœur. La limite journalière d'ajouts et son message restent. Renommer, Rendre privée, Supprimer : en toutes lettres.</p>
+  <div class="pscroll"><div class="panel WS SM" style="height:600px">
+    <div class="planches"></div>
+    <div class="scene">
+      <div class="inner">
+        <div class="tete2"><div class="w-h" style="font-size:30px">Mes cibles</div><span class="w-l">03 listes · 01 publique</span></div>
+        <div class="ong"><span class="on">Mes cibles</span><span>Les cibles de la ville<em>14 LISTES</em></span></div>
+        <div class="z">
+          <div class="ls">
+            <div class="l on"><b>Soirée Leone</b><div class="m"><span>06 FILMS · 02 CAPTURÉS</span><span class="pub">PUBLIQUE</span></div></div>
+            <div class="l"><b>À voir avant Noël</b><div class="m"><span>11 FILMS · 04 CAPTURÉS</span><span>PRIVÉE</span></div></div>
+            <div class="l"><b>Pour convaincre HazroF</b><div class="m"><span>03 FILMS · 00 CAPTURÉ</span><span>PRIVÉE</span></div></div>
+            <span class="w-b2" style="margin-top:8px;font-size:11px">+ Nouvelle watchlist</span>
+          </div>
+          <div>
+            <div class="act"><div class="w-h" style="font-size:22px">Soirée Leone</div><span class="w-etq">Renommer</span><span class="w-etq">Rendre privée</span><span class="w-etq rg">Supprimer</span></div>
+            <div class="gr"><div class="pc pris"><div class="vis" id="wx33"></div><b>Pour une poignée de dollars</b></div><div class="pc pris"><div class="vis" id="wx34"></div><b>Et pour quelques dollars de plus</b></div><div class="pc"><div class="vis" id="wx35"></div><b>Le Bon, la Brute et le Truand</b></div><div class="pc"><div class="vis" id="wx36"></div><b>Il était une fois dans l'Ouest</b></div><div class="pc"><div class="vis" id="wx37"></div><b>Il était une fois la révolution</b></div><div class="pc"><div class="vis" id="wx38"></div><b>Il était une fois en Amérique</b></div></div>
+            <div class="w-m" style="margin-top:10px">Deux coups de cœur de la ville sur cette liste — Duffman, Clara.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="devant"><span class="ens">Ciné Marathon</span>
+      <span class="lk"><span>Le contrat</span><span class="vc">Vidéoclub</span><span>La chevauchée <i>▾</i></span><span class="on">Les avis <i>▾</i></span><span>La ville <i>▾</i></span><span>La planque <i>▾</i></span></span>
+      <span class="ter">TERRITOIRE 03 / 04</span><span class="acc"><i>2</i>L</span></div>
+    
+  </div></div>
+  <p class="cap">Mes cibles — les watchlists</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 14</p>
+  <h2>Le courrier — la page Messages</h2>
+  <p class="prose">Les messages privés, avec les non-lus par correspondant et le badge dans le menu. <em>Bloquer</em>, sa confirmation « Bloquer ? » et « Débloquer » existent dans ton code et restent littéraux. Les lettres sont sur papier, mais en texte lisible : pas d'écriture manuscrite pour un message qu'on doit lire vite.</p>
+  <div class="pscroll"><div class="panel WS SN" style="height:600px">
+    <div class="planches"></div>
+    <div class="scene">
+      <div class="inner">
+        <div class="tete2"><div class="w-h" style="font-size:30px">Le courrier</div><span class="w-l">arrivé par la diligence — seuls vous deux le lisez</span></div>
+        <div class="pm">
+          <div class="cv">
+            <div class="c on"><span class="av">D</span><div><b>Duffman</b><div class="x">Tu viens vendredi ?</div></div><span class="u">2</span></div>
+            <div class="c"><span class="av">C</span><div><b>Clara</b><div class="x">Merci pour la liste Leone</div></div><span></span></div>
+            <div class="c"><span class="av">H</span><div><b>HazroF</b><div class="x">Ok pour le duel</div></div><span></span></div>
+            <div class="c"><span class="av">J</span><div><b>John</b><div class="x">Tu as vu Keoma ?</div></div><span></span></div>
+          </div>
+          <div class="th">
+            <div class="hd"><b>Duffman</b><span>ATTAQUE DE TRAIN · 12 000 $</span><span class="bq">Bloquer</span></div>
+            <div class="lt">Tu viens vendredi pour Le Bon, la Brute, ou tu l'as déjà capturé ?<i>20:41</i></div>
+            <div class="lt moi">Déjà vu trois fois. Je viens quand même pour le triello.<i>20:44</i></div>
+            <div class="lt">Alors tire sur Django au duel, on a besoin de toi.<i>20:45</i></div>
+            <div class="lt">Et ramène HazroF.<i>20:46</i></div>
+            <div class="in"><div class="f">Écris un message...</div><span class="w-b1" style="font-size:11.5px;padding:8px 14px">Envoyer</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="devant"><span class="ens">Ciné Marathon</span>
+      <span class="lk"><span>Le contrat</span><span class="vc">Vidéoclub</span><span>La chevauchée <i>▾</i></span><span>Les avis <i>▾</i></span><span class="on">La ville <i>▾</i></span><span>La planque <i>▾</i></span></span>
+      <span class="ter">TERRITOIRE 03 / 04</span><span class="acc"><i>2</i>L</span></div>
+    
+  </div></div>
+  <p class="cap">Le courrier — les messages</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 15</p>
+  <h2>Une table — la page d'un sujet du forum</h2>
+  <p class="prose">Un sujet du saloon. Tes messages portent <em>(toi)</em> et un <em>Supprimer</em> ; le créateur et l'admin ont aussi Modifier et Supprimer le topic. Pas de « signaler » sur le forum, parce qu'il n'y en a pas dans ton code. Supprimer un message laisse un trou de balle à l'endroit du clic, comme toutes les actions destructives du thème — c'est l'effet, pas une blague sur le mot.</p>
+  <div class="pscroll"><div class="panel WS SO" style="height:560px">
+    <div class="planches"></div>
+    <div class="scene">
+      <div class="inner">
+        <span class="w-l">← Le saloon · table 04</span>
+        <div class="w-h" style="font-size:26px;margin-top:6px">Le triello du cimetière, plan par plan</div>
+        <div class="ps">
+          <div class="p"><span class="av">D</span><div><div class="h"><b>Duffman</b><span>12 000 $ · 18:02</span></div>
+            <div class="tx">Cinq minutes sans un mot, que des yeux, des mains et la musique. Et le montage qui accélère à chaque mesure.</div></div></div>
+          <div class="p"><span class="av">C</span><div><div class="h"><b>Clara</b><span>400 $ · 18:20</span></div>
+            <div class="tx">Le vrai sommet c'est Tuco qui court dans le cimetière. Personne ne tire, et c'est la scène la plus folle du film.</div></div></div>
+          <div class="p"><span class="av">L</span><div><div class="h"><b>The Legendre</b><span class="me">(toi)</span><span>2 500 $ · 19:05</span><span class="sg">Supprimer</span></div>
+            <div class="tx">D'accord avec Clara. Le triello, on le montre. La course de Tuco, on s'en souvient.</div></div></div>
+        </div>
+        <div class="rp"><div class="f">Écrire un message…</div><span class="w-b1" style="font-size:11.5px;padding:8px 14px">Envoyer</span></div>
+      </div>
+    </div>
+    <div class="devant"><span class="ens">Ciné Marathon</span>
+      <span class="lk"><span>Le contrat</span><span class="vc">Vidéoclub</span><span>La chevauchée <i>▾</i></span><span>Les avis <i>▾</i></span><span class="on">La ville <i>▾</i></span><span>La planque <i>▾</i></span></span>
+      <span class="ter">TERRITOIRE 03 / 04</span><span class="acc"><i>2</i>L</span></div>
+    <span class="imp" style="right:40px;top:300px"></span>
+  </div></div>
+  <p class="cap">Une table — un sujet du forum</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 16</p>
+  <h2>Le butin — la page Easter eggs</h2>
+  <p class="prose">Même mécanique que ta page : trouvé, l'œuf montre nom, condition et nombre de joueurs ; pas trouvé, « ??? (#numéro) », « Pas encore découvert », sa famille et son nombre de joueurs. Numéros d'origine conservés. En semaine 03, les familles Action et Comédie sont là, closes, et celle du Western s'ouvre. Total : 33.</p>
+  <div class="pscroll"><div class="panel WS SP" style="height:1200px">
+    <div class="planches"></div>
+    <div class="scene">
+      <div class="inner">
+        <div class="tete2"><div class="w-h" style="font-size:30px">Le butin</div><span class="w-l">15 trouvés sur 33</span></div>
+        <div class="int">Des choses sont enterrées dans la ville. Trouve-les toutes pour les déterrer. Certaines nécessitent du courage.</div>
+        <div class="jg"><span>15 découverts</span><i><b style="width:45%"></b></i><span>18 restants</span></div><div class="fam"><div class="fh"><b>Clavier</b><span>5 / 14</span></div><div class="cds"><div class="cd ok"><i>Déterré</i><b>La Pilule Rouge</b><em>Taper « red pill »</em><u>9 joueurs</u></div><div class="cd ok"><i>Déterré</i><b>Why So Serious?</b><em>Le code Konami</em><u>4 joueurs</u></div><div class="cd"><i>Enterré</i><b>??? #03</b><em>Pas encore découvert</em><u>7 joueurs</u></div><div class="cd ok"><i>Déterré</i><b>Je suis désolé, Dave</b><em>Taper « open the door »</em><u>6 joueurs</u></div><div class="cd"><i>Enterré</i><b>??? #05</b><em>Pas encore découvert</em><u>5 joueurs</u></div><div class="cd ok"><i>Déterré</i><b>Shaken, Not Stirred</b><em>Taper « bond »</em><u>8 joueurs</u></div><div class="cd"><i>Enterré</i><b>??? #07</b><em>Pas encore découvert</em><u>3 joueurs</u></div><div class="cd ok"><i>Déterré</i><b>Oh mon Dieu !</b><em>Taper « kill kenny »</em><u>6 joueurs</u></div><div class="cd"><i>Enterré</i><b>??? #09</b><em>Pas encore découvert</em><u>5 joueurs</u></div><div class="cd"><i>Enterré</i><b>??? #10</b><em>Pas encore découvert</em><u>2 joueurs</u></div><div class="cd"><i>Enterré</i><b>??? #11</b><em>Pas encore découvert</em><u>3 joueurs</u></div><div class="cd"><i>Enterré</i><b>??? #12</b><em>Pas encore découvert</em><u>4 joueurs</u></div><div class="cd"><i>Enterré</i><b>??? #20</b><em>Pas encore découvert</em><u>2 joueurs</u></div><div class="cd"><i>Enterré</i><b>??? #21</b><em>Pas encore découvert</em><u>1 joueur</u></div></div></div><div class="fam"><div class="fh"><b>Forum</b><span>2 / 2</span></div><div class="cds"><div class="cd ok"><i>Déterré</i><b>Le Facehugger</b><em>« alien » dans le forum</em><u>7 joueurs</u></div><div class="cd ok"><i>Déterré</i><b>Le Rageux</b><em>Un mot bien senti</em><u>6 joueurs</u></div></div></div><div class="fam"><div class="fh"><b>Horaire</b><span>1 / 2</span></div><div class="cds"><div class="cd ok"><i>Déterré</i><b>TARS en ligne</b><em>Le site à 14 h 07</em><u>2 joueurs</u></div><div class="cd"><i>Enterré</i><b>??? #15</b><em>Pas encore découvert</em><u>5 joueurs</u></div></div></div><div class="fam"><div class="fh"><b>Films</b><span>0 / 3</span></div><div class="cds"><div class="cd"><i>Enterré</i><b>??? #17</b><em>Pas encore découvert</em><u>4 joueurs</u></div><div class="cd"><i>Enterré</i><b>??? #18</b><em>Pas encore découvert</em><u>1 joueur</u></div><div class="cd"><i>Enterré</i><b>??? #19</b><em>Pas encore découvert</em><u>3 joueurs</u></div></div></div><div class="fam"><div class="fh"><b>Succès</b><span>4 / 4</span></div><div class="cds"><div class="cd ok"><i>Déterré</i><b>Cinéphile Confirmé</b><em>5 films vus</em><u>12 joueurs</u></div><div class="cd ok"><i>Déterré</i><b>Critique en Herbe</b><em>3 films notés</em><u>11 joueurs</u></div><div class="cd ok"><i>Déterré</i><b>Premier Duel</b><em>1 vote en duel</em><u>12 joueurs</u></div><div class="cd ok"><i>Déterré</i><b>Curateur</b><em>1 film ajouté</em><u>10 joueurs</u></div></div></div><div class="fam"><div class="fh"><b>Thème — Action</b><span>1 / 2</span> <span class="nw">semaine 01 · passée</span></div><div class="cds"><div class="cd"><i>Enterré</i><b>??? #26</b><em>Pas encore découvert</em><u>0 joueur</u></div><div class="cd ok"><i>Déterré</i><b>Nakatomi Plaza</b><em>Taper « nakatomi »</em><u>3 joueurs</u></div></div></div><div class="fam"><div class="fh"><b>Thème — Comédie</b><span>1 / 3</span> <span class="nw">semaine 02 · passée</span></div><div class="cds"><div class="cd"><i>Enterré</i><b>??? #28</b><em>Pas encore découvert</em><u>0 joueur</u></div><div class="cd ok"><i>Déterré</i><b>La blanquette</b><em>Chercher « blanquette »</em><u>4 joueurs</u></div><div class="cd"><i>Enterré</i><b>??? #30</b><em>Pas encore découvert</em><u>1 joueur</u></div></div></div><div class="fam"><div class="fh"><b>Thème — Western</b><span>1 / 3</span> <span class="nw on">nouvelle famille · seulement pendant la semaine 03</span></div><div class="cds"><div class="cd ok"><i>Déterré</i><b>La mouche</b><em>Cliquer trois fois sur la mouche</em><u>2 joueurs</u></div><div class="cd"><i>Enterré</i><b>??? #32</b><em>Pas encore découvert</em><u>1 joueur</u></div><div class="cd"><i>Enterré</i><b>??? #33</b><em>Pas encore découvert</em><u>0 joueur</u></div></div></div>
+      </div>
+    </div>
+    <div class="devant"><span class="ens">Ciné Marathon</span>
+      <span class="lk"><span>Le contrat</span><span class="vc">Vidéoclub</span><span>La chevauchée <i>▾</i></span><span>Les avis <i>▾</i></span><span>La ville <i>▾</i></span><span class="on">La planque <i>▾</i></span></span>
+      <span class="ter">TERRITOIRE 03 / 04</span><span class="acc"><i>2</i>L</span></div>
+    
+  </div></div>
+  <p class="cap">Le butin — les easter eggs</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 17</p>
+  <h2>Pousser les portes — les pages Connexion, Inscription et Mot de passe oublié</h2>
+  <p class="prose">Page à part, sans menu : compte à rebours <em>seulement avant la saison</em>, bouton Discord, carte Connexion / Inscription, et l'avertissement « déjà en cours » pendant une saison. Titres habillés (« Pousser les portes », « Clé perdue »), <strong>onglets, champs, boutons et « Mot de passe oublié ? » littéraux</strong>. Et toujours : 4 caractères minimum pour un mot de passe, c'est à corriger.</p>
+  <div class="pscroll"><div class="panel WS SQ" style="height:600px">
+    <div class="horizon"><div class="soleil"></div>
+      <div class="mesa" style="left:52px;width:150px;height:62px;clip-path:polygon(0 100%,7% 22%,86% 14%,100% 100%)"></div>
+      <div class="mesa" style="right:96px;width:210px;height:44px;clip-path:polygon(0 100%,12% 34%,62% 26%,88% 40%,100% 100%)"></div>
+    </div>
+    <div class="sol"></div>
+    <div class="vent"></div>
+    <div class="scene">
+      <div class="inner">
+        <div class="solo">
+          <div><span class="w-l">1 · saison en cours — connexion</span>
+            <div class="dsc">Rejoindre le Discord</div>
+            <div class="card"><div class="w-h" style="font-size:24px">Pousser les portes</div><span class="w-l">Saison 2 · 2026</span>
+              <div class="ong"><span class="on">Connexion</span><span>Inscription</span></div>
+              <div class="fd"><label>Email</label><div class="f on">legendre@exemple.fr</div></div>
+              <div class="fd"><label>Mot de passe</label><div class="f">••••••••••</div></div>
+              <div class="bt"><span class="w-b1">Se connecter</span><span class="lkk">Mot de passe oublié ?</span></div></div></div>
+          <div><span class="w-l">2 · saison en cours — inscription</span>
+            <div class="card"><div class="warn"><b>La bande est déjà partie</b>Le marathon est déjà en cours ! Tu participeras à la <em>Saison 3</em>.</div>
+              <div class="fd"><label>Pseudo</label><div class="f">CinéPhile42</div></div>
+              <div class="fd"><label>Email</label><div class="f">&nbsp;</div></div>
+              <div class="fd"><label>Mot de passe</label><div class="f">&nbsp;</div></div>
+              <div class="bt"><span class="w-b1">Rejoindre le marathon</span></div></div></div>
+          <div><span class="w-l">3 · avant la saison — compte à rebours</span>
+            <div class="cpt"><span class="w-l">La diligence arrive dans</span><div class="n"><div><b>03</b>Jours</div><div><b>14</b>Heures</div><div><b>22</b>Min</div><div><b>07</b>Sec</div></div></div>
+            <span class="w-l" style="display:block;margin-top:14px">Réinitialisation — /auth/reset</span>
+            <div class="card"><div class="w-h" style="font-size:20px">Clé perdue</div>
+              <div class="fd"><label>Nouveau mot de passe</label><div class="f">&nbsp;</div></div>
+              <div class="bt"><span class="w-b2">Valider</span></div></div>
+            <div class="lg"><u>Mentions légales</u> · <u>Politique de confidentialité</u></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="devant"><span class="ens">Ciné Marathon</span>
+      <span class="lk"></span>
+      <span class="ter"></span></div>
+    
+  </div></div>
+  <p class="cap">Pousser les portes — connexion, inscription, réinitialisation</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 18</p>
+  <h2>Le télégraphe — bannières, fenêtres, notifications</h2>
+  <p class="prose">Tout ce qui passe par-dessus les pages : bienvenue, rejoindre une saison en cours et ses quatre états, fenêtre de 24 h, notifications, chargement, état vide, bouton Discord, bandeaux 18+. Règle du Western : le site annonce, il ne salue pas — donc les titres deviennent des ordres, <strong>mais la phrase qui explique reste celle de ton code</strong>. « Refusée », « 18+ », « Signalement envoyé » : jamais habillés.</p>
+  <div class="pscroll"><div class="panel WS SR" style="height:720px">
+    <div class="planches"></div>
+    <div class="scene">
+      <div class="inner">
+        <div class="tete2"><div class="w-h" style="font-size:26px">Le télégraphe</div><span class="w-l">ce qui apparaît par-dessus les pages</span></div>
+        <div class="grid">
+          <div class="bx"><span class="w-l">Premier passage — la bannière</span>
+            <div class="bn"><b>Lis les règles avant de dégainer.</b><p>Avant de commencer, consulte les règles du jeu ci-dessous pour tout comprendre en 2 minutes.</p>
+              <div class="bt"><span class="w-b1">Voir les règles</span><span class="w-b2">Je connais déjà</span></div></div></div>
+          <div class="bx"><span class="w-l">Rejoindre une saison en cours — 4 états</span>
+            <div class="st"><b>Rejoindre la bande en cours de route</b><span class="w-b2">Envoyer la demande</span></div>
+            <div class="st w"><b>Le shérif examine ta demande</b><p>Ton inscription en cours de saison a bien été envoyée à l'admin. Tu recevras une réponse prochainement.</p></div>
+            <div class="st g"><b>Recruté — Saison 3</b><p>Tu es inscrit pour la prochaine saison. Tu pourras participer pleinement dès son lancement.</p></div>
+            <div class="st r"><p>Ta précédente demande a été refusée — tu peux en envoyer une nouvelle.</p></div></div>
+          <div class="bx"><span class="w-l">Recruté — la fenêtre de 24 h</span>
+            <div class="bn"><b>24 heures pour déclarer tes captures passées</b><p>Tu as une fenêtre de 24 h pour cocher les films déjà vus avant de rejoindre le marathon.</p>
+              <div class="tm"><span>Temps restant pour cocher tes films pré-marathon</span><b>23:41:07</b></div>
+              <p>Va sur la page Films, ouvre un film que tu as déjà vu, et clique sur <em>« J'ai vu ce film (pré-marathon) »</em>.</p>
+              <div class="bt"><span class="w-b1">Compris — Allons cocher mes films !</span></div></div></div>
+          <div class="bx"><span class="w-l">Notifications</span>
+            <div class="tg2"><span>Capturé — Le Bon, la Brute</span><b>+10 $</b></div>
+            <div class="tg2"><span>Signalement envoyé à l'admin</span><b>✓</b></div>
+            <div class="tg2 er"><span>Limite journalière atteinte !</span><b>✕</b></div>
+            <div class="tg2"><span>Déjà dans tes watchlists !</span><b>!</b></div></div>
+          <div class="bx"><span class="w-l">Chargement · vide · réglage</span>
+            <div class="bar"><div class="ch"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i><i></i></div><span>On charge</span></div>
+            <div class="vd">Rien à l'horizon.<small>Ouvre un film et note-le pour démarrer le classement.</small></div>
+            <div class="tgl"><span>Activer les notifications</span><i></i></div></div>
+          <div class="bx"><span class="w-l">Sur les affiches · flottant</span>
+            <div class="po2"><div class="pc"><div class="vis" id="wx39"></div><span class="p18">18+</span></div><div class="pc"><div class="vis" id="wx40"></div><span class="p18 v">18+ ÉTRANGE</span></div><div class="fab">Discord</div></div>
+            <p class="nt">Les bandeaux 18+ gardent leur rouge et leur violet. Le bouton Discord garde sa couleur de marque.</p></div>
+        </div>
+      </div>
+    </div>
+    <div class="devant"><span class="ens">Ciné Marathon</span>
+      <span class="lk"><span class="on">Le contrat</span><span class="vc">Vidéoclub</span><span>La chevauchée <i>▾</i></span><span>Les avis <i>▾</i></span><span>La ville <i>▾</i></span><span>La planque <i>▾</i></span></span>
+      <span class="ter">TERRITOIRE 03 / 04</span><span class="acc"><i>2</i>L</span></div>
+    
+  </div></div>
+  <p class="cap">Le télégraphe</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 19</p>
+  <h2>Le poste du saloon — musique, volume, œufs du thème</h2>
+  <p class="prose">Une vieille radio, présente dans les quatre thèmes, chacun avec son habillage. En Western, c'est le poste du saloon : une radio en bois à dôme, cadran de laiton, leviers de cuivre. Anachronique pour un western, je sais — mais tu as demandé une radio dans les quatre thèmes, et un phonographe ne se règle pas au volume. Elle règle trois choses pour le joueur : la musique de fond (éteinte par défaut — les navigateurs bloquent le son tant qu'on n'a pas cliqué sur la page), le volume, et les œufs du thème (couper les œufs coupe aussi leurs effets : la voiture, la mouche, le ballon…). La piste du thème, « La piste », est à produire : pas de musique de film, elles sont protégées.</p>
+  <div class="pscroll"><div class="panel WS SV" style="height:600px">
+    <div class="planches"></div>
+    <div class="scene"><div class="inner">
+      <div class="dome">
+        <div class="arc"></div>
+        <div class="cad"><span>550</span><span>700</span><span>900</span><span>1200</span><span>1500</span><i></i></div>
+        <div class="rc">
+          <div><span>Musique</span><i class="sw on"><u></u></i><em>marche</em></div>
+          <div><span>Volume</span><i class="kn" style="transform:rotate(40deg)"><u></u></i><em>4 / 10</em></div>
+          <div><span>Œufs du thème</span><i class="sw on"><u></u></i><em>actifs</em></div></div>
+        <div class="rp">« La piste » — musique originale, à produire</div>
+      </div>
+      <div class="rmini"><span class="led"></span>LE POSTE</div>
+      <div class="rnotes">
+        <div><b>Fermée</b>Un petit poste en bas à gauche, sa diode allumée si la musique joue. Le bouton Discord reste en bas à droite.</div>
+        <div><b>Ouverte</b>Trois réglages : la musique, le volume, les œufs du thème. Gardés sur le compte, et dans le navigateur pour les visiteurs.</div>
+        <div><b>Au téléphone</b>Pas de poste flottant : la barre du bas est déjà pleine. Le poste passe dans le tiroir « Menu ».</div></div>
+    </div></div>
+    <div class="devant"><span class="ens">Ciné Marathon</span>
+      <span class="lk"><span class="on">Le contrat</span><span class="vc">Vidéoclub</span><span>La chevauchée <i>▾</i></span><span>Les avis <i>▾</i></span><span>La ville <i>▾</i></span><span>La planque <i>▾</i></span></span>
+      <span class="ter">TERRITOIRE 03 / 04</span><span class="acc"><i>2</i>L</span></div>
+  </div></div>
+  <p class="cap">Le poste du saloon — la radio du thème Western</p>
+</section>
+
+<section>
+  <p class="eyebrow">Écran 20</p>
+  <h2>Le vidéoclub — l'entrée dans la barre et le bloc d'accueil</h2>
+  <p class="prose">Le vidéoclub a sa section dans chaque thème, en deux endroits. Une entrée à part dans la barre du haut, juste après l'accueil et hors des quatre menus : elle garde son nom, « Vidéoclub », et un petit point de néon doré, le même dans les quatre thèmes. Et un bloc sur la page d'accueil, qui parle la langue du thème : en Western, c'est le magasin général au bout de la rue principale, et les boîtes que personne n'a rendues sont des bobines que le magasin attend toujours. Derrière la porte, rien ne change : le vidéoclub reste en thème neutre, toutes les semaines. Les chiffres viennent des vraies données : les boîtes « louées » sont les films que personne n'a encore vus, et le dernier retour est le dernier film marqué vu, avant ou pendant le marathon.</p>
+  <div class="pscroll"><div class="panel WS SX" style="height:620px">
+    <div class="planches"></div>
+    <div class="scene"><div class="inner">
+      <div class="vcgrid">
+        <div class="vcblk">
+          <span class="w-l">Au bout de la rue principale</span>
+          <div class="ttl">Magasin général</div>
+          <div class="cnt"><span>Le magasin attend</span><b>112</b><span>bobines</span></div>
+          <div class="lst">Dernier passage : <b>HazroF</b>, avec <b>Le Grand Silence</b>. Il est reparti sans rien dire.</div>
+          <div class="vcx"><i class="w3" style="background:linear-gradient(160deg,#7a1f24,#1a0506)"><b>24</b></i><i class="w2" style="background:linear-gradient(160deg,#1c2947,#070b16)"><b>15</b></i><i class="loue"></i><i class="" style="background:linear-gradient(160deg,#2b4527,#0a1208)"><b>4</b></i><i class="loue"></i><i class="w2" style="background:linear-gradient(160deg,#9a4419,#200b03)"><b>11</b></i></div>
+          <div style="margin-top:20px"><span class="w-b1">Pousser les portes battantes</span></div>
+        </div>
+        <div class="vcside"><div class="vcn"><div class="fac"></div><div class="sign">VIDÉOCLUB</div>
+          <div class="win l"><i style="background:linear-gradient(160deg,#6f1d22,#1a0506)"></i><i style="background:linear-gradient(160deg,#0f3a5f,#06111c)"></i></div>
+          <div class="door"><span>OUVERT<br>24 H / 24</span></div>
+          <div class="win r"><i style="background:linear-gradient(160deg,#c79a2a,#2a1f06)"></i><i style="background:linear-gradient(160deg,#3a2150,#0e0714)"></i></div>
+          <div class="glow"></div><span class="tag">Derrière la porte · thème neutre</span></div></div>
+      </div>
+      <div class="vcnotes">
+          <div><b>Barre du haut</b>« Vidéoclub », après l'accueil. Le point doré le distingue des quatre menus.</div>
+          <div><b>Accueil</b>Ce bloc, sous le héros. Visiteur non connecté : titre et bouton seulement.</div>
+          <div><b>Téléphone</b>Le vidéoclub passe dans le tiroir « Menu », le bloc reste sur l'accueil.</div></div>
+    </div></div>
+    <div class="devant"><span class="ens">Ciné Marathon</span>
+      <span class="lk"><span>Le contrat</span><span class="vc on">Vidéoclub</span><span>La chevauchée <i>▾</i></span><span>Les avis <i>▾</i></span><span>La ville <i>▾</i></span><span>La planque <i>▾</i></span></span>
+      <span class="ter">TERRITOIRE 03 / 04</span><span class="acc"><i>2</i>L</span></div>
+  </div></div>
+  <p class="cap">Le vidéoclub — le magasin général</p>
+</section>
+
+<section>
+  <p class="eyebrow">Les œufs du thème</p>
+  <h2>Trois secrets qui n'existent que pendant la semaine Western</h2>
+  <p class="prose">Ils forment la famille « Thème — Western » (#31 à #33) de la page Easter eggs. Même mécanique que tes œufs actuels : une ligne dans <code>discovered_eggs</code>, une carte, un interrupteur dans l'admin. J'avais listé « la mouche », « le 404 » et « midi » comme des gags : ce sont des comportements, pas des œufs. Voilà ce qu'il faut <em>faire</em> pour les débloquer.</p>
+  <div class="eggs">
+    <div class="egg"><div class="k">theme-western-mouche · #31</div><h3>La mouche</h3>
+      <p><b>Déclencheur.</b> La mouche traverse l'écran de temps en temps et se pose. Cliquer dessus quand elle est posée : elle s'envole et se repose un peu plus loin. Au troisième clic, l'œuf tombe, avec une seule ligne : « Elle est toujours là. »</p>
+      <p><b>Limites.</b> Sur téléphone, un toucher compte comme un clic. Avec « réduire les animations », la mouche ne vole pas : elle apparaît posée, et reste cliquable.</p></div>
+    <div class="egg"><div class="k">theme-western-404 · #32</div><h3>La ville fantôme</h3>
+      <p><b>Déclencheur.</b> Tomber sur une page introuvable pendant la semaine Western. La page criblée s'affiche (« Y'a plus personne ici. ») et l'œuf est débloqué au premier passage.</p>
+      <p><b>Limites.</b> Il faut que ta page 404 connaisse l'utilisateur connecté pour enregistrer l'œuf ; sinon, l'œuf s'enregistre au prochain chargement d'une page normale.</p></div>
+    <div class="egg"><div class="k">theme-western-duel · #33</div><h3>L'heure du duel</h3>
+      <p><b>Déclencheur.</b> Être sur la page du duel au moment où il se clôture (mercredi 20 h). L'écran blanchit, l'affiche du perdant est trouée, l'œuf tombe.</p>
+      <p><b>Ce qu'il faut coder.</b> La page doit vérifier l'état du duel toutes les 30 s dans les dix minutes autour de la clôture. <strong>Tant que le cron est cassé en hiver, cet œuf est impossible d'octobre à mars.</strong> Corrige le cron d'abord.</p></div>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Pour Claude Code</p>
+  <h2>Le bloc de jetons</h2>
+<pre><span class="c">/* ------------------------------------------------------------------
+   THÈME WESTERN — spaghetti
+   Leone : Le Bon la Brute et le Truand · Il était une fois dans l'Ouest
+           Pour une poignée de dollars
+   ------------------------------------------------------------------ */</span>
+[data-theme="western"]{
+  <span class="c">/* le désert — le fond est un horizon, pas une couleur */</span>
+  <span class="k">--bg</span>:         <span class="v">linear-gradient(180deg,#D8CBA8 0%,#C9B98F 34%,#B79E6A 49.6%,
+                #8A6A3C 50%,#6B4F2A 74%,#4A3620 100%)</span>;
+  <span class="k">--nuit</span>:       <span class="v">#1A1410</span>;  <span class="c">/* fond des blocs — jamais #000 */</span>
+  <span class="k">--bois</span>:       <span class="v">#3A2A1B</span>;
+  <span class="k">--terre</span>:      <span class="v">#6B4A28</span>;
+  <span class="k">--sable</span>:      <span class="v">#C9A96B</span>;
+  <span class="k">--papier</span>:     <span class="v">#D8C295</span>;  <span class="c">/* les avis de recherche */</span>
+
+  <span class="c">/* encres */</span>
+  <span class="k">--txt</span>:        <span class="v">#E3CFA4</span>;
+  <span class="k">--txt-2</span>:      <span class="v">#C3AB7E</span>;
+  <span class="k">--txt-3</span>:      <span class="v">#8A7856</span>;
+  <span class="k">--trait</span>:      <span class="v">rgba(227,207,164,.17)</span>;
+
+  <span class="c">/* accents — le sang agit, le laiton s'acquiert, l'acier informe */</span>
+  <span class="k">--action</span>:     <span class="v">#8E2216</span>;
+  <span class="k">--action-vif</span>: <span class="v">#B93222</span>;
+  <span class="k">--acquis</span>:     <span class="v">#C08A2E</span>;
+  <span class="k">--acquis-clair</span>: <span class="v">#E6BE6C</span>;
+  <span class="k">--info</span>:       <span class="v">#6E7A82</span>;  <span class="c">/* la SEULE couleur froide du thème */</span>
+  <span class="k">--info-clair</span>: <span class="v">#9BA8AE</span>;
+  <span class="k">--impact</span>:     <span class="v">#0D0906</span>;  <span class="c">/* uniquement le cœur des trous de balle */</span>
+
+  <span class="c">/* typographie */</span>
+  <span class="k">--f-aff</span>:      <span class="v">"Rye", Georgia, serif</span>;         <span class="c">/* WANTED, primes, grands titres */</span>
+  <span class="k">--f-num</span>:      <span class="v">"Alfa Slab One", Georgia, serif</span>; <span class="c">/* noms, chiffres */</span>
+  <span class="k">--f-txt</span>:      <span class="v">"Bitter", Georgia, serif</span>;      <span class="c">/* interface et texte courant */</span>
+  <span class="k">--f-tel</span>:      <span class="v">"Courier Prime", monospace</span>;    <span class="c">/* télégraphe, dates, dossiers */</span>
+  <span class="k">--ombre-titre</span>: <span class="v">3px 3px 0 rgba(20,12,7,.85)</span>;
+
+  <span class="c">/* mouvement — la règle du thème */</span>
+  <span class="k">--ease</span>:       <span class="v">cubic-bezier(.16,.84,.34,1)</span>;
+  <span class="k">--dur</span>:        <span class="v">500ms</span>;   <span class="c">/* survols, apparitions, recadrages */</span>
+  <span class="k">--dur-clic</span>:   <span class="v">0ms</span>;     <span class="c">/* le clic n'a AUCUNE transition */</span>
+
+  <span class="c">/* curseur : le colt */</span>
+  <span class="k">--cursor</span>:     <span class="v">url("/cursors/western-colt.svg") 2 7, pointer</span>;
+}
+
+<span class="c">/* le trou de balle — à poser au point de clic, il reste jusqu'au départ */</span>
+.impact{position:absolute;width:17px;height:17px;border-radius:50%;pointer-events:none;z-index:8;
+  background:radial-gradient(circle at 46% 42%,
+    var(--impact) 0 38%, #241810 52%, rgba(36,24,16,0) 72%);
+  box-shadow:0 0 0 1px rgba(255,238,200,.16), 0 1px 2px rgba(0,0,0,.7)}
+.impact::before,.impact::after{content:"";position:absolute;left:50%;top:50%;
+  width:22px;height:1.4px;margin:-.7px 0 0 -11px;background:rgba(20,12,7,.55)}
+.impact::before{transform:rotate(28deg)}
+.impact::after{transform:rotate(-64deg)}
+@media (prefers-reduced-motion:reduce){ .impact{display:none} }</pre>
+  <div class="caveat">
+    <b>Trois règles à faire respecter dans le code :</b> aucun <code>#000</code> nulle part sauf au cœur des impacts, et aucune couleur froide sauf l'acier des compteurs — si du bleu ou du vert apparaît, le désert s'effondre. Les 500 ms s'appliquent à tout sauf au clic, qui est à zéro. Et un trou de balle n'apparaît <b>jamais</b> en décoration : il est la trace d'une action destructive, sinon c'est de la saleté sur l'écran.
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">État du kit</p>
+  <h2>Ce qui a changé, ce qui reste</h2>
+  <p class="prose">Ce kit a été repris le 21 septembre à partir du code du site (dossier <code>cm-next</code>). Il couvre maintenant les quatre catégories de la barre latérale et leurs quinze entrées, la connexion, les messages du système la galerie des easter eggs, la radio et l'entrée du vidéoclub : écrans 00 à 20. L'inventaire du Marathon liste, route par route, le nom de chaque page dans chaque thème.</p>
+  <p class="prose"><strong>Corrigé depuis la version validée</strong> : les primes par film (250 $, 300 $…) n'existaient pas : un film rapporte 5 $, le contrat 10 $, le vainqueur du duel 15 $, un vote 2 $. Le duel ne ferme pas à midi mais le mercredi à 20 h — et le cron de clôture est cassé l'hiver, voir l'écran 04. « Le silence » garde les deux messages d'accueil qui servent. Trois œufs de thème sont définis.</p>
+  <p class="prose"><strong>Tranché depuis</strong> : la barre du haut remplace la barre latérale sur ordinateur (phase 3.2 du prompt), et le vidéoclub y a son entrée à part. <strong>Encore ouvert</strong> : les maquettes téléphone ; la page 404, qui n'existe pas encore dans le code.</p>
+</section>
+
+<footer>Ciné Marathon — thème Western · 20 septembre 2026</footer>
+</div>
+
+<script>
+(function(){
+  var POS=[['#8A5A2E','#2A170A'],['#9E6B2A','#2E1C08'],['#7A4A26','#241206'],['#A87A38','#31200C'],
+  ['#6B4A28','#1E1005'],['#8E6034','#2A1809'],['#A8874A','#33240F'],['#7E5230','#251308'],
+  ['#96702E','#2C1E0A'],['#6E4620','#200F05'],['#B08447','#352510'],['#845A2A','#271607']];
+  function hp(i){var k=(i*2654435761)%4294967296;k=(k^(k>>>13))>>>0;return POS[k%POS.length];}
+  function vis(i){var p=hp(i);
+    return 'radial-gradient(60% 52% at 50% 38%,rgba(255,240,200,.28),transparent 66%),'
+      +'linear-gradient(168deg,'+p[0]+','+p[1]+')';}
+  ['a0','a1','a2','a3','a4','m0','d1','d2','f0','cv','p1','p2','p3','p4','p5','p6','p7','p8']
+    .forEach(function(id,k){var el=document.getElementById(id);if(el)el.style.background=vis(k*3+1);});
+
+  ['wx1','wx2','wx3','wx4','wx5','wx6','wx7','wx8','wx9','wx10','wx11','wx12','wx13','wx14','wx15','wx16','wx17','wx18','wx19','wx20','wx21','wx22','wx23','wx24','wx25','wx26','wx27','wx28','wx29','wx30','wx31','wx32','wx33','wx34','wx35','wx36','wx37','wx38','wx39','wx40'].forEach(function(id,k){var el=document.getElementById(id);if(el)el.style.background=vis(k*7+3);});
+  var FILMS=[['Le Bon, la Brute et le Truand',1,1,10],['Il était une fois dans l\'Ouest',1,0,5],
+  ['Pour une poignée de dollars',1,0,5],['Et pour quelques dollars de plus',1,0,5],
+  ['Django',0,0,15],['Le Grand Silence',0,0,5],['Keoma',0,0,5],['El Topo',0,0,5],
+  ['Le Bon la Brute le Cinglé',0,0,5],['Mon nom est Personne',1,0,5],
+  ['Il était une fois la révolution',1,0,5],['Le Dernier Face-à-face',0,0,5],
+  ['Colorado',0,0,5],['Companeros',0,0,5],['La Horde sauvage',1,0,5],
+  ['L\'Homme des hautes plaines',1,0,5],['Josey Wales',1,0,5],['Impitoyable',1,0,5],
+  ['Le Train sifflera trois fois',0,0,5],['La Prisonnière du désert',1,0,5],
+  ['Rio Bravo',1,0,5],['L\'Homme qui tua Liberty Valance',0,0,5],
+  ['Butch Cassidy',0,0,5],['Jeremiah Johnson',0,0,5],
+  ['Danse avec les loups',0,0,5],['Il faut tuer Sartana',0,0,5],
+  ['Le Vent de la plaine',0,0,5],['Quarante tueurs',0,0,5],
+  ['Pale Rider',0,0,5],['Le Convoi sauvage',0,0,5],
+  ['Little Big Man',0,0,5],['La Chevauchée fantastique',1,0,5]];
+  var mur=document.getElementById('mur');
+  if(mur){var o='';for(var i=0;i<FILMS.length;i++){var f=FILMS[i];
+    o+='<div class="w-av"><span class="clou a"></span><span class="clou b"></span>'
+      +'<div class="hd">WANTED</div><div class="mo">Mort ou vif</div>'
+      +'<div class="vis" style="background:'+vis(i*5+2)+'"></div>'
+      +'<div class="nm">'+f[0]+'</div><div class="pr">'+f[3]+' $</div>'
+      +'<div class="ss">'+(f[1]?'Capturé':'En cavale')+'</div>'
+      +(f[1]?'<div class="cap">CAPTURÉ</div>':'')+'</div>';}
+    mur.insertAdjacentHTML('beforeend',o);}
+
+  var enc=document.getElementById('enc');
+  if(enc){var o='';for(var i=0;i<22;i++){
+    o+='<i class="'+(i<9?'r':(i<14?'a':''))+'"></i>';}
+    enc.innerHTML=o;}
+})();
+</script>
