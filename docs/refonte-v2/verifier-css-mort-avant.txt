@@ -1,0 +1,273 @@
+=== Vérification du CSS mort dans les thèmes ===
+
+app/styles/themes/action-screens.css : 14 morte(s) sur 20
+  ✗ .film-stat-bar
+  ✗ .filter-chip
+  ✗ .film-modal-header
+  ✗ .duel-bar
+  ✗ .duel-bar-inner
+  ✗ .duel-winner-glow
+  ✗ .leaderboard-row-self
+  ✗ .forum-topic-freq
+  ✗ .loading-indicator
+  ✗ .not-found-page
+  ✗ .btn-primary
+  ✗ .panel-riveted
+  ✗ .data-value
+  ✗ .data-time
+app/styles/themes/action.css : 7 morte(s) sur 8
+  ✗ .page-title-chrome
+  ✗ .action-skew
+  ✗ .action-skew-inner
+  ✗ .data-mono
+  ✗ .info-cyan
+  ✗ .poster-wrap
+  ✗ .loading-scan
+app/styles/themes/comedie-screens.css : 26 morte(s) sur 55
+  ✗ .page-title-chrome
+  ✗ .btn-primary
+  ✗ .ticket-btn
+  ✗ .ticket-stub
+  ✗ .poster-wrap
+  ✗ .film-seen-ribbon
+  ✗ .filter-chip
+  ✗ .souffleurHead
+  ✗ .souffleurText
+  ✗ .troisCoups
+  ✗ .coupVisible
+  ✗ .poster-container
+  ✗ .leaderboard-table
+  ✗ .leaderboard-rank-1
+  ✗ .leaderboard-rank-2
+  ✗ .leaderboard-rank-3
+  ✗ .player-avatar
+  ✗ .forum-topic-row
+  ✗ .week-title
+  ✗ .profile-card
+  ✗ .profile-name
+  ✗ .forum-card
+  ✗ .page-header
+  ✗ .data-cell
+  ✗ .auth-title
+  ✗ .not-found-title
+app/styles/themes/comedie.css : 1 classe(s), toutes utilisées
+app/styles/themes/horreur-screens.css : 19 morte(s) sur 29
+  ✗ .page-title-chrome
+  ✗ .page-header
+  ✗ .btn-primary
+  ✗ .film-title
+  ✗ .poster-container
+  ✗ .filter-chip
+  ✗ .leaderboard-table
+  ✗ .leaderboard-rank-1
+  ✗ .leaderboard-rank-2
+  ✗ .leaderboard-rank-3
+  ✗ .profile-card
+  ✗ .profile-name
+  ✗ .forum-card
+  ✗ .forum-topic-row
+  ✗ .week-title
+  ✗ .player-avatar
+  ✗ .data-cell
+  ✗ .auth-title
+  ✗ .not-found-title
+app/styles/themes/western-screens.css : 20 morte(s) sur 34
+  ✗ .page-title-chrome
+  ✗ .btn-primary
+  ✗ .poster-container
+  ✗ .film-title
+  ✗ .poster-wrap
+  ✗ .filter-chip
+  ✗ .leaderboard-table
+  ✗ .leaderboard-rank-1
+  ✗ .leaderboard-rank-2
+  ✗ .leaderboard-rank-3
+  ✗ .profile-card
+  ✗ .profile-name
+  ✗ .forum-card
+  ✗ .forum-topic-row
+  ✗ .week-title
+  ✗ .player-avatar
+  ✗ .auth-title
+  ✗ .not-found-title
+  ✗ .data-cell
+  ✗ .page-header
+app/styles/themes/western.css : 2 classe(s), toutes utilisées
+
+Total thèmes : 63 vivante(s), 86 morte(s)
+
+=== Vérification des modules CSS ===
+
+components/theme/action/action-frame.module.css : 6 morte(s) sur 22
+  ✗ .cracksReduced
+  ✗ .chrome
+  ✗ .skew
+  ✗ .skewInner
+  ✗ .riveted
+  ✗ .shakeable
+components/theme/horreur/horreur-frame.module.css : 2 morte(s) sur 7
+  ✗ .w3
+  ✗ .org
+components/theme/western/western-frame.module.css : 2 morte(s) sur 10
+  ✗ .impactLayer
+  ✗ .impactLayerModal
+components/ui/Button.module.css : 7 morte(s) sur 11
+  ✗ .primary
+  ✗ .ghost
+  ✗ .danger
+  ✗ .link
+  ✗ .sm
+  ✗ .md
+  ✗ .lg
+components/ui/Gauge.module.css : 4 morte(s) sur 10
+  ✗ .accent
+  ✗ .ok
+  ✗ .warn
+  ✗ .bad
+components/ui/StatRow.module.css : 4 morte(s) sur 7
+  ✗ .accent
+  ✗ .ok
+  ✗ .bad
+  ✗ .info
+components/ui/Tag.module.css : 5 morte(s) sur 6
+  ✗ .accent
+  ✗ .ok
+  ✗ .warn
+  ✗ .bad
+  ✗ .info
+
+Total modules : 30 morte(s) sans exception
+
+=== Vérification des règles * + !important dans les thèmes ===
+
+  ✗ app/styles/themes/western-screens.css:18 — sélecteur * avec !important
+  ✗ app/styles/themes/western-screens.css:21 — sélecteur * avec !important
+
+2 règle(s) * + !important sans exception
+
+=== Résultat ===
+
+ERREUR : 118 alerte(s) sans exception :
+
+  ✗ CSS-MORT app/styles/themes/action-screens.css:.film-stat-bar
+  ✗ CSS-MORT app/styles/themes/action-screens.css:.filter-chip
+  ✗ CSS-MORT app/styles/themes/action-screens.css:.film-modal-header
+  ✗ CSS-MORT app/styles/themes/action-screens.css:.duel-bar
+  ✗ CSS-MORT app/styles/themes/action-screens.css:.duel-bar-inner
+  ✗ CSS-MORT app/styles/themes/action-screens.css:.duel-winner-glow
+  ✗ CSS-MORT app/styles/themes/action-screens.css:.leaderboard-row-self
+  ✗ CSS-MORT app/styles/themes/action-screens.css:.forum-topic-freq
+  ✗ CSS-MORT app/styles/themes/action-screens.css:.loading-indicator
+  ✗ CSS-MORT app/styles/themes/action-screens.css:.not-found-page
+  ✗ CSS-MORT app/styles/themes/action-screens.css:.btn-primary
+  ✗ CSS-MORT app/styles/themes/action-screens.css:.panel-riveted
+  ✗ CSS-MORT app/styles/themes/action-screens.css:.data-value
+  ✗ CSS-MORT app/styles/themes/action-screens.css:.data-time
+  ✗ CSS-MORT app/styles/themes/action.css:.page-title-chrome
+  ✗ CSS-MORT app/styles/themes/action.css:.action-skew
+  ✗ CSS-MORT app/styles/themes/action.css:.action-skew-inner
+  ✗ CSS-MORT app/styles/themes/action.css:.data-mono
+  ✗ CSS-MORT app/styles/themes/action.css:.info-cyan
+  ✗ CSS-MORT app/styles/themes/action.css:.poster-wrap
+  ✗ CSS-MORT app/styles/themes/action.css:.loading-scan
+  ✗ CSS-MORT app/styles/themes/comedie-screens.css:.page-title-chrome
+  ✗ CSS-MORT app/styles/themes/comedie-screens.css:.btn-primary
+  ✗ CSS-MORT app/styles/themes/comedie-screens.css:.ticket-btn
+  ✗ CSS-MORT app/styles/themes/comedie-screens.css:.ticket-stub
+  ✗ CSS-MORT app/styles/themes/comedie-screens.css:.poster-wrap
+  ✗ CSS-MORT app/styles/themes/comedie-screens.css:.film-seen-ribbon
+  ✗ CSS-MORT app/styles/themes/comedie-screens.css:.filter-chip
+  ✗ CSS-MORT app/styles/themes/comedie-screens.css:.souffleurHead
+  ✗ CSS-MORT app/styles/themes/comedie-screens.css:.souffleurText
+  ✗ CSS-MORT app/styles/themes/comedie-screens.css:.troisCoups
+  ✗ CSS-MORT app/styles/themes/comedie-screens.css:.coupVisible
+  ✗ CSS-MORT app/styles/themes/comedie-screens.css:.poster-container
+  ✗ CSS-MORT app/styles/themes/comedie-screens.css:.leaderboard-table
+  ✗ CSS-MORT app/styles/themes/comedie-screens.css:.leaderboard-rank-1
+  ✗ CSS-MORT app/styles/themes/comedie-screens.css:.leaderboard-rank-2
+  ✗ CSS-MORT app/styles/themes/comedie-screens.css:.leaderboard-rank-3
+  ✗ CSS-MORT app/styles/themes/comedie-screens.css:.player-avatar
+  ✗ CSS-MORT app/styles/themes/comedie-screens.css:.forum-topic-row
+  ✗ CSS-MORT app/styles/themes/comedie-screens.css:.week-title
+  ✗ CSS-MORT app/styles/themes/comedie-screens.css:.profile-card
+  ✗ CSS-MORT app/styles/themes/comedie-screens.css:.profile-name
+  ✗ CSS-MORT app/styles/themes/comedie-screens.css:.forum-card
+  ✗ CSS-MORT app/styles/themes/comedie-screens.css:.page-header
+  ✗ CSS-MORT app/styles/themes/comedie-screens.css:.data-cell
+  ✗ CSS-MORT app/styles/themes/comedie-screens.css:.auth-title
+  ✗ CSS-MORT app/styles/themes/comedie-screens.css:.not-found-title
+  ✗ CSS-MORT app/styles/themes/horreur-screens.css:.page-title-chrome
+  ✗ CSS-MORT app/styles/themes/horreur-screens.css:.page-header
+  ✗ CSS-MORT app/styles/themes/horreur-screens.css:.btn-primary
+  ✗ CSS-MORT app/styles/themes/horreur-screens.css:.film-title
+  ✗ CSS-MORT app/styles/themes/horreur-screens.css:.poster-container
+  ✗ CSS-MORT app/styles/themes/horreur-screens.css:.filter-chip
+  ✗ CSS-MORT app/styles/themes/horreur-screens.css:.leaderboard-table
+  ✗ CSS-MORT app/styles/themes/horreur-screens.css:.leaderboard-rank-1
+  ✗ CSS-MORT app/styles/themes/horreur-screens.css:.leaderboard-rank-2
+  ✗ CSS-MORT app/styles/themes/horreur-screens.css:.leaderboard-rank-3
+  ✗ CSS-MORT app/styles/themes/horreur-screens.css:.profile-card
+  ✗ CSS-MORT app/styles/themes/horreur-screens.css:.profile-name
+  ✗ CSS-MORT app/styles/themes/horreur-screens.css:.forum-card
+  ✗ CSS-MORT app/styles/themes/horreur-screens.css:.forum-topic-row
+  ✗ CSS-MORT app/styles/themes/horreur-screens.css:.week-title
+  ✗ CSS-MORT app/styles/themes/horreur-screens.css:.player-avatar
+  ✗ CSS-MORT app/styles/themes/horreur-screens.css:.data-cell
+  ✗ CSS-MORT app/styles/themes/horreur-screens.css:.auth-title
+  ✗ CSS-MORT app/styles/themes/horreur-screens.css:.not-found-title
+  ✗ CSS-MORT app/styles/themes/western-screens.css:.page-title-chrome
+  ✗ CSS-MORT app/styles/themes/western-screens.css:.btn-primary
+  ✗ CSS-MORT app/styles/themes/western-screens.css:.poster-container
+  ✗ CSS-MORT app/styles/themes/western-screens.css:.film-title
+  ✗ CSS-MORT app/styles/themes/western-screens.css:.poster-wrap
+  ✗ CSS-MORT app/styles/themes/western-screens.css:.filter-chip
+  ✗ CSS-MORT app/styles/themes/western-screens.css:.leaderboard-table
+  ✗ CSS-MORT app/styles/themes/western-screens.css:.leaderboard-rank-1
+  ✗ CSS-MORT app/styles/themes/western-screens.css:.leaderboard-rank-2
+  ✗ CSS-MORT app/styles/themes/western-screens.css:.leaderboard-rank-3
+  ✗ CSS-MORT app/styles/themes/western-screens.css:.profile-card
+  ✗ CSS-MORT app/styles/themes/western-screens.css:.profile-name
+  ✗ CSS-MORT app/styles/themes/western-screens.css:.forum-card
+  ✗ CSS-MORT app/styles/themes/western-screens.css:.forum-topic-row
+  ✗ CSS-MORT app/styles/themes/western-screens.css:.week-title
+  ✗ CSS-MORT app/styles/themes/western-screens.css:.player-avatar
+  ✗ CSS-MORT app/styles/themes/western-screens.css:.auth-title
+  ✗ CSS-MORT app/styles/themes/western-screens.css:.not-found-title
+  ✗ CSS-MORT app/styles/themes/western-screens.css:.data-cell
+  ✗ CSS-MORT app/styles/themes/western-screens.css:.page-header
+  ✗ CSS-MORT components/theme/action/action-frame.module.css:.cracksReduced
+  ✗ CSS-MORT components/theme/action/action-frame.module.css:.chrome
+  ✗ CSS-MORT components/theme/action/action-frame.module.css:.skew
+  ✗ CSS-MORT components/theme/action/action-frame.module.css:.skewInner
+  ✗ CSS-MORT components/theme/action/action-frame.module.css:.riveted
+  ✗ CSS-MORT components/theme/action/action-frame.module.css:.shakeable
+  ✗ CSS-MORT components/theme/horreur/horreur-frame.module.css:.w3
+  ✗ CSS-MORT components/theme/horreur/horreur-frame.module.css:.org
+  ✗ CSS-MORT components/theme/western/western-frame.module.css:.impactLayer
+  ✗ CSS-MORT components/theme/western/western-frame.module.css:.impactLayerModal
+  ✗ CSS-MORT components/ui/Button.module.css:.primary
+  ✗ CSS-MORT components/ui/Button.module.css:.ghost
+  ✗ CSS-MORT components/ui/Button.module.css:.danger
+  ✗ CSS-MORT components/ui/Button.module.css:.link
+  ✗ CSS-MORT components/ui/Button.module.css:.sm
+  ✗ CSS-MORT components/ui/Button.module.css:.md
+  ✗ CSS-MORT components/ui/Button.module.css:.lg
+  ✗ CSS-MORT components/ui/Gauge.module.css:.accent
+  ✗ CSS-MORT components/ui/Gauge.module.css:.ok
+  ✗ CSS-MORT components/ui/Gauge.module.css:.warn
+  ✗ CSS-MORT components/ui/Gauge.module.css:.bad
+  ✗ CSS-MORT components/ui/StatRow.module.css:.accent
+  ✗ CSS-MORT components/ui/StatRow.module.css:.ok
+  ✗ CSS-MORT components/ui/StatRow.module.css:.bad
+  ✗ CSS-MORT components/ui/StatRow.module.css:.info
+  ✗ CSS-MORT components/ui/Tag.module.css:.accent
+  ✗ CSS-MORT components/ui/Tag.module.css:.ok
+  ✗ CSS-MORT components/ui/Tag.module.css:.warn
+  ✗ CSS-MORT components/ui/Tag.module.css:.bad
+  ✗ CSS-MORT components/ui/Tag.module.css:.info
+  ✗ IMPORTANT-STAR app/styles/themes/western-screens.css:18
+  ✗ IMPORTANT-STAR app/styles/themes/western-screens.css:21
+
+Ajoutez-les dans scripts/exceptions-verifier.txt avec une raison,
+ou corrigez le code.
+

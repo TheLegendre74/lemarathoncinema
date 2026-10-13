@@ -1,0 +1,71 @@
+=== Vérification des composants orphelins ===
+
+30 composant(s) orphelin(s) :
+
+  ✗ components/AlienEgg.tsx
+  ✗ components/JawsEgg.tsx
+  ✗ components/Sidebar.tsx
+  ✗ components/theme/action/PosterGrade.tsx
+  ✗ components/theme/comedie/ComedieAffiche.tsx
+  ✗ components/theme/comedie/ComedieCadran.tsx
+  ✗ components/theme/comedie/ComedieSouffleur.tsx
+  ✗ components/theme/comedie/ComedieTroisCoups.tsx
+  ✗ components/theme/comedie/ComedieVertEgg.tsx
+  ✗ components/theme/horreur/HorreurCassette.tsx
+  ✗ components/theme/horreur/HorreurHomeHero.tsx
+  ✗ components/theme/horreur/HorreurVHS.tsx
+  ✗ components/theme/western/WesternBarillet.tsx
+  ✗ components/theme/western/WesternHomeHero.tsx
+  ✗ components/theme/western/WesternVautour.tsx
+  ✗ components/ui/Button.tsx
+  ✗ components/ui/CountdownDisplay.tsx
+  ✗ components/ui/Divider.tsx
+  ✗ components/ui/EmptyState.tsx
+  ✗ components/ui/Field.tsx
+  ✗ components/ui/Gauge.tsx
+  ✗ components/ui/Modal.tsx
+  ✗ components/ui/PageHeader.tsx
+  ✗ components/ui/Panel.tsx
+  ✗ components/ui/Skeleton.tsx
+  ✗ components/ui/StatRow.tsx
+  ✗ components/ui/Tabs.tsx
+  ✗ components/ui/Tag.tsx
+  ✗ components/ui/Ticker.tsx
+  ✗ components/ui/Toggle.tsx
+
+ERREUR : 30 orphelin(s) sans exception :
+
+  ✗ components/AlienEgg.tsx
+  ✗ components/JawsEgg.tsx
+  ✗ components/Sidebar.tsx
+  ✗ components/theme/action/PosterGrade.tsx
+  ✗ components/theme/comedie/ComedieAffiche.tsx
+  ✗ components/theme/comedie/ComedieCadran.tsx
+  ✗ components/theme/comedie/ComedieSouffleur.tsx
+  ✗ components/theme/comedie/ComedieTroisCoups.tsx
+  ✗ components/theme/comedie/ComedieVertEgg.tsx
+  ✗ components/theme/horreur/HorreurCassette.tsx
+  ✗ components/theme/horreur/HorreurHomeHero.tsx
+  ✗ components/theme/horreur/HorreurVHS.tsx
+  ✗ components/theme/western/WesternBarillet.tsx
+  ✗ components/theme/western/WesternHomeHero.tsx
+  ✗ components/theme/western/WesternVautour.tsx
+  ✗ components/ui/Button.tsx
+  ✗ components/ui/CountdownDisplay.tsx
+  ✗ components/ui/Divider.tsx
+  ✗ components/ui/EmptyState.tsx
+  ✗ components/ui/Field.tsx
+  ✗ components/ui/Gauge.tsx
+  ✗ components/ui/Modal.tsx
+  ✗ components/ui/PageHeader.tsx
+  ✗ components/ui/Panel.tsx
+  ✗ components/ui/Skeleton.tsx
+  ✗ components/ui/StatRow.tsx
+  ✗ components/ui/Tabs.tsx
+  ✗ components/ui/Tag.tsx
+  ✗ components/ui/Ticker.tsx
+  ✗ components/ui/Toggle.tsx
+
+Ajoutez-les dans scripts/exceptions-verifier.txt avec une raison,
+ou branchez-les dans le code.
+
