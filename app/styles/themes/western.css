@@ -19,7 +19,9 @@
   --impact: #0D0906;
   --ombre-titre: 3px 3px 0 rgba(20,12,7,.85);
   --ease: cubic-bezier(.16,.84,.34,1);  --dur: 500ms;  --dur-clic: 0ms;
-  --cursor: url("/cursors/western-colt.png") 2 8, pointer;
+  --cursor: url("/cursors/western-colt.png") 2 2, auto;
+  --cursor-survol: url("/cursors/western-colt-survol.png") 2 2, pointer;
+  --cursor-clic: url("/cursors/western-colt-appui.png") 2 2, pointer;
 }
 
 .impact { position: absolute; width: 17px; height: 17px; margin: -8.5px 0 0 -8.5px; border-radius: 50%; pointer-events: none;

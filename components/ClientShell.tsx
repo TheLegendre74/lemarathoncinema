@@ -15,6 +15,7 @@ const TamagotchiWidget = dynamic(() => import('./TamagotchiWidget'), { ssr: fals
 const PreMarathonApprovedPopup = dynamic(() => import('./PreMarathonApprovedPopup'), { ssr: false })
 const ComedieRamp = dynamic(() => import('./theme/comedie/ComedieRamp'), { ssr: false })
 const ThemeRadio = dynamic(() => import('./theme/ThemeRadio'), { ssr: false })
+const ThemeCursors = dynamic(() => import('./theme/ThemeCursors'), { ssr: false })
 
 interface Props {
   profile: Profile | null
@@ -78,6 +79,7 @@ export default function ClientShell({ profile, hasRageuxEgg, hasTamagotchiEgg, u
         </footer>
       </main>
       <ThemeRadio />
+      <ThemeCursors />
       {hasTamagotchiEgg && <Suspense fallback={null}><TamagotchiWidget /></Suspense>}
       {showJoinPopup && (
         <Suspense fallback={null}>

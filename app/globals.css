@@ -474,15 +474,32 @@ html, body {
   }
 }
 
-/* ── THEME ACTION — CURSOR ── */
-[data-theme="action"] #site {
+/* ── CURSEURS DES THÈMES (§11.13) ── */
+#site {
   cursor: var(--cursor);
 }
-[data-theme="action"] #site input,
-[data-theme="action"] #site textarea,
-[data-theme="action"] #site select,
-[data-theme="action"] #site [contenteditable] {
-  cursor: auto;
+#site :where(a, button, [role="button"], summary, label[for], select, [tabindex]:not([tabindex="-1"])) {
+  cursor: var(--cursor-survol);
+}
+#site :where(input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+  textarea, [contenteditable]) {
+  cursor: text;
+}
+#site :where(:disabled) {
+  cursor: not-allowed;
+}
+#site[data-clic] {
+  cursor: var(--cursor-clic);
+}
+#site[data-clic] :where(a, button, [role="button"], summary, label[for], select, [tabindex]:not([tabindex="-1"])) {
+  cursor: var(--cursor-clic);
+}
+#site[data-clic] .egg-legacy {
+  cursor: revert;
+}
+#site[data-sans-curseur],
+#site[data-sans-curseur] * {
+  cursor: revert;
 }
 #site[data-car] :where(:not(input, textarea, select, [contenteditable])) {
   cursor: inherit !important;

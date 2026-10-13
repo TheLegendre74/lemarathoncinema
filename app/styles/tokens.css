@@ -22,7 +22,7 @@
   --radius: 2px;  --skew: 0deg;
   --tex: none;  --grit: none;
   --ease: cubic-bezier(.2,.8,.2,1);  --dur: 160ms;
-  --cursor: auto;
+  --cursor: auto;  --cursor-survol: pointer;  --cursor-clic: pointer;
   /* échelles */
   --fs-1: 12px; --fs-2: 13px; --fs-3: 14px; --fs-4: 16px; --fs-5: 18px;
   --fs-6: 21px; --fs-7: 26px; --fs-8: 34px; --fs-9: 48px; --fs-10: 74px;

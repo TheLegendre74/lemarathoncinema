@@ -21,5 +21,7 @@
   --ombre-titre: 2px 3px 0 var(--rideau-ombre), 0 0 26px rgba(255,243,208,.24);
   --ease: cubic-bezier(.34,1.4,.5,1);  --dur: 200ms;
   --dur-rideau: 420ms;  --dur-trac: 400ms;  --retard-poursuite: 140ms;
-  --cursor: url("/cursors/comedie-gant.png") 10 3, pointer;
+  --cursor: url("/cursors/comedie-chaussure.png") 2 12, auto;
+  --cursor-survol: url("/cursors/comedie-chaussure-survol.png") 2 12, pointer;
+  --cursor-clic: url("/cursors/comedie-chaussure-appui.png") 2 12, pointer;
 }
