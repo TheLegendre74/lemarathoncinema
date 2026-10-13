@@ -17,11 +17,12 @@ export function ecranOccupe({ seuilZ, part }: { seuilZ: number; part: number }):
   const vh = window.innerHeight
   const seuil = vw * vh * part
 
-  const fixedEls = document.querySelectorAll('[style*="position: fixed"], [style*="position:fixed"]')
-  let totalArea = 0
+  const candidates = new Set<Element>()
+  for (const el of document.body.children) candidates.add(el)
+  for (const el of document.querySelectorAll('[style*="position"]')) candidates.add(el)
 
-  const allEls = document.querySelectorAll('*')
-  for (const el of allEls) {
+  let totalArea = 0
+  for (const el of candidates) {
     if (el.hasAttribute('data-calque-theme')) continue
     const style = window.getComputedStyle(el)
     if (style.position !== 'fixed') continue

@@ -3,23 +3,20 @@
    Spaghetti western : lenteur, poussière, laiton, sépia
    ═══════════════════════════════════════════════════════════ */
 
-/* ── Cursor: colt ── */
-[data-theme="western"] #site {
-  cursor: var(--cursor);
+/* ── Lenteur : transitions 500ms sur les composants du thème seulement ── */
+[data-theme="western"] .site-main,
+[data-theme="western"] .site-main a,
+[data-theme="western"] .site-main button,
+[data-theme="western"] .site-main [role="button"],
+[data-theme="western"] .site-main img,
+[data-theme="western"] .site-main details,
+[data-theme="western"] [data-theme-frame] {
+  transition-duration: var(--dur);
 }
-[data-theme="western"] #site input,
-[data-theme="western"] #site textarea,
-[data-theme="western"] #site select,
-[data-theme="western"] #site [contenteditable] {
-  cursor: auto;
-}
-
-/* ── Lenteur : transitions 500ms partout ── */
-[data-theme="western"] * {
-  transition-duration: var(--dur) !important;
-}
-[data-theme="western"] *:active {
-  transition-duration: var(--dur-clic) !important;
+[data-theme="western"] .site-main a:active,
+[data-theme="western"] .site-main button:active,
+[data-theme="western"] .site-main [role="button"]:active {
+  transition-duration: var(--dur-clic);
 }
 
 /* ── Titles: ombre-titre western ── */
