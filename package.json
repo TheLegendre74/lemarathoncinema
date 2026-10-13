@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx --no-inline-config",
-    "test": "vitest run"
+    "test": "vitest run",
+    "verifier": "node scripts/verifier-orphelins.mjs && node scripts/verifier-css-mort.mjs",
+    "verifier:orphelins": "node scripts/verifier-orphelins.mjs",
+    "verifier:css": "node scripts/verifier-css-mort.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.9.0",

@@ -1,0 +1,7 @@
+# Exceptions du vérificateur de code mort
+# Format :
+#   ORPHELIN components/path/File.tsx — raison
+#   CSS-MORT app/styles/themes/file.css:.classe — raison
+#   IMPORTANT-STAR app/styles/themes/file.css:42 — raison
+#
+# Chaque exception doit avoir une raison.
