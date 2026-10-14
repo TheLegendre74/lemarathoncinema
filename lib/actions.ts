@@ -1356,7 +1356,8 @@ export async function adminCreateDuelFromFilms(film1Id: number, film2Id: number)
   const { count } = await supabase.from('duels').select('*', { count: 'exact', head: true })
   const weekNum = (count ?? 0) + 1
 
-  const { error } = await supabase.from('duels').insert({ film1_id: film1Id, film2_id: film2Id, week_num: weekNum, pending: true })
+  const closes_at = nextDuelDeadline(new Date()).toISOString()
+  const { error } = await supabase.from('duels').insert({ film1_id: film1Id, film2_id: film2Id, week_num: weekNum, pending: false, closes_at })
   if (error) return { error: error.message }
   revalidatePath('/duels')
   revalidatePath('/admin')
