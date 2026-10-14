@@ -27,7 +27,7 @@ export default async function VideoclubPage() {
         lineHeight: 1.7,
         marginBottom: 'var(--sp-6)',
       }}>
-        Chaque film vu sort du rayon et s&apos;use. Ton nom reste sur la boîte que tu as ouverte le premier.
+        En cours de chantier, alpha bientôt disponible.
       </p>
       <p style={{
         fontFamily: 'var(--f-data)',
