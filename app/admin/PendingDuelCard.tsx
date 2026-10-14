@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { adminApproveDuel } from '@/lib/actions'
+import { adminApproveDuel, adminDeleteDuel } from '@/lib/actions'
 
 export default function PendingDuelCard({ duel }: { duel: { id: number; film1: { titre: string }; film2: { titre: string } } }) {
   const [busy, setBusy] = useState(false)
@@ -12,6 +12,15 @@ export default function PendingDuelCard({ duel }: { duel: { id: number; film1: {
   async function handleApprove() {
     setBusy(true)
     const res = await adminApproveDuel(duel.id)
+    setBusy(false)
+    if (res.error) alert(res.error)
+    else { setDone(true); router.refresh() }
+  }
+
+  async function handleReject() {
+    if (!confirm(`Refuser et supprimer le duel "${duel.film1.titre} VS ${duel.film2.titre}" ?`)) return
+    setBusy(true)
+    const res = await adminDeleteDuel(duel.id)
     setBusy(false)
     if (res.error) alert(res.error)
     else { setDone(true); router.refresh() }
@@ -30,7 +39,14 @@ export default function PendingDuelCard({ duel }: { duel: { id: number; film1: {
         onClick={handleApprove}
         style={{ fontSize: '.78rem', padding: '.35rem .8rem', background: 'rgba(79,217,138,.15)', border: '1px solid rgba(79,217,138,.4)', borderRadius: 6, color: 'var(--ok, #4fd98a)', cursor: busy ? 'wait' : 'pointer', fontWeight: 600 }}
       >
-        {busy ? '...' : '✓ Confirmer le duel'}
+        {busy ? '...' : '✓ Confirmer'}
+      </button>
+      <button
+        disabled={busy}
+        onClick={handleReject}
+        style={{ fontSize: '.78rem', padding: '.35rem .8rem', background: 'rgba(231,76,60,.1)', border: '1px solid rgba(231,76,60,.35)', borderRadius: 6, color: '#e74c3c', cursor: busy ? 'wait' : 'pointer', fontWeight: 600 }}
+      >
+        {busy ? '...' : '✗ Refuser'}
       </button>
     </div>
   )
