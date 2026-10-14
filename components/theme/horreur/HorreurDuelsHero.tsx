@@ -125,10 +125,10 @@ export default function HorreurDuelsHero({ duel, seasonPlayers, hasVoted, onVote
           </div>
           <div className={s.frame}>
             <div className={s.door}>
-              <div className={{s.pnA}} />
-              <div className={{s.pnB}} />
-              <div className={{s.pnC}} />
-              <div className={{s.pnD}} />
+              <div className={s.pnA} />
+              <div className={s.pnB} />
+              <div className={s.pnC} />
+              <div className={s.pnD} />
             </div>
             <div className={s.doorLight} style={lightIntensity(pct1)} />
           </div>
@@ -153,10 +153,10 @@ export default function HorreurDuelsHero({ duel, seasonPlayers, hasVoted, onVote
           </div>
           <div className={s.frame}>
             <div className={s.door}>
-              <div className={{s.pnA}} />
-              <div className={{s.pnB}} />
-              <div className={{s.pnC}} />
-              <div className={{s.pnD}} />
+              <div className={s.pnA} />
+              <div className={s.pnB} />
+              <div className={s.pnC} />
+              <div className={s.pnD} />
             </div>
             <div className={s.doorLight} style={lightIntensity(pct2)} />
           </div>

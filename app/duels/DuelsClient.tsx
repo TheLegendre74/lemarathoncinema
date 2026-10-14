@@ -79,6 +79,7 @@ function FilmPreview({ film, watchPct, avg, profile, isWatched, watchedPre, myRa
     } else {
       const removed = result?.action === 'removed'
       addToast(removed ? `"${film.titre}" retiré` : `"${film.titre}" marqué ${pre ? 'vu (avant marathon)' : 'vu (marathon)'}`, '🎬')
+      if ((result as any)?.egg) addToast('Un secret de la Comédie a été découvert', '🎭')
       onRefresh()
     }
   }

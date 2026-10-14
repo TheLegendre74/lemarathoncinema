@@ -202,6 +202,7 @@ function FilmModal({ film, profile, isWatched, watchedPre, myRating, myNegativeR
     if (res?.error) { addToast(res.error, '⚠️'); return }
     if (res?.action === 'added') {
       addToast(`+${(res as any).exp ?? config.EXP_FILM} EXP — "${film.titre}" vu pendant le marathon !`, '🎬')
+      if ((res as any).egg) addToast('Un secret de la Comédie a été découvert', '🎭')
       if (!myRating) setRatePrompt(true)
     } else {
       addToast(`"${film.titre}" retiré`, '🎬')
@@ -1326,6 +1327,7 @@ export default function FilmsClient({ films, profile, watchedIds, watchedPreMap,
       return
     }
     addToast(`+${(res as any)?.exp ?? config.EXP_FILM} EXP — "${filmTitre}" vu pendant le marathon !`, '🎬')
+    if ((res as any)?.egg) addToast('Un secret de la Comédie a été découvert', '🎭')
     router.refresh()
   }
 
