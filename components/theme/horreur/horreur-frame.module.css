@@ -1,107 +1,103 @@
 /* ═══════════════════════════════════════════════════════════
    Horreur — décor (§16.4)
-   Grain, obscurité, lampe-torche
+   Conteneur z-index 0, premier enfant de #site.
+   La lampe est un calque d'obscurité DANS le décor, sous le contenu.
    ═══════════════════════════════════════════════════════════ */
 
-/* ── Le grain (found-footage) ── */
-.grain {
+.decor {
   position: fixed;
   inset: 0;
-  z-index: var(--z-fx, 50);
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* ── La lisière (forêt d'arbres sans feuilles) ── */
+.bois {
+  position: absolute;
+  left: -2%;
+  right: -2%;
+  bottom: 0;
+  height: 62%;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.9;
+  background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%201200%20420%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20d%3D%22M388.6%20420%20L380.0%2095.7%20L382.7%2095.7%20L391.2%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M438.8%20420%20L429.6%2074.6%20L431.8%2074.6%20L441.1%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M434.2%20178.0%20l32.0%20-19.2%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.0%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M434.2%20106.4%20l-48.3%20-29.0%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.0%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M434.2%20220.3%20l-49.1%20-29.5%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.0%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M692.5%20420%20L683.5%20143.5%20L687.0%20143.5%20L696.1%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M688.0%20201.3%20l-27.2%20-16.3%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.3%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M685.1%20420%20L677.2%20100.3%20L681.4%20100.3%20L689.3%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M681.1%20185.0%20l-47.4%20-28.4%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.5%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M677.2%20420%20L677.9%2073.0%20L682.4%2073.0%20L681.7%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M677.6%20186.6%20l66.2%20-39.7%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.6%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M677.6%20153.2%20l-59.7%20-35.8%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.6%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M98.2%20420%20L95.1%2072.8%20L98.3%2072.8%20L101.4%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M96.7%20150.7%20l-69.0%20-41.4%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.1%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M96.7%20195.8%20l28.2%20-16.9%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.1%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M96.7%20123.4%20l-44.4%20-26.7%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.1%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1154.4%20420%20L1160.2%2082.0%20L1162.5%2082.0%20L1156.7%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M1157.3%20167.3%20l37.5%20-22.5%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.0%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1157.3%20213.4%20l-42.8%20-25.7%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.0%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1133.6%20420%20L1124.8%2097.6%20L1128.7%2097.6%20L1137.5%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M1129.2%20231.8%20l69.7%20-41.8%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.4%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1129.2%20167.8%20l39.3%20-23.6%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.4%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M27.1%20420%20L19.4%2024.7%20L23.3%2024.7%20L30.9%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M261.8%20420%20L259.8%20108.5%20L263.0%20108.5%20L265.0%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M260.8%20141.9%20l42.5%20-25.5%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.1%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M260.8%20274.7%20l61.0%20-36.6%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.1%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M260.8%20245.4%20l69.3%20-41.6%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.1%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1149.3%20420%20L1143.9%2025.9%20L1146.5%2025.9%20L1151.9%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M1146.6%2048.9%20l-61.6%20-36.9%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.0%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M315.3%20420%20L312.7%2061.6%20L314.7%2061.6%20L317.3%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M314.0%20284.0%20l-54.5%20-32.7%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.0%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M314.0%20178.6%20l63.5%20-38.1%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.0%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M477.7%20420%20L475.7%2070.8%20L479.3%2070.8%20L481.3%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M476.7%20104.5%20l-30.4%20-18.3%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.3%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M131.9%20420%20L133.2%2015.0%20L137.7%2015.0%20L136.3%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M1138.7%20420%20L1132.9%2010.3%20L1137.4%2010.3%20L1143.2%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M1135.8%2069.5%20l32.6%20-19.6%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.6%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1135.8%20189.1%20l-43.7%20-26.2%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.6%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1135.8%20254.2%20l69.7%20-41.8%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.6%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M576.5%20420%20L581.5%2021.2%20L584.7%2021.2%20L579.7%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M579.0%20162.2%20l-54.6%20-32.8%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.1%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M579.0%2093.1%20l67.6%20-40.6%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.1%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M175.9%20420%20L176.5%204.0%20L180.7%204.0%20L180.1%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M835.4%20420%20L828.8%2053.9%20L831.8%2053.9%20L838.5%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M832.1%20191.1%20l59.0%20-35.4%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.1%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M763.7%20420%20L768.9%20115.9%20L773.3%20115.9%20L768.2%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M766.3%20263.3%20l-60.9%20-36.5%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.6%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M239.9%20420%20L249.7%20107.5%20L253.7%20107.5%20L243.9%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M244.8%20206.1%20l29.7%20-17.8%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.4%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M244.8%20201.9%20l66.9%20-40.1%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.4%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1146.0%20420%20L1140.5%2032.4%20L1144.0%2032.4%20L1149.5%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M1143.3%20134.0%20l-44.1%20-26.5%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.2%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M575.4%20420%20L567.1%20117.5%20L571.7%20117.5%20L580.0%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M1091.7%20420%20L1091.3%20110.3%20L1096.4%20110.3%20L1096.9%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M1091.5%20201.3%20l-51.8%20-31.1%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.8%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M961.0%20420%20L959.0%2058.2%20L964.9%2058.2%20L966.9%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M869.8%20420%20L862.8%2018.7%20L865.5%2018.7%20L872.4%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M866.3%20244.6%20l27.3%20-16.4%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.0%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M866.3%20206.5%20l-37.5%20-22.5%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.0%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M866.3%2044.1%20l-60.0%20-36.0%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.0%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M631.9%20420%20L639.3%2063.8%20L645.1%2063.8%20L637.6%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M635.6%2089.7%20l-30.6%20-18.4%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%222.0%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M916.4%20420%20L923.1%2080.0%20L926.4%2080.0%20L919.7%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M1092.0%20420%20L1093.7%2067.3%20L1097.1%2067.3%20L1095.4%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M1092.9%20258.3%20l-63.9%20-38.3%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.2%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1092.9%20197.3%20l-46.2%20-27.7%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.2%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1092.9%20267.7%20l-58.8%20-35.3%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.2%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M931.2%20420%20L933.6%2020.8%20L936.2%2020.8%20L933.8%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M667.8%20420%20L668.9%2076.2%20L672.2%2076.2%20L671.1%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M1059.9%20420%20L1050.7%2028.1%20L1052.9%2028.1%20L1062.1%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M609.3%20420%20L617.5%20111.7%20L621.8%20111.7%20L613.5%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M613.4%20184.6%20l-68.7%20-41.2%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.5%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M613.4%20244.1%20l42.6%20-25.6%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.5%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M613.4%20214.1%20l32.4%20-19.4%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.5%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1107.3%20420%20L1106.3%2029.8%20L1111.9%2029.8%20L1112.9%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M1106.8%2079.5%20l-42.1%20-25.3%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.9%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1106.8%20213.7%20l-41.4%20-24.9%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.9%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1106.8%20213.3%20l-59.2%20-35.5%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.9%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1127.4%20420%20L1122.5%2053.8%20L1127.0%2053.8%20L1132.0%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M1124.9%20286.9%20l-31.0%20-18.6%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.6%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M477.9%20420%20L484.6%20145.5%20L488.5%20145.5%20L481.9%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M481.2%20256.3%20l69.7%20-41.8%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.4%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M406.9%20420%20L411.4%2046.8%20L414.2%2046.8%20L409.7%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M405.6%20420%20L403.3%20103.4%20L407.1%20103.4%20L409.4%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M404.4%20210.8%20l-23.2%20-13.9%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.3%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M404.4%20289.2%20l25.2%20-15.1%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.3%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M326.3%20420%20L331.4%2026.7%20L337.0%2026.7%20L331.9%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M328.9%20256.8%20l53.8%20-32.3%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%222.0%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M328.9%20147.1%20l46.8%20-28.1%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%222.0%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M328.9%20219.9%20l-24.5%20-14.7%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%222.0%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M959.5%20420%20L954.9%20131.6%20L957.6%20131.6%20L962.2%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M761.3%20420%20L768.5%2012.3%20L773.7%2012.3%20L766.5%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M317.3%20420%20L327.2%201.7%20L329.7%201.7%20L319.8%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M322.3%20274.0%20l-33.4%20-20.0%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.0%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M322.3%2033.5%20l-55.5%20-33.3%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.0%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M322.3%20285.6%20l-33.1%20-19.9%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.0%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M242.1%20420%20L247.3%2044.8%20L250.6%2044.8%20L245.4%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M244.7%20167.0%20l53.6%20-32.2%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.1%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M244.7%20144.4%20l20.9%20-12.5%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.1%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M44.3%20420%20L53.9%2074.3%20L56.0%2074.3%20L46.4%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M49.1%20143.4%20l42.4%20-25.4%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.0%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M49.1%20225.4%20l47.3%20-28.4%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.0%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M49.1%20288.1%20l-35.4%20-21.2%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.0%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1178.9%20420%20L1183.1%20122.3%20L1186.4%20122.3%20L1182.3%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M1181.0%20203.7%20l-37.4%20-22.4%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.2%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1004.4%20420%20L1012.0%2091.9%20L1014.0%2091.9%20L1006.4%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M1008.2%20141.7%20l24.2%20-14.5%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.0%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1008.2%20270.4%20l53.5%20-32.1%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.0%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1008.2%20221.0%20l-54.6%20-32.8%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.0%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M551.3%20420%20L546.6%2065.5%20L549.2%2065.5%20L554.0%20420%20Z%22%20fill%3D%22%2311141a%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M549.0%20288.3%20l-47.4%20-28.4%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.0%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M549.0%2092.7%20l-64.1%20-38.5%22%20stroke%3D%22%2311141a%22%20stroke-width%3D%221.0%22%20opacity%3D%220.55%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M427.9%20420%20L427.4%2056.1%20L431.0%2056.1%20L431.5%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M427.6%20130.2%20l-58.8%20-35.3%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%221.3%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M317.0%20420%20L307.8%2058.7%20L312.1%2058.7%20L321.2%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M359.6%20420%20L368.7%2012.4%20L376.9%2012.4%20L367.7%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M364.2%20204.4%20l55.8%20-33.5%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%222.8%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M917.2%20420%20L912.9%2072.6%20L921.6%2072.6%20L926.0%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M915.0%20101.5%20l61.8%20-37.1%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%223.1%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M880.6%20420%20L881.1%2020.5%20L890.5%2020.5%20L890.1%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M991.7%20420%20L995.3%20131.2%20L1003.2%20131.2%20L999.5%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M993.5%20163.4%20l22.1%20-13.3%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%222.7%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1151.4%20420%20L1142.4%2066.4%20L1148.7%2066.4%20L1157.7%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M751.5%20420%20L741.5%2071.9%20L750.0%2071.9%20L760.0%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M897.9%20420%20L901.1%2078.7%20L908.3%2078.7%20L905.1%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M894.9%20420%20L901.8%20119.0%20L908.8%20119.0%20L901.9%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M898.3%20252.0%20l30.3%20-18.2%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%222.5%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M592.7%20420%20L596.4%2070.4%20L602.8%2070.4%20L599.1%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M740.4%20420%20L733.3%2011.4%20L741.5%2011.4%20L748.6%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M736.8%20202.5%20l-54.6%20-32.8%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%222.9%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M736.8%2034.7%20l23.0%20-13.8%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%222.9%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1167.0%20420%20L1166.8%2032.0%20L1171.1%2032.0%20L1171.3%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M1166.9%20164.4%20l-43.3%20-26.0%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%221.5%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1166.9%20292.4%20l47.5%20-28.5%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%221.5%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1173.8%20420%20L1172.9%202.6%20L1183.3%202.6%20L1184.1%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M1173.3%20292.4%20l-39.3%20-23.6%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%223.6%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1173.3%2042.8%20l24.5%20-14.7%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%223.6%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1173.3%20281.2%20l26.6%20-16.0%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%223.6%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1064.2%20420%20L1072.2%2034.0%20L1080.9%2034.0%20L1072.9%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M1068.2%20148.6%20l28.0%20-16.8%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%223.0%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1068.2%20217.6%20l-40.3%20-24.2%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%223.0%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1068.2%20153.9%20l-38.8%20-23.3%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%223.0%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1008.3%20420%20L1015.1%20110.4%20L1018.7%20110.4%20L1011.9%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M1127.9%20420%20L1132.7%201.7%20L1137.7%201.7%20L1132.9%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M1130.3%20123.1%20l-39.6%20-23.8%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%221.8%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1130.3%20119.9%20l41.4%20-24.8%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%221.8%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1025.1%20420%20L1028.3%207.6%20L1034.0%207.6%20L1030.7%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M1026.7%2094.0%20l33.3%20-20.0%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%222.0%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M227.8%20420%20L235.5%20140.6%20L241.8%20140.6%20L234.1%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M231.7%20282.4%20l-67.0%20-40.2%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%222.2%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M231.7%20256.6%20l22.5%20-13.5%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%222.2%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M231.7%20220.7%20l57.6%20-34.6%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%222.2%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M582.7%20420%20L576.1%2080.9%20L586.3%2080.9%20L592.9%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M579.4%20167.2%20l34.9%20-20.9%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%223.6%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M579.4%20179.3%20l31.9%20-19.2%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%223.6%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M579.4%20208.5%20l-39.7%20-23.8%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%223.6%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M771.8%20420%20L778.1%2073.6%20L782.2%2073.6%20L776.0%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M775.0%20184.4%20l36.6%20-22.0%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%221.4%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M512.9%20420%20L506.4%2035.9%20L513.9%2035.9%20L520.5%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M383.1%20420%20L377.2%20119.0%20L383.4%20119.0%20L389.4%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M899.6%20420%20L900.1%2060.8%20L906.6%2060.8%20L906.2%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M899.8%20138.4%20l57.6%20-34.6%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%222.3%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M899.8%20140.0%20l-68.4%20-41.0%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%222.3%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M899.8%20227.2%20l-46.5%20-27.9%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%222.3%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M111.1%20420%20L114.0%2056.5%20L124.1%2056.5%20L121.2%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M112.6%20284.0%20l-62.4%20-37.5%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%223.5%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M112.6%20104.2%20l41.3%20-24.8%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%223.5%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M112.6%20287.1%20l-44.5%20-26.7%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%223.5%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M469.8%20420%20L476.9%20121.4%20L487.2%20121.4%20L480.1%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M473.4%20179.3%20l-25.5%20-15.3%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%223.6%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M473.4%20164.6%20l-68.6%20-41.2%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%223.6%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M473.4%20285.1%20l56.1%20-33.7%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%223.6%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M102.0%20420%20L94.5%200.2%20L103.7%200.2%20L111.2%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M774.6%20420%20L769.6%2018.8%20L775.4%2018.8%20L780.4%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M772.1%20217.1%20l-25.6%20-15.4%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%222.0%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M772.1%20115.5%20l-67.2%20-40.3%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%222.0%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M772.1%20137.8%20l-31.2%20-18.7%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%222.0%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M12.6%20420%20L21.7%2067.7%20L27.5%2067.7%20L18.3%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M17.1%20185.8%20l-31.7%20-19.0%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%222.0%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M35.1%20420%20L26.2%2095.5%20L32.8%2095.5%20L41.7%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M30.7%20204.4%20l53.7%20-32.2%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%222.3%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M97.3%20420%20L94.7%2062.4%20L100.0%2062.4%20L102.6%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M96.0%2089.6%20l36.9%20-22.1%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%221.8%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M96.0%20159.1%20l-39.8%20-23.9%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%221.8%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M96.0%20251.1%20l-57.0%20-34.2%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%221.8%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M246.3%20420%20L252.7%2045.8%20L263.2%2045.8%20L256.8%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M249.5%20172.0%20l33.3%20-20.0%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%223.7%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M130.8%20420%20L138.7%2089.7%20L146.8%2089.7%20L138.9%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M134.8%20186.5%20l-53.3%20-32.0%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%222.8%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M134.8%20279.6%20l-22.7%20-13.6%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%222.8%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M134.8%20289.2%20l-27.1%20-16.3%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%222.8%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M851.8%20420%20L856.1%2066.1%20L861.0%2066.1%20L856.8%20420%20Z%22%20fill%3D%22%230a0c10%22%20opacity%3D%220.8%22/%3E%3Cpath%20d%3D%22M854.0%20238.4%20l-69.9%20-41.9%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%221.7%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M854.0%20154.5%20l29.3%20-17.6%22%20stroke%3D%22%230a0c10%22%20stroke-width%3D%221.7%22%20opacity%3D%220.8%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M38.3%20420%20L35.8%2055.7%20L47.9%2055.7%20L50.4%20420%20Z%22%20fill%3D%22%23050608%22%20opacity%3D%221%22/%3E%3Cpath%20d%3D%22M37.0%20172.3%20l-25.4%20-15.3%22%20stroke%3D%22%23050608%22%20stroke-width%3D%224.2%22%20opacity%3D%221%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M37.0%20136.8%20l-37.6%20-22.5%22%20stroke%3D%22%23050608%22%20stroke-width%3D%224.2%22%20opacity%3D%221%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M673.4%20420%20L678.7%2055.9%20L691.8%2055.9%20L686.4%20420%20Z%22%20fill%3D%22%23050608%22%20opacity%3D%221%22/%3E%3Cpath%20d%3D%22M676.0%20255.2%20l-41.6%20-25.0%22%20stroke%3D%22%23050608%22%20stroke-width%3D%224.6%22%20opacity%3D%221%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M676.0%20229.7%20l29.8%20-17.9%22%20stroke%3D%22%23050608%22%20stroke-width%3D%224.6%22%20opacity%3D%221%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M231.6%20420%20L222.2%20131.9%20L231.2%20131.9%20L240.6%20420%20Z%22%20fill%3D%22%23050608%22%20opacity%3D%221%22/%3E%3Cpath%20d%3D%22M226.9%20187.1%20l51.3%20-30.8%22%20stroke%3D%22%23050608%22%20stroke-width%3D%223.1%22%20opacity%3D%221%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M226.9%20157.6%20l-21.7%20-13.0%22%20stroke%3D%22%23050608%22%20stroke-width%3D%223.1%22%20opacity%3D%221%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M226.9%20266.0%20l-23.1%20-13.9%22%20stroke%3D%22%23050608%22%20stroke-width%3D%223.1%22%20opacity%3D%221%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M896.7%20420%20L892.2%2049.8%20L906.7%2049.8%20L911.3%20420%20Z%22%20fill%3D%22%23050608%22%20opacity%3D%221%22/%3E%3Cpath%20d%3D%22M314.6%20420%20L310.1%2046.5%20L322.8%2046.5%20L327.3%20420%20Z%22%20fill%3D%22%23050608%22%20opacity%3D%221%22/%3E%3Cpath%20d%3D%22M865.9%20420%20L874.8%20118.4%20L886.2%20118.4%20L877.3%20420%20Z%22%20fill%3D%22%23050608%22%20opacity%3D%221%22/%3E%3Cpath%20d%3D%22M29.1%20420%20L38.2%2069.9%20L45.9%2069.9%20L36.7%20420%20Z%22%20fill%3D%22%23050608%22%20opacity%3D%221%22/%3E%3Cpath%20d%3D%22M33.7%20251.1%20l65.7%20-39.4%22%20stroke%3D%22%23050608%22%20stroke-width%3D%222.7%22%20opacity%3D%221%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M33.7%20116.9%20l-44.8%20-26.9%22%20stroke%3D%22%23050608%22%20stroke-width%3D%222.7%22%20opacity%3D%221%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M33.7%20253.7%20l-56.9%20-34.2%22%20stroke%3D%22%23050608%22%20stroke-width%3D%222.7%22%20opacity%3D%221%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M728.7%20420%20L725.9%2047.0%20L734.6%2047.0%20L737.3%20420%20Z%22%20fill%3D%22%23050608%22%20opacity%3D%221%22/%3E%3Cpath%20d%3D%22M614.3%20420%20L612.4%2023.5%20L621.7%2023.5%20L623.5%20420%20Z%22%20fill%3D%22%23050608%22%20opacity%3D%221%22/%3E%3Cpath%20d%3D%22M578.0%20420%20L576.6%2023.6%20L587.4%2023.6%20L588.9%20420%20Z%22%20fill%3D%22%23050608%22%20opacity%3D%221%22/%3E%3Cpath%20d%3D%22M1185.4%20420%20L1177.3%2012.4%20L1185.3%2012.4%20L1193.3%20420%20Z%22%20fill%3D%22%23050608%22%20opacity%3D%221%22/%3E%3Cpath%20d%3D%22M1181.4%20291.0%20l-68.6%20-41.2%22%20stroke%3D%22%23050608%22%20stroke-width%3D%222.8%22%20opacity%3D%221%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1181.4%2093.6%20l-40.8%20-24.5%22%20stroke%3D%22%23050608%22%20stroke-width%3D%222.8%22%20opacity%3D%221%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1181.4%20228.1%20l-62.3%20-37.4%22%20stroke%3D%22%23050608%22%20stroke-width%3D%222.8%22%20opacity%3D%221%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M935.7%20420%20L931.1%2041.1%20L939.3%2041.1%20L944.0%20420%20Z%22%20fill%3D%22%23050608%22%20opacity%3D%221%22/%3E%3Cpath%20d%3D%22M933.4%20233.0%20l-30.0%20-18.0%22%20stroke%3D%22%23050608%22%20stroke-width%3D%222.9%22%20opacity%3D%221%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M933.4%20104.3%20l31.8%20-19.1%22%20stroke%3D%22%23050608%22%20stroke-width%3D%222.9%22%20opacity%3D%221%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1061.0%20420%20L1058.9%2048.0%20L1070.1%2048.0%20L1072.2%20420%20Z%22%20fill%3D%22%23050608%22%20opacity%3D%221%22/%3E%3Cpath%20d%3D%22M1060.0%20182.6%20l-31.6%20-18.9%22%20stroke%3D%22%23050608%22%20stroke-width%3D%223.9%22%20opacity%3D%221%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M784.0%20420%20L783.5%2015.0%20L799.0%2015.0%20L799.5%20420%20Z%22%20fill%3D%22%23050608%22%20opacity%3D%221%22/%3E%3Cpath%20d%3D%22M783.7%20252.7%20l-65.7%20-39.4%22%20stroke%3D%22%23050608%22%20stroke-width%3D%225.4%22%20opacity%3D%221%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M1052.3%20420%20L1054.3%207.4%20L1061.9%207.4%20L1059.9%20420%20Z%22%20fill%3D%22%23050608%22%20opacity%3D%221%22/%3E%3Cpath%20d%3D%22M1053.3%20275.4%20l-38.6%20-23.2%22%20stroke%3D%22%23050608%22%20stroke-width%3D%222.7%22%20opacity%3D%221%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M538.9%20420%20L547.9%20114.3%20L555.8%20114.3%20L546.8%20420%20Z%22%20fill%3D%22%23050608%22%20opacity%3D%221%22/%3E%3Cpath%20d%3D%22M764.9%20420%20L755.7%2051.4%20L768.3%2051.4%20L777.5%20420%20Z%22%20fill%3D%22%23050608%22%20opacity%3D%221%22/%3E%3Cpath%20d%3D%22M760.3%20102.9%20l30.2%20-18.1%22%20stroke%3D%22%23050608%22%20stroke-width%3D%224.4%22%20opacity%3D%221%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M760.3%2079.9%20l-56.6%20-34.0%22%20stroke%3D%22%23050608%22%20stroke-width%3D%224.4%22%20opacity%3D%221%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M977.7%20420%20L975.1%2060.1%20L988.8%2060.1%20L991.4%20420%20Z%22%20fill%3D%22%23050608%22%20opacity%3D%221%22/%3E%3Cpath%20d%3D%22M976.4%2096.8%20l21.6%20-12.9%22%20stroke%3D%22%23050608%22%20stroke-width%3D%224.8%22%20opacity%3D%221%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M976.4%20197.3%20l-23.2%20-13.9%22%20stroke%3D%22%23050608%22%20stroke-width%3D%224.8%22%20opacity%3D%221%22%20fill%3D%22none%22/%3E%3C/svg%3E") center bottom / 100% 100% no-repeat;
+}
+
+/* ── La brume ── */
+.brume {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 48%;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 40% at 30% 100%, rgba(140, 150, 165, .13), transparent 70%),
+    radial-gradient(50% 36% at 78% 100%, rgba(140, 150, 165, .10), transparent 70%),
+    linear-gradient(0deg, rgba(26, 29, 35, .55), transparent);
+}
+
+/* ── La lampe-torche ──
+   Grand élément 200vw × 200vh, centré sur le curseur par transform.
+   Dégradé radial : transparent au centre (halo 240px), obscurité autour.
+   Seul ce calque bouge — rien n'est repeint. */
+.lampe {
+  position: absolute;
+  width: 200vw;
+  height: 200vh;
+  z-index: 3;
+  pointer-events: none;
+  will-change: transform;
+  background: radial-gradient(
+    circle 240px at center,
+    rgba(7, 8, 11, 0) 0%,
+    rgba(7, 8, 11, .35) 45%,
+    rgba(7, 8, 11, .9) 100%
+  );
+}
+
+/* Mobile : fade d'opacité pour le toucher */
+.lampeMobile {
+  transition: opacity 4s ease-out;
+}
+
+/* Réduire les animations : halo fixe à 70% × 62% */
+.lampeFixe {
+  position: absolute !important;
+  inset: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  transform: none !important;
+  background: radial-gradient(
+    70% 62% at 50% 50%,
+    rgba(7, 8, 11, 0) 0%,
+    rgba(7, 8, 11, .35) 45%,
+    rgba(7, 8, 11, .9) 100%
+  );
+}
+
+/* ── Le vignettage ── */
+.vign {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+  box-shadow: inset 0 0 160px 40px rgba(0, 0, 0, .85);
+}
+
+/* ── Le grain (7%, fixe, jamais animé) ── */
+.grain {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
   pointer-events: none;
   opacity: var(--grain, .07);
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 256px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .grain { opacity: 0; }
-}
-
-/* ── La lampe-torche ── */
-.lampe {
-  position: fixed;
-  inset: 0;
-  z-index: var(--z-fx, 50);
-  pointer-events: none;
-  background: radial-gradient(
-    circle var(--lampe, 240px) at var(--mx, 50%) var(--my, 50%),
-    transparent 0%,
-    rgba(7,8,11,.55) 100%
-  );
-  transition: none;
+  mix-blend-mode: screen;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 220px;
 }
 
 @media (max-width: 768px) {
-  .lampe { display: none; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .lampe { display: none; }
-}
-
-/* ── REC indicator ── */
-.rec {
-  position: fixed;
-  top: 16px;
-  right: 16px;
-  z-index: var(--z-fx, 50);
-  pointer-events: none;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--f-data);
-  font-size: 11px;
-  letter-spacing: .12em;
-  color: var(--rec, #8FA89A);
-  opacity: 0.6;
-}
-
-.recDot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--bad, #B0141C);
-  animation: recBlink 2s steps(1) infinite;
-}
-
-@keyframes recBlink {
-  0%, 49% { opacity: 1; }
-  50%, 100% { opacity: 0; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .recDot { animation: none; opacity: 1; }
-}
-
-/* ── VHS tracking lines (loading) ── */
-@keyframes vhsTrack {
-  0% { transform: translateY(-100%); }
-  100% { transform: translateY(100vh); }
-}
-
-.vhsLine {
-  position: fixed;
-  left: 0;
-  width: 100%;
-  height: 3px;
-  background: rgba(217,211,196,.08);
-  pointer-events: none;
-  z-index: var(--z-fx, 50);
-  animation: vhsTrack 3s linear infinite;
-}
-
-.vhsLine:nth-child(2) {
-  animation-delay: -1s;
-  height: 2px;
-}
-
-.vhsLine:nth-child(3) {
-  animation-delay: -2s;
-  height: 1px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .vhsLine { animation: none; display: none; }
+  .grain { opacity: .05; }
 }
