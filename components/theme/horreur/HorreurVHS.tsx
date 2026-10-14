@@ -12,19 +12,40 @@ export default function HorreurVHS() {
         justifyContent: 'center',
         padding: '40px 16px',
         fontFamily: 'var(--f-data)',
-        fontSize: 14,
+        fontSize: 12,
+        letterSpacing: '.14em',
+        textTransform: 'uppercase',
         color: 'var(--ink3)',
       }}>
-        Rembobinage…
+        ▶▶ Rembobinage
       </div>
     )
   }
 
   return (
-    <>
+    <div
+      aria-label="Rembobinage…"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 4,
+        padding: '32px 16px',
+      }}
+    >
       <div className={styles.vhsLine} />
       <div className={styles.vhsLine} />
       <div className={styles.vhsLine} />
-    </>
+      <span style={{
+        fontFamily: 'var(--f-data)',
+        fontSize: 10,
+        letterSpacing: '.14em',
+        textTransform: 'uppercase',
+        color: 'var(--ink3)',
+        marginTop: 8,
+      }}>
+        ▶▶ Rembobinage
+      </span>
+    </div>
   )
 }

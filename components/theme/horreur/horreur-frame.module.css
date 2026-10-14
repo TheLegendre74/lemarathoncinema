@@ -98,6 +98,55 @@
   background-size: 220px;
 }
 
+/* ── La forme (§16.5) — silhouette, même z que la brume ── */
+.forme {
+  position: absolute;
+  bottom: 18%;
+  width: 22px;
+  height: 55vh;
+  z-index: 2;
+  pointer-events: none;
+  filter: blur(.5px);
+  opacity: 0;
+  animation: formeAppear 2s ease-out forwards;
+  background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2060%20170%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20d%3D%22M30%203%20C24%203%2021%208%2021%2014%20C21%2020%2024%2025%2027%2026%20L27%2030%20C20%2031%2013%2033%2011%2037%20C9%2042%208%2055%207%2070%20C6%2082%206%2092%207%2098%20L10%2098%20C11%2088%2012%2076%2014%2064%20L15%2058%20C15%2070%2016%2085%2017%2096%20L18%20118%20C18%20135%2019%20150%2019%20166%20L27%20166%20C27%20150%2028%20135%2029%20120%20L30%20104%20L31%20120%20C32%20135%2033%20150%2033%20166%20L41%20166%20C41%20150%2042%20135%2042%20118%20L43%2096%20C44%2085%2045%2070%2045%2058%20L46%2064%20C48%2076%2049%2088%2050%2098%20L53%2098%20C54%2092%2054%2082%2053%2070%20C52%2055%2051%2042%2049%2037%20C47%2033%2040%2031%2033%2030%20L33%2026%20C36%2025%2039%2020%2039%2014%20C39%208%2036%203%2030%203%20Z%22%20fill%3D%22%23030405%22/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+}
+
+@keyframes formeAppear {
+  0% { opacity: 0; }
+  100% { opacity: 0.85; }
+}
+
+/* ── Le voile (le froid, §16.5) — obscurité brève sur cm:destruction ── */
+.voile {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background: #07080B;
+  opacity: 0;
+  transition: opacity 1s ease;
+}
+
+/* ── Bande VHS (rembobinage, §16.5) ── */
+.vhsLine {
+  height: 3px;
+  background: linear-gradient(90deg, transparent 5%, rgba(217, 211, 196, .12) 20%, rgba(217, 211, 196, .18) 50%, rgba(217, 211, 196, .12) 80%, transparent 95%);
+  margin: 12px 0;
+  animation: vhsScan 1.6s linear infinite;
+}
+
+.vhsLine:nth-child(2) { animation-delay: .5s; }
+.vhsLine:nth-child(3) { animation-delay: 1.1s; }
+
+@keyframes vhsScan {
+  0% { transform: translateY(-20px); opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translateY(20px); opacity: 0; }
+}
+
 @media (max-width: 768px) {
   .grain { opacity: .05; }
+  .forme { width: 16px; height: 45vh; }
 }

@@ -19,6 +19,7 @@ const HorreurBallonEgg = dynamic(() => import('./horreur/HorreurBallonEgg'), { s
 const HorreurPossessionEgg = dynamic(() => import('./horreur/HorreurPossessionEgg'), { ssr: false })
 const HorreurCercleEgg = dynamic(() => import('./horreur/HorreurCercleEgg'), { ssr: false })
 const HorreurApparitionEgg = dynamic(() => import('./horreur/HorreurApparitionEgg'), { ssr: false })
+const HorreurFroid = dynamic(() => import('./horreur/HorreurFroid'), { ssr: false })
 
 interface ThemeBehaviorsProps {
   playerExp: number | null
@@ -77,6 +78,7 @@ export default function ThemeBehaviors({
   if (key === 'horreur') {
     return (
       <>
+        <HorreurFroid />
         <HorreurBallonEgg />
         <HorreurPossessionEgg />
         <HorreurCercleEgg />
