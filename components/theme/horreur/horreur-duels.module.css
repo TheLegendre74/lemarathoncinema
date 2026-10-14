@@ -1,0 +1,200 @@
+/* H4 — Les deux portes (§16.7) */
+
+.header {
+  font-family: var(--f-data);
+  font-size: 9.5px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink3);
+  text-align: center;
+  padding: 24px 16px 8px;
+}
+
+.regle {
+  font-family: var(--f-body);
+  font-size: 12px;
+  color: var(--ink3);
+  font-style: italic;
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.couloir {
+  display: grid;
+  grid-template-columns: 1fr 80px 1fr;
+  justify-content: center;
+  align-items: end;
+  margin: 0 auto;
+  max-width: 760px;
+  min-height: 360px;
+  padding: 0 16px 24px;
+  background:
+    radial-gradient(ellipse 60% 40% at 50% 100%, rgba(26,29,35,.8), transparent 70%),
+    repeating-linear-gradient(90deg, rgba(217,211,196,.025) 0 1px, transparent 1px 64px);
+}
+
+.dp {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.porteLabel {
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.porteLabel b {
+  display: block;
+  font-family: var(--f-display);
+  font-weight: 600;
+  font-size: 20px;
+  color: var(--ink);
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+
+.porteLabel span {
+  font-family: var(--f-data);
+  font-size: 9.5px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ink3);
+}
+
+.frame {
+  position: relative;
+  width: 130px;
+  height: 260px;
+  background: #0B0A09;
+  box-shadow: inset 0 0 0 7px #17150F, 0 0 50px rgba(0,0,0,.9);
+}
+
+.door {
+  position: absolute;
+  left: 7px;
+  right: 7px;
+  top: 7px;
+  bottom: 4px;
+  background: linear-gradient(180deg, #2A241D, #15120F);
+}
+
+.pn {
+  position: absolute;
+  border: 1px solid rgba(0,0,0,.55);
+  box-shadow: inset 1px 1px 0 rgba(255,230,190,.06);
+}
+
+.pnA { composes: pn; left: 10px; right: 52px; top: 12px; height: 60px; }
+.pnB { composes: pn; left: 52px; right: 10px; top: 12px; height: 60px; }
+.pnC { composes: pn; left: 10px; right: 52px; top: 86px; height: 110px; }
+.pnD { composes: pn; left: 52px; right: 10px; top: 86px; height: 110px; }
+
+.doorLight {
+  position: absolute;
+  bottom: -3px;
+  left: 7px;
+  right: 7px;
+  height: 3px;
+  transition: box-shadow .8s ease, background .8s ease;
+}
+
+.voteBtn {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  font-family: var(--f-ui);
+  font-size: 10.5px;
+  text-transform: var(--ui-case);
+  letter-spacing: var(--ui-track);
+  padding: 12px 8px;
+  border: 1px solid var(--accent);
+  background: linear-gradient(180deg, #1C1812, #120F0B);
+  color: var(--accent-2);
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.voteBtn:hover {
+  box-shadow: 0 0 22px -6px rgba(227,181,106,.55);
+}
+
+.voteBtnDone {
+  composes: voteBtn;
+  border-color: var(--line2);
+  color: var(--ink3);
+  cursor: default;
+}
+
+.votes {
+  font-family: var(--f-data);
+  font-size: 10px;
+  color: var(--ink3);
+  text-align: center;
+  margin-top: 8px;
+  letter-spacing: .14em;
+}
+
+.vs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--f-display);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ink3);
+  padding-bottom: 40px;
+}
+
+.result {
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  font-family: var(--f-body);
+  font-size: 14px;
+  color: var(--ink2);
+  line-height: 1.6;
+}
+
+.result em {
+  font-style: normal;
+  color: var(--accent);
+}
+
+.result .expLine {
+  font-family: var(--f-data);
+  font-size: 9.5px;
+  letter-spacing: .14em;
+  color: var(--ink3);
+  margin-top: 8px;
+}
+
+.noDuel {
+  text-align: center;
+  padding: 60px 16px;
+  font-family: var(--f-body);
+  font-size: 14px;
+  color: var(--ink3);
+}
+
+@media (max-width: 768px) {
+  .couloir {
+    grid-template-columns: 1fr 40px 1fr;
+    min-height: 280px;
+  }
+
+  .frame {
+    width: 110px;
+    height: 220px;
+  }
+
+  .porteLabel b {
+    font-size: 16px;
+  }
+
+  .voteBtn {
+    font-size: 10px;
+    padding: 10px 6px;
+  }
+}

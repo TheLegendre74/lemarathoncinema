@@ -1,0 +1,427 @@
+/* ═══════════════════════════════════════════════════════════
+   H1 — La porte (§16.7)
+   Le perron dans le noir. La porte est le bouton de la fiche.
+   ═══════════════════════════════════════════════════════════ */
+
+.hero {
+  position: relative;
+  height: 476px;
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.une {
+  position: absolute;
+  left: 0;
+  top: 14px;
+  width: 340px;
+  z-index: 6;
+}
+
+/* ── Le porche ── */
+.porche {
+  position: absolute;
+  left: 440px;
+  top: -6px;
+  width: 300px;
+  height: 476px;
+}
+
+.mur {
+  position: absolute;
+  left: -120px;
+  top: 0;
+  width: 540px;
+  height: 440px;
+  background: repeating-linear-gradient(180deg, #1E1C19 0 17px, #0D0C0B 17px 19px);
+  mask-image: radial-gradient(ellipse 46% 58% at 50% 34%, #000 0, rgba(0,0,0,.55) 42%, transparent 74%);
+}
+
+.cone {
+  position: absolute;
+  left: -70px;
+  top: 44px;
+  width: 440px;
+  height: 420px;
+  background: radial-gradient(ellipse 42% 62% at 50% 0, rgba(244,217,166,.20), rgba(227,181,106,.05) 52%, transparent 74%);
+}
+
+.douille {
+  position: absolute;
+  left: 141px;
+  top: 34px;
+  width: 18px;
+  height: 10px;
+  background: #15130F;
+  border-radius: 2px 2px 6px 6px;
+}
+
+.ampoule {
+  position: absolute;
+  left: 144px;
+  top: 44px;
+  width: 12px;
+  height: 13px;
+  border-radius: 50%;
+  background: #FFF1D2;
+  box-shadow: 0 0 22px 10px rgba(244,217,166,.55), 0 0 90px 30px rgba(227,181,106,.18);
+}
+
+.cadre {
+  position: absolute;
+  left: 82px;
+  top: 82px;
+  width: 136px;
+  height: 272px;
+  background: #0B0A09;
+  box-shadow: inset 0 0 0 7px #1C1915, 0 0 40px rgba(0,0,0,.8);
+}
+
+.battant {
+  position: absolute;
+  left: 90px;
+  top: 90px;
+  width: 120px;
+  height: 262px;
+  background: linear-gradient(180deg, #43392D 0%, #2A231B 38%, #17130F 100%);
+  box-shadow: inset 0 0 18px rgba(0,0,0,.7);
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+
+.panneau {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  border: 1px solid rgba(0,0,0,.55);
+  box-shadow: inset 1px 1px 0 rgba(255,230,190,.08);
+}
+
+.panneauA { composes: panneau; top: 14px; height: 74px; right: 62px; }
+.panneauB { composes: panneau; top: 14px; height: 74px; left: 62px; }
+.panneauC { composes: panneau; top: 104px; height: 140px; right: 62px; }
+.panneauD { composes: panneau; top: 104px; height: 140px; left: 62px; }
+
+.poignee {
+  position: absolute;
+  right: 12px;
+  top: 132px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #D8B77A, #6B5230);
+}
+
+.serrure {
+  position: absolute;
+  right: 14px;
+  top: 146px;
+  width: 3px;
+  height: 7px;
+  border-radius: 2px;
+  background: #FFE2A8;
+  box-shadow: 0 0 6px 2px rgba(255,210,140,.85);
+}
+
+.fente {
+  position: absolute;
+  left: 90px;
+  top: 351px;
+  width: 120px;
+  height: 3px;
+  background: #FFE3AE;
+  box-shadow: 0 0 12px 3px rgba(255,210,140,.7);
+}
+
+.flaque {
+  position: absolute;
+  left: 30px;
+  top: 352px;
+  width: 240px;
+  height: 70px;
+  background: radial-gradient(ellipse 50% 46% at 50% 0, rgba(255,210,140,.26), transparent 72%);
+}
+
+.marche {
+  position: absolute;
+  height: 17px;
+  background: linear-gradient(180deg, #1A1815, #0B0A09);
+  border-top: 1px solid rgba(255,220,170,.12);
+}
+
+.m1 { composes: marche; left: 70px; width: 160px; top: 356px; }
+.m2 { composes: marche; left: 52px; width: 196px; top: 373px; }
+.m3 { composes: marche; left: 34px; width: 232px; top: 390px; }
+
+/* ── Colonne gauche (une) ── */
+.nuit {
+  font-family: var(--f-ui);
+  font-size: 10px;
+  letter-spacing: var(--ui-track);
+  text-transform: uppercase;
+  color: var(--ink3);
+  margin-bottom: 16px;
+}
+
+.nuitLueur {
+  color: var(--accent);
+}
+
+.titre {
+  font-family: var(--f-display);
+  font-weight: var(--disp-weight);
+  font-size: 28px;
+  letter-spacing: var(--disp-track);
+  color: var(--ink);
+  line-height: 1.15;
+  margin-bottom: 8px;
+}
+
+.realisateur {
+  font-family: var(--f-data);
+  font-size: 11px;
+  color: var(--ink3);
+  margin-bottom: 12px;
+}
+
+.compteur {
+  font-family: var(--f-data);
+  font-size: 9.5px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink3);
+  margin-bottom: 16px;
+}
+
+.synopsis {
+  font-family: var(--f-body);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink2);
+  margin-bottom: 16px;
+  max-height: 80px;
+  overflow: hidden;
+}
+
+.sousTitre {
+  font-family: var(--f-body);
+  font-size: 14px;
+  font-style: italic;
+  color: var(--ink3);
+  margin-top: 16px;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ── Colonne droite ── */
+.cote {
+  position: absolute;
+  right: 0;
+  top: 14px;
+  width: 236px;
+  z-index: 6;
+}
+
+/* ── Ligne de nuit (semaine / duel) ── */
+.nr {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr);
+  gap: 2px 8px;
+  padding: 6px 0;
+  border-top: 1px solid var(--line);
+  margin-top: 6px;
+  font-family: var(--f-data);
+  font-size: 9.5px;
+  color: var(--ink3);
+}
+
+.nr b {
+  font-family: var(--f-display);
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--ink);
+}
+
+.nr i {
+  grid-column: 2;
+  font-style: normal;
+  font-size: 8.5px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.nrOn span,
+.nrOn i {
+  color: var(--accent);
+}
+
+.sectionLabel {
+  font-family: var(--f-ui);
+  font-size: 9px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ink3);
+  margin-top: 14px;
+  margin-bottom: 6px;
+}
+
+/* ── Bas de page : 4 colonnes ── */
+.bas {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr 1fr 1.1fr;
+  gap: 12px;
+  margin-top: 24px;
+  max-width: 880px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ── Trace (activité) ── */
+.tr {
+  font-family: var(--f-body);
+  font-size: 12px;
+  color: var(--ink2);
+  padding: 5px 0;
+  border-top: 1px solid var(--line);
+  margin-top: 5px;
+}
+
+.tr span {
+  font-family: var(--f-data);
+  font-size: 9px;
+  color: var(--ink3);
+  margin-right: 8px;
+}
+
+.tr em {
+  font-style: normal;
+  color: var(--ink);
+}
+
+/* ── Survivant ── */
+.sv {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: baseline;
+  padding: 5px 0;
+  border-top: 1px solid var(--line);
+  margin-top: 5px;
+}
+
+.sv span,
+.sv i {
+  font-family: var(--f-data);
+  font-size: 10px;
+  font-style: normal;
+  color: var(--ink3);
+}
+
+.sv b {
+  font-family: var(--f-display);
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--ink);
+}
+
+.svMoi b,
+.svMoi i {
+  color: var(--accent);
+}
+
+/* ── News ── */
+.nw {
+  font-family: var(--f-body);
+  font-size: 12px;
+  color: var(--ink2);
+  padding: 6px 0;
+  border-top: 1px solid var(--line);
+  margin-top: 6px;
+  line-height: 1.45;
+}
+
+/* ── Règles ── */
+.regles {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  white-space: nowrap;
+  margin-top: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  background: rgba(10,11,14,.7);
+  font-family: var(--f-data);
+  font-size: 10px;
+  color: var(--ink2);
+}
+
+.regles b {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  .hero {
+    height: auto;
+    min-height: 40dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .une {
+    position: relative;
+    width: 100%;
+    top: 0;
+    order: 2;
+    padding: 0 16px;
+  }
+
+  .porche {
+    position: relative;
+    left: auto;
+    top: 0;
+    width: 220px;
+    height: 340px;
+    order: 1;
+    margin: 0 auto 24px;
+  }
+
+  .mur { left: -80px; width: 380px; height: 310px; }
+  .cone { left: -50px; top: 30px; width: 320px; height: 300px; }
+  .cadre { left: 55px; top: 56px; width: 110px; height: 220px; }
+  .battant { left: 62px; top: 62px; width: 96px; height: 210px; }
+  .fente { left: 62px; top: 270px; width: 96px; }
+  .flaque { left: 20px; top: 270px; width: 180px; }
+  .m1 { left: 48px; width: 124px; top: 274px; }
+  .m2 { left: 34px; width: 152px; top: 288px; }
+  .m3 { left: 20px; width: 180px; top: 302px; }
+  .douille { left: 103px; top: 20px; }
+  .ampoule { left: 106px; top: 28px; }
+
+  .cote {
+    position: relative;
+    width: 100%;
+    top: 0;
+    right: auto;
+    order: 3;
+    padding: 0 16px;
+    margin-top: 24px;
+  }
+
+  .titre { font-size: clamp(24px, 8vw, 40px); }
+
+  .bas {
+    grid-template-columns: 1fr;
+    padding: 0 16px;
+  }
+
+  .actions { flex-direction: column; }
+  .actions > * { width: 100%; }
+}

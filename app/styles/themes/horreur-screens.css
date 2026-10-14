@@ -221,53 +221,6 @@
   letter-spacing: var(--disp-track);
 }
 
-/* ── Home hero: la porte ── */
-.horreur-porte {
-  max-width: 520px;
-  margin: 0 auto;
-  padding: 48px 32px;
-  text-align: center;
-}
-
-.horreur-porte-header {
-  font-family: var(--f-ui);
-  text-transform: var(--ui-case);
-  letter-spacing: var(--ui-track);
-  font-size: 11px;
-  color: var(--ink3);
-  margin-bottom: 24px;
-}
-
-.horreur-porte-titre {
-  font-family: var(--f-display);
-  font-weight: var(--disp-weight);
-  font-size: 32px;
-  letter-spacing: var(--disp-track);
-  color: var(--ink);
-  margin-bottom: 16px;
-  line-height: 1.2;
-}
-
-.horreur-porte-sous-titre {
-  font-family: var(--f-body);
-  font-size: 15px;
-  font-style: italic;
-  color: var(--ink3);
-  margin-bottom: 24px;
-}
-
-.horreur-porte-role {
-  font-family: var(--f-data);
-  font-size: 12px;
-  color: var(--rec);
-  letter-spacing: .06em;
-}
-
-@media (max-width: 768px) {
-  .horreur-porte { padding: 32px 16px; }
-  .horreur-porte-titre { font-size: 24px; }
-}
-
 /* ── Cassette (empty state) ── */
 .horreur-cassette {
   display: flex;

@@ -29,6 +29,21 @@ const ECRANS: Record<string, EcranMap> = {
   'duel-cadran': {
     comedie: () => import('@/components/theme/comedie/ComedieCadran'),
   },
+  'duels-hero': {
+    horreur: () => import('@/components/theme/horreur/HorreurDuelsHero'),
+  },
+  'classement': {
+    horreur: () => import('@/components/theme/horreur/HorreurClassement'),
+  },
+  'forum': {
+    horreur: () => import('@/components/theme/horreur/HorreurForum'),
+  },
+  'semaine': {
+    horreur: () => import('@/components/theme/horreur/HorreurSemaine'),
+  },
+  'marathoniens': {
+    horreur: () => import('@/components/theme/horreur/HorreurMarathoniens'),
+  },
 }
 
 export async function getThemeEcran<P = any>(

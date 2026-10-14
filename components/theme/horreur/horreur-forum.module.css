@@ -1,0 +1,137 @@
+/* H7 — La veillée (§16.7) */
+
+.wrap {
+  max-width: 660px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.header {
+  font-family: var(--f-data);
+  font-size: 9.5px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink3);
+  margin-bottom: 20px;
+}
+
+.topic {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+
+.candle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 4px;
+}
+
+.flame {
+  width: 6px;
+  height: 10px;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  background: radial-gradient(ellipse at 50% 70%, #FFE3AE, #E3B56A 50%, transparent 80%);
+  box-shadow: 0 0 8px 2px rgba(255,210,140,.5);
+  animation: flicker 2s ease-in-out infinite alternate;
+}
+
+.wick {
+  width: 1px;
+  height: 20px;
+  background: linear-gradient(180deg, #D8C8A0 0%, #6B5B40 60%, #3A3228 100%);
+}
+
+.smoke {
+  width: 1px;
+  height: 12px;
+  background: linear-gradient(180deg, rgba(217,211,196,.3) 0%, transparent 100%);
+  margin-bottom: 2px;
+}
+
+.smokeWick {
+  composes: wick;
+  background: linear-gradient(180deg, #6B5B40 0%, #3A3228 100%);
+}
+
+.title {
+  font-family: var(--f-display);
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--ink);
+  line-height: 1.3;
+  margin-bottom: 4px;
+}
+
+.meta {
+  font-family: var(--f-data);
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink3);
+  margin-bottom: 6px;
+}
+
+.lastMsg {
+  font-family: var(--f-body);
+  font-size: 12px;
+  color: var(--ink2);
+  font-style: italic;
+  line-height: 1.4;
+  max-width: 460px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lastMsg::before { content: '« '; }
+.lastMsg::after { content: ' »'; }
+
+.count {
+  font-family: var(--f-data);
+  font-size: 9px;
+  color: var(--ink3);
+  margin-top: 4px;
+}
+
+.createBtn {
+  display: block;
+  margin: 24px auto 0;
+  font-family: var(--f-ui);
+  font-size: 11px;
+  text-transform: var(--ui-case);
+  letter-spacing: var(--ui-track);
+  padding: 12px 24px;
+  border: 1px solid var(--accent);
+  background: linear-gradient(180deg, #1C1812, #120F0B);
+  color: var(--accent-2);
+  cursor: pointer;
+}
+
+.pied {
+  font-family: var(--f-body);
+  font-size: 12px;
+  font-style: italic;
+  color: var(--ink3);
+  text-align: center;
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+@keyframes flicker {
+  0% { opacity: 1; transform: scaleY(1); }
+  25% { opacity: .85; transform: scaleY(.95); }
+  50% { opacity: 1; transform: scaleY(1.05); }
+  75% { opacity: .9; transform: scaleY(.98); }
+  100% { opacity: 1; transform: scaleY(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flame {
+    animation: none;
+  }
+}

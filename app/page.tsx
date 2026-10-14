@@ -208,9 +208,41 @@ export default async function HomePage() {
         />
       ) : hasWeekFilm && themeKey === 'horreur' ? (
         <HorreurHomeHero
-          weekFilm={wf ? { id: wf.id, titre: wf.titre, poster: wf.poster } : null}
-          weekLabel={resolved.week ? `SEMAINE ${resolved.week.semaine}` : null}
-          playerRole={null}
+          weekFilm={wf ? { id: wf.id, titre: wf.titre, poster: wf.poster, realisateur: wf.realisateur, annee: wf.annee, synopsis: wf.synopsis } : null}
+          weekLabel={resolved.week ? `LA NUIT DE ${cfg.FDLS_JOUR.toUpperCase()} · ${cfg.FDLS_HEURE}` : null}
+          watchedBySeason={seasonPlayers > 0 ? Math.min(seasonPlayers, watchedCount) : 0}
+          seasonPlayers={seasonPlayers}
+          expFilm={cfg.EXP_FILM}
+          duel={d1 && d2 && activeDuel ? {
+            film1: d1.titre, film2: d2.titre,
+            votes1: 0, votes2: 0,
+            closesLabel: `CLÔTURE SEMAINE ${(activeDuel as any).week_num ?? ''}`,
+            totalVoters: seasonPlayers,
+          } : null}
+          closedDuel={null}
+          nights={[
+            { label: cfg.FDLS_JOUR, value: cfg.FDLS_HEURE, detail: 'SÉANCE', current: false },
+            { label: cfg.SEANCE_JOUR, value: cfg.SEANCE_HEURE, detail: '2E SÉANCE', current: false },
+          ]}
+          traces={activity.slice(0, 6).map(ev => ({
+            time: new Date(ev.at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+            text: ev.type === 'watched' ? `a rayé ${ev.titre}` : ev.type === 'rated' ? `a griffé ${ev.titre} — ${ev.note}/10` : ev.type === 'duel_opened' ? `Deux portes : ${ev.film1} vs ${ev.film2}` : `Porte éclairée — ${ev.winner}`,
+            highlight: (ev.type === 'watched' || ev.type === 'rated') ? ev.pseudo : undefined,
+            amount: ev.type === 'watched' && ev.exp > 0 ? `+${ev.exp}` : undefined,
+          }))}
+          survivors={topPlayers.slice(0, 4).map((p: any, i: number) => ({
+            rank: i + 1, pseudo: p.pseudo, exp: p.exp,
+            isSelf: p.id === userId,
+          }))}
+          playerLevel={level}
+          playerExp={profile.exp}
+          playerRole={(() => { const roles = ['La première victime','Celui qui dit « je reviens tout de suite »','Celui qui descend à la cave','Celui qui se sépare du groupe','Le sceptique','Celui qui a entendu un bruit','Le témoin','Celui qui a lu le livre','Le prêtre','Celui qui est revenu de la forêt','Le dernier survivant','La dernière fille']; return roles[level - 1] ?? roles[roles.length - 1] })()}
+          playerNextRole={(() => { const roles = ['La première victime','Celui qui dit « je reviens tout de suite »','Celui qui descend à la cave','Celui qui se sépare du groupe','Le sceptique','Celui qui a entendu un bruit','Le témoin','Celui qui a lu le livre','Le prêtre','Celui qui est revenu de la forêt','Le dernier survivant','La dernière fille']; return level < 12 ? (roles[level] ?? null) : null })()}
+          playerExpToNext={level * 100 - profile.exp}
+          playerWatched={watchedCount}
+          news={newsList.slice(0, 3).map((n: any) => ({ title: n.title, content: n.content, pinned: n.pinned }))}
+          porteSousTitre="Ta prochaine victime. Et quelqu'un te suit."
+          duelRegle="Deux portes. Une seule restera éclairée."
         />
       ) : hasWeekFilm ? (
         <WeekFilmHero

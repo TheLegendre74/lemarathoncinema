@@ -1,0 +1,163 @@
+/* H8 — Les sept nuits (§16.7) */
+
+.wrap {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.header {
+  font-family: var(--f-data);
+  font-size: 9.5px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink3);
+  margin-bottom: 20px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+
+.col {
+  padding: 10px 8px;
+  border-top: 1px solid var(--line);
+  min-height: 120px;
+}
+
+.colCurrent {
+  composes: col;
+  border-top-color: var(--accent);
+  background: rgba(227,181,106,.04);
+}
+
+.dayName {
+  font-family: var(--f-ui);
+  font-size: 9px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ink3);
+  margin-bottom: 8px;
+}
+
+.colCurrent .dayName {
+  color: var(--accent);
+}
+
+.event {
+  font-family: var(--f-body);
+  font-size: 11px;
+  color: var(--ink2);
+  line-height: 1.45;
+  padding: 4px 0;
+}
+
+.eventLueur {
+  composes: event;
+  color: var(--accent);
+}
+
+.eventLune {
+  composes: event;
+  color: var(--ink3);
+}
+
+.eventPassed {
+  composes: event;
+  color: var(--ink3);
+  text-decoration: line-through;
+  opacity: .6;
+}
+
+.expTag {
+  font-family: var(--f-data);
+  font-size: 8.5px;
+  letter-spacing: .14em;
+  color: var(--ink3);
+}
+
+.sectionTitle {
+  font-family: var(--f-data);
+  font-size: 9.5px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink3);
+  margin-top: 32px;
+  margin-bottom: 12px;
+}
+
+.seasonBand {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.seasonWeek {
+  font-family: var(--f-data);
+  font-size: 9px;
+  color: var(--ink3);
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.seasonWeekCurrent {
+  composes: seasonWeek;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.montants {
+  font-family: var(--f-data);
+  font-size: 10px;
+  color: var(--ink2);
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.montants b {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.reserve {
+  margin-top: 24px;
+}
+
+.reserveGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.reserveFilm {
+  font-family: var(--f-body);
+  font-size: 12px;
+  color: var(--ink2);
+  padding: 8px;
+  border: 1px solid var(--line);
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .col, .colCurrent {
+    min-height: auto;
+    display: grid;
+    grid-template-columns: 60px 1fr;
+    gap: 8px;
+    padding: 8px 0;
+  }
+
+  .reserveGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

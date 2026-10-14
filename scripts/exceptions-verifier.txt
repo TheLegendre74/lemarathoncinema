@@ -118,3 +118,8 @@ CSS-MORT components/ui/Tag.module.css:.ok — Variante Tag (composant orphelin, 
 CSS-MORT components/ui/Tag.module.css:.warn — Variante Tag (composant orphelin, étapes 3-6)
 CSS-MORT components/ui/Tag.module.css:.bad — Variante Tag (composant orphelin, étapes 3-6)
 CSS-MORT components/ui/Tag.module.css:.info — Variante Tag (composant orphelin, étapes 3-6)
+
+# ── Modules CSS Horreur — classes de base composées (composes:) ──
+CSS-MORT components/theme/horreur/horreur-porte.module.css:.panneau — Classe de base composée par .panneauA/.panneauB/.panneauC/.panneauD
+CSS-MORT components/theme/horreur/horreur-porte.module.css:.marche — Classe de base composée par .m1/.m2/.m3
+CSS-MORT components/theme/horreur/horreur-duels.module.css:.pn — Classe de base composée par .pnA/.pnB/.pnC/.pnD
