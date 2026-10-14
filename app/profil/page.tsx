@@ -11,6 +11,11 @@ import PseudoEditor from '@/components/PseudoEditor'
 import MessagesSection from '@/components/MessagesSection'
 import { getMyConversations, getConversationMessages } from '@/lib/actions'
 import { getUserCached } from '@/lib/auth'
+import { resolveTheme } from '@/lib/themes/resolve'
+import { getSeasonWeeks } from '@/lib/themes/seasonWeeks'
+import { READY_THEMES, type ThemeKey } from '@/lib/themes/types'
+import { cookies } from 'next/headers'
+import HorreurProfil from '@/components/theme/horreur/HorreurProfil'
 
 export const revalidate = 30
 
@@ -23,7 +28,7 @@ export default async function ProfilPage({ searchParams }: { searchParams: Promi
   const { with: withUserId } = await searchParams
 
   const [{ data: profile }, { data: watched }, { data: votes }, { data: eggs }, { data: tama }, conversations, threadMessages, { data: blockedData }] = await Promise.all([
-    (supabase as any).from('profiles').select('id, pseudo, exp, avatar_url, active_badge, bio, is_admin, saison, pre_marathon_window_until').eq('id', user.id).single(),
+    (supabase as any).from('profiles').select('id, pseudo, exp, avatar_url, active_badge, bio, is_admin, saison, pre_marathon_window_until, created_at').eq('id', user.id).single(),
     supabase.from('watched').select('*, films(id, titre, annee, genre, realisateur, poster)').eq('user_id', user.id).order('watched_at', { ascending: false }),
     supabase.from('votes').select('duel_id, voted_at').eq('user_id', user.id),
     supabase.from('discovered_eggs').select('egg_id').eq('user_id', user.id),
@@ -72,6 +77,77 @@ export default async function ProfilPage({ searchParams }: { searchParams: Promi
   const unlockedSpecials = SPECIAL_BADGES.filter(b =>
     discoveredEggIds.includes(b.id) || unlockedTamaTitles.includes(b.id)
   )
+
+  // Résolution du thème pour le profil structurel
+  const [seasonWeeks, cookieStore] = await Promise.all([getSeasonWeeks(), cookies()])
+  const previewRaw = cookieStore.get('cm_theme_apercu')?.value ?? null
+  const previewCookie = (previewRaw && READY_THEMES.includes(previewRaw as ThemeKey)) ? previewRaw as ThemeKey : null
+  const resolved = resolveTheme({
+    now: new Date(),
+    cfg: { theme_mode: cfg.theme_mode, theme_force: cfg.theme_force as ThemeKey },
+    weeks: seasonWeeks,
+    previewCookie,
+    isAdmin: !!profile.is_admin,
+  })
+  const themeKey = resolved.key
+
+  if (themeKey === 'horreur') {
+    const marathonWatched = (watched ?? []).filter((w: any) => !w.pre)
+    const { data: ratings } = await supabase.from('ratings').select('film_id, score, films(titre)').eq('user_id', user.id).order('score', { ascending: false })
+    const ratingsCount = ratings?.length ?? 0
+    const bestRating = ratings?.[0] ? { titre: (ratings[0] as any).films?.titre ?? '?', note: ratings[0].score } : null
+
+    const watchedHours = { matin: 0, aprem: 0, soir: 0, nuit: 0 }
+    for (const w of marathonWatched) {
+      const h = new Date(w.watched_at).getHours()
+      if (h >= 6 && h < 12) watchedHours.matin++
+      else if (h >= 12 && h < 18) watchedHours.aprem++
+      else if (h >= 18 && h < 22) watchedHours.soir++
+      else watchedHours.nuit++
+    }
+
+    const lastW = marathonWatched[0]
+    const allBadgesForHorreur = getAllBadges(profile.exp).map(b => ({
+      id: b.id, label: b.label, icon: b.icon, unlocked: b.unlocked,
+    }))
+
+    return (
+      <>
+        <HorreurProfil
+          pseudo={profile.pseudo}
+          avatarUrl={profile.avatar_url ?? null}
+          userId={profile.id}
+          exp={profile.exp}
+          watchedCount={marathonWatched.length}
+          ratingsCount={ratingsCount}
+          votesCount={votes?.length ?? 0}
+          bio={(profile as any).bio ?? null}
+          badges={allBadgesForHorreur}
+          createdAt={(profile as any).created_at ?? null}
+          lastWatchedTitle={(lastW as any)?.films?.titre ?? null}
+          lastWatchedDate={(lastW as any)?.watched_at ?? null}
+          watchedHours={watchedHours}
+          bestRating={bestRating}
+        />
+        <AvatarUpload currentAvatar={profile.avatar_url ?? null} pseudo={profile.pseudo} />
+        <PseudoEditor initial={profile.pseudo} />
+        <BioEditor initial={(profile as any).bio ?? null} />
+        <BadgeSelector
+          expBadges={badges}
+          specialBadges={unlockedSpecials as any}
+          activeBadge={(profile as any).active_badge ?? null}
+        />
+        <MessagesSection
+          myId={user.id}
+          conversations={conversations as any}
+          initialWithId={withUserId ?? null}
+          initialMessages={threadMessages as any}
+          initialOtherProfile={initialOtherProfile as any}
+          blockedIds={blockedIds}
+        />
+      </>
+    )
+  }
 
   return (
     <div data-ecran="profil">

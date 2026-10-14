@@ -1,9 +1,81 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useTheme } from './ThemeProvider'
 import { usePathname } from 'next/navigation'
 import { ecranOccupe } from '@/lib/themes/ecran'
+
+function HorreurTransistor({ vol, isPlaying, onVolumeChange, onMuteToggle }: {
+  vol: number; isPlaying: boolean
+  onVolumeChange: (v: number) => void; onMuteToggle: () => void
+}) {
+  const freq = (88 + (vol / 100) * 20).toFixed(1)
+  const base: CSSProperties = {
+    position: 'fixed', bottom: 72, right: 16, zIndex: 199,
+    width: 200, padding: '10px 12px',
+    background: '#0e0f11', border: '1px solid #2a2a30',
+    boxShadow: '0 2px 16px rgba(0,0,0,.6)',
+    fontFamily: 'var(--f-data, monospace)',
+    color: 'var(--ink3)',
+  }
+  return (
+    <div style={base}>
+      <div style={{
+        fontSize: 8, letterSpacing: '.18em', textTransform: 'uppercase' as const,
+        color: '#5a5a65', marginBottom: 6,
+      }}>
+        RADIO · ONDES DU SOIR
+      </div>
+      <div style={{
+        fontSize: 18, fontFamily: 'var(--f-data, monospace)',
+        color: isPlaying ? 'var(--accent, #c4a24c)' : '#3a3a42',
+        textShadow: isPlaying ? '0 0 8px var(--accent, #c4a24c)' : 'none',
+        letterSpacing: '.1em', marginBottom: 6, transition: 'color .36s, text-shadow .36s',
+      }}>
+        {freq} <span style={{ fontSize: 10 }}>FM</span>
+      </div>
+      <div style={{
+        width: '100%', height: 2,
+        background: 'linear-gradient(90deg, #2a2a30, var(--accent, #c4a24c) ' + vol + '%, #2a2a30)',
+        marginBottom: 8, opacity: isPlaying ? 1 : .3,
+        transition: 'opacity .36s',
+      }} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <button
+          onClick={onMuteToggle}
+          aria-label={isPlaying ? 'Couper la musique' : 'Activer la musique'}
+          style={{
+            width: 28, height: 28, border: '1px solid #2a2a30',
+            background: isPlaying ? '#1a1a20' : '#0e0f11',
+            color: isPlaying ? 'var(--accent, #c4a24c)' : '#3a3a42',
+            fontSize: 14, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0, transition: 'color .36s',
+          }}
+        >
+          {isPlaying ? '▮▮' : '▶'}
+        </button>
+        <input
+          type="range" min={0} max={100} value={vol}
+          onChange={e => onVolumeChange(Number(e.target.value))}
+          aria-label="Volume musique"
+          style={{
+            flex: 1, height: 3,
+            accentColor: 'var(--accent, #c4a24c)',
+            cursor: 'pointer', margin: 0,
+          }}
+        />
+        <span style={{ fontSize: 9, color: '#5a5a65', minWidth: 20, textAlign: 'right' as const }}>{vol}</span>
+      </div>
+      <div style={{
+        fontSize: 8, color: '#3a3a42', marginTop: 6,
+        letterSpacing: '.12em', textTransform: 'uppercase' as const,
+      }}>
+        {isPlaying ? 'Piste à venir' : 'Musique'}
+      </div>
+    </div>
+  )
+}
 
 const MUTED_ROUTES = ['/videoclub', '/labo/', '/clippy-revanche', '/tamagotchi']
 
@@ -120,6 +192,10 @@ export default function ThemeRadio() {
   if (!tracks.length) return null
 
   const isPlaying = autoStarted && !userMuted && vol > 0 && !routeBlocked
+
+  if (key === 'horreur') {
+    return <HorreurTransistor vol={vol} isPlaying={isPlaying} onVolumeChange={onVolumeChange} onMuteToggle={onMuteToggle} />
+  }
 
   return (
     <div style={{

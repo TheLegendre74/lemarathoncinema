@@ -44,6 +44,9 @@ const ECRANS: Record<string, EcranMap> = {
   'marathoniens': {
     horreur: () => import('@/components/theme/horreur/HorreurMarathoniens'),
   },
+  'profil': {
+    horreur: () => import('@/components/theme/horreur/HorreurProfil'),
+  },
 }
 
 export async function getThemeEcran<P = any>(
