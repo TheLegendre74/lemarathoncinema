@@ -394,10 +394,43 @@
   }
 }
 
+/* ── La possession (§16.9 #35) : texte inversé ── */
+html.possede #site h1,
+html.possede #site h2,
+html.possede #site h3,
+html.possede #site h4,
+html.possede #site h5,
+html.possede #site h6,
+html.possede #site p,
+html.possede #site a,
+html.possede #site button,
+html.possede #site label,
+html.possede #site li,
+html.possede #site td,
+html.possede #site th,
+html.possede #site span,
+html.possede #site figcaption,
+html.possede #site blockquote {
+  unicode-bidi: bidi-override;
+  direction: rtl;
+}
+
 /* ── Animations for eggs ── */
-@keyframes ballonFloat {
-  0%, 100% { bottom: -40px; }
-  50% { bottom: 60vh; }
+@keyframes ballonRise {
+  0% { bottom: -80px; }
+  100% { bottom: calc(100% + 80px); }
+}
+
+@keyframes ballonCatch {
+  0% { transform: translateX(-50%); }
+  100% { transform: translateX(-50%) translateY(-200px); opacity: 0; }
+}
+
+@keyframes cercleOverlay {
+  0% { opacity: 0; }
+  30% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
 }
 
 @keyframes possessionFlicker {
