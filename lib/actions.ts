@@ -1373,11 +1373,14 @@ export async function adminApproveDuel(duelId: number) {
   const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
   if (!profile?.is_admin) return { error: 'Non autorisé.' }
 
+  const admin = createAdminClient()
   const closes_at = nextDuelDeadline(new Date()).toISOString()
-  const { error } = await supabase.from('duels').update({ pending: false, closes_at }).eq('id', duelId)
+  const { error } = await admin.from('duels').update({ pending: false, closes_at }).eq('id', duelId)
   if (error) return { error: error.message }
+  await deleteCacheKeys(['duels:list'])
   revalidatePath('/duels')
   revalidatePath('/admin')
+  revalidatePath('/admin/seances')
   return { success: true }
 }
 

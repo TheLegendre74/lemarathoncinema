@@ -7,6 +7,7 @@ import { cookies } from 'next/headers'
 import { READY_THEMES, type ThemeKey } from '@/lib/themes/types'
 import Link from 'next/link'
 import styles from './admin.module.css'
+import PendingDuelCard from './PendingDuelCard'
 
 export const revalidate = 0
 
@@ -36,7 +37,7 @@ export default async function AdminDashboard() {
     admin.from('films').select('id', { count: 'exact', head: true }).eq('pending_admin_approval', true),
     admin.from('films').select('id', { count: 'exact', head: true }).eq('flagged_18_pending', true),
     supabase.from('reports').select('id', { count: 'exact', head: true }).eq('resolved', false),
-    supabase.from('duels').select('id', { count: 'exact', head: true }).eq('pending', true),
+    supabase.from('duels').select('id, film1:films!duels_film1_id_fkey(titre), film2:films!duels_film2_id_fkey(titre)').eq('pending', true),
     admin.from('week_films').select('films(titre)').eq('active', true).limit(1).single(),
     supabase.from('duels').select('id, closes_at, film1:films!duels_film1_id_fkey(titre), film2:films!duels_film2_id_fkey(titre)').eq('closed', false).eq('pending', false).order('created_at', { ascending: false }).limit(1).single(),
     admin.from('admin_log').select('action, detail, created_at').order('created_at', { ascending: false }).limit(10),
@@ -49,7 +50,8 @@ export default async function AdminDashboard() {
   const pendingFilms = cnt(1)
   const flagged18 = cnt(2)
   const reports = cnt(3)
-  const pendingDuels = cnt(4)
+  const pendingDuelRows = settled[4].status === 'fulfilled' ? ((settled[4].value as any)?.data ?? []) as Array<{ id: number; film1: { titre: string }; film2: { titre: string } }> : []
+  const pendingDuels = pendingDuelRows.length
   const weekFilm = dat(5)
   const activeDuel = dat(6)
   const recentLog = dat(7)
@@ -69,7 +71,7 @@ export default async function AdminDashboard() {
   if ((pendingFilms ?? 0) > 0) todoItems.push({ label: 'Films a approuver', count: pendingFilms ?? 0, href: '/admin/films' })
   if ((flagged18 ?? 0) > 0) todoItems.push({ label: 'Films 18+ a confirmer', count: flagged18 ?? 0, href: '/admin/films' })
   if ((reports ?? 0) > 0) todoItems.push({ label: 'Signalements', count: reports ?? 0, href: '/admin/films' })
-  if ((pendingDuels ?? 0) > 0) todoItems.push({ label: 'Duels a approuver', count: pendingDuels ?? 0, href: '/admin/seances' })
+  // pendingDuels affichés séparément avec bouton de confirmation inline
 
   const weekInfo = resolved.week
     ? `semaine ${resolved.week.semaine} / ${resolved.week.total}`
@@ -81,7 +83,7 @@ export default async function AdminDashboard() {
     <>
       <h1 className={styles.pageTitle}>Tableau de bord</h1>
 
-      {todoItems.length > 0 && (
+      {(todoItems.length > 0 || pendingDuelRows.length > 0) && (
         <div className={styles.section}>
           <h2 className={styles.sectionTitle}>A traiter</h2>
           {todoItems.map(item => (
@@ -89,6 +91,9 @@ export default async function AdminDashboard() {
               <span>{item.label}</span>
               <span className={styles.badge}>{item.count}</span>
             </Link>
+          ))}
+          {pendingDuelRows.map(d => (
+            <PendingDuelCard key={d.id} duel={d} />
           ))}
         </div>
       )}
