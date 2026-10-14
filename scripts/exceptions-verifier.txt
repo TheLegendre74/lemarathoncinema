@@ -64,6 +64,15 @@ CSS-MORT app/styles/themes/comedie-screens.css:.data-cell — Habillage Comédie
 CSS-MORT app/styles/themes/horreur-screens.css:.poster-container — Habillage Horreur (étape 3)
 CSS-MORT app/styles/themes/horreur-screens.css:.filter-chip — Habillage Horreur (étape 3)
 CSS-MORT app/styles/themes/horreur-screens.css:.data-cell — Habillage Horreur (étape 3)
+CSS-MORT app/styles/themes/horreur-screens.css:.btn-secondary — Habillage Horreur bouton secondaire (h-b2 du kit)
+CSS-MORT app/styles/themes/horreur-screens.css:.badge-tag — Habillage Horreur étiquettes (pièces à conviction H6)
+CSS-MORT app/styles/themes/horreur-screens.css:.handwritten — Habillage Horreur manuscrit (Reenie Beanie, H6/H9)
+CSS-MORT app/styles/themes/horreur-screens.css:.data-label — Habillage Horreur étiquettes données (h-l du kit)
+CSS-MORT app/styles/themes/horreur-screens.css:.film-modal — Habillage Horreur jaquette H3 (modal)
+CSS-MORT app/styles/themes/horreur-screens.css:.modal-content — Habillage Horreur jaquette H3 (modal content)
+CSS-MORT app/styles/themes/horreur-screens.css:.rec-timestamp — Habillage Horreur horodatage vert H16 (bandes retrouvées)
+CSS-MORT app/styles/themes/horreur-screens.css:.divider — Habillage Horreur séparateurs
+CSS-MORT app/styles/themes/horreur-screens.css:.dossier-autre — Habillage Horreur cadre rouge H6 (l'autre dossier)
 CSS-MORT app/styles/themes/western-screens.css:.poster-container — Habillage Western (étape 4)
 CSS-MORT app/styles/themes/western-screens.css:.film-title — Habillage Western (étape 4)
 CSS-MORT app/styles/themes/western-screens.css:.poster-wrap — Habillage Western (étape 4)
@@ -77,14 +86,14 @@ CSS-MORT app/styles/themes/horreur-screens.css:.btn-primary — Alias .btn-gold 
 CSS-MORT app/styles/themes/western-screens.css:.btn-primary — Alias .btn-gold (globals.css), className branché étapes 3-6
 
 # ── Modules CSS frames — classes pour variantes de frame thématiques (étapes 3-6) ──
+CSS-MORT components/theme/horreur/horreur-frame.module.css:.org — Faux positif : sous-chaîne dans URL SVG data-uri, pas un sélecteur
+CSS-MORT components/theme/horreur/horreur-frame.module.css:.w3 — Faux positif : sous-chaîne dans URL SVG data-uri (w3.org), pas un sélecteur
 CSS-MORT components/theme/action/action-frame.module.css:.cracksReduced — Variante frame Action (étape 6)
 CSS-MORT components/theme/action/action-frame.module.css:.chrome — Variante frame Action (étape 6)
 CSS-MORT components/theme/action/action-frame.module.css:.skew — Variante frame Action (étape 6)
 CSS-MORT components/theme/action/action-frame.module.css:.skewInner — Variante frame Action (étape 6)
 CSS-MORT components/theme/action/action-frame.module.css:.riveted — Variante frame Action (étape 6)
 CSS-MORT components/theme/action/action-frame.module.css:.shakeable — Variante frame Action (étape 6)
-CSS-MORT components/theme/horreur/horreur-frame.module.css:.w3 — Variante frame Horreur (étape 3)
-CSS-MORT components/theme/horreur/horreur-frame.module.css:.org — Variante frame Horreur (étape 3)
 CSS-MORT components/theme/western/western-frame.module.css:.impactLayer — Variante frame Western (étape 4)
 CSS-MORT components/theme/western/western-frame.module.css:.impactLayerModal — Variante frame Western (étape 4)
 
