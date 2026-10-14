@@ -68,3 +68,44 @@ CSS-MORT app/styles/themes/western-screens.css:.poster-container — Habillage W
 CSS-MORT app/styles/themes/western-screens.css:.film-title — Habillage Western (étape 4)
 CSS-MORT app/styles/themes/western-screens.css:.poster-wrap — Habillage Western (étape 4)
 CSS-MORT app/styles/themes/western-screens.css:.filter-chip — Habillage Western (étape 4)
+CSS-MORT app/styles/themes/western-screens.css:.data-cell — Habillage Western (étape 4)
+
+# ── .btn-primary — alias CSS de .btn-gold dans globals.css, sera utilisé comme className aux étapes 3-6 ──
+CSS-MORT app/styles/themes/action-screens.css:.btn-primary — Alias .btn-gold (globals.css), className branché étapes 3-6
+CSS-MORT app/styles/themes/comedie-screens.css:.btn-primary — Alias .btn-gold (globals.css), className branché étapes 3-6
+CSS-MORT app/styles/themes/horreur-screens.css:.btn-primary — Alias .btn-gold (globals.css), className branché étapes 3-6
+CSS-MORT app/styles/themes/western-screens.css:.btn-primary — Alias .btn-gold (globals.css), className branché étapes 3-6
+
+# ── Modules CSS frames — classes pour variantes de frame thématiques (étapes 3-6) ──
+CSS-MORT components/theme/action/action-frame.module.css:.cracksReduced — Variante frame Action (étape 6)
+CSS-MORT components/theme/action/action-frame.module.css:.chrome — Variante frame Action (étape 6)
+CSS-MORT components/theme/action/action-frame.module.css:.skew — Variante frame Action (étape 6)
+CSS-MORT components/theme/action/action-frame.module.css:.skewInner — Variante frame Action (étape 6)
+CSS-MORT components/theme/action/action-frame.module.css:.riveted — Variante frame Action (étape 6)
+CSS-MORT components/theme/action/action-frame.module.css:.shakeable — Variante frame Action (étape 6)
+CSS-MORT components/theme/horreur/horreur-frame.module.css:.w3 — Variante frame Horreur (étape 3)
+CSS-MORT components/theme/horreur/horreur-frame.module.css:.org — Variante frame Horreur (étape 3)
+CSS-MORT components/theme/western/western-frame.module.css:.impactLayer — Variante frame Western (étape 4)
+CSS-MORT components/theme/western/western-frame.module.css:.impactLayerModal — Variante frame Western (étape 4)
+
+# ── Modules CSS UI — variantes des composants UI orphelins (étapes 3-6) ──
+CSS-MORT components/ui/Button.module.css:.primary — Variante Button (composant orphelin, étapes 3-6)
+CSS-MORT components/ui/Button.module.css:.ghost — Variante Button (composant orphelin, étapes 3-6)
+CSS-MORT components/ui/Button.module.css:.danger — Variante Button (composant orphelin, étapes 3-6)
+CSS-MORT components/ui/Button.module.css:.link — Variante Button (composant orphelin, étapes 3-6)
+CSS-MORT components/ui/Button.module.css:.sm — Variante Button (composant orphelin, étapes 3-6)
+CSS-MORT components/ui/Button.module.css:.md — Variante Button (composant orphelin, étapes 3-6)
+CSS-MORT components/ui/Button.module.css:.lg — Variante Button (composant orphelin, étapes 3-6)
+CSS-MORT components/ui/Gauge.module.css:.accent — Variante Gauge (composant orphelin, étapes 3-6)
+CSS-MORT components/ui/Gauge.module.css:.ok — Variante Gauge (composant orphelin, étapes 3-6)
+CSS-MORT components/ui/Gauge.module.css:.warn — Variante Gauge (composant orphelin, étapes 3-6)
+CSS-MORT components/ui/Gauge.module.css:.bad — Variante Gauge (composant orphelin, étapes 3-6)
+CSS-MORT components/ui/StatRow.module.css:.accent — Variante StatRow (composant orphelin, étapes 3-6)
+CSS-MORT components/ui/StatRow.module.css:.ok — Variante StatRow (composant orphelin, étapes 3-6)
+CSS-MORT components/ui/StatRow.module.css:.bad — Variante StatRow (composant orphelin, étapes 3-6)
+CSS-MORT components/ui/StatRow.module.css:.info — Variante StatRow (composant orphelin, étapes 3-6)
+CSS-MORT components/ui/Tag.module.css:.accent — Variante Tag (composant orphelin, étapes 3-6)
+CSS-MORT components/ui/Tag.module.css:.ok — Variante Tag (composant orphelin, étapes 3-6)
+CSS-MORT components/ui/Tag.module.css:.warn — Variante Tag (composant orphelin, étapes 3-6)
+CSS-MORT components/ui/Tag.module.css:.bad — Variante Tag (composant orphelin, étapes 3-6)
+CSS-MORT components/ui/Tag.module.css:.info — Variante Tag (composant orphelin, étapes 3-6)
